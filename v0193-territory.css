@@ -1,0 +1,12 @@
+/* v0.19.3 · Territory kept separate from UAF intelligence */
+.v0193-territory-alerts{display:grid;gap:7px;margin-top:12px}
+.v0193-territory-alerts button{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;padding:10px 11px;border:1px solid #dce5e9;border-radius:11px;background:#fff;text-align:left;color:#284653}
+.v0193-territory-alerts button:hover,.v0193-territory-alerts button.active{border-color:#9fc0c8;background:#f1f8f8}
+.v0193-territory-alerts b{display:block;font-size:11px}.v0193-territory-alerts small{display:block;margin-top:3px;color:#7b8d97;font-size:9px;line-height:1.35}.v0193-territory-alerts strong{color:#1e6970;font-size:18px}
+.v0193-territory-detail-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:13px}
+.v0193-territory-detail-head span{display:block;color:#71848f;font-size:9px;font-weight:850;text-transform:uppercase;letter-spacing:.06em}.v0193-territory-detail-head h2{margin:4px 0 0;color:#183746;font-size:20px}
+.v0193-territory-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:15px}
+.v0193-territory-kpis>div{padding:12px;border:1px solid #dde6ea;border-radius:11px;background:#fbfcfd}.v0193-territory-kpis span{display:block;color:#748690;font-size:8px;text-transform:uppercase;letter-spacing:.05em}.v0193-territory-kpis b{display:block;margin-top:5px;color:#1e4658;font-size:21px}.v0193-territory-kpis small{display:block;margin-top:4px;color:#8a989f;font-size:8px}
+.v0193-territory-columns{display:grid;grid-template-columns:1fr 1fr;gap:14px}.v0193-territory-columns>section{min-width:0}.v0193-territory-columns h3{margin:0 0 9px;color:#31505e;font-size:11px}
+@media(max-width:900px){.v0193-territory-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.v0193-territory-columns{grid-template-columns:1fr}}
+@media(max-width:560px){.v0193-territory-kpis{grid-template-columns:1fr}}
