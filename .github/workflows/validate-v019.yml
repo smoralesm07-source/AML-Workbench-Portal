@@ -1,0 +1,25 @@
+name: Validate v0.19
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'v019-live.js'
+      - 'v019.css'
+      - 'index.html'
+      - '.github/workflows/validate-v019.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check JavaScript syntax
+        run: node --check v019-live.js
+      - name: Ensure no inline event handlers in v0.19
+        run: |
+          if grep -E 'onclick=|onchange=|onmouseover=' v019-live.js; then
+            echo 'Inline event handler found; incompatible with CSP.'
+            exit 1
+          fi
