@@ -1,6 +1,6 @@
 function v17PriorityBand(score) {
+  if (!v17HasNumber(score)) return {label:'Sin cálculo',cls:'neutral'};
   const n = Number(score);
-  if (!Number.isFinite(n)) return {label:'Sin cálculo',cls:'neutral'};
   if (n >= 75) return {label:'Muy alta',cls:'high'};
   if (n >= 60) return {label:'Alta',cls:'med'};
   if (n >= 45) return {label:'Media',cls:'low'};
@@ -12,7 +12,7 @@ function v17FindingCards(rows, modeKey=V17_FINDING_MODE, compact=false) {
   const mode = V17_MODE[modeKey] || V17_MODE.investigate;
   return `<div class="finding-deck">${rows.map(f => {
     const p = f.payload || {};
-    const score = Number(f[mode.scoreField]);
+    const score = v17HasNumber(f[mode.scoreField]) ? Number(f[mode.scoreField]) : null;
     const band = v17PriorityBand(score);
     const facts = p.decision_facts || {};
     const producers = p.producer_ids || [];
@@ -22,7 +22,7 @@ function v17FindingCards(rows, modeKey=V17_FINDING_MODE, compact=false) {
     return `<article class="finding-card ${compact?'compact':''}">
       <div class="finding-card-head">
         <div><div class="finding-type">${esc(v17FindingLabel(f.finding_type))}</div><h3>${esc(f.title || v17FindingLabel(f.finding_type))}</h3></div>
-        <div class="priority-box ${band.cls}"><span>Prioridad para ${esc(mode.label.toLowerCase())}</span><strong>${fmtScore(score)}</strong><small>${esc(band.label)}</small></div>
+        <div class="priority-box ${band.cls}"><span>Prioridad para ${esc(mode.label.toLowerCase())}</span><strong>${v17FmtScore(score)}</strong><small>${esc(band.label)}</small></div>
       </div>
       <p class="finding-summary">${esc(v17PlainFindingSummary(f))}</p>
       <div class="fact-strip">
@@ -44,7 +44,7 @@ function v17PatternExplanation(p) {
   return `<div class="formula-summary">
     <div><span>Tipo de comparación</span><strong>${esc(v17PatternLabel(p.pattern_type,p.title))}</strong></div>
     <div><span>Ámbito</span><strong>${esc(p.scope_label || p.scope_id || p.scope_type || '—')}</strong></div>
-    <div><span>Índice comparativo</span><strong>${fmtScore(p.strength)}/100</strong></div>
+    <div><span>Índice comparativo</span><strong>${v17FmtScore(p.strength)}/100</strong></div>
   </div>
   <h3 class="modal-subtitle">Regla utilizada</h3><p>${esc(rule)}</p>
   <p class="plain-note">Este índice expresa intensidad o posición relativa dentro del universo comparado. No es probabilidad de LA/FT.</p>
@@ -60,7 +60,7 @@ function v17PatternCards(rows, contextOnly=false) {
       <div class="phenomenon-top"><span>${esc(p.scope_type || 'Ámbito')}</span><span class="priority-label">${esc(priority)}</span></div>
       <h3>${esc(v17PatternLabel(p.pattern_type,p.title))}</h3>
       <p>${esc(p.summary || '')}</p>
-      <div class="phenomenon-metric"><span>Índice comparativo</span><strong>${fmtScore(p.strength)}/100</strong></div>
+      <div class="phenomenon-metric"><span>Índice comparativo</span><strong>${v17FmtScore(p.strength)}/100</strong></div>
       ${contextOnly?'<div class="context-badge">Contexto sectorial: no se atribuye automáticamente a la entidad.</div>':''}
       <div class="card-actions">${info}</div>
     </article>`;
@@ -75,30 +75,31 @@ function v17BarChart(title, entries, infoHtml='') {
   if (!entries.length) return '';
   const max = Math.max(...entries.map(x=>Number(x.value)||0),1);
   return `<section class="viz-card"><div class="viz-head"><h2>${esc(title)}</h2>${infoHtml?v17InfoButton('Cómo leerlo',infoHtml,true):''}</div>
-    <div class="bar-chart">${entries.map(x=>`<div class="bar-row"><div class="bar-label">${esc(x.label)}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(2,Math.round((Number(x.value)||0)*100/max))}%"></div></div><div class="bar-value">${fmtNum(x.value)}</div></div>`).join('')}</div>
+    <div class="bar-chart">${entries.map(x=>`<div class="bar-row"><div class="bar-label">${esc(x.label)}</div><progress class="bar-progress" max="${max}" value="${Math.max(0,Number(x.value)||0)}"></progress><div class="bar-value">${fmtNum(x.value)}</div></div>`).join('')}</div>
   </section>`;
 }
 
-function v17FiveYearSanctions(rows) {
-  const now = new Date();
-  const startYear = now.getFullYear() - 4;
-  const counts = new Map();
-  for (let y=startYear;y<=now.getFullYear();y++) counts.set(y,0);
-  rows.forEach(r=>{
-    const y = r.event_date ? Number(String(r.event_date).slice(0,4)) : null;
-    if (counts.has(y)) counts.set(y,counts.get(y)+1);
-  });
-  return [...counts.entries()].map(([label,value])=>({label:String(label),value}));
+async function v17FiveYearSanctionCounts() {
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({length:5},(_,i)=>currentYear-4+i);
+  return Promise.all(years.map(async year => {
+    const start = `${year}-01-01`;
+    const end = `${year+1}-01-01`;
+    const value = await countRows('aml_sanctions', q=>q.gte('event_date',start).lt('event_date',end));
+    return {label:String(year),value};
+  }));
 }
 
-function v17PatternScopes(rows) {
-  const counts = new Map();
-  rows.forEach(r=>{
-    const raw = r.scope_type || 'OTRO';
-    const label = ({ENTITY:'Entidad',SECTOR:'Sector',TERRITORY:'Territorio',NETWORK:'Red',ORGANIZATION:'Organización',PROVIDER:'Proveedor'})[raw] || raw;
-    counts.set(label,(counts.get(label)||0)+1);
-  });
-  return [...counts.entries()].sort((a,b)=>b[1]-a[1]).map(([label,value])=>({label,value}));
+async function v17PatternScopeCounts() {
+  const scopes = [
+    ['ENTITY','Entidad'],['SECTOR','Sector'],['TERRITORY','Territorio'],
+    ['NETWORK','Red'],['ORGANIZATION','Organización'],['PROVIDER','Proveedor']
+  ];
+  const values = await Promise.all(scopes.map(async ([scope,label]) => ({
+    label,
+    value: await countRows('aml_pattern_alerts',q=>q.eq('scope_type',scope))
+  })));
+  return values.filter(x=>x.value>0);
 }
 
 function v17Shell(title, subtitle) {
