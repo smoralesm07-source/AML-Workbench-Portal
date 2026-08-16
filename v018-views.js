@@ -1,0 +1,153 @@
+'use strict';
+
+function v18Iso(d){return d.toISOString().slice(0,10);}
+function v18MonthsAgo(n){const d=new Date();d.setMonth(d.getMonth()-n);return d;}
+function v18PctChange(current,previous){
+  if(!previous) return current?null:0;
+  return ((current-previous)/previous)*100;
+}
+function v18DeltaLabel(current,previous){
+  const pct=v18PctChange(current,previous);
+  if(pct===null) return 'Sin base comparable en el período anterior';
+  if(Math.abs(pct)<0.5) return 'Sin variación material frente al período anterior';
+  return `${pct>0?'+':''}${pct.toFixed(1)}% frente a los 12 meses anteriores`;
+}
+async function v18CountFindingTypes(types){return countRows('aml_findings',q=>q.in('finding_type',types));}
+async function v18FindingFamilyCounts(){
+  const defs=[
+    ['Señales AML directas',['GOVERNED_AML_SIGNAL','DIRECT_AML_SIGNAL']],
+    ['Cambios / anomalías',['CONTEXTUAL_ANOMALY','BEHAVIOR_CHANGE','PERSISTENCE']],
+    ['Cobertura UAF',['REGULATORY_GAP','SUPERVISORY_GAP']],
+    ['Sanciones',['PRUDENTIAL_SANCTION','SANCTION_CONVERGENCE','SANCTION_ACCUMULATION']],
+    ['Varias fuentes',['ENTITY_CONVERGENCE','CONVERGENCIA_3PLUS']],
+    ['Territorio / red',['TERRITORY_EMERGENCE','TERRITORIAL_CONVERGENCE','NETWORK_PATTERN','NETWORK_CONTEXT']]
+  ];
+  const vals=await Promise.all(defs.map(async ([label,types])=>({label,value:await v18CountFindingTypes(types)})));
+  return vals.filter(x=>x.value>0);
+}
+async function v18SanctionWindowCounts(){
+  const now=new Date();
+  const start12=v18MonthsAgo(12), start24=v18MonthsAgo(24);
+  const current=await countRows('aml_sanctions',q=>q.gte('event_date',v18Iso(start12)).lte('event_date',v18Iso(now)));
+  const previous=await countRows('aml_sanctions',q=>q.gte('event_date',v18Iso(start24)).lt('event_date',v18Iso(start12)));
+  return {current,previous};
+}
+function v18ScoreAlertBand(score){
+  if(!v17HasNumber(score)) return {label:'Revisar',cls:'neutral'};
+  const n=Number(score);
+  if(n>=75) return {label:'Prioridad muy alta',cls:'critical'};
+  if(n>=60) return {label:'Prioridad alta',cls:'high'};
+  return {label:'Prioridad media',cls:'medium'};
+}
+function v18AlertCard({kind,title,statement,metric,metricLabel,detail,actionHtml='',infoHtml='',tone='neutral'}){
+  return `<article class="v18-alert ${tone}">
+    <div class="v18-alert-top"><span class="v18-alert-kind">${esc(kind)}</span>${metric!==undefined?`<div class="v18-alert-metric"><strong>${esc(String(metric))}</strong><span>${esc(metricLabel||'')}</span></div>`:''}</div>
+    <h3>${esc(title)}</h3>
+    <p class="v18-alert-statement">${esc(statement)}</p>
+    ${detail?`<p class="v18-alert-detail">${esc(detail)}</p>`:''}
+    <div class="v18-alert-actions">${infoHtml?actionHtml+v17InfoButton('Ver fundamento',infoHtml,true):actionHtml}</div>
+  </article>`;
+}
+function v18FindingAlert(f){
+  if(!f) return '';
+  const score=v17HasNumber(f.score_investigate)?Number(f.score_investigate):null;
+  const band=v18ScoreAlertBand(score);
+  const place=[f.commune,f.region].filter(Boolean).join(', ');
+  return v18AlertCard({
+    kind:'Hallazgo prioritario',
+    title:f.title||v17FindingLabel(f.finding_type),
+    statement:`${v17PlainFindingSummary(f)}${place?` Ubicación observada: ${place}.`:''}`,
+    metric:v17FmtScore(score),metricLabel:'prioridad / 100',tone:band.cls,
+    detail:`${fmtNum(f.source_count||f.payload?.decision_facts?.independent_sources||0)} fuente(s) · ${fmtNum(f.evidence_count||0)} evidencia(s).`,
+    actionHtml:f.entity_id?`<button type="button" class="v18-link-btn" data-open-entity="${esc(f.entity_id)}">Abrir entidad</button>`:'',
+    infoHtml:v17ScoreExplanation(f,'investigate')+v17EvidenceExplanation(f)
+  });
+}
+function v18PatternAlert(p,label){
+  if(!p) return '';
+  const score=v17HasNumber(p.strength)?Number(p.strength):null;
+  const tone=score>=75?'critical':score>=60?'high':'medium';
+  return v18AlertCard({
+    kind:label,
+    title:p.scope_label||p.scope_id||v17PatternLabel(p.pattern_type,p.title),
+    statement:`${v17PatternLabel(p.pattern_type,p.title)}. ${p.summary||''}`,
+    metric:v17FmtScore(score),metricLabel:'índice comparativo',tone,
+    detail:'Se muestra el caso con mayor índice disponible dentro de este ámbito.',
+    infoHtml:v17PatternExplanation(p)
+  });
+}
+function v18SanctionAlert(windowCounts){
+  const {current,previous}=windowCounts;
+  const tone=current>previous?'high':'neutral';
+  return v18AlertCard({
+    kind:'Actividad sancionatoria',
+    title:'Últimos 12 meses',
+    statement:`Se observan ${fmtNum(current)} eventos sancionatorios frente a ${fmtNum(previous)} en los 12 meses anteriores.`,
+    metric:fmtNum(current),metricLabel:'eventos',tone,
+    detail:v18DeltaLabel(current,previous),
+    actionHtml:'<button type="button" class="v18-link-btn" data-view-shortcut="sanctions">Ver sanciones</button>',
+    infoHtml:'<p>Conteo exacto bajo la sesión y RLS actuales usando <code>event_date</code>. Compara dos ventanas consecutivas de 12 meses. Es actividad administrativa y no una medición de LA/FT.</p>'
+  });
+}
+function v18RankedPatterns(rows){
+  if(!rows.length) return '<div class="empty"><strong>Sin fenómenos comparables</strong><p>No hay registros para este corte.</p></div>';
+  return `<div class="v18-rank-list">${rows.slice(0,8).map((p,i)=>`<div class="v18-rank-row"><span class="v18-rank-no">${i+1}</span><div><strong>${esc(p.scope_label||p.scope_id||'Ámbito no informado')}</strong><span>${esc(v17PatternLabel(p.pattern_type,p.title))}</span></div><b>${v17FmtScore(p.strength)}</b></div>`).join('')}</div>`;
+}
+
+loadOverview=async function(){
+  state.view='overview';shell('Panorama','Qué está pasando ahora, dónde mirar primero y qué evidencia lo sostiene.');
+  try{
+    const [highPriority,directAml,territoryCount,sanctionWindow,topFindingRes,territoryRes,sectorRes,topPatternsRes,familyCounts,sanctionTrend]=await Promise.all([
+      countRows('aml_findings',q=>q.gte('score_investigate',60)),
+      v18CountFindingTypes(['GOVERNED_AML_SIGNAL','DIRECT_AML_SIGNAL']),
+      countRows('aml_pattern_alerts',q=>q.eq('scope_type','TERRITORY')),
+      v18SanctionWindowCounts(),
+      sb.from('aml_findings').select('finding_key,finding_id,finding_type,entity_id,title,region,commune,score_investigate,source_count,evidence_count,snapshot_id,updated_at,payload').order('score_investigate',{ascending:false,nullsFirst:false}).limit(1),
+      sb.from('aml_pattern_alerts').select('alert_id,family,pattern_type,scope_type,scope_id,scope_label,strength,priority,title,summary,snapshot_id,payload').eq('scope_type','TERRITORY').order('strength',{ascending:false,nullsFirst:false}).limit(1),
+      sb.from('aml_pattern_alerts').select('alert_id,family,pattern_type,scope_type,scope_id,scope_label,strength,priority,title,summary,snapshot_id,payload').eq('scope_type','SECTOR').order('strength',{ascending:false,nullsFirst:false}).limit(1),
+      sb.from('aml_pattern_alerts').select('alert_id,family,pattern_type,scope_type,scope_id,scope_label,strength,priority,title,summary,snapshot_id,payload').order('strength',{ascending:false,nullsFirst:false}).limit(8),
+      v18FindingFamilyCounts(),
+      v17FiveYearSanctionCounts()
+    ]);
+    for(const r of [topFindingRes,territoryRes,sectorRes,topPatternsRes]) if(r.error) throw r.error;
+    const topFinding=topFindingRes.data?.[0]||null;
+    const topTerritory=territoryRes.data?.[0]||null;
+    const topSector=sectorRes.data?.[0]||null;
+    const topPatterns=topPatternsRes.data||[];
+    const alerts=[
+      v18FindingAlert(topFinding),
+      v18PatternAlert(topTerritory,'Alerta territorial'),
+      v18PatternAlert(topSector,'Alerta sectorial'),
+      v18SanctionAlert(sanctionWindow)
+    ].filter(Boolean).join('');
+    content().innerHTML=`
+      <section class="v18-hero">
+        <div><span class="v18-kicker">LECTURA EJECUTIVA</span><h2>Lo importante está aquí, sin navegar primero</h2><p>Las alertas superiores sintetizan los registros de mayor prioridad o mayor desviación observable del corte actual.</p></div>
+        <div class="v18-hero-state"><span>Actualizado en línea</span><strong>Supabase + RLS</strong></div>
+      </section>
+      <div class="v18-signal-strip">
+        ${v17MetricCard('Hallazgos con prioridad alta',highPriority,'Score de investigación ≥ 60','<p>Conteo exacto de hallazgos cuyo score de investigación materializado es igual o superior a 60. Sirve para ordenar revisión, no para afirmar riesgo de delito.</p>')}
+        ${v17MetricCard('Señales AML directas',directAml,'Reglas AML explícitamente gobernadas','<p>Conteo exacto de hallazgos tipificados como señal AML directa o gobernada en Fusion.</p>')}
+        ${v17MetricCard('Fenómenos territoriales',territoryCount,'Comparaciones materializadas por territorio','<p>Conteo exacto de alertas comparativas cuyo ámbito es territorio.</p>')}
+        ${v17MetricCard('Sanciones · 12 meses',sanctionWindow.current,v18DeltaLabel(sanctionWindow.current,sanctionWindow.previous),'<p>Conteo exacto por fecha de evento para los últimos 12 meses y comparación con la ventana anterior.</p>')}
+      </div>
+      <section class="v18-section v18-attention">
+        <div class="v18-section-head"><div><span>ATENCIÓN INMEDIATA</span><h2>Cuatro cosas que revisaría ahora</h2></div><p>Las tarjetas ya incluyen el hecho principal, el lugar o ámbito, la métrica y la razón. Profundizar es opcional.</p></div>
+        <div class="v18-alert-grid">${alerts||'<div class="empty"><strong>Sin alertas disponibles</strong><p>No se materializaron alertas para el corte actual.</p></div>'}</div>
+      </section>
+      <section class="v18-section">
+        <div class="v18-section-head"><div><span>CONCENTRACIÓN</span><h2>Dónde se acumulan los hallazgos</h2></div><p>Conteos exactos por grandes familias analíticas, evitando lenguaje técnico del motor.</p></div>
+        <div class="v18-two-col">
+          ${v17BarChart('Hallazgos por tipo de señal',familyCounts,'<p>Cada barra suma tipos de hallazgo relacionados dentro de una familia analítica. Los conteos son exactos bajo RLS.</p>')}
+          <section class="viz-card"><div class="viz-head"><h2>Fenómenos con mayor desviación</h2>${v17InfoButton('Cómo leerlo','<p>Ordena los fenómenos por su índice comparativo materializado. Un valor alto indica mayor intensidad o posición relativa dentro de su universo de pares; no es probabilidad de LA/FT.</p>',true)}</div>${v18RankedPatterns(topPatterns)}</section>
+        </div>
+      </section>
+      <section class="v18-section">
+        <div class="v18-section-head"><div><span>EVOLUCIÓN</span><h2>Actividad sancionatoria en cinco años</h2></div><p>Una de las series temporales actualmente comparables con fecha de evento real.</p></div>
+        ${v17BarChart('Sanciones por año',sanctionTrend,'<p>Conteo exacto de eventos por <code>event_date</code>. La serie muestra actividad administrativa, no riesgo AML.</p>')}
+      </section>
+      <div class="v18-footnote">Principio de diseño v0.18: primero conclusión observable; luego evidencia y cálculo sólo si quieres auditarla.</div>`;
+    document.querySelectorAll('[data-view-shortcut]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.viewShortcut)));
+    document.querySelectorAll('[data-open-entity]').forEach(b=>b.addEventListener('click',()=>openEntity(b.dataset.openEntity)));
+  }catch(e){showContentError(e);}
+};
