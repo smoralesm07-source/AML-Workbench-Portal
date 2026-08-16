@@ -10,6 +10,8 @@ on:
       - 'v0191.css'
       - 'v0192-ux.js'
       - 'v0192.css'
+      - 'v0193-uaf.js'
+      - 'v0193.css'
       - 'index.html'
       - '.github/workflows/validate-v019.yml'
   workflow_dispatch:
@@ -26,9 +28,10 @@ jobs:
           node --check v0191-tuning.js
           node --check v0191-csp.js
           node --check v0192-ux.js
+          node --check v0193-uaf.js
       - name: Ensure no inline event handlers in v0.19
         run: |
-          if grep -E 'onclick=|onchange=|onmouseover=' v019-live.js v0191-tuning.js v0191-csp.js v0192-ux.js; then
+          if grep -E 'onclick=|onchange=|onmouseover=' v019-live.js v0191-tuning.js v0191-csp.js v0192-ux.js v0193-uaf.js; then
             echo 'Inline event handler found; incompatible with CSP.'
             exit 1
           fi
@@ -36,8 +39,10 @@ jobs:
         run: |
           grep -q 'v0191-csp.js' index.html
           grep -q 'v0192-ux.js' index.html
+          grep -q 'v0193-uaf.js' index.html
           grep -q 'v0192.css' index.html
-          if grep -E 'style=' v0191-csp.js v0192-ux.js; then
+          grep -q 'v0193.css' index.html
+          if grep -E 'style=' v0191-csp.js v0192-ux.js v0193-uaf.js; then
             echo 'Inline style found in CSP-safe renderer.'
             exit 1
           fi
