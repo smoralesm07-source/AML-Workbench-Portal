@@ -4,19 +4,20 @@ function v17ModeSelector() {
   </div>`;
 }
 
-function v17RenderFindingsPage(rows) {
+function v17RenderFindingsPage(rows, totalCount=V17_FINDINGS_TOTAL) {
   V17_FINDINGS_CACHE = rows || [];
+  V17_FINDINGS_TOTAL = Number(totalCount ?? V17_FINDINGS_CACHE.length);
   const mode = V17_MODE[V17_FINDING_MODE];
-  const sorted = [...V17_FINDINGS_CACHE].sort((a,b)=>(Number(b[mode.scoreField])||0)-(Number(a[mode.scoreField])||0));
+  const sorted = [...V17_FINDINGS_CACHE].sort((a,b)=>(v17HasNumber(b[mode.scoreField])?Number(b[mode.scoreField]):-Infinity)-(v17HasNumber(a[mode.scoreField])?Number(a[mode.scoreField]):-Infinity));
   content().innerHTML = `<div class="workbench-toolbar">
-      <div><h2>Qué merece revisión</h2><p>Ordena los mismos hallazgos según el objetivo analítico.</p></div>
-      <div class="toolbar-actions">${v17ModeSelector()}<button type="button" class="secondary compact-action" id="export-findings">Exportar vista CSV</button></div>
+      <div><h2>Qué merece revisión</h2><p>Mostrando ${fmtNum(V17_FINDINGS_CACHE.length)} de ${fmtNum(V17_FINDINGS_TOTAL)} hallazgo(s). Ordenados según el objetivo analítico.</p></div>
+      <div class="toolbar-actions">${v17ModeSelector()}<button type="button" class="secondary compact-action" id="export-findings">Exportar ${fmtNum(V17_FINDINGS_CACHE.length)} filas CSV</button></div>
     </div>
     <div class="mode-explanation">${esc(mode.purpose)} ${v17InfoButton('Ver fórmula de priorización', `<p>Los pesos para <strong>${esc(mode.label)}</strong> son:</p><ul>${Object.entries(mode.weights).map(([k,w])=>`<li>${esc(V17_FEATURE_LABELS[k]||k)}: <strong>${w}%</strong></li>`).join('')}</ul><div class="formula-box"><code>Prioridad = Σ(valor × peso) / Σ(pesos disponibles)</code></div>`, true)}</div>
     ${v17FindingCards(sorted,V17_FINDING_MODE,false)}`;
   document.querySelectorAll('[data-v17-mode]').forEach(btn=>btn.onclick=()=>{
     V17_FINDING_MODE = btn.dataset.v17Mode;
-    v17RenderFindingsPage(V17_FINDINGS_CACHE);
+    v17RenderFindingsPage(V17_FINDINGS_CACHE,V17_FINDINGS_TOTAL);
   });
   document.querySelector('#export-findings')?.addEventListener('click',()=>v17ExportFindings(sorted));
 }
@@ -53,10 +54,10 @@ async function v17ExportFindings(rows) {
 loadFindings = async function() {
   state.view='findings'; shell('Hallazgos','Señales priorizadas con cálculo reconstruible, evidencia y siguiente paso.');
   try {
-    const {data,error}=await sb.from('aml_findings')
-      .select('finding_key,finding_id,finding_type,entity_id,title,region,commune,score_explore,score_supervise,score_investigate,source_count,evidence_count,snapshot_id,updated_at,payload')
+    const {data,error,count}=await sb.from('aml_findings')
+      .select('finding_key,finding_id,finding_type,entity_id,title,region,commune,score_explore,score_supervise,score_investigate,source_count,evidence_count,snapshot_id,updated_at,payload',{count:'exact'})
       .order('score_investigate',{ascending:false,nullsFirst:false}).limit(100);
     if(error) throw error;
-    v17RenderFindingsPage(data||[]);
+    v17RenderFindingsPage(data||[],count||0);
   } catch(e) { showContentError(e); }
 };
