@@ -3,32 +3,24 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="robots" content="noindex,nofollow" />
+  <meta name="robots" content="noindex,nofollow,noarchive" />
   <meta name="referrer" content="no-referrer" />
-  <title>AML Analytical Workbench · Online Pilot</title>
-  <style>
-    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0f1720;color:#edf2f7}body{min-height:100vh;background:radial-gradient(circle at 20% 0%,#253244 0,#111820 42%,#0b1117 100%)}button{font:inherit}.screen{min-height:100vh;display:grid;place-items:center;padding:32px}.card{width:min(760px,100%);background:rgba(20,29,39,.94);border:1px solid rgba(255,255,255,.09);border-radius:24px;padding:34px;box-shadow:0 30px 80px rgba(0,0,0,.35)}.eyebrow{font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:#ffad66;font-weight:700}.card h1{font-size:42px;line-height:1.02;margin:12px 0 18px}.card p{color:#b8c2cc;line-height:1.65}.ms{margin-top:18px;border:0;border-radius:12px;padding:13px 18px;background:#f3f6f8;color:#111827;font-weight:750;cursor:pointer}.meta{margin-top:22px;padding:15px 17px;border-radius:14px;background:#111821;border:1px solid rgba(255,255,255,.08);color:#aab6c2;font-size:14px}.ok{color:#70d8a8}.warn{color:#ffc078}.row{display:flex;gap:12px;align-items:center;justify-content:space-between}.ghost{border:1px solid rgba(255,255,255,.15);background:transparent;color:#e6edf3;border-radius:10px;padding:9px 12px;cursor:pointer}.error{margin-top:15px;color:#ff9f9f}.pill{display:inline-flex;border-radius:999px;padding:6px 10px;background:#162331;color:#9dd5ff;font-size:12px;font-weight:700}@media(max-width:640px){.card{padding:24px}.card h1{font-size:34px}.row{align-items:flex-start;flex-direction:column}}
-  </style>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://ldmtlwzqaqmegedktlxr.supabase.co wss://ldmtlwzqaqmegedktlxr.supabase.co; style-src 'self'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'" />
+  <title>AML Analytical Workbench</title>
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-<main id="app"><section class="screen"><div class="card"><div class="eyebrow">Piloto privado · v0.14</div><h1>AML Analytical<br>Workbench</h1><p>Iniciando autenticación institucional…</p></div></section></main>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
-<script>
-const SUPABASE_URL='https://ldmtlwzqaqmegedktlxr.supabase.co';
-const SUPABASE_KEY='sb_publishable_Nu21dZFBM3NwtIvOwIM8ag_9tyfDJyR';
-const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-const app=document.querySelector('#app');
-const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const redirectTo='https://smoralesm07-source.github.io/AML-Workbench-Portal/';
-async function signIn(){const {error}=await sb.auth.signInWithOAuth({provider:'azure',options:{scopes:'email',redirectTo}});if(error)renderError(error.message)}
-async function signOut(){await sb.auth.signOut();location.href=redirectTo}
-function renderLogin(){app.innerHTML='<section class="screen"><div class="card"><div class="eyebrow">Piloto privado · v0.14</div><h1>AML Analytical<br>Workbench</h1><p>Acceso institucional mediante Microsoft Entra ID y Supabase Auth. Esta página no contiene datos Fusion ni claves privilegiadas.</p><button class="ms" id="login">Ingresar con Microsoft</button><div class="meta">Autenticarse en Microsoft no otorga acceso automático. PostgreSQL/RLS exige además habilitación explícita del usuario.</div></div></section>';document.querySelector('#login').onclick=signIn}
-function renderPending(user){app.innerHTML='<section class="screen"><div class="card"><div class="row"><span class="pill">Entra → Supabase OK</span><button class="ghost" id="logout">Cerrar sesión</button></div><div class="eyebrow" style="margin-top:28px">Autenticación correcta</div><h1>Acceso pendiente de habilitación</h1><p>Microsoft autenticó correctamente la cuenta institucional. Los datos permanecen cerrados por RLS hasta que el usuario sea incorporado a <strong>aml_allowed_users</strong>.</p><div class="meta"><span class="ok">✓ Sesión Supabase creada</span><br><span class="warn">● Autorización AML pendiente</span></div></div></section>';document.querySelector('#logout').onclick=signOut}
-function renderAuthorized(user,access){app.innerHTML='<section class="screen"><div class="card"><div class="row"><span class="pill">Acceso autorizado · '+esc(access.role)+'</span><button class="ghost" id="logout">Cerrar sesión</button></div><div class="eyebrow" style="margin-top:28px">v0.14 Online Pilot</div><h1>Autenticación y autorización operativas</h1><p>La cuenta institucional ya puede acceder al Workbench. La siguiente etapa activará Entity 360, findings, sanciones y patrones bajo RLS.</p><div class="meta"><span class="ok">✓ Entra ID</span><br><span class="ok">✓ Supabase Auth</span><br><span class="ok">✓ RLS / allowed_users</span></div></div></section>';document.querySelector('#logout').onclick=signOut}
-function renderError(m){app.innerHTML='<section class="screen"><div class="card"><div class="eyebrow">Error de autenticación</div><h1>No fue posible iniciar sesión</h1><p class="error">'+esc(m)+'</p><button class="ms" id="retry">Reintentar</button></div></section>';document.querySelector('#retry').onclick=signIn}
-async function boot(){const {data:{session},error}=await sb.auth.getSession();if(error)return renderError(error.message);if(!session)return renderLogin();const user=session.user;const {data:access,error:accessError}=await sb.from('aml_allowed_users').select('role,enabled').eq('user_id',user.id).maybeSingle();if(accessError||!access?.enabled)return renderPending(user);return renderAuthorized(user,access)}
-sb.auth.onAuthStateChange(event=>{if(event==='SIGNED_OUT')renderLogin()});
-boot();
-</script>
+  <main id="app">
+    <section class="auth-screen">
+      <div class="auth-card">
+        <div class="brand-mark">AML</div>
+        <div class="eyebrow">Analytical Workbench</div>
+        <h1>Iniciando sesión segura…</h1>
+        <p>Validando Microsoft Entra, Supabase Auth y autorización RLS.</p>
+      </div>
+    </section>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
