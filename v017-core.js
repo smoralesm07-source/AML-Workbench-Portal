@@ -10,6 +10,7 @@ const V17_INFO = new Map();
 let V17_INFO_SEQ = 0;
 let V17_FINDING_MODE = 'investigate';
 let V17_FINDINGS_CACHE = [];
+let V17_FINDINGS_TOTAL = 0;
 let V17_ENTITY_CACHE = null;
 
 const V17_MODE = {
@@ -88,6 +89,13 @@ const V17_PATTERN_LABELS = {
   SILENCIO_PERSISTENTE_ROS: 'Serie sectorial sin ROS agregados observados',
   CAPACIDAD_TEMPORAL_PARCIAL: 'Cobertura temporal incompleta'
 };
+
+function v17HasNumber(value) {
+  return value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
+}
+function v17FmtScore(value) {
+  return v17HasNumber(value) ? Number(value).toFixed(1) : '—';
+}
 
 const V17_PRODUCER_LABELS = {
   RADAR_SII: 'Servicio de Impuestos Internos',
@@ -177,7 +185,7 @@ function v17ScoreExplanation(f, modeKey='investigate') {
   const p = f.payload || {};
   const features = p.decision_features || {};
   const facts = p.decision_facts || {};
-  const keys = Object.keys(mode.weights).filter(k => Number.isFinite(Number(features[k])));
+  const keys = Object.keys(mode.weights).filter(k => v17HasNumber(features[k]));
   if (!keys.length) {
     return `<div class="explain-callout">Este registro no contiene el desglose necesario para reconstruir el cálculo. El puntaje se muestra sólo cuando viene materializado desde Fusion.</div>`;
   }
@@ -193,7 +201,7 @@ function v17ScoreExplanation(f, modeKey='investigate') {
   const raw = keys.map(k => `<details class="formula-detail"><summary>${esc(V17_FEATURE_LABELS[k] || k)}</summary><p>${esc(k==='rule_strength' ? v17RuleStrengthFormula(f) : v17FeatureFormula(k,facts))}</p></details>`).join('');
   return `<div class="formula-summary">
     <div><span>Qué representa</span><strong>Prioridad para ${esc(mode.label.toLowerCase())}</strong></div>
-    <div><span>Resultado materializado</span><strong>${fmtScore(f[mode.scoreField])}/100</strong></div>
+    <div><span>Resultado materializado</span><strong>${v17FmtScore(f[mode.scoreField])}/100</strong></div>
     <div><span>Resultado reconstruido</span><strong>${reconstructed.toFixed(1)}/100</strong></div>
   </div>
   <p class="plain-note">${esc(mode.purpose)} No es probabilidad de delito, LA/FT o incumplimiento.</p>
