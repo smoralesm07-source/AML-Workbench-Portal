@@ -40,7 +40,8 @@ v16RenderEntity = function(e,findings,sanctions,directPatterns,tax,sector,report
   const profile=e.profile||{};
   const obliged=e.is_uaf_observed||profile.contexto?.sujeto_obligado===true||(profile.roles||[]).includes('OBLIGED_ENTITY');
   const evidenceCount=findings.reduce((a,r)=>a+Number(r.evidence_count||0),0);
-  const maxInvestigate = findings.length ? Math.max(...findings.map(x=>Number(x.score_investigate)||0)) : null;
+  const validInvestigate = findings.map(x=>x.score_investigate).filter(v17HasNumber).map(Number);
+  const maxInvestigate = validInvestigate.length ? Math.max(...validInvestigate) : null;
   const priorityBand = v17PriorityBand(maxInvestigate);
   const identityInfo = `<p><strong>Método:</strong> ${esc(profile.identity_method_es||'Identidad Fusion')}</p><p><strong>Confianza:</strong> ${profile.identity_confidence!=null?Math.round(Number(profile.identity_confidence)*100)+'%':'No informada'}</p><p>La confianza describe calidad de vinculación de identidad; no es riesgo AML.</p>`;
   content().innerHTML=`<div class="entity-command">
@@ -49,7 +50,7 @@ v16RenderEntity = function(e,findings,sanctions,directPatterns,tax,sector,report
     </div>
     <div class="entity-hero">
       <div><div class="eyebrow">${esc(profile.tipo_entidad_es||e.entity_type||'Entidad')}</div><h2>${esc(e.name)}</h2><div class="mono small muted">${esc(e.entity_id)}</div></div>
-      <div class="entity-priority"><span>Mayor prioridad para investigar</span><strong>${maxInvestigate==null?'—':fmtScore(maxInvestigate)}</strong><small>${esc(priorityBand.label)}</small></div>
+      <div class="entity-priority"><span>Mayor prioridad para investigar</span><strong>${maxInvestigate==null?'—':v17FmtScore(maxInvestigate)}</strong><small>${esc(priorityBand.label)}</small></div>
     </div>
     <div class="detail-core">
       ${v16Datum('RUT',e.rut)}
