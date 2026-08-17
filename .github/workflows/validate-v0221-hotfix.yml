@@ -12,6 +12,7 @@ on:
       - 'v026-territory-causal-profile.js'
       - 'v026-territory-profile-legend.js'
       - 'v027-model-consistency.js'
+      - 'v027-source-null-hardening.js'
       - 'index.html'
       - '.github/workflows/validate-v0221-hotfix.yml'
   push:
@@ -27,6 +28,7 @@ on:
       - 'v026-territory-causal-profile.js'
       - 'v026-territory-profile-legend.js'
       - 'v027-model-consistency.js'
+      - 'v027-source-null-hardening.js'
       - 'index.html'
       - '.github/workflows/validate-v0221-hotfix.yml'
   workflow_dispatch:
@@ -49,18 +51,22 @@ jobs:
           node --check v026-territory-causal-profile.js
           node --check v026-territory-profile-legend.js
           node --check v027-model-consistency.js
+          node --check v027-source-null-hardening.js
       - name: Wiring and hardening
         run: |
           grep -q 'AML Analytical Workbench · v0.27.0' index.html
           grep -q 'v027-model-consistency.js?b=0270' index.html
+          grep -q 'v027-source-null-hardening.js?b=0270' index.html
           grep -q "V027_GEO_METHOD='GEO-RISK-B-0.27.0'" v027-model-consistency.js
           grep -q "V027_IPA_SCORE_VERSION='0.4-shadow'" v027-model-consistency.js
           grep -q "V027_IPA_REGION_VIEW='aml_v026_geo_ipa_region'" v027-model-consistency.js
           grep -q 'MISSING_IS_NOT_ZERO_STRICT' v027-model-consistency.js
           grep -q 'NO_SII_PROFILE_TECHNICAL_ONLY' v027-model-consistency.js
           grep -q 'CORRELATED_GROUP_NOT_ADDITIVE' v027-model-consistency.js
+          grep -q 'a.positive_trend=a.yoy_pct===null?null' v027-source-null-hardening.js
+          grep -q 'const s=v027Number(f.aml_score)' v027-source-null-hardening.js
           grep -q "window.__AML_ACTIVE_VERSION__=V027" v027-model-consistency.js
-          if grep -E 'onclick=|onchange=|style=' v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js v0241-reconciliation-restore.js v025-territory-ipa.js v025-territory-ipa-hardening.js v026-territory-causal-profile.js v026-territory-profile-legend.js v027-model-consistency.js; then
+          if grep -E 'onclick=|onchange=|style=' v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js v0241-reconciliation-restore.js v025-territory-ipa.js v025-territory-ipa-hardening.js v026-territory-causal-profile.js v026-territory-profile-legend.js v027-model-consistency.js v027-source-null-hardening.js; then
             echo 'CSP-incompatible inline handler/style found'
             exit 1
           fi
