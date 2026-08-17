@@ -1,4 +1,4 @@
-name: Validate v0.25.0
+name: Validate v0.26.0
 on:
   push:
     branches: [main]
@@ -43,35 +43,39 @@ jobs:
           PY
       - name: Ensure no inline event handlers in active renderer layers
         run: |
-          ACTIVE='v019-live.js v0191-tuning.js v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js v022-territory-risk.js v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js v0241-reconciliation-restore.js v025-territory-ipa.js v025-territory-ipa-hardening.js'
+          ACTIVE='v019-live.js v0191-tuning.js v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js v022-territory-risk.js v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js v0241-reconciliation-restore.js v025-territory-ipa.js v025-territory-ipa-hardening.js v026-territory-causal-profile.js v026-territory-profile-legend.js'
           if grep -E 'onclick=|onchange=|onmouseover=' $ACTIVE; then
             echo 'Inline event handler found; incompatible with CSP.'
             exit 1
           fi
-      - name: Validate atomic v0.25.0 startup
+      - name: Validate atomic v0.26.0 startup
         run: |
           python - <<'PY'
           from pathlib import Path
           html=Path('index.html').read_text(encoding='utf-8')
-          assert 'AML Analytical Workbench · v0.25.0' in html
+          assert 'AML Analytical Workbench · v0.26.0' in html
           for asset in [
-              'v0211-bootstrap.js?b=0250',
-              'v022-territory-risk.css?b=0250',
-              'v022-territory-risk.js?b=0250',
-              'v0221-hotfix.js?b=0250',
-              'v0222-radar-hotfix.js?b=0250',
-              'v023-ipa3-shadow.css?b=0250',
-              'v023-ipa3-shadow.js?b=0250',
-              'v024-dashboard-feedback.css?b=0250',
-              'v024-dashboard-feedback.js?b=0250',
-              'v0241-reconciliation-restore.css?b=0250',
-              'v0241-reconciliation-restore.js?b=0250',
-              'v025-territory-ipa.css?b=0250',
-              'v025-territory-ipa.js?b=0250',
-              'v025-territory-ipa-hardening.js?b=0250']:
+              'v0211-bootstrap.js?b=0260',
+              'v022-territory-risk.css?b=0260',
+              'v022-territory-risk.js?b=0260',
+              'v0221-hotfix.js?b=0260',
+              'v0222-radar-hotfix.js?b=0260',
+              'v023-ipa3-shadow.css?b=0260',
+              'v023-ipa3-shadow.js?b=0260',
+              'v024-dashboard-feedback.css?b=0260',
+              'v024-dashboard-feedback.js?b=0260',
+              'v0241-reconciliation-restore.css?b=0260',
+              'v0241-reconciliation-restore.js?b=0260',
+              'v025-territory-ipa.css?b=0260',
+              'v025-territory-ipa.js?b=0260',
+              'v025-territory-ipa-hardening.js?b=0260',
+              'v026-territory-causal-profile.css?b=0260',
+              'v026-territory-causal-profile.js?b=0260',
+              'v026-territory-profile-legend.js?b=0260']:
               assert asset in html, asset
-          assert html.rfind('v025-territory-ipa-hardening.js?b=0250') > html.rfind('v025-territory-ipa.js?b=0250') > html.rfind('v0241-reconciliation-restore.js?b=0250') > html.rfind('v024-dashboard-feedback.js?b=0250')
-          assert '?b=0241' not in html and '?b=0240' not in html and '?b=0230' not in html and '?b=0222' not in html and '?b=0211' not in html
+          assert html.rfind('v026-territory-profile-legend.js?b=0260') > html.rfind('v026-territory-causal-profile.js?b=0260') > html.rfind('v025-territory-ipa-hardening.js?b=0260') > html.rfind('v025-territory-ipa.js?b=0260') > html.rfind('v0241-reconciliation-restore.js?b=0260')
+          for stale in ['?b=0250','?b=0241','?b=0240','?b=0230','?b=0222','?b=0211']:
+              assert stale not in html, stale
           geo=Path('v022-territory-risk.js').read_text(encoding='utf-8')
           tfix=Path('v0221-hotfix.js').read_text(encoding='utf-8')
           rfix=Path('v0222-radar-hotfix.js').read_text(encoding='utf-8')
@@ -80,6 +84,8 @@ jobs:
           recon=Path('v0241-reconciliation-restore.js').read_text(encoding='utf-8')
           terr=Path('v025-territory-ipa.js').read_text(encoding='utf-8')
           hard=Path('v025-territory-ipa-hardening.js').read_text(encoding='utf-8')
+          profile=Path('v026-territory-causal-profile.js').read_text(encoding='utf-8')
+          legend=Path('v026-territory-profile-legend.js').read_text(encoding='utf-8')
           assert 'GEO-RISK-0.22.0' in geo
           assert 'MISSING_IS_NOT_ZERO' in geo
           assert 'PROVISIONAL_NO_APTO' in geo
@@ -106,27 +112,37 @@ jobs:
           assert 'v025MarkTitle' in terr and 'title="${esc(title)}"' in terr
           assert 'v025StrictPercentile' in hard
           assert 'x.v!==null&&x.v!==undefined' in hard
-          assert "window.__AML_ACTIVE_VERSION__=V025" in terr
+          assert "V026_METHOD_VERSION='GEO-RISK-B-0.26.0'" in profile
+          assert "V026_PROFILE_VERSION='TERRITORIAL-EXPLANATORY-PROFILE-1.0'" in profile
+          assert "V022_LAYERS.profile={label:'Perfil conductor',kind:'explain'}" in profile
+          assert "code='EVIDENCIA_INSUFICIENTE'" in profile
+          assert "code='MULTIFUENTE'" in profile
+          assert "code='MIXTO'" in profile
+          assert 'EXPLANATORY_PROFILE_IS_NOT_CAUSAL_INFERENCE' in profile
+          assert "window.__AML_ACTIVE_VERSION__=V026" in profile
+          assert 'Clasificación categórica · no escala 0–100' in legend
+          assert 'no representa una intensidad adicional' in legend
           method=Path('docs/geographic-risk-methodology-v2.md').read_text(encoding='utf-8')
           assert 'GEO-RISK-B-0.25.0' in method
           assert '15,00%' in method
-          assert 'MISSING_IS_NOT_ZERO' in method
+          profile_doc=Path('docs/geographic-risk-explanatory-profile-v1.md').read_text(encoding='utf-8')
+          assert 'TERRITORIAL-EXPLANATORY-PROFILE-1.0' in profile_doc
+          assert 'No se realiza inferencia causal estadística' in profile_doc
+          assert 'MISSING_IS_NOT_ZERO' in profile_doc
           PY
       - name: Ensure CSP-safe active layers
         run: |
           grep -q 'v0210-reconciliation-analysis.js' index.html
           grep -q 'v022-territory-risk.js' index.html
-          grep -q 'v0221-hotfix.js' index.html
-          grep -q 'v0222-radar-hotfix.js' index.html
           grep -q 'v023-ipa3-shadow.js' index.html
-          grep -q 'v024-dashboard-feedback.js' index.html
           grep -q 'v0241-reconciliation-restore.js' index.html
-          grep -q 'v025-territory-ipa.js' index.html
           grep -q 'v025-territory-ipa-hardening.js' index.html
+          grep -q 'v026-territory-causal-profile.js' index.html
+          grep -q 'v026-territory-profile-legend.js' index.html
           grep -q 'VALIDATED_RULE' v022-territory-risk.js
-          grep -q 'Percentil robusto' v022-territory-risk.js
           grep -q 'Context Hub' docs/geographic-risk-methodology-v2.md
-          if grep -E 'style=' v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js v022-territory-risk.js v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js v0241-reconciliation-restore.js v025-territory-ipa.js v025-territory-ipa-hardening.js; then
+          grep -q 'Perfil conductor' v026-territory-causal-profile.js
+          if grep -E 'style=' v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js v022-territory-risk.js v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js v0241-reconciliation-restore.js v025-territory-ipa.js v025-territory-ipa-hardening.js v026-territory-causal-profile.js v026-territory-profile-legend.js; then
             echo 'Inline style found in CSP-safe renderer.'
             exit 1
           fi
