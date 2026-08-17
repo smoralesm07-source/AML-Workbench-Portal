@@ -84,7 +84,7 @@ v0203UafMonitor=function(core,uaf){
   const end=html.indexOf('<div class="v0203-uaf-grid">',start);
   if(start<0||end<0)return html;
   const replacement=`<div class="v0205-recon-kpis v0209-recon-kpis">
-    <button type="button" data-v0205-recon-open="all"><span>SO inscritos UAF</span><b>${v019Fmt(total)}</b><small>universo completo →</small></button>
+    <button type="button" data-home-view="uaf"><span>SO inscritos UAF</span><b>${v019Fmt(total)}</b><small>universo total · abrir inteligencia UAF →</small></button>
     <button type="button" class="matched" data-v0205-recon-open="matched"><span>Con cruce SII disponible</span><b>${v019Fmt(matched)}</b><small>cobertura técnica · no señal</small></button>
     <button type="button" class="terminated" data-v0205-recon-open="terminated"><span>Término de giro en SII</span><b data-v0205-home-terminated>…</b><small>revisar vigencia UAF →</small></button>
   </div><div class="v0205-recon-context v0209-recon-context"><span><b>${v019Fmt(three)}</b> SO con 3+ fuentes</span><span><b>${v019Fmt(sanctioned)}</b> SO con sanciones</span><button type="button" data-v0205-recon-open="terminated">Revisar conciliación UAF ↔ SII →</button></div><div class="v0209-method-inline">Los SO sin perfil SII quedan fuera del análisis comparativo y no se consideran hallazgo. El upstream SII está orientado a personas jurídicas y UAF no entrega hoy una clasificación PN/PJ suficientemente trazable para imputar la ausencia.</div>`;
@@ -96,6 +96,7 @@ function v0209ComparableCoverage(c){
 }
 async function v0209TransformReconciliation(){
   const c=await v0205LoadCounts();
+  document.querySelector('[data-v0205-filter="all"]')?.remove();
   document.querySelector('[data-v0205-filter="unmatched"]')?.remove();
   const hero=document.querySelector('.v0205-hero');
   if(hero){
@@ -110,10 +111,12 @@ async function v0209TransformReconciliation(){
   }
   const coverage=document.querySelector('.v0205-coverage');if(coverage)coverage.outerHTML=v0209ComparableCoverage(c);
   const note=document.querySelector('.v0205-method-note');if(note)note.innerHTML='<b>Criterio de comparabilidad:</b> esta vista no intenta clasificar como persona natural a quien no aparece en Radar SII. Los estados sin perfil SII permanecen técnicamente disponibles en backend, pero se excluyen del monitoreo y de las prioridades hasta contar con una clasificación PN/PJ independiente y trazable.';
-  const listTitle=document.querySelector('#v0205-list-title');if(listTitle&&V0205_STATE.filter==='terminated')listTitle.textContent='SO UAF con término de giro publicado en SII';
+  const listTitle=document.querySelector('#v0205-list-title');
+  if(listTitle&&V0205_STATE.filter==='terminated')listTitle.textContent='SO UAF con término de giro publicado en SII';
+  if(listTitle&&V0205_STATE.filter==='matched')listTitle.textContent='SO UAF con cruce SII disponible';
 }
 v0205LoadReconciliation=async function(filter='terminated',initialSearch=''){
-  const safeFilter=(filter==='review'||filter==='unmatched')?'terminated':filter;
+  const safeFilter=filter==='all'?'matched':((filter==='review'||filter==='unmatched')?'terminated':filter);
   await v0209BaseReconciliation(safeFilter,initialSearch);
   try{await v0209TransformReconciliation();}catch{}
 };
