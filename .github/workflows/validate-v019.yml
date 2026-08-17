@@ -1,4 +1,4 @@
-name: Validate v0.20.7
+name: Validate v0.20.8
 on:
   push:
     branches: [main]
@@ -115,6 +115,8 @@ jobs:
           grep -q 'v0207-freshness.css' index.html
           grep -q 'Radar_UAF/data' v0207-freshness.js
           grep -q 'Radar_SII/data/snapshot_manifest.json' v0207-freshness.js
+          grep -q "aml_sync_state" v0207-freshness.js
+          grep -q '0.20.8' index.html
           if grep -E 'style=' v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js; then
             echo 'Inline style found in CSP-safe renderer.'
             exit 1
