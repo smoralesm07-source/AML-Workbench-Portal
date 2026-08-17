@@ -1,0 +1,34 @@
+name: Validate v0.22.1 hotfix
+on:
+  pull_request:
+    paths:
+      - 'v0221-hotfix.js'
+      - 'index.html'
+      - '.github/workflows/validate-v0221-hotfix.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'v0221-hotfix.js'
+      - 'index.html'
+      - '.github/workflows/validate-v0221-hotfix.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax
+        run: node --check v0221-hotfix.js
+      - name: Wiring
+        run: |
+          grep -q 'AML Analytical Workbench · v0.22.1' index.html
+          grep -q 'v022-territory-risk.js?b=0221' index.html
+          grep -q 'v0221-hotfix.js?b=0221' index.html
+          grep -q "Promise.allSettled(dbSpecs.map" v0221-hotfix.js
+          grep -q "window.__AML_ACTIVE_VERSION__=V0221" v0221-hotfix.js
+          if grep -E 'onclick=|onchange=|style=' v0221-hotfix.js; then
+            echo 'CSP-incompatible inline handler/style found'
+            exit 1
+          fi
