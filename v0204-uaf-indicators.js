@@ -40,7 +40,7 @@ function v0204Meta(kind,rows,uaf){
     title:'Sectores con ROS bajos frente a sus pares',
     value:n,
     secondary:`${v019Fmt(so)} SO inscritos en esos sectores`,
-    meaning:`Su intensidad de ROS por cada 100 SO está en el 25% inferior entre sectores comparables con al menos 10 SO.`,
+    meaning:'Su intensidad de ROS por cada 100 SO está en el 25% inferior entre sectores comparables con al menos 10 SO.',
     drawerTitle:'Sectores en el 25% inferior de intensidad ROS',
     guard:`La comparación es relativa entre sectores comparables. El umbral Q1 actual es ${v019Fmt(uaf?.q1,2)} ROS por cada 100 SO y no constituye un mínimo normativo.`,
     tone:'low'
@@ -67,7 +67,7 @@ function v0204Indicator(kind,uaf){
 }
 
 function v0204SectorRow(row,kind){
-  const delta=Number(row.delta_ros_2025_vs_2024_pct),flags=v0193Flags(row,{...window.V0193_UAF_CACHE,q1:window.V0193_UAF_CACHE?.q1});
+  const delta=Number(row.delta_ros_2025_vs_2024_pct);
   let main='';
   if(kind==='silence')main='0 ROS acumulados en 2021–2025';
   else if(kind==='low')main=`${v019Fmt(row.ros_per_100_so_2025,2)} ROS por cada 100 SO`;
