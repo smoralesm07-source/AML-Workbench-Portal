@@ -1,4 +1,4 @@
-name: Validate v0.23.0 IPA3 shadow
+name: Validate v0.24.0 dashboard feedback
 on:
   pull_request:
     paths:
@@ -6,6 +6,8 @@ on:
       - 'v0222-radar-hotfix.js'
       - 'v023-ipa3-shadow.js'
       - 'v023-ipa3-shadow.css'
+      - 'v024-dashboard-feedback.js'
+      - 'v024-dashboard-feedback.css'
       - 'index.html'
       - '.github/workflows/validate-v0221-hotfix.yml'
   push:
@@ -15,6 +17,8 @@ on:
       - 'v0222-radar-hotfix.js'
       - 'v023-ipa3-shadow.js'
       - 'v023-ipa3-shadow.css'
+      - 'v024-dashboard-feedback.js'
+      - 'v024-dashboard-feedback.css'
       - 'index.html'
       - '.github/workflows/validate-v0221-hotfix.yml'
   workflow_dispatch:
@@ -30,22 +34,26 @@ jobs:
           node --check v0221-hotfix.js
           node --check v0222-radar-hotfix.js
           node --check v023-ipa3-shadow.js
+          node --check v024-dashboard-feedback.js
       - name: Wiring
         run: |
-          grep -q 'AML Analytical Workbench · v0.23.0' index.html
-          grep -q 'v022-territory-risk.js?b=0230' index.html
-          grep -q 'v0222-radar-hotfix.js?b=0230' index.html
-          grep -q 'v023-ipa3-shadow.css?b=0230' index.html
-          grep -q 'v023-ipa3-shadow.js?b=0230' index.html
-          grep -q "V023_SCORE_VIEW='aml_v_ipa3_entity_score_v0_3'" v023-ipa3-shadow.js
-          grep -q "V023_MARK_VIEW='aml_v_ipa3_mark_scores_v0_3'" v023-ipa3-shadow.js
-          grep -q 'experimental · no probabilidad LA/FT' v023-ipa3-shadow.js
-          grep -q 'window.__AML_ACTIVE_VERSION__=V023' v023-ipa3-shadow.js
-          if grep -E 'onclick=|onchange=|style=' v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js; then
+          grep -q 'AML Analytical Workbench · v0.24.0' index.html
+          grep -q 'v022-territory-risk.js?b=0240' index.html
+          grep -q 'v0222-radar-hotfix.js?b=0240' index.html
+          grep -q 'v023-ipa3-shadow.css?b=0240' index.html
+          grep -q 'v023-ipa3-shadow.js?b=0240' index.html
+          grep -q 'v024-dashboard-feedback.css?b=0240' index.html
+          grep -q 'v024-dashboard-feedback.js?b=0240' index.html
+          grep -q "V024_CROSS_VIEW='aml_v024_uaf_cross_entity'" v024-dashboard-feedback.js
+          grep -q 'data-v024-cross' v024-dashboard-feedback.js
+          grep -q 'data-v024-ros-year' v024-dashboard-feedback.js
+          grep -q 'data-v024-sanction-year' v024-dashboard-feedback.js
+          grep -q 'window.__AML_ACTIVE_VERSION__=V024' v024-dashboard-feedback.js
+          if grep -E 'onclick=|onchange=|style=' v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js; then
             echo 'CSP-incompatible inline handler/style found'
             exit 1
           fi
-          if grep -E '\?b=(0211|0222)' index.html; then
+          if grep -E '\?b=(0211|0222|0230)' index.html; then
             echo 'Stale asset cache-bust found'
             exit 1
           fi
