@@ -1,4 +1,4 @@
-name: Validate v0.24.1 reconciliation restore
+name: Validate v0.25.0 active overlays
 on:
   pull_request:
     paths:
@@ -10,6 +10,9 @@ on:
       - 'v024-dashboard-feedback.css'
       - 'v0241-reconciliation-restore.js'
       - 'v0241-reconciliation-restore.css'
+      - 'v025-territory-ipa.js'
+      - 'v025-territory-ipa.css'
+      - 'v025-territory-ipa-hardening.js'
       - 'index.html'
       - '.github/workflows/validate-v0221-hotfix.yml'
   push:
@@ -23,6 +26,9 @@ on:
       - 'v024-dashboard-feedback.css'
       - 'v0241-reconciliation-restore.js'
       - 'v0241-reconciliation-restore.css'
+      - 'v025-territory-ipa.js'
+      - 'v025-territory-ipa.css'
+      - 'v025-territory-ipa-hardening.js'
       - 'index.html'
       - '.github/workflows/validate-v0221-hotfix.yml'
   workflow_dispatch:
@@ -40,17 +46,22 @@ jobs:
           node --check v023-ipa3-shadow.js
           node --check v024-dashboard-feedback.js
           node --check v0241-reconciliation-restore.js
+          node --check v025-territory-ipa.js
+          node --check v025-territory-ipa-hardening.js
       - name: Wiring
         run: |
-          grep -q 'AML Analytical Workbench · v0.24.1' index.html
-          grep -q 'v022-territory-risk.js?b=0241' index.html
-          grep -q 'v0222-radar-hotfix.js?b=0241' index.html
-          grep -q 'v023-ipa3-shadow.css?b=0241' index.html
-          grep -q 'v023-ipa3-shadow.js?b=0241' index.html
-          grep -q 'v024-dashboard-feedback.css?b=0241' index.html
-          grep -q 'v024-dashboard-feedback.js?b=0241' index.html
-          grep -q 'v0241-reconciliation-restore.css?b=0241' index.html
-          grep -q 'v0241-reconciliation-restore.js?b=0241' index.html
+          grep -q 'AML Analytical Workbench · v0.25.0' index.html
+          grep -q 'v022-territory-risk.js?b=0250' index.html
+          grep -q 'v0222-radar-hotfix.js?b=0250' index.html
+          grep -q 'v023-ipa3-shadow.css?b=0250' index.html
+          grep -q 'v023-ipa3-shadow.js?b=0250' index.html
+          grep -q 'v024-dashboard-feedback.css?b=0250' index.html
+          grep -q 'v024-dashboard-feedback.js?b=0250' index.html
+          grep -q 'v0241-reconciliation-restore.css?b=0250' index.html
+          grep -q 'v0241-reconciliation-restore.js?b=0250' index.html
+          grep -q 'v025-territory-ipa.css?b=0250' index.html
+          grep -q 'v025-territory-ipa.js?b=0250' index.html
+          grep -q 'v025-territory-ipa-hardening.js?b=0250' index.html
           grep -q "V024_CROSS_VIEW='aml_v024_uaf_cross_entity'" v024-dashboard-feedback.js
           grep -q 'data-v024-cross' v024-dashboard-feedback.js
           grep -q 'data-v024-ros-year' v024-dashboard-feedback.js
@@ -59,11 +70,16 @@ jobs:
           grep -q 'data-v0241-recon="matched"' v0241-reconciliation-restore.js
           grep -q 'data-v0241-recon="terminated"' v0241-reconciliation-restore.js
           grep -q 'window.__AML_ACTIVE_VERSION__=V0241' v0241-reconciliation-restore.js
-          if grep -E 'onclick=|onchange=|style=' v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js v0241-reconciliation-restore.js; then
+          grep -q "V025_IPA_VIEW='aml_v023_geo_ipa_region'" v025-territory-ipa.js
+          grep -q 'ipa:15' v025-territory-ipa.js
+          grep -q 'v025MarkTitle' v025-territory-ipa.js
+          grep -q 'v025StrictPercentile' v025-territory-ipa-hardening.js
+          grep -q 'window.__AML_ACTIVE_VERSION__=V025' v025-territory-ipa.js
+          if grep -E 'onclick=|onchange=|style=' v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js v0241-reconciliation-restore.js v025-territory-ipa.js v025-territory-ipa-hardening.js; then
             echo 'CSP-incompatible inline handler/style found'
             exit 1
           fi
-          if grep -E '\?b=(0211|0222|0230|0240)' index.html; then
+          if grep -E '\?b=(0211|0222|0230|0240|0241)' index.html; then
             echo 'Stale asset cache-bust found'
             exit 1
           fi
