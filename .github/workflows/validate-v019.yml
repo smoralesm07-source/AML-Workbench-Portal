@@ -41,7 +41,7 @@ jobs:
           PY
       - name: Ensure no inline event handlers in active renderer layers
         run: |
-          ACTIVE='v019-live.js v0191-tuning.js v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js v022-territory-risk.js v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js v0241-reconciliation-restore.js v025-territory-ipa.js v025-territory-ipa-hardening.js v026-territory-causal-profile.js v026-territory-profile-legend.js v027-model-consistency.js'
+          ACTIVE='v019-live.js v0191-tuning.js v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js v022-territory-risk.js v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js v0241-reconciliation-restore.js v025-territory-ipa.js v025-territory-ipa-hardening.js v026-territory-causal-profile.js v026-territory-profile-legend.js v027-model-consistency.js v027-source-null-hardening.js'
           if grep -E 'onclick=|onchange=|onmouseover=' $ACTIVE; then
             echo 'Inline event handler found; incompatible with CSP.'
             exit 1
@@ -56,11 +56,12 @@ jobs:
             'v0211-bootstrap.js?b=0270','v022-territory-risk.js?b=0270','v023-ipa3-shadow.js?b=0270',
             'v0241-reconciliation-restore.js?b=0270','v025-territory-ipa.js?b=0270',
             'v025-territory-ipa-hardening.js?b=0270','v026-territory-causal-profile.js?b=0270',
-            'v026-territory-profile-legend.js?b=0270','v027-model-consistency.js?b=0270']
+            'v026-territory-profile-legend.js?b=0270','v027-model-consistency.js?b=0270','v027-source-null-hardening.js?b=0270']
           for asset in required: assert asset in html, asset
-          assert html.rfind('v027-model-consistency.js?b=0270') > html.rfind('v026-territory-profile-legend.js?b=0270')
+          assert html.rfind('v027-source-null-hardening.js?b=0270') > html.rfind('v027-model-consistency.js?b=0270') > html.rfind('v026-territory-profile-legend.js?b=0270')
           assert '?b=0260' not in html
           v=Path('v027-model-consistency.js').read_text(encoding='utf-8')
+          src=Path('v027-source-null-hardening.js').read_text(encoding='utf-8')
           assert "V027='0.27.0'" in v
           assert "V027_GEO_METHOD='GEO-RISK-B-0.27.0'" in v
           assert "V027_IPA_SCORE_VERSION='0.4-shadow'" in v
@@ -70,14 +71,17 @@ jobs:
           assert "V027_IPA_COMPARE_VIEW='aml_v_ipa3_compare_ipa2_v0_4'" in v
           assert 'MISSING_IS_NOT_ZERO_STRICT' in v
           assert 'NO_SII_PROFILE_TECHNICAL_ONLY' in v
-          assert "cross:8.5,ipa:15" in v
-          assert 'context:8.5' not in v
+          assert "cross:8.5,ipa:15" in v and 'context:8.5' not in v
           assert "['sector','cead','budget','cgr','cross','ipa']" in v
           assert "readiness==='ABSORBED_BY_COMPOSITE'" in v
           assert "readiness==='CORRELATED_GROUP_NOT_ADDITIVE'" in v
           assert 'v027ReconciliationFilter' in v
           assert "window.__AML_ACTIVE_VERSION__=V027" in v
-          # Historical contracts remain present underneath the hardening layer.
+          assert 'a.positive_trend=a.yoy_pct===null?null' in src
+          assert 'const s=v027Number(f.aml_score)' in src
+          assert 'avg_priority:v027Number(r.avg_investigation_priority)' in src
+          assert 'v022Weighted({p1:a.p1_pct,signal:a.signal_pct,priority:a.priority_pct}' in src
+          assert 'v022Weighted({findings:a.finding_pct,aml:a.aml_pct,high:a.high_pct}' in src
           geo=Path('v022-territory-risk.js').read_text(encoding='utf-8')
           ipa=Path('v023-ipa3-shadow.js').read_text(encoding='utf-8')
           profile=Path('v026-territory-causal-profile.js').read_text(encoding='utf-8')
@@ -88,9 +92,9 @@ jobs:
           PY
       - name: Ensure CSP-safe active layers
         run: |
-          grep -q 'v027-model-consistency.js' index.html
+          grep -q 'v027-source-null-hardening.js' index.html
           grep -q 'VALIDATED_RULE' v022-territory-risk.js
-          if grep -E 'style=' v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js v022-territory-risk.js v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js v0241-reconciliation-restore.js v025-territory-ipa.js v025-territory-ipa-hardening.js v026-territory-causal-profile.js v026-territory-profile-legend.js v027-model-consistency.js; then
+          if grep -E 'style=' v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js v022-territory-risk.js v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js v0241-reconciliation-restore.js v025-territory-ipa.js v025-territory-ipa-hardening.js v026-territory-causal-profile.js v026-territory-profile-legend.js v027-model-consistency.js v027-source-null-hardening.js; then
             echo 'Inline style found in CSP-safe renderer.'
             exit 1
           fi
