@@ -1,4 +1,6 @@
-/* AML Workbench v0.21.1 · startup masking and stable version label */
+/* AML Workbench legacy startup masking.
+ * This layer MUST NOT own or hardcode the active application version.
+ * The final runtime bootstrap writes the visible version label.
+ */
 body:not(.aml-runtime-ready) .shell{visibility:hidden}
-.v019-brand small{font-size:0!important;line-height:1.35;min-height:14px;display:block}
-.v019-brand small::after{content:'Operational Radar · v0.21.1';font-size:10.5px;font-weight:750;letter-spacing:.02em;white-space:nowrap}
+.v019-brand small{font-size:10.5px!important;line-height:1.35;min-height:14px;display:block;font-weight:750;letter-spacing:.02em;white-space:nowrap}
