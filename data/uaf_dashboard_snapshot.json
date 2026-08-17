@@ -1,0 +1,20 @@
+{
+  "version":"0.2.0-local-snapshot",
+  "generated_at":"2026-08-17T10:00:55+00:00",
+  "kpis":{
+    "registered_private_latest":9782,
+    "registered_private_as_of":"2026-06-30",
+    "registered_public_latest":512,
+    "registered_public_as_of":"2026-06-30",
+    "registered_total_latest":10294,
+    "registered_total_as_of":"2026-06-30",
+    "ros_latest":21828,
+    "ros_latest_as_of":"2025-12-31",
+    "roe_latest":1620219,
+    "roe_latest_as_of":"2025-12-31",
+    "supervision_latest":172,
+    "supervision_latest_as_of":"2025-12-31"
+  },
+  "source":"Radar_UAF/docs/data/dashboard.json",
+  "guardrail":"Snapshot local para disponibilidad del front-end; la fuente maestra sigue siendo Radar_UAF."
+}
