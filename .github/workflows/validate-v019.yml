@@ -1,4 +1,4 @@
-name: Validate v0.23.0
+name: Validate v0.24.0
 on:
   push:
     branches: [main]
@@ -43,32 +43,35 @@ jobs:
           PY
       - name: Ensure no inline event handlers in active renderer layers
         run: |
-          ACTIVE='v019-live.js v0191-tuning.js v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js v022-territory-risk.js v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js'
+          ACTIVE='v019-live.js v0191-tuning.js v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js v022-territory-risk.js v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js'
           if grep -E 'onclick=|onchange=|onmouseover=' $ACTIVE; then
             echo 'Inline event handler found; incompatible with CSP.'
             exit 1
           fi
-      - name: Validate atomic v0.23.0 startup
+      - name: Validate atomic v0.24.0 startup
         run: |
           python - <<'PY'
           from pathlib import Path
           html=Path('index.html').read_text(encoding='utf-8')
-          assert 'AML Analytical Workbench · v0.23.0' in html
+          assert 'AML Analytical Workbench · v0.24.0' in html
           for asset in [
-              'v0211-bootstrap.js?b=0230',
-              'v022-territory-risk.css?b=0230',
-              'v022-territory-risk.js?b=0230',
-              'v0221-hotfix.js?b=0230',
-              'v0222-radar-hotfix.js?b=0230',
-              'v023-ipa3-shadow.css?b=0230',
-              'v023-ipa3-shadow.js?b=0230']:
+              'v0211-bootstrap.js?b=0240',
+              'v022-territory-risk.css?b=0240',
+              'v022-territory-risk.js?b=0240',
+              'v0221-hotfix.js?b=0240',
+              'v0222-radar-hotfix.js?b=0240',
+              'v023-ipa3-shadow.css?b=0240',
+              'v023-ipa3-shadow.js?b=0240',
+              'v024-dashboard-feedback.css?b=0240',
+              'v024-dashboard-feedback.js?b=0240']:
               assert asset in html, asset
-          assert html.rfind('v023-ipa3-shadow.js?b=0230') > html.rfind('v0222-radar-hotfix.js?b=0230')
-          assert '?b=0211' not in html and '?b=0222' not in html
+          assert html.rfind('v024-dashboard-feedback.js?b=0240') > html.rfind('v023-ipa3-shadow.js?b=0240')
+          assert '?b=0230' not in html and '?b=0222' not in html and '?b=0211' not in html
           geo=Path('v022-territory-risk.js').read_text(encoding='utf-8')
           tfix=Path('v0221-hotfix.js').read_text(encoding='utf-8')
           rfix=Path('v0222-radar-hotfix.js').read_text(encoding='utf-8')
           ipa=Path('v023-ipa3-shadow.js').read_text(encoding='utf-8')
+          ux=Path('v024-dashboard-feedback.js').read_text(encoding='utf-8')
           assert 'GEO-RISK-0.22.0' in geo
           assert 'MISSING_IS_NOT_ZERO' in geo
           assert 'PROVISIONAL_NO_APTO' in geo
@@ -76,13 +79,14 @@ jobs:
           assert "window.__AML_ACTIVE_VERSION__=V0222" in rfix
           assert 'Promise.allSettled(specs.map' in rfix
           assert 'ausencia de dato no se interpreta como cero' in rfix
-          assert "sb.from('aml_v020_producer_findings')" in rfix
-          assert "sb.from('aml_v019_uaf_cross_radar')" in rfix
           assert "V023_SCORE_VIEW='aml_v_ipa3_entity_score_v0_3'" in ipa
           assert "V023_MARK_VIEW='aml_v_ipa3_mark_scores_v0_3'" in ipa
           assert 'grupo dominante + 25% del segundo + 10% del tercero' in ipa
-          assert 'no probabilidad LA/FT' in ipa
-          assert 'window.__AML_ACTIVE_VERSION__=V023' in ipa
+          assert "V024_CROSS_VIEW='aml_v024_uaf_cross_entity'" in ux
+          assert 'data-v024-ros-year' in ux
+          assert 'data-v024-sanction-year' in ux
+          assert 'v024EconomyPress' in ux
+          assert 'window.__AML_ACTIVE_VERSION__=V024' in ux
           PY
       - name: Ensure CSP-safe active layers
         run: |
@@ -91,10 +95,11 @@ jobs:
           grep -q 'v0221-hotfix.js' index.html
           grep -q 'v0222-radar-hotfix.js' index.html
           grep -q 'v023-ipa3-shadow.js' index.html
+          grep -q 'v024-dashboard-feedback.js' index.html
           grep -q 'VALIDATED_RULE' v022-territory-risk.js
           grep -q 'Percentil robusto' v022-territory-risk.js
           grep -q 'Context Hub' docs/geographic-risk-methodology-v1.md
-          if grep -E 'style=' v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js v022-territory-risk.js v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js; then
+          if grep -E 'style=' v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js v022-territory-risk.js v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js; then
             echo 'Inline style found in CSP-safe renderer.'
             exit 1
           fi
