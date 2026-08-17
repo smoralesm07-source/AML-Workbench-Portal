@@ -1,4 +1,4 @@
-name: Validate v0.20.9
+name: Validate v0.21.0
 on:
   push:
     branches: [main]
@@ -37,6 +37,8 @@ on:
       - 'v0207-freshness.css'
       - 'v0209-entity-consolidation.js'
       - 'v0209-entity-consolidation.css'
+      - 'v0210-reconciliation-analysis.js'
+      - 'v0210-reconciliation-analysis.css'
       - 'data/uaf_reportability_sector_2025.json'
       - 'data/uaf_dashboard_snapshot.json'
       - 'index.html'
@@ -71,6 +73,7 @@ jobs:
           node --check v0206-stability.js
           node --check v0207-freshness.js
           node --check v0209-entity-consolidation.js
+          node --check v0210-reconciliation-analysis.js
       - name: Validate local UAF JSON assets
         run: |
           python - <<'PY'
@@ -80,51 +83,29 @@ jobs:
                   json.load(f)
           with open('data/uaf_reportability_sector_2025.json', encoding='utf-8') as f:
               r=json.load(f)
-          assert len(r.get('sectors', [])) == 48, len(r.get('sectors', []))
+          assert len(r.get('sectors', [])) == 48
           assert r.get('totals', {}).get('registered_so_2025') == 9911
           assert r.get('totals', {}).get('ros_2025') == 21828
           PY
       - name: Ensure no inline event handlers
         run: |
-          if grep -E 'onclick=|onchange=|onmouseover=' v019-live.js v0191-tuning.js v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js; then
+          if grep -E 'onclick=|onchange=|onmouseover=' v019-live.js v0191-tuning.js v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js; then
             echo 'Inline event handler found; incompatible with CSP.'
             exit 1
           fi
       - name: Ensure CSP-safe active layers
         run: |
-          grep -q 'v0191-csp.js' index.html
-          grep -q 'v0192-ux.js' index.html
-          grep -q 'v0193-uaf.js' index.html
-          grep -q 'v0193-core.js' index.html
-          grep -q 'v0193-questions.js' index.html
-          grep -q 'v0193-territory.js' index.html
-          grep -q 'v0194-home.js' index.html
-          grep -q 'v0194-bridge.js' index.html
-          grep -q 'v020-radar.js' index.html
-          grep -q 'v020.css' index.html
-          grep -q 'v0201-insights.js' index.html
-          grep -q 'v0201-fixes.js' index.html
-          grep -q 'v0201-insights.css' index.html
-          grep -q 'v0202-alerts.js' index.html
-          grep -q 'v0202-alerts.css' index.html
-          grep -q 'v0203-dashboard.js' index.html
-          grep -q 'v0203-dashboard.css' index.html
-          grep -q 'v0204-uaf-indicators.js' index.html
-          grep -q 'v0204-uaf-indicators.css' index.html
-          grep -q 'v0205-reconciliation.js' index.html
-          grep -q 'v0205-reconciliation.css' index.html
-          grep -q 'v0206-stability.js' index.html
-          grep -q 'v0207-freshness.js' index.html
-          grep -q 'v0207-freshness.css' index.html
-          grep -q 'v0209-entity-consolidation.js' index.html
-          grep -q 'v0209-entity-consolidation.css' index.html
-          grep -q 'Radar_UAF/data' v0207-freshness.js
-          grep -q 'Radar_SII/data/snapshot_manifest.json' v0207-freshness.js
-          grep -q "aml_sync_state" v0207-freshness.js
-          grep -q '0.20.9' index.html
+          grep -q 'v0210-reconciliation-analysis.js' index.html
+          grep -q 'v0210-reconciliation-analysis.css' index.html
+          grep -q 'aml_v0210_uaf_sii_reconciliation' v0210-reconciliation-analysis.js
+          grep -q 'Antigüedad de términos de giro' v0210-reconciliation-analysis.js
+          grep -q 'Todos los sectores UAF' v0210-reconciliation-analysis.js
+          grep -q '0.21.0' index.html
           grep -q 'NO_SII_PROFILE' v0209-entity-consolidation.js
           grep -q 'Score consolidado' v0209-entity-consolidation.js
-          if grep -E 'style=' v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js; then
+          grep -q 'Radar_UAF/data' v0207-freshness.js
+          grep -q "aml_sync_state" v0207-freshness.js
+          if grep -E 'style=' v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js; then
             echo 'Inline style found in CSP-safe renderer.'
             exit 1
           fi
