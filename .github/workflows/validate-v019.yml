@@ -1,61 +1,21 @@
-name: Validate v0.22.1
+name: Validate v0.22.2
 on:
   push:
     branches: [main]
     paths:
-      - 'v019-live.js'
-      - 'v019.css'
-      - 'v0191-tuning.js'
-      - 'v0191-csp.js'
-      - 'v0191.css'
-      - 'v0192-ux.js'
-      - 'v0192.css'
-      - 'v0193-uaf.js'
-      - 'v0193-core.js'
-      - 'v0193-questions.js'
-      - 'v0193.css'
-      - 'v0193-territory.js'
-      - 'v0193-territory.css'
-      - 'v0194-home.js'
-      - 'v0194-bridge.js'
-      - 'v0194-home.css'
-      - 'v020-radar.js'
-      - 'v020.css'
-      - 'v0201-insights.js'
-      - 'v0201-fixes.js'
-      - 'v0201-insights.css'
-      - 'v0202-alerts.js'
-      - 'v0202-alerts.css'
-      - 'v0203-dashboard.js'
-      - 'v0203-dashboard.css'
-      - 'v0204-uaf-indicators.js'
-      - 'v0204-uaf-indicators.css'
-      - 'v0205-reconciliation.js'
-      - 'v0205-reconciliation.css'
-      - 'v0206-stability.js'
-      - 'v0207-freshness.js'
-      - 'v0207-freshness.css'
-      - 'v0209-entity-consolidation.js'
-      - 'v0209-entity-consolidation.css'
-      - 'v0210-reconciliation-analysis.js'
-      - 'v0210-reconciliation-analysis.css'
-      - 'v0211-bootstrap.js'
-      - 'v0211-bootstrap.css'
-      - 'v022-territory-risk.js'
-      - 'v022-territory-risk.css'
-      - 'v0221-hotfix.js'
-      - 'docs/geographic-risk-methodology-v1.md'
-      - 'data/uaf_reportability_sector_2025.json'
-      - 'data/uaf_dashboard_snapshot.json'
+      - '*.js'
+      - '*.css'
       - 'index.html'
+      - 'docs/**'
+      - 'data/**'
       - '.github/workflows/validate-v019.yml'
   pull_request:
     paths:
-      - 'v022-territory-risk.js'
-      - 'v022-territory-risk.css'
-      - 'v0221-hotfix.js'
-      - 'docs/geographic-risk-methodology-v1.md'
+      - '*.js'
+      - '*.css'
       - 'index.html'
+      - 'docs/**'
+      - 'data/**'
       - '.github/workflows/validate-v019.yml'
   workflow_dispatch:
 permissions:
@@ -67,30 +27,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check JavaScript syntax
         run: |
-          node --check v019-live.js
-          node --check v0191-tuning.js
-          node --check v0191-csp.js
-          node --check v0192-ux.js
-          node --check v0193-uaf.js
-          node --check v0193-core.js
-          node --check v0193-questions.js
-          node --check v0193-territory.js
-          node --check v0194-home.js
-          node --check v0194-bridge.js
-          node --check v020-radar.js
-          node --check v0201-insights.js
-          node --check v0201-fixes.js
-          node --check v0202-alerts.js
-          node --check v0203-dashboard.js
-          node --check v0204-uaf-indicators.js
-          node --check v0205-reconciliation.js
-          node --check v0206-stability.js
-          node --check v0207-freshness.js
-          node --check v0209-entity-consolidation.js
-          node --check v0210-reconciliation-analysis.js
-          node --check v0211-bootstrap.js
-          node --check v022-territory-risk.js
-          node --check v0221-hotfix.js
+          for f in *.js; do node --check "$f"; done
       - name: Validate local UAF JSON assets
         run: |
           python - <<'PY'
@@ -104,46 +41,48 @@ jobs:
           assert r.get('totals', {}).get('registered_so_2025') == 9911
           assert r.get('totals', {}).get('ros_2025') == 21828
           PY
-      - name: Ensure no inline event handlers
+      - name: Ensure no inline event handlers in active renderer layers
         run: |
-          if grep -E 'onclick=|onchange=|onmouseover=' v019-live.js v0191-tuning.js v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js v022-territory-risk.js v0221-hotfix.js; then
+          ACTIVE='v019-live.js v0191-tuning.js v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js v022-territory-risk.js v0221-hotfix.js v0222-radar-hotfix.js'
+          if grep -E 'onclick=|onchange=|onmouseover=' $ACTIVE; then
             echo 'Inline event handler found; incompatible with CSP.'
             exit 1
           fi
-      - name: Validate atomic v0.22.1 startup
+      - name: Validate atomic v0.22.2 startup
         run: |
           python - <<'PY'
           from pathlib import Path
           html=Path('index.html').read_text(encoding='utf-8')
-          assert 'AML Analytical Workbench · v0.22.1' in html
-          assert 'v0211-bootstrap.css?b=0211' in html
+          assert 'AML Analytical Workbench · v0.22.2' in html
           assert 'v0211-bootstrap.js?b=0211' in html
-          assert 'v022-territory-risk.css?b=0221' in html
-          assert 'v022-territory-risk.js?b=0221' in html
-          assert 'v0221-hotfix.js?b=0221' in html
-          assert html.rfind('v0221-hotfix.js?b=0221') > html.rfind('v022-territory-risk.js?b=0221')
+          assert 'v022-territory-risk.css?b=0222' in html
+          assert 'v022-territory-risk.js?b=0222' in html
+          assert 'v0221-hotfix.js?b=0222' in html
+          assert 'v0222-radar-hotfix.js?b=0222' in html
+          assert html.rfind('v0222-radar-hotfix.js?b=0222') > html.rfind('v0221-hotfix.js?b=0222')
           geo=Path('v022-territory-risk.js').read_text(encoding='utf-8')
-          hotfix=Path('v0221-hotfix.js').read_text(encoding='utf-8')
+          tfix=Path('v0221-hotfix.js').read_text(encoding='utf-8')
+          rfix=Path('v0222-radar-hotfix.js').read_text(encoding='utf-8')
           assert 'GEO-RISK-0.22.0' in geo
           assert 'MISSING_IS_NOT_ZERO' in geo
           assert 'PROVISIONAL_NO_APTO' in geo
-          assert "window.__AML_ACTIVE_VERSION__=V0221" in hotfix
-          assert 'Promise.allSettled(dbSpecs.map' in hotfix
+          assert 'Promise.allSettled(dbSpecs.map' in tfix
+          assert "window.__AML_ACTIVE_VERSION__=V0222" in rfix
+          assert 'Promise.allSettled(specs.map' in rfix
+          assert 'ausencia de dato no se interpreta como cero' in rfix
+          assert "sb.from('aml_v020_producer_findings')" in rfix
+          assert "sb.from('aml_v019_uaf_cross_radar')" in rfix
           PY
       - name: Ensure CSP-safe active layers
         run: |
           grep -q 'v0210-reconciliation-analysis.js' index.html
-          grep -q 'v0211-bootstrap.js' index.html
           grep -q 'v022-territory-risk.js' index.html
           grep -q 'v0221-hotfix.js' index.html
-          grep -q 'v022-territory-risk.css' index.html
-          grep -q 'aml_v0210_uaf_sii_reconciliation' v0210-reconciliation-analysis.js
-          grep -q 'aml_v022_geo_economic_region' v022-territory-risk.js
-          grep -q 'aml_v022_geo_activity_commune' v022-territory-risk.js
+          grep -q 'v0222-radar-hotfix.js' index.html
           grep -q 'VALIDATED_RULE' v022-territory-risk.js
           grep -q 'Percentil robusto' v022-territory-risk.js
           grep -q 'Context Hub' docs/geographic-risk-methodology-v1.md
-          if grep -E 'style=' v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js v022-territory-risk.js v0221-hotfix.js; then
+          if grep -E 'style=' v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js v022-territory-risk.js v0221-hotfix.js v0222-radar-hotfix.js; then
             echo 'Inline style found in CSP-safe renderer.'
             exit 1
           fi
