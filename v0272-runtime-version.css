@@ -1,0 +1,17 @@
+/* AML Workbench v0.27.2 · single visible version authority.
+ * Historical layers may still mutate the badge textContent, but the visible
+ * label is rendered from data-runtime-label owned only by the final bootstrap.
+ */
+.v019-brand small[data-runtime-label]{
+  font-size:0!important;
+  line-height:1.35;
+  min-height:14px;
+  display:block;
+}
+.v019-brand small[data-runtime-label]::after{
+  content:attr(data-runtime-label)!important;
+  font-size:10.5px!important;
+  font-weight:750;
+  letter-spacing:.02em;
+  white-space:nowrap;
+}
