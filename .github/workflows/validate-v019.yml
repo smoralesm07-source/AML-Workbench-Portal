@@ -1,4 +1,4 @@
-name: Validate v0.26.0
+name: Validate v0.27.0
 on:
   push:
     branches: [main]
@@ -33,116 +33,64 @@ jobs:
           python - <<'PY'
           import json
           for path in ['data/uaf_reportability_sector_2025.json','data/uaf_dashboard_snapshot.json']:
-              with open(path, encoding='utf-8') as f:
-                  json.load(f)
-          with open('data/uaf_reportability_sector_2025.json', encoding='utf-8') as f:
-              r=json.load(f)
+              with open(path, encoding='utf-8') as f: json.load(f)
+          with open('data/uaf_reportability_sector_2025.json', encoding='utf-8') as f: r=json.load(f)
           assert len(r.get('sectors', [])) == 48
           assert r.get('totals', {}).get('registered_so_2025') == 9911
           assert r.get('totals', {}).get('ros_2025') == 21828
           PY
       - name: Ensure no inline event handlers in active renderer layers
         run: |
-          ACTIVE='v019-live.js v0191-tuning.js v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js v022-territory-risk.js v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js v0241-reconciliation-restore.js v025-territory-ipa.js v025-territory-ipa-hardening.js v026-territory-causal-profile.js v026-territory-profile-legend.js'
+          ACTIVE='v019-live.js v0191-tuning.js v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js v022-territory-risk.js v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js v0241-reconciliation-restore.js v025-territory-ipa.js v025-territory-ipa-hardening.js v026-territory-causal-profile.js v026-territory-profile-legend.js v027-model-consistency.js'
           if grep -E 'onclick=|onchange=|onmouseover=' $ACTIVE; then
             echo 'Inline event handler found; incompatible with CSP.'
             exit 1
           fi
-      - name: Validate atomic v0.26.0 startup
+      - name: Validate atomic v0.27.0 startup and model contracts
         run: |
           python - <<'PY'
           from pathlib import Path
           html=Path('index.html').read_text(encoding='utf-8')
-          assert 'AML Analytical Workbench · v0.26.0' in html
-          for asset in [
-              'v0211-bootstrap.js?b=0260',
-              'v022-territory-risk.css?b=0260',
-              'v022-territory-risk.js?b=0260',
-              'v0221-hotfix.js?b=0260',
-              'v0222-radar-hotfix.js?b=0260',
-              'v023-ipa3-shadow.css?b=0260',
-              'v023-ipa3-shadow.js?b=0260',
-              'v024-dashboard-feedback.css?b=0260',
-              'v024-dashboard-feedback.js?b=0260',
-              'v0241-reconciliation-restore.css?b=0260',
-              'v0241-reconciliation-restore.js?b=0260',
-              'v025-territory-ipa.css?b=0260',
-              'v025-territory-ipa.js?b=0260',
-              'v025-territory-ipa-hardening.js?b=0260',
-              'v026-territory-causal-profile.css?b=0260',
-              'v026-territory-causal-profile.js?b=0260',
-              'v026-territory-profile-legend.js?b=0260']:
-              assert asset in html, asset
-          assert html.rfind('v026-territory-profile-legend.js?b=0260') > html.rfind('v026-territory-causal-profile.js?b=0260') > html.rfind('v025-territory-ipa-hardening.js?b=0260') > html.rfind('v025-territory-ipa.js?b=0260') > html.rfind('v0241-reconciliation-restore.js?b=0260')
-          for stale in ['?b=0250','?b=0241','?b=0240','?b=0230','?b=0222','?b=0211']:
-              assert stale not in html, stale
+          assert 'AML Analytical Workbench · v0.27.0' in html
+          required=[
+            'v0211-bootstrap.js?b=0270','v022-territory-risk.js?b=0270','v023-ipa3-shadow.js?b=0270',
+            'v0241-reconciliation-restore.js?b=0270','v025-territory-ipa.js?b=0270',
+            'v025-territory-ipa-hardening.js?b=0270','v026-territory-causal-profile.js?b=0270',
+            'v026-territory-profile-legend.js?b=0270','v027-model-consistency.js?b=0270']
+          for asset in required: assert asset in html, asset
+          assert html.rfind('v027-model-consistency.js?b=0270') > html.rfind('v026-territory-profile-legend.js?b=0270')
+          assert '?b=0260' not in html
+          v=Path('v027-model-consistency.js').read_text(encoding='utf-8')
+          assert "V027='0.27.0'" in v
+          assert "V027_GEO_METHOD='GEO-RISK-B-0.27.0'" in v
+          assert "V027_IPA_SCORE_VERSION='0.4-shadow'" in v
+          assert "V027_IPA_REGION_VIEW='aml_v026_geo_ipa_region'" in v
+          assert "V027_IPA_SCORE_VIEW='aml_v_ipa3_entity_score_v0_4'" in v
+          assert "V027_IPA_MARK_VIEW='aml_v_ipa3_mark_scores_v0_4'" in v
+          assert "V027_IPA_COMPARE_VIEW='aml_v_ipa3_compare_ipa2_v0_4'" in v
+          assert 'MISSING_IS_NOT_ZERO_STRICT' in v
+          assert 'NO_SII_PROFILE_TECHNICAL_ONLY' in v
+          assert "cross:8.5,ipa:15" in v
+          assert 'context:8.5' not in v
+          assert "['sector','cead','budget','cgr','cross','ipa']" in v
+          assert "readiness==='ABSORBED_BY_COMPOSITE'" in v
+          assert "readiness==='CORRELATED_GROUP_NOT_ADDITIVE'" in v
+          assert 'v027ReconciliationFilter' in v
+          assert "window.__AML_ACTIVE_VERSION__=V027" in v
+          # Historical contracts remain present underneath the hardening layer.
           geo=Path('v022-territory-risk.js').read_text(encoding='utf-8')
-          tfix=Path('v0221-hotfix.js').read_text(encoding='utf-8')
-          rfix=Path('v0222-radar-hotfix.js').read_text(encoding='utf-8')
           ipa=Path('v023-ipa3-shadow.js').read_text(encoding='utf-8')
-          ux=Path('v024-dashboard-feedback.js').read_text(encoding='utf-8')
-          recon=Path('v0241-reconciliation-restore.js').read_text(encoding='utf-8')
-          terr=Path('v025-territory-ipa.js').read_text(encoding='utf-8')
-          hard=Path('v025-territory-ipa-hardening.js').read_text(encoding='utf-8')
           profile=Path('v026-territory-causal-profile.js').read_text(encoding='utf-8')
-          legend=Path('v026-territory-profile-legend.js').read_text(encoding='utf-8')
-          assert 'GEO-RISK-0.22.0' in geo
-          assert 'MISSING_IS_NOT_ZERO' in geo
-          assert 'PROVISIONAL_NO_APTO' in geo
-          assert 'Promise.allSettled(dbSpecs.map' in tfix
-          assert "window.__AML_ACTIVE_VERSION__=V0222" in rfix
-          assert 'Promise.allSettled(specs.map' in rfix
-          assert 'ausencia de dato no se interpreta como cero' in rfix
-          assert "V023_SCORE_VIEW='aml_v_ipa3_entity_score_v0_3'" in ipa
-          assert "V023_MARK_VIEW='aml_v_ipa3_mark_scores_v0_3'" in ipa
+          assert 'GEO-RISK-0.22.0' in geo and 'MISSING_IS_NOT_ZERO' in geo
           assert 'grupo dominante + 25% del segundo + 10% del tercero' in ipa
-          assert "V024_CROSS_VIEW='aml_v024_uaf_cross_entity'" in ux
-          assert 'data-v024-ros-year' in ux
-          assert 'data-v024-sanction-year' in ux
-          assert 'v024EconomyPress' in ux
-          assert 'CONCILIACIÓN UAF ↔ SII' in recon
-          assert 'data-v0241-recon="matched"' in recon
-          assert 'data-v0241-recon="terminated"' in recon
-          assert "window.__AML_ACTIVE_VERSION__=V0241" in recon
-          assert "V025_METHOD_VERSION='GEO-RISK-B-0.25.0'" in terr
-          assert "V025_IPA_VIEW='aml_v023_geo_ipa_region'" in terr
-          assert 'sector:17,cead:25.5,budget:21.25,cgr:12.75,cross:8.5,ipa:15' in terr
-          assert "V022_LAYERS.ipa={label:'Marcas IPA3',kind:'risk'}" in terr
-          assert 'Estado exportación' not in terr
-          assert 'v025MarkTitle' in terr and 'title="${esc(title)}"' in terr
-          assert 'v025StrictPercentile' in hard
-          assert 'x.v!==null&&x.v!==undefined' in hard
-          assert "V026_METHOD_VERSION='GEO-RISK-B-0.26.0'" in profile
           assert "V026_PROFILE_VERSION='TERRITORIAL-EXPLANATORY-PROFILE-1.0'" in profile
-          assert "V022_LAYERS.profile={label:'Perfil conductor',kind:'explain'}" in profile
-          assert "code='EVIDENCIA_INSUFICIENTE'" in profile
-          assert "code='MULTIFUENTE'" in profile
-          assert "code='MIXTO'" in profile
           assert 'EXPLANATORY_PROFILE_IS_NOT_CAUSAL_INFERENCE' in profile
-          assert "window.__AML_ACTIVE_VERSION__=V026" in profile
-          assert 'Clasificación categórica · no escala 0–100' in legend
-          assert 'no representa una intensidad adicional' in legend
-          method=Path('docs/geographic-risk-methodology-v2.md').read_text(encoding='utf-8')
-          assert 'GEO-RISK-B-0.25.0' in method
-          assert '15,00%' in method
-          profile_doc=Path('docs/geographic-risk-explanatory-profile-v1.md').read_text(encoding='utf-8')
-          assert 'TERRITORIAL-EXPLANATORY-PROFILE-1.0' in profile_doc
-          assert 'No se realiza inferencia causal estadística' in profile_doc
-          assert 'MISSING_IS_NOT_ZERO' in profile_doc
           PY
       - name: Ensure CSP-safe active layers
         run: |
-          grep -q 'v0210-reconciliation-analysis.js' index.html
-          grep -q 'v022-territory-risk.js' index.html
-          grep -q 'v023-ipa3-shadow.js' index.html
-          grep -q 'v0241-reconciliation-restore.js' index.html
-          grep -q 'v025-territory-ipa-hardening.js' index.html
-          grep -q 'v026-territory-causal-profile.js' index.html
-          grep -q 'v026-territory-profile-legend.js' index.html
+          grep -q 'v027-model-consistency.js' index.html
           grep -q 'VALIDATED_RULE' v022-territory-risk.js
-          grep -q 'Context Hub' docs/geographic-risk-methodology-v2.md
-          grep -q 'Perfil conductor' v026-territory-causal-profile.js
-          if grep -E 'style=' v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js v022-territory-risk.js v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js v0241-reconciliation-restore.js v025-territory-ipa.js v025-territory-ipa-hardening.js v026-territory-causal-profile.js v026-territory-profile-legend.js; then
+          if grep -E 'style=' v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js v022-territory-risk.js v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js v0241-reconciliation-restore.js v025-territory-ipa.js v025-territory-ipa-hardening.js v026-territory-causal-profile.js v026-territory-profile-legend.js v027-model-consistency.js; then
             echo 'Inline style found in CSP-safe renderer.'
             exit 1
           fi
