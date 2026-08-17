@@ -1,4 +1,4 @@
-name: Validate v0.21.0
+name: Validate v0.21.1
 on:
   push:
     branches: [main]
@@ -39,6 +39,8 @@ on:
       - 'v0209-entity-consolidation.css'
       - 'v0210-reconciliation-analysis.js'
       - 'v0210-reconciliation-analysis.css'
+      - 'v0211-bootstrap.js'
+      - 'v0211-bootstrap.css'
       - 'data/uaf_reportability_sector_2025.json'
       - 'data/uaf_dashboard_snapshot.json'
       - 'index.html'
@@ -74,6 +76,7 @@ jobs:
           node --check v0207-freshness.js
           node --check v0209-entity-consolidation.js
           node --check v0210-reconciliation-analysis.js
+          node --check v0211-bootstrap.js
       - name: Validate local UAF JSON assets
         run: |
           python - <<'PY'
@@ -89,23 +92,43 @@ jobs:
           PY
       - name: Ensure no inline event handlers
         run: |
-          if grep -E 'onclick=|onchange=|onmouseover=' v019-live.js v0191-tuning.js v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js; then
+          if grep -E 'onclick=|onchange=|onmouseover=' v019-live.js v0191-tuning.js v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js; then
             echo 'Inline event handler found; incompatible with CSP.'
             exit 1
           fi
+      - name: Validate atomic v0.21.1 startup
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html=Path('index.html').read_text(encoding='utf-8')
+          assert 'AML Analytical Workbench · v0.21.1' in html
+          assert 'v0211-bootstrap.css?b=0211' in html
+          assert 'v0211-bootstrap.js?b=0211' in html
+          assert html.rfind('v0211-bootstrap.js?b=0211') > html.rfind('v0210-reconciliation-analysis.js?b=0211')
+          assert '?b=0210' not in html
+          js=Path('v0211-bootstrap.js').read_text(encoding='utf-8')
+          css=Path('v0211-bootstrap.css').read_text(encoding='utf-8')
+          assert "window.__AML_ACTIVE_VERSION__=V0211" in js
+          assert "await navigate(state.view||'overview')" in js
+          assert "document.body.classList.add('aml-runtime-ready')" in js
+          assert 'body:not(.aml-runtime-ready) .shell' in css
+          assert 'Operational Radar · v0.21.1' in css
+          PY
       - name: Ensure CSP-safe active layers
         run: |
           grep -q 'v0210-reconciliation-analysis.js' index.html
           grep -q 'v0210-reconciliation-analysis.css' index.html
+          grep -q 'v0211-bootstrap.js' index.html
+          grep -q 'v0211-bootstrap.css' index.html
           grep -q 'aml_v0210_uaf_sii_reconciliation' v0210-reconciliation-analysis.js
           grep -q 'Antigüedad de términos de giro' v0210-reconciliation-analysis.js
           grep -q 'Todos los sectores UAF' v0210-reconciliation-analysis.js
-          grep -q '0.21.0' index.html
+          grep -q '0.21.1' index.html
           grep -q 'NO_SII_PROFILE' v0209-entity-consolidation.js
           grep -q 'Score consolidado' v0209-entity-consolidation.js
           grep -q 'Radar_UAF/data' v0207-freshness.js
           grep -q "aml_sync_state" v0207-freshness.js
-          if grep -E 'style=' v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js; then
+          if grep -E 'style=' v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js; then
             echo 'Inline style found in CSP-safe renderer.'
             exit 1
           fi
