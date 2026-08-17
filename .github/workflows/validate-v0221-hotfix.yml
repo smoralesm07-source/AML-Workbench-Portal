@@ -1,22 +1,17 @@
-name: Validate v0.26.0 active overlays
+name: Validate v0.27.0 active overlays
 on:
   pull_request:
     paths:
       - 'v0221-hotfix.js'
       - 'v0222-radar-hotfix.js'
       - 'v023-ipa3-shadow.js'
-      - 'v023-ipa3-shadow.css'
       - 'v024-dashboard-feedback.js'
-      - 'v024-dashboard-feedback.css'
       - 'v0241-reconciliation-restore.js'
-      - 'v0241-reconciliation-restore.css'
       - 'v025-territory-ipa.js'
-      - 'v025-territory-ipa.css'
       - 'v025-territory-ipa-hardening.js'
       - 'v026-territory-causal-profile.js'
-      - 'v026-territory-causal-profile.css'
       - 'v026-territory-profile-legend.js'
-      - 'docs/geographic-risk-explanatory-profile-v1.md'
+      - 'v027-model-consistency.js'
       - 'index.html'
       - '.github/workflows/validate-v0221-hotfix.yml'
   push:
@@ -25,18 +20,13 @@ on:
       - 'v0221-hotfix.js'
       - 'v0222-radar-hotfix.js'
       - 'v023-ipa3-shadow.js'
-      - 'v023-ipa3-shadow.css'
       - 'v024-dashboard-feedback.js'
-      - 'v024-dashboard-feedback.css'
       - 'v0241-reconciliation-restore.js'
-      - 'v0241-reconciliation-restore.css'
       - 'v025-territory-ipa.js'
-      - 'v025-territory-ipa.css'
       - 'v025-territory-ipa-hardening.js'
       - 'v026-territory-causal-profile.js'
-      - 'v026-territory-causal-profile.css'
       - 'v026-territory-profile-legend.js'
-      - 'docs/geographic-risk-explanatory-profile-v1.md'
+      - 'v027-model-consistency.js'
       - 'index.html'
       - '.github/workflows/validate-v0221-hotfix.yml'
   workflow_dispatch:
@@ -58,35 +48,23 @@ jobs:
           node --check v025-territory-ipa-hardening.js
           node --check v026-territory-causal-profile.js
           node --check v026-territory-profile-legend.js
-      - name: Wiring
+          node --check v027-model-consistency.js
+      - name: Wiring and hardening
         run: |
-          grep -q 'AML Analytical Workbench · v0.26.0' index.html
-          grep -q 'v022-territory-risk.js?b=0260' index.html
-          grep -q 'v023-ipa3-shadow.js?b=0260' index.html
-          grep -q 'v0241-reconciliation-restore.js?b=0260' index.html
-          grep -q 'v025-territory-ipa.js?b=0260' index.html
-          grep -q 'v025-territory-ipa-hardening.js?b=0260' index.html
-          grep -q 'v026-territory-causal-profile.css?b=0260' index.html
-          grep -q 'v026-territory-causal-profile.js?b=0260' index.html
-          grep -q 'v026-territory-profile-legend.js?b=0260' index.html
-          grep -q "V024_CROSS_VIEW='aml_v024_uaf_cross_entity'" v024-dashboard-feedback.js
-          grep -q 'CONCILIACIÓN UAF ↔ SII' v0241-reconciliation-restore.js
-          grep -q "V025_IPA_VIEW='aml_v023_geo_ipa_region'" v025-territory-ipa.js
-          grep -q 'ipa:15' v025-territory-ipa.js
-          grep -q 'v025StrictPercentile' v025-territory-ipa-hardening.js
-          grep -q "V026_PROFILE_VERSION='TERRITORIAL-EXPLANATORY-PROFILE-1.0'" v026-territory-causal-profile.js
-          grep -q "V022_LAYERS.profile={label:'Perfil conductor',kind:'explain'}" v026-territory-causal-profile.js
-          grep -q 'MULTIFUENTE' v026-territory-causal-profile.js
-          grep -q 'SUPERVISIVO_REGISTRAL' v026-territory-causal-profile.js
-          grep -q 'EXPLANATORY_PROFILE_IS_NOT_CAUSAL_INFERENCE' v026-territory-causal-profile.js
-          grep -q 'Clasificación categórica · no escala 0–100' v026-territory-profile-legend.js
-          grep -q 'No se realiza inferencia causal estadística' docs/geographic-risk-explanatory-profile-v1.md
-          grep -q 'window.__AML_ACTIVE_VERSION__=V026' v026-territory-causal-profile.js
-          if grep -E 'onclick=|onchange=|style=' v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js v0241-reconciliation-restore.js v025-territory-ipa.js v025-territory-ipa-hardening.js v026-territory-causal-profile.js v026-territory-profile-legend.js; then
+          grep -q 'AML Analytical Workbench · v0.27.0' index.html
+          grep -q 'v027-model-consistency.js?b=0270' index.html
+          grep -q "V027_GEO_METHOD='GEO-RISK-B-0.27.0'" v027-model-consistency.js
+          grep -q "V027_IPA_SCORE_VERSION='0.4-shadow'" v027-model-consistency.js
+          grep -q "V027_IPA_REGION_VIEW='aml_v026_geo_ipa_region'" v027-model-consistency.js
+          grep -q 'MISSING_IS_NOT_ZERO_STRICT' v027-model-consistency.js
+          grep -q 'NO_SII_PROFILE_TECHNICAL_ONLY' v027-model-consistency.js
+          grep -q 'CORRELATED_GROUP_NOT_ADDITIVE' v027-model-consistency.js
+          grep -q "window.__AML_ACTIVE_VERSION__=V027" v027-model-consistency.js
+          if grep -E 'onclick=|onchange=|style=' v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js v0241-reconciliation-restore.js v025-territory-ipa.js v025-territory-ipa-hardening.js v026-territory-causal-profile.js v026-territory-profile-legend.js v027-model-consistency.js; then
             echo 'CSP-incompatible inline handler/style found'
             exit 1
           fi
-          if grep -E '\?b=(0211|0222|0230|0240|0241|0250)' index.html; then
+          if grep -E '\?b=(0211|0222|0230|0240|0241|0250|0260)' index.html; then
             echo 'Stale asset cache-bust found'
             exit 1
           fi
