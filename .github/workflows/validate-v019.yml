@@ -1,4 +1,4 @@
-name: Validate v0.20.4
+name: Validate v0.20.5
 on:
   push:
     branches: [main]
@@ -30,6 +30,8 @@ on:
       - 'v0203-dashboard.css'
       - 'v0204-uaf-indicators.js'
       - 'v0204-uaf-indicators.css'
+      - 'v0205-reconciliation.js'
+      - 'v0205-reconciliation.css'
       - 'index.html'
       - '.github/workflows/validate-v019.yml'
   workflow_dispatch:
@@ -58,9 +60,10 @@ jobs:
           node --check v0202-alerts.js
           node --check v0203-dashboard.js
           node --check v0204-uaf-indicators.js
+          node --check v0205-reconciliation.js
       - name: Ensure no inline event handlers
         run: |
-          if grep -E 'onclick=|onchange=|onmouseover=' v019-live.js v0191-tuning.js v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js; then
+          if grep -E 'onclick=|onchange=|onmouseover=' v019-live.js v0191-tuning.js v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js; then
             echo 'Inline event handler found; incompatible with CSP.'
             exit 1
           fi
@@ -85,7 +88,9 @@ jobs:
           grep -q 'v0203-dashboard.css' index.html
           grep -q 'v0204-uaf-indicators.js' index.html
           grep -q 'v0204-uaf-indicators.css' index.html
-          if grep -E 'style=' v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js; then
+          grep -q 'v0205-reconciliation.js' index.html
+          grep -q 'v0205-reconciliation.css' index.html
+          if grep -E 'style=' v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js; then
             echo 'Inline style found in CSP-safe renderer.'
             exit 1
           fi
