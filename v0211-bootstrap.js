@@ -1,25 +1,16 @@
 'use strict';
 
-/* AML Workbench v0.21.1 · atomic runtime bootstrap
- * Prevents authenticated sessions from rendering an older layer while
- * versioned scripts are still loading. The shell is revealed only after
- * the final active layer has had one opportunity to render.
+/* AML Workbench legacy atomic startup barrier.
+ * This file preserves the startup sequencing introduced in v0.21.1, but it is
+ * intentionally NOT an authority for the active application version. The final
+ * runtime bootstrap loaded last owns version/build globals and the visible label.
  */
 const V0211='0.21.1';
-window.__AML_ACTIVE_VERSION__=V0211;
-window.__AML_BUILD__=V0211;
-
 const v0211BaseShell=shell;
 
-function v0211ApplyVersion(){
-  const label=`Operational Radar · v${V0211}`;
-  const badge=document.querySelector('.v019-brand small');
-  if(badge){
-    badge.textContent=label;
-    badge.setAttribute('aria-label',label);
-  }
-  document.title=`AML Analytical Workbench · v${V0211}`;
-}
+/* Final runtime replaces this function before DOMContentLoaded. Keeping a
+ * neutral no-op avoids any transient or persistent legacy version write. */
+function v0211ApplyVersion(){}
 
 function v0211DisconnectLegacyVersionWatcher(){
   try{
@@ -28,13 +19,13 @@ function v0211DisconnectLegacyVersionWatcher(){
       V0206_VERSION_OBSERVER=null;
     }
   }catch(error){
-    console.warn('v0.21.1 legacy version observer cleanup',error);
+    console.warn('legacy version observer cleanup',error);
   }
 }
 
 shell=function(title,subtitle){
   v0211BaseShell(title,subtitle);
-  v0211ApplyVersion();
+  try{v0211ApplyVersion();}catch(error){console.warn('runtime version apply',error);}
 };
 
 async function v0211FinalizeRuntime(){
@@ -46,10 +37,9 @@ async function v0211FinalizeRuntime(){
       await navigate(state.view||'overview');
     }
   }catch(error){
-    console.error('v0.21.1 atomic render',error);
+    console.error('atomic render',error);
   }finally{
-    v0211ApplyVersion();
-    document.documentElement.setAttribute('data-aml-build',V0211);
+    try{v0211ApplyVersion();}catch(error){console.warn('runtime version final apply',error);}
     document.body.classList.add('aml-runtime-ready');
     window.__AML_RUNTIME_READY__=true;
   }
