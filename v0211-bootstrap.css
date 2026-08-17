@@ -1,0 +1,4 @@
+/* AML Workbench v0.21.1 · startup masking and stable version label */
+body:not(.aml-runtime-ready) .shell{visibility:hidden}
+.v019-brand small{font-size:0!important;line-height:1.35;min-height:14px;display:block}
+.v019-brand small::after{content:'Operational Radar · v0.21.1';font-size:10.5px;font-weight:750;letter-spacing:.02em;white-space:nowrap}
