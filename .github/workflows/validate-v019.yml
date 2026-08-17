@@ -1,4 +1,4 @@
-name: Validate v0.20.1
+name: Validate v0.20.2
 on:
   push:
     branches: [main]
@@ -24,6 +24,8 @@ on:
       - 'v0201-insights.js'
       - 'v0201-fixes.js'
       - 'v0201-insights.css'
+      - 'v0202-alerts.js'
+      - 'v0202-alerts.css'
       - 'index.html'
       - '.github/workflows/validate-v019.yml'
   workflow_dispatch:
@@ -49,9 +51,10 @@ jobs:
           node --check v020-radar.js
           node --check v0201-insights.js
           node --check v0201-fixes.js
+          node --check v0202-alerts.js
       - name: Ensure no inline event handlers
         run: |
-          if grep -E 'onclick=|onchange=|onmouseover=' v019-live.js v0191-tuning.js v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js; then
+          if grep -E 'onclick=|onchange=|onmouseover=' v019-live.js v0191-tuning.js v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js; then
             echo 'Inline event handler found; incompatible with CSP.'
             exit 1
           fi
@@ -70,7 +73,9 @@ jobs:
           grep -q 'v0201-insights.js' index.html
           grep -q 'v0201-fixes.js' index.html
           grep -q 'v0201-insights.css' index.html
-          if grep -E 'style=' v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js; then
+          grep -q 'v0202-alerts.js' index.html
+          grep -q 'v0202-alerts.css' index.html
+          if grep -E 'style=' v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js; then
             echo 'Inline style found in CSP-safe renderer.'
             exit 1
           fi
