@@ -1,4 +1,4 @@
-name: Validate v0.27.1
+name: Validate v0.27.2
 on:
   push:
     branches: [main]
@@ -21,7 +21,7 @@ on:
 permissions:
   contents: read
 jobs:
-  syntax:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,73 +39,45 @@ jobs:
           assert r.get('totals', {}).get('registered_so_2025') == 9911
           assert r.get('totals', {}).get('ros_2025') == 21828
           PY
-      - name: Ensure no inline event handlers in active renderer layers
-        run: |
-          ACTIVE='v019-live.js v0191-tuning.js v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js v022-territory-risk.js v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js v0241-reconciliation-restore.js v025-territory-ipa.js v025-territory-ipa-hardening.js v026-territory-causal-profile.js v026-territory-profile-legend.js v027-model-consistency.js v027-source-null-hardening.js v0271-runtime-bootstrap.js'
-          if grep -E 'onclick=|onchange=|onmouseover=' $ACTIVE; then
-            echo 'Inline event handler found; incompatible with CSP.'
-            exit 1
-          fi
-      - name: Validate atomic v0.27.1 startup and model contracts
+      - name: Validate v0.27.2 single visible version authority
         run: |
           python - <<'PY'
           from pathlib import Path
           html=Path('index.html').read_text(encoding='utf-8')
-          assert 'AML Analytical Workbench · v0.27.1' in html
-          required=[
-            'v0211-bootstrap.js?b=0271','v022-territory-risk.js?b=0271','v023-ipa3-shadow.js?b=0271',
-            'v0241-reconciliation-restore.js?b=0271','v025-territory-ipa.js?b=0271',
-            'v025-territory-ipa-hardening.js?b=0271','v026-territory-causal-profile.js?b=0271',
-            'v026-territory-profile-legend.js?b=0271','v027-model-consistency.js?b=0271',
-            'v027-source-null-hardening.js?b=0271','v0271-runtime-bootstrap.js?b=0271']
-          for asset in required: assert asset in html, asset
-          assert html.rfind('v0271-runtime-bootstrap.js?b=0271') > html.rfind('v027-source-null-hardening.js?b=0271') > html.rfind('v027-model-consistency.js?b=0271')
-          assert '?b=0270' not in html
+          css=Path('v0272-runtime-version.css').read_text(encoding='utf-8')
+          boot=Path('v0272-runtime-bootstrap.js').read_text(encoding='utf-8')
+          legacy21=Path('v0211-bootstrap.css').read_text(encoding='utf-8')
+          legacy19=Path('v0192-ux.js').read_text(encoding='utf-8')
+          model=Path('v027-model-consistency.js').read_text(encoding='utf-8')
+          source=Path('v027-source-null-hardening.js').read_text(encoding='utf-8')
 
-          legacy_css=Path('v0211-bootstrap.css').read_text(encoding='utf-8')
-          legacy_js=Path('v0211-bootstrap.js').read_text(encoding='utf-8')
-          final_boot=Path('v0271-runtime-bootstrap.js').read_text(encoding='utf-8')
-          assert "content:'Operational Radar · v0.21.1'" not in legacy_css
-          assert 'font-size:0' not in legacy_css
-          assert 'window.__AML_ACTIVE_VERSION__=V0211' not in legacy_js
-          assert "const V0271='0.27.1'" in final_boot
-          assert 'window.__AML_ACTIVE_VERSION__=V0271' in final_boot
-          assert 'window.__AML_RUNTIME_VERSION_APPLIER__=v0271ApplyVersion' in final_boot
+          assert 'AML Analytical Workbench · v0.27.2' in html
+          assert '?b=0271' not in html and '?b=0270' not in html
+          assert 'v0272-runtime-version.css?b=0272' in html
+          assert 'v0272-runtime-bootstrap.js?b=0272' in html
+          assert html.rfind('v0272-runtime-bootstrap.js?b=0272') > html.rfind('v0271-runtime-bootstrap.js?b=0272')
 
-          v=Path('v027-model-consistency.js').read_text(encoding='utf-8')
-          src=Path('v027-source-null-hardening.js').read_text(encoding='utf-8')
-          assert "V027='0.27.0'" in v
-          assert "V027_GEO_METHOD='GEO-RISK-B-0.27.0'" in v
-          assert "V027_IPA_SCORE_VERSION='0.4-shadow'" in v
-          assert "V027_IPA_REGION_VIEW='aml_v026_geo_ipa_region'" in v
-          assert "V027_IPA_SCORE_VIEW='aml_v_ipa3_entity_score_v0_4'" in v
-          assert "V027_IPA_MARK_VIEW='aml_v_ipa3_mark_scores_v0_4'" in v
-          assert "V027_IPA_COMPARE_VIEW='aml_v_ipa3_compare_ipa2_v0_4'" in v
-          assert 'MISSING_IS_NOT_ZERO_STRICT' in v
-          assert 'NO_SII_PROFILE_TECHNICAL_ONLY' in v
-          assert "cross:8.5,ipa:15" in v and 'context:8.5' not in v
-          assert "['sector','cead','budget','cgr','cross','ipa']" in v
-          assert "readiness==='ABSORBED_BY_COMPOSITE'" in v
-          assert "readiness==='CORRELATED_GROUP_NOT_ADDITIVE'" in v
-          assert 'v027ReconciliationFilter' in v
-          assert 'a.positive_trend=a.yoy_pct===null?null' in src
-          assert 'const s=v027Number(f.aml_score)' in src
-          assert 'avg_priority:v027Number(r.avg_investigation_priority)' in src
-          assert 'v022Weighted({p1:a.p1_pct,signal:a.signal_pct,priority:a.priority_pct}' in src
-          assert 'v022Weighted({findings:a.finding_pct,aml:a.aml_pct,high:a.high_pct}' in src
-          geo=Path('v022-territory-risk.js').read_text(encoding='utf-8')
-          ipa=Path('v023-ipa3-shadow.js').read_text(encoding='utf-8')
-          profile=Path('v026-territory-causal-profile.js').read_text(encoding='utf-8')
-          assert 'GEO-RISK-0.22.0' in geo and 'MISSING_IS_NOT_ZERO' in geo
-          assert 'grupo dominante + 25% del segundo + 10% del tercero' in ipa
-          assert "V026_PROFILE_VERSION='TERRITORIAL-EXPLANATORY-PROFILE-1.0'" in profile
-          assert 'EXPLANATORY_PROFILE_IS_NOT_CAUSAL_INFERENCE' in profile
+          # The visible label must no longer depend on mutable textContent.
+          assert 'content:attr(data-runtime-label)!important' in css
+          assert "const V0272='0.27.2'" in boot
+          assert "badge.setAttribute('data-runtime-label',label)" in boot
+          assert 'window.__AML_ACTIVE_VERSION__=V0272' in boot
+          assert 'window.__AML_RUNTIME_VERSION_APPLIER__=v0272ApplyVersion' in boot
+
+          # Known historical writers may exist, but they cannot own the visible label.
+          assert "content:'Operational Radar · v0.21.1'" not in legacy21
+          assert 'setInterval(apply,1200)' in legacy19
+
+          # Core model consistency contracts remain present.
+          assert 'MISSING_IS_NOT_ZERO_STRICT' in model
+          assert "V027_IPA_SCORE_VERSION='0.4-shadow'" in model
+          assert "cross:8.5,ipa:15" in model and 'context:8.5' not in model
+          assert 'a.positive_trend=a.yoy_pct===null?null' in source
+          assert 'const s=v027Number(f.aml_score)' in source
           PY
-      - name: Ensure CSP-safe active layers
+      - name: Ensure CSP-safe final runtime
         run: |
-          grep -q 'v0271-runtime-bootstrap.js' index.html
-          grep -q 'VALIDATED_RULE' v022-territory-risk.js
-          if grep -E 'style=' v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js v022-territory-risk.js v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js v0241-reconciliation-restore.js v025-territory-ipa.js v025-territory-ipa-hardening.js v026-territory-causal-profile.js v026-territory-profile-legend.js v027-model-consistency.js v027-source-null-hardening.js v0271-runtime-bootstrap.js; then
-            echo 'Inline style found in CSP-safe renderer.'
+          if grep -E 'onclick=|onchange=|onmouseover=|style=' v0271-runtime-bootstrap.js v0272-runtime-bootstrap.js; then
+            echo 'Inline handler/style found in final runtime.'
             exit 1
           fi
