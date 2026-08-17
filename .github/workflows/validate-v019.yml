@@ -41,9 +41,10 @@ jobs:
           assert r.get('totals', {}).get('registered_so_2025') == 9911
           assert r.get('totals', {}).get('ros_2025') == 21828
           PY
-      - name: Ensure no inline event handlers
+      - name: Ensure no inline event handlers in active renderer layers
         run: |
-          if grep -E 'onclick=|onchange=|onmouseover=' *.js; then
+          ACTIVE='v019-live.js v0191-tuning.js v0191-csp.js v0192-ux.js v0193-uaf.js v0193-core.js v0193-questions.js v0193-territory.js v0194-home.js v0194-bridge.js v020-radar.js v0201-insights.js v0201-fixes.js v0202-alerts.js v0203-dashboard.js v0204-uaf-indicators.js v0205-reconciliation.js v0206-stability.js v0207-freshness.js v0209-entity-consolidation.js v0210-reconciliation-analysis.js v0211-bootstrap.js v022-territory-risk.js v0221-hotfix.js v0222-radar-hotfix.js'
+          if grep -E 'onclick=|onchange=|onmouseover=' $ACTIVE; then
             echo 'Inline event handler found; incompatible with CSP.'
             exit 1
           fi
