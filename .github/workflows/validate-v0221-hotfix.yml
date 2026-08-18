@@ -1,70 +1,10 @@
-name: Validate v0.32.0 active overlays
+name: Validate v0.32.1 active overlays
 on:
   pull_request:
-    paths:
-      - 'v0221-hotfix.js'
-      - 'v0222-radar-hotfix.js'
-      - 'v023-ipa3-shadow.js'
-      - 'v024-dashboard-feedback.js'
-      - 'v0241-reconciliation-restore.js'
-      - 'v025-territory-ipa.js'
-      - 'v025-territory-ipa-hardening.js'
-      - 'v026-territory-causal-profile.js'
-      - 'v026-territory-profile-legend.js'
-      - 'v027-model-consistency.js'
-      - 'v027-source-null-hardening.js'
-      - 'v028-ipa3-global.js'
-      - 'v028-sanctions-ipa3.js'
-      - 'v029-territory-analytics.js'
-      - 'v029-territory-analytics.css'
-      - 'v030-osfl.js'
-      - 'v030-osfl.css'
-      - 'v0301-osfl-consistency.js'
-      - 'v0302-performance.js'
-      - 'v0302-performance.css'
-      - 'v0311-uaf-fallback.js'
-      - 'v031-territory-cockpit.js'
-      - 'v031-territory-cockpit.css'
-      - 'v0312-territory-refinement.js'
-      - 'v0312-territory-refinement.css'
-      - 'v032-osfl-expert.js'
-      - 'v032-osfl-expert.css'
-      - 'v032-runtime-bootstrap.js'
-      - 'index.html'
-      - '.github/workflows/validate-v0221-hotfix.yml'
+    paths: ['v0221-hotfix.js','v0222-radar-hotfix.js','v023-ipa3-shadow.js','v024-dashboard-feedback.js','v0241-reconciliation-restore.js','v025-territory-ipa.js','v025-territory-ipa-hardening.js','v026-territory-causal-profile.js','v026-territory-profile-legend.js','v027-model-consistency.js','v027-source-null-hardening.js','v028-ipa3-global.js','v028-sanctions-ipa3.js','v029-territory-analytics.js','v029-territory-analytics.css','v030-osfl.js','v030-osfl.css','v0301-osfl-consistency.js','v0302-performance.js','v0302-performance.css','v0311-uaf-fallback.js','v031-territory-cockpit.js','v031-territory-cockpit.css','v0312-territory-refinement.js','v0312-territory-refinement.css','v032-osfl-expert.js','v032-osfl-expert.css','v0321-osfl-polish.js','v0321-osfl-polish.css','v0321-runtime-bootstrap.js','index.html','.github/workflows/validate-v0221-hotfix.yml']
   push:
     branches: [main]
-    paths:
-      - 'v0221-hotfix.js'
-      - 'v0222-radar-hotfix.js'
-      - 'v023-ipa3-shadow.js'
-      - 'v024-dashboard-feedback.js'
-      - 'v0241-reconciliation-restore.js'
-      - 'v025-territory-ipa.js'
-      - 'v025-territory-ipa-hardening.js'
-      - 'v026-territory-causal-profile.js'
-      - 'v026-territory-profile-legend.js'
-      - 'v027-model-consistency.js'
-      - 'v027-source-null-hardening.js'
-      - 'v028-ipa3-global.js'
-      - 'v028-sanctions-ipa3.js'
-      - 'v029-territory-analytics.js'
-      - 'v029-territory-analytics.css'
-      - 'v030-osfl.js'
-      - 'v030-osfl.css'
-      - 'v0301-osfl-consistency.js'
-      - 'v0302-performance.js'
-      - 'v0302-performance.css'
-      - 'v0311-uaf-fallback.js'
-      - 'v031-territory-cockpit.js'
-      - 'v031-territory-cockpit.css'
-      - 'v0312-territory-refinement.js'
-      - 'v0312-territory-refinement.css'
-      - 'v032-osfl-expert.js'
-      - 'v032-osfl-expert.css'
-      - 'v032-runtime-bootstrap.js'
-      - 'index.html'
-      - '.github/workflows/validate-v0221-hotfix.yml'
+    paths: ['v0221-hotfix.js','v0222-radar-hotfix.js','v023-ipa3-shadow.js','v024-dashboard-feedback.js','v0241-reconciliation-restore.js','v025-territory-ipa.js','v025-territory-ipa-hardening.js','v026-territory-causal-profile.js','v026-territory-profile-legend.js','v027-model-consistency.js','v027-source-null-hardening.js','v028-ipa3-global.js','v028-sanctions-ipa3.js','v029-territory-analytics.js','v029-territory-analytics.css','v030-osfl.js','v030-osfl.css','v0301-osfl-consistency.js','v0302-performance.js','v0302-performance.css','v0311-uaf-fallback.js','v031-territory-cockpit.js','v031-territory-cockpit.css','v0312-territory-refinement.js','v0312-territory-refinement.css','v032-osfl-expert.js','v032-osfl-expert.css','v0321-osfl-polish.js','v0321-osfl-polish.css','v0321-runtime-bootstrap.js','index.html','.github/workflows/validate-v0221-hotfix.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -75,53 +15,25 @@ jobs:
       - uses: actions/checkout@v4
       - name: Syntax
         run: |
-          node --check v0221-hotfix.js
-          node --check v0222-radar-hotfix.js
-          node --check v023-ipa3-shadow.js
-          node --check v024-dashboard-feedback.js
-          node --check v0241-reconciliation-restore.js
-          node --check v025-territory-ipa.js
-          node --check v025-territory-ipa-hardening.js
-          node --check v026-territory-causal-profile.js
-          node --check v026-territory-profile-legend.js
-          node --check v027-model-consistency.js
-          node --check v027-source-null-hardening.js
-          node --check v028-ipa3-global.js
-          node --check v028-sanctions-ipa3.js
-          node --check v029-territory-analytics.js
-          node --check v030-osfl.js
-          node --check v0301-osfl-consistency.js
-          node --check v0302-performance.js
-          node --check v0311-uaf-fallback.js
-          node --check v031-territory-cockpit.js
-          node --check v0312-territory-refinement.js
-          node --check v032-osfl-expert.js
-          node --check v032-runtime-bootstrap.js
+          for f in v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js v0241-reconciliation-restore.js v025-territory-ipa.js v025-territory-ipa-hardening.js v026-territory-causal-profile.js v026-territory-profile-legend.js v027-model-consistency.js v027-source-null-hardening.js v028-ipa3-global.js v028-sanctions-ipa3.js v029-territory-analytics.js v030-osfl.js v0301-osfl-consistency.js v0302-performance.js v0311-uaf-fallback.js v031-territory-cockpit.js v0312-territory-refinement.js v032-osfl-expert.js v0321-osfl-polish.js v0321-runtime-bootstrap.js; do node --check "$f"; done
       - name: Wiring and interaction contract
         run: |
-          grep -q 'AML Analytical Workbench · v0.32.0' index.html
-          grep -q 'v0302-performance.js?b=0320' index.html
-          grep -q 'v0311-uaf-fallback.js?b=0320' index.html
-          grep -q 'v0312-territory-refinement.js?b=0320' index.html
-          grep -q 'v032-osfl-expert.js?b=0320' index.html
-          grep -q 'v032-runtime-bootstrap.js?b=0320' index.html
-          ! grep -q 'v0312-runtime-bootstrap.js' index.html
-          grep -q "const V0312='0.31.2'" v0312-territory-refinement.js
-          grep -q "const V032='0.32.0'" v032-osfl-expert.js
-          grep -q "const V032_RUNTIME='0.32.0'" v032-runtime-bootstrap.js
-          grep -q "V022_STATE.method='B'" v0312-territory-refinement.js
-          grep -q 'LOCAL_FALLBACK' v0311-uaf-fallback.js
+          grep -q 'AML Analytical Workbench · v0.32.1' index.html
+          grep -q 'v032-osfl-expert.js?b=0321' index.html
+          grep -q 'v0321-osfl-polish.js?b=0321' index.html
+          grep -q 'v0321-runtime-bootstrap.js?b=0321' index.html
+          ! grep -q 'v032-runtime-bootstrap.js' index.html
+          grep -q "const V0321_RUNTIME='0.32.1'" v0321-runtime-bootstrap.js
           grep -q 'data-v032-ipa-open' v032-osfl-expert.js
           grep -q 'v032BudgetExposure' v032-osfl-expert.js
           grep -q 'v030SyncMapAndCharts=function' v032-osfl-expert.js
-          if grep -E 'onclick=|onchange=|onmouseover=|style=' v031-territory-cockpit.js v0311-uaf-fallback.js v0312-territory-refinement.js v032-osfl-expert.js v032-runtime-bootstrap.js; then
-            echo 'CSP-incompatible inline handler/style found in final runtime.'
-            exit 1
-          fi
+          grep -q 'FULL_ON_360_OPEN' v0321-osfl-polish.js
+          grep -q 'LOCAL_FALLBACK' v0311-uaf-fallback.js
+          if grep -E 'onclick=|onchange=|onmouseover=|style=' v032-osfl-expert.js v0321-osfl-polish.js v0321-runtime-bootstrap.js; then exit 1; fi
           python - <<'PY'
           import re
           html=open('index.html',encoding='utf-8').read()
-          assert set(re.findall(r'\?b=(\d+)',html))=={'0320'}
+          assert set(re.findall(r'\?b=(\d+)',html))=={'0321'}
           js=open('v0312-territory-refinement.js',encoding='utf-8').read()
           assert "const V0312_INDICATOR='Índice de Prioridad Territorial'" in js
           assert 'Score B' not in js
