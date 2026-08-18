@@ -1,4 +1,4 @@
-name: Validate v0.32.1
+name: Validate v0.33.0
 on:
   push:
     branches: [main]
@@ -27,23 +27,15 @@ jobs:
           assert r.get('totals', {}).get('registered_so_2025') == 9911
           assert r.get('totals', {}).get('ros_2025') == 21828
           PY
-      - name: Validate model and v0.32.1 OSFL contract
+      - name: Validate retained v0.32.1 OSFL contract
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
-          html=Path('index.html').read_text(encoding='utf-8')
           global_js=Path('v028-ipa3-global.js').read_text(encoding='utf-8')
           model=Path('v027-model-consistency.js').read_text(encoding='utf-8')
           expert=Path('v032-osfl-expert.js').read_text(encoding='utf-8')
           polish=Path('v0321-osfl-polish.js').read_text(encoding='utf-8')
           css=Path('v032-osfl-expert.css').read_text(encoding='utf-8')
-          boot=Path('v0321-runtime-bootstrap.js').read_text(encoding='utf-8')
-          assert 'AML Analytical Workbench · v0.32.1' in html
-          assert set(re.findall(r'\?b=(\d+)',html))=={'0321'}
-          assert 'v032-osfl-expert.js?b=0321' in html and 'v0321-osfl-polish.js?b=0321' in html
-          assert 'v0321-runtime-bootstrap.js?b=0321' in html and 'v032-runtime-bootstrap.js' not in html
-          assert html.rfind('v0321-runtime-bootstrap.js?b=0321') > html.rfind('v0321-osfl-polish.js?b=0321') > html.rfind('v032-osfl-expert.js?b=0321')
           assert "version:'0.4-shadow'" in global_js and 'MISSING_IS_NOT_ZERO_STRICT' in model
           assert "V032_REGION_RUNTIME='aml_osfl_region_runtime_snapshot'" in expert
           assert "V032_ENTITY_RUNTIME='aml_osfl_entity_runtime_snapshot'" in expert
@@ -54,20 +46,50 @@ jobs:
           assert 'Universo OSFL analizado' in polish
           assert 'FULL_ON_360_OPEN' in polish and 'v032GetEntity=async function' in polish
           assert '.v032-drawer-head' in css and '.v032-budget-summary' in css
-          assert "const V0321_RUNTIME='0.32.1'" in boot
           PY
-      - name: Validate territory remains intact
+      - name: Validate IRG-LAFT territorial model
         run: |
           python - <<'PY'
           from pathlib import Path
-          js=Path('v0312-territory-refinement.js').read_text(encoding='utf-8')
-          assert "V022_STATE.method='B'" in js
-          assert "const V0312_INDICATOR='Índice de Prioridad Territorial'" in js
-          assert 'Score B' not in js
+          import json,re
+          html=Path('index.html').read_text(encoding='utf-8')
+          irg=Path('v032-irg-territory.js').read_text(encoding='utf-8')
+          css=Path('v032-irg-territory.css').read_text(encoding='utf-8')
+          docs=Path('docs/geographic-risk-methodology-v3-irg.md').read_text(encoding='utf-8')
+          boot=Path('v033-runtime-bootstrap.js').read_text(encoding='utf-8')
+          catalog=json.loads(Path('data/irg_sector_vulnerability_v1.json').read_text(encoding='utf-8'))
+
+          assert 'AML Analytical Workbench · v0.33.0' in html
+          assert set(re.findall(r'\?b=(\d+)',html))=={'0330'}
+          assert 'v032-osfl-expert.js?b=0330' in html and 'v0321-osfl-polish.js?b=0330' in html
+          assert 'v032-irg-territory.css?b=0330' in html
+          assert '<script type="module" src="./v032-irg-territory.js?b=0330"></script>' in html
+          assert '<script type="module" src="./v033-runtime-bootstrap.js?b=0330"></script>' in html
+          assert html.rfind('v033-runtime-bootstrap.js?b=0330') > html.rfind('v032-irg-territory.js?b=0330') > html.rfind('v0321-runtime-bootstrap.js?b=0330')
+
+          assert catalog['schema']=='IRG_SECTOR_VULNERABILITY_V1'
+          assert catalog['risk_method']=='SIMPLE_MEAN_OF_SIX_STRUCTURAL_DIMENSIONS'
+          sectors=catalog['sectors']; assert len(sectors)==55
+          assert {x['uaf_sector_id'] for x in sectors}==set(range(1,56))
+          by={x['uaf_sector_id']:x for x in sectors}
+          assert by[21]['risk_inherent_1_5']==4.83 and by[52]['risk_inherent_1_5']==4.33 and by[54]['risk_inherent_1_5']==4.33
+
+          assert "const V032_METHOD='IRG-LAFT-0.32.0'" in irg
+          assert "const V032_UAF_VIEW='aml_v032_geo_uaf_territory'" in irg
+          assert "const V032_WEIGHTS={vulnerability:0.45,density:0.20,gap:0.20,threat:0.15}" in irg
+          assert "const V032_CONF_WEIGHTS={completeness:0.35,geo:0.30,mapping:0.20,freshness:0.15}" in irg
+          assert 'function v032StrictIRG' in irg and 'secondary_sources_direct_weight:0' in irg
+          assert 'CGR_BUDGET_IPA_PRESS_OSFL_DO_NOT_RECEIVE_INVENTED_IRG_WEIGHTS' in irg
+          assert '70% percentil de intensidad y 30% percentil de tendencia positiva' in irg
+          assert 'No se renormalizan los pesos' in docs
+          assert 'UAF_UNLOCATED_RECORDS_ARE_NOT_IMPUTED' in docs
+          assert 'table-layout:fixed' in css and '.v032-comparator' in css and 'overflow:hidden' in css
+          assert "const V033_RUNTIME='0.33.0'" in boot
+          assert 'window.__AML_RUNTIME_VERSION_APPLIER__=v033RuntimeApplyVersion' in boot
           PY
       - name: Ensure CSP-safe final runtime
         run: |
-          if grep -E 'onclick=|onchange=|onmouseover=|style=' v032-osfl-expert.js v0321-osfl-polish.js v0321-runtime-bootstrap.js; then
+          if grep -E 'onclick=|onchange=|onmouseover=|style=' v032-osfl-expert.js v0321-osfl-polish.js v0321-runtime-bootstrap.js v032-irg-territory.js v033-runtime-bootstrap.js; then
             echo 'Inline handler/style found in final runtime.'
             exit 1
           fi
