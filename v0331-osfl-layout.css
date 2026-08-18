@@ -1,0 +1,118 @@
+/* AML Workbench v0.33.1 · OSFL responsive framing + contrast hardening */
+.v030-osfl{
+  width:100%;max-width:100%;min-width:0;overflow-x:clip;
+  container-type:inline-size;container-name:osfl;
+  gap:14px;
+  --osfl-text:#23332a;--osfl-text-2:#4b5e52;--osfl-muted:#617268;--osfl-muted-2:#6d7b73;
+}
+.v030-osfl,.v030-osfl *{box-sizing:border-box}
+.v030-osfl>*,:where(.v030-osfl .v030-grid,.v030-osfl .v030-card,.v030-osfl .v030-stack-col,.v030-osfl .v030-map-layout,.v030-osfl .v030-map-stage,.v030-osfl .v030-map-side,.v030-osfl .v030-explorer,.v030-osfl .v030-explorer-controls,.v030-osfl .v030-entity-main,.v030-osfl .v032-sii-kpis,.v030-osfl .v032-sii-years,.v030-osfl .v032-public-grid,.v030-osfl .v030-band-grid)>*{min-width:0;max-width:100%}
+.v030-osfl h2,.v030-osfl h3,.v030-osfl h4,.v030-osfl b,.v030-osfl strong{overflow-wrap:anywhere}
+.v030-osfl p,.v030-osfl small,.v030-osfl span{overflow-wrap:anywhere}
+
+/* Compact global density without sacrificing hierarchy. */
+.v030-card{padding:16px;border-radius:16px}
+.v030-card-head{gap:10px;margin-bottom:11px}
+.v030-card-head h3{font-size:16px;line-height:1.2;color:var(--osfl-text)}
+.v030-card-head p{font-size:10px;line-height:1.42;color:var(--osfl-text-2)}
+.v030-kicker,.v030-card-head>div>span,.v030-drawer-head>span,.v030-detail-head span{color:#536b5c}
+.v030-hint{color:#627268}
+
+.v030-hero{padding:20px;gap:16px;grid-template-columns:minmax(0,1fr) minmax(170px,200px);border-radius:20px}
+.v030-hero h2{font-size:25px;line-height:1.06;color:#1f3026}
+.v030-hero p{font-size:11.5px;color:#4c6053}
+.v030-hero-score{padding:16px;border-radius:15px}
+.v030-hero-score b{font-size:36px}
+.v030-hero-score span{color:#c8dbce}.v030-hero-score small{color:#e2ece5}.v030-hero-score em{color:#f0cc91}
+.v030-hero-metrics,.v032-hero-metrics{grid-template-columns:repeat(auto-fit,minmax(125px,1fr))}
+.v030-hero-metrics>div{padding:11px 12px}
+.v030-hero-metrics span,.v030-detail-grid span,.v030-public-grid span{color:#596b60}
+.v030-hero-metrics small{color:#66776d}
+
+/* Main composition: size against the actual content container, not the viewport. */
+.v030-grid{gap:14px}
+.v030-grid-main{grid-template-columns:minmax(0,1.42fr) minmax(260px,.68fr);gap:14px}
+.v030-grid-2{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.v030-stack-col{gap:14px}
+
+/* Map remains visually strong but cannot force overflow. */
+.v030-map-card{padding-bottom:14px}
+.v030-map-layout{grid-template-columns:minmax(180px,.75fr) minmax(0,1fr);gap:14px}
+.v030-map-stage{width:100%;height:clamp(340px,36vw,445px);min-width:0;border-radius:14px}
+.v030-map-stage svg{height:min(410px,92%);width:auto;max-width:88%}
+.v030-map-metrics{justify-content:flex-start;max-width:100%}
+.v030-map-metrics button{padding:5px 7px;font-size:8px}
+.v030-map-side{gap:5px;min-width:0}
+.v030-rank{grid-template-columns:22px minmax(0,1fr) auto;gap:7px;padding:5px}
+.v030-rank em{width:20px;height:20px}.v030-rank span b{font-size:9px}.v030-rank strong{font-size:10px}
+.v030-selected-region{padding:11px;gap:7px}.v030-selected-region div strong{font-size:15px}
+.v030-map-side-title span,.v030-map-note{color:#5f7066}
+
+/* IPA / SII / activity / exposure: fluid items, shorter cards, darker secondary text. */
+.v030-band-grid{grid-template-columns:repeat(auto-fit,minmax(98px,1fr));gap:6px}
+.v030-band-grid button{padding:9px 7px}.v030-band-grid span{color:#5f7066}.v030-band-grid small{color:#68786f}
+.v032-sii-kpis{grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px;margin-bottom:10px}
+.v032-sii-kpis>div{padding:8px}.v032-sii-kpis span{color:#5c6d63}.v032-sii-kpis small{color:#66766d}
+.v032-sii-years{grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:6px}
+.v032-sii-year{padding:8px}.v032-sii-year header span,.v032-sii-year>div span,.v032-sii-year small em,.v032-trajectory-note{color:#5f7066}
+.v032-activity-card .v030-activity-list{max-height:245px;padding-right:2px}
+.v032-activity-card .v030-activity{grid-template-columns:minmax(0,1.2fr) minmax(72px,.55fr) 48px;gap:7px;padding:5px 6px;min-height:34px}
+.v030-activity span b{font-size:9px}.v030-activity span small{color:#607168}.v030-activity strong{font-size:10px}
+.v032-public-grid,.v030-public-grid{grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:6px}
+.v030-public-grid button,.v030-public-grid>div{padding:10px}
+.v030-public-grid small{color:#5f7067;font-size:8px}.v032-card-foot,.v030-context-rule,.v030-ipa-guard,.v030-method-footer{color:#5c6d63}
+.v032-public-summary{padding:8px 9px}.v032-public-summary span{color:#53695b}
+
+/* Explorer: no rigid 7-column row. Controls wrap against container width. */
+.v030-explorer>.v030-card-head{padding:16px 16px 0}
+.v030-explorer-controls{grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:6px;padding:0 16px 12px}
+.v030-explorer-controls input:first-child{grid-column:span 2}
+.v030-explorer-controls input,.v030-explorer-controls select{min-width:0;padding:8px 9px;font-size:9px;color:#25372c}
+.v030-explorer-controls button{padding:8px 9px;font-size:9px;white-space:nowrap}
+.v030-results-head{padding:9px 16px;color:#586a5f}
+.v030-entity-main{grid-template-columns:minmax(0,1.45fr) minmax(135px,.62fr) minmax(88px,105px) 40px;gap:9px;padding:11px 16px}
+.v030-entity-id>span{color:#5a7162}.v030-entity-id>small{color:#5f7066}.v030-entity-econ span{color:#53665a}.v030-entity-econ small{color:#65766d}
+.v030-entity-ipa{padding:8px}.v030-entity-ipa span{color:#5a6d61}.v030-entity-ipa small{color:#617268}.v030-open-arrow{color:#4e6657}
+
+/* OSFL 360: ensure readable surfaces and no inner overflow. */
+.v030-drawer,.v032-drawer{width:100%;max-width:100%;min-width:0;color:#213229;overflow-wrap:anywhere}
+.v032-drawer-head{padding:15px 16px;border-radius:14px}
+.v032-drawer-head>span{color:#d2e5d8!important}.v032-drawer-head p{color:#eef6f1!important}
+.v032-drawer-head .v030-tag,.v032-drawer-head .v030-tag.r8,.v032-drawer-head .v030-tag.public,.v032-drawer-head .v030-tag.uaf,.v032-drawer-head .v030-tag.san,.v032-drawer-head .v030-tag.good{background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.32)}
+.v032-drawer .v030-drawer-score span,.v032-drawer .v030-drawer-score small,.v032-drawer .v030-drawer-score em{color:#455e4f}
+.v032-detail-grid,.v030-detail-grid{grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:6px}
+.v032-detail-grid span{color:#53675a!important}.v032-detail-grid small{color:#607168!important}
+.v032-drawer .v030-detail-section{padding:11px;margin-top:9px}
+.v032-sales-year header span,.v032-sales-year footer,.v032-sales-year>small,.v032-sales-note{color:#596b60}
+.v032-budget-summary{grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px}
+.v032-budget-summary span{color:#715e43}.v032-budget-summary small{color:#77664d}
+.v032-budget-orgs>div{min-width:0;gap:8px}.v032-budget-orgs span{min-width:0}.v032-budget-orgs span small{color:#776852}.v032-budget-warning,.v032-budget-empty{color:#65563f}
+.v030-mark-list>div{grid-template-columns:34px minmax(0,1fr) 42px}.v030-mark-list span{color:#5d7063}.v030-mark-list small{color:#66766d}
+.v030-san-list span{color:#5f7066}.v030-san-list small{color:#66766d}
+
+/* Container-aware breakpoints: based on real OSFL width after sidebar. */
+@container osfl (max-width:1100px){
+  .v030-grid-main{grid-template-columns:1fr}
+  .v030-stack-col{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .v030-hero{grid-template-columns:minmax(0,1fr) 180px}
+  .v030-map-layout{grid-template-columns:minmax(190px,.7fr) minmax(0,1fr)}
+}
+@container osfl (max-width:820px){
+  .v030-hero{grid-template-columns:1fr}.v030-hero-score{max-width:none}
+  .v030-grid-2,.v030-stack-col,.v030-map-layout{grid-template-columns:1fr}
+  .v030-map-stage{height:390px}.v030-map-stage svg{height:350px}
+  .v030-explorer-controls{grid-template-columns:repeat(2,minmax(0,1fr))}.v030-explorer-controls input:first-child{grid-column:1/-1}
+  .v030-entity-main{grid-template-columns:minmax(0,1fr) minmax(84px,100px)}.v030-entity-econ,.v030-open-arrow{display:none}
+}
+@container osfl (max-width:560px){
+  .v030-card{padding:12px}.v030-hero{padding:15px}.v030-hero h2{font-size:22px}
+  .v030-hero-metrics,.v032-hero-metrics,.v032-sii-kpis,.v032-sii-years,.v032-public-grid,.v030-public-grid,.v030-band-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .v030-map-stage{height:340px}.v030-map-stage svg{height:305px}
+  .v030-explorer-controls{grid-template-columns:1fr}.v030-explorer-controls input:first-child{grid-column:auto}
+  .v030-results-head{align-items:flex-start;gap:6px;flex-wrap:wrap}
+  .v030-detail-timeline>div{grid-template-columns:32px minmax(0,1fr)}.v030-detail-timeline>div>*:nth-child(3){grid-column:2}
+}
+
+/* Fallback for browsers that do not apply container queries. */
+@media(max-width:1360px){.v030-grid-main{grid-template-columns:1fr}.v030-stack-col{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:900px){.v030-grid-2,.v030-stack-col,.v030-map-layout{grid-template-columns:1fr}.v030-explorer-controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
