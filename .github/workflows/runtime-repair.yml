@@ -99,17 +99,30 @@ jobs:
         id: deploy
         uses: actions/deploy-pages@v4
 
-      - name: Verify public artifact
+      - name: Compare plain root and cache-busted root
         id: verify
         shell: bash
         run: |
-          set -euo pipefail
+          set +e
           sleep 12
-          URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/?runtime=0343-${GITHUB_RUN_ID}"
-          curl -fsSL -H 'Cache-Control: no-cache' "$URL" -o /tmp/public.html
-          grep -q 'AML Analytical Workbench · v0.34.3' /tmp/public.html
-          grep -q 'v0343-final.module.js?b=0343' /tmp/public.html
-          echo 'PUBLIC_OK=yes' >> "$GITHUB_ENV"
+          BASE="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/"
+          curl -sS -D /tmp/root.headers -o /tmp/root.html "$BASE"
+          ROOT_CURL=$?
+          curl -sS -D /tmp/bust.headers -o /tmp/bust.html "${BASE}?runtime=0343-${GITHUB_RUN_ID}"
+          BUST_CURL=$?
+          ROOT_TITLE=$(grep -o '<title>[^<]*' /tmp/root.html | head -1 | sed 's/<title>//')
+          BUST_TITLE=$(grep -o '<title>[^<]*' /tmp/bust.html | head -1 | sed 's/<title>//')
+          ROOT_FINAL=$(grep -c 'v0343-final.module.js?b=0343' /tmp/root.html)
+          BUST_FINAL=$(grep -c 'v0343-final.module.js?b=0343' /tmp/bust.html)
+          echo "ROOT_CURL=$ROOT_CURL" >> "$GITHUB_ENV"
+          echo "BUST_CURL=$BUST_CURL" >> "$GITHUB_ENV"
+          echo "ROOT_TITLE=$ROOT_TITLE" >> "$GITHUB_ENV"
+          echo "BUST_TITLE=$BUST_TITLE" >> "$GITHUB_ENV"
+          echo "ROOT_FINAL=$ROOT_FINAL" >> "$GITHUB_ENV"
+          echo "BUST_FINAL=$BUST_FINAL" >> "$GITHUB_ENV"
+          grep -iE '^(HTTP/|age:|cache-control:|etag:|last-modified:|x-cache:|via:|date:)' /tmp/root.headers > /tmp/root.filtered || true
+          grep -iE '^(HTTP/|age:|cache-control:|etag:|last-modified:|x-cache:|via:|date:)' /tmp/bust.headers > /tmp/bust.filtered || true
+          exit 0
 
       - name: Report result
         if: always() && github.event_name == 'issues'
@@ -120,14 +133,25 @@ jobs:
           PAGE_URL: ${{ steps.deploy.outputs.page_url }}
         shell: bash
         run: |
-          cat > /tmp/report.md <<EOF
-          ## Runtime repair v0.34.3
-
-          - HEAD deployed: \`$(git rev-parse HEAD)\`
-          - deploy-pages: \`${DEPLOY_OUTCOME}\`
-          - public verification: \`${VERIFY_OUTCOME}\`
-          - public v0.34.3 + final module observed: \`${PUBLIC_OK:-no}\`
-          - Sanciones route pinned to AML_SANCTIONS_V12: \`yes\`
-          - URL: \`${PAGE_URL}\`
-          EOF
+          {
+            echo '## Runtime repair v0.34.3'
+            echo
+            echo "- HEAD deployed: \`$(git rev-parse HEAD)\`"
+            echo "- deploy-pages: \`${DEPLOY_OUTCOME}\`"
+            echo "- root title: \`${ROOT_TITLE:-?}\`"
+            echo "- root has v0343 final module: \`${ROOT_FINAL:-?}\`"
+            echo "- cache-busted title: \`${BUST_TITLE:-?}\`"
+            echo "- cache-busted has v0343 final module: \`${BUST_FINAL:-?}\`"
+            echo "- Sanciones route pinned to AML_SANCTIONS_V12: \`yes\`"
+            echo "- URL: \`${PAGE_URL}\`"
+            echo
+            echo '### Root cache headers'
+            echo '```'
+            cat /tmp/root.filtered 2>/dev/null || true
+            echo '```'
+            echo '### Cache-busted headers'
+            echo '```'
+            cat /tmp/bust.filtered 2>/dev/null || true
+            echo '```'
+          } > /tmp/report.md
           gh issue comment "${{ github.event.issue.number }}" --body-file /tmp/report.md
