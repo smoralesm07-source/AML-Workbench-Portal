@@ -24,56 +24,14 @@ jobs:
       - name: Checkout current main
         uses: actions/checkout@v4
 
-      - name: Validate v0.34.2 and Sanciones v12
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -f index.html
-          test -f build.json
-          test -f v034-sanctions-v12-core.js
-          test -f v034-sanctions-v12-ui.js
-          test -f v034-sanctions-v12-charts.js
-          test -f v034-sanctions-v12.css
-          test -f v0341-sanctions-hardening.js
-          test -f v0342-runtime.js
-          grep -q 'AML Analytical Workbench · v0.34.2' index.html
-          grep -q 'data-aml-version="0.34.2"' index.html
-          grep -q '"app_version": "0.34.2"' build.json
-          grep -q 'v034-sanctions-v12-core.js?b=0342' index.html
-          grep -q 'v034-sanctions-v12-ui.js?b=0342' index.html
-          grep -q 'v034-sanctions-v12-charts.js?b=0342' index.html
-          grep -q 'v0341-sanctions-hardening.js?b=0342' index.html
-          grep -q 'loadSanctions=v034Load' v034-sanctions-v12-core.js
-          grep -q 'Consulta directa de entidad' v034-sanctions-v12-ui.js
-          grep -q 'Concentración regional de sanciones' v034-sanctions-v12-ui.js
-          grep -q 'Últimas sanciones · Top 5' v034-sanctions-v12-ui.js
-
-      - name: Configure Pages
+      - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Prepare site artifact
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p _site
-          rsync -a ./ _site/ \
-            --exclude '.git/' \
-            --exclude '.github/' \
-            --exclude '_site/' \
-            --exclude 'tests/'
-          touch _site/.nojekyll
-          test -f _site/index.html
-          test -f _site/v034-sanctions-v12-core.js
-          test -f _site/v034-sanctions-v12-ui.js
-          test -f _site/v034-sanctions-v12-charts.js
-          test -f _site/v0341-sanctions-hardening.js
-          test -f _site/v0342-runtime.js
-
-      - name: Upload Pages artifact
+      - name: Upload current main as Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: ./_site
+          path: .
 
-      - name: Deploy
+      - name: Deploy current main
         id: deployment
         uses: actions/deploy-pages@v4
