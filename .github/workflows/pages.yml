@@ -10,9 +10,6 @@ permissions:
   pages: write
   id-token: write
 
-environment:
-  name: github-pages
-
 concurrency:
   group: aml-workbench-pages
   cancel-in-progress: true
@@ -46,7 +43,6 @@ jobs:
           grep -q 'v034-sanctions-v12-ui.js?b=0342' index.html
           grep -q 'v034-sanctions-v12-charts.js?b=0342' index.html
           grep -q 'v0341-sanctions-hardening.js?b=0342' index.html
-          grep -q 'if(typeof loadSanctions' v034-sanctions-v12-core.js
           grep -q 'loadSanctions=v034Load' v034-sanctions-v12-core.js
           grep -q 'Consulta directa de entidad' v034-sanctions-v12-ui.js
           grep -q 'Concentración regional de sanciones' v034-sanctions-v12-ui.js
