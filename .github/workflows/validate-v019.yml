@@ -1,4 +1,4 @@
-name: Validate v0.29.0
+name: Validate v0.30.1
 on:
   push:
     branches: [main]
@@ -39,57 +39,70 @@ jobs:
           assert r.get('totals', {}).get('registered_so_2025') == 9911
           assert r.get('totals', {}).get('ros_2025') == 21828
           PY
-      - name: Validate v0.28.0 global IPA3 contract remains intact
+      - name: Validate global IPA3 and territory contracts
         run: |
           python - <<'PY'
           from pathlib import Path
           global_js=Path('v028-ipa3-global.js').read_text(encoding='utf-8')
           sanc_js=Path('v028-sanctions-ipa3.js').read_text(encoding='utf-8')
+          territory=Path('v029-territory-analytics.js').read_text(encoding='utf-8')
           model=Path('v027-model-consistency.js').read_text(encoding='utf-8')
           assert "const V028_SCORE_VIEW='aml_v_ipa3_entity_score_v0_4'" in global_js
-          assert "const V028_MARK_VIEW='aml_v_ipa3_mark_scores_v0_4'" in global_js
           assert "version:'0.4-shadow'" in global_js
           assert 'window.AML_IPA3=' in global_js
           assert "const V028_SANCTIONS_VIEW='aml_v028_sanctions_with_identity'" in sanc_js
+          assert "V029_ANALYTICS_VERSION='TERRITORY-ANALYTICS-0.29.0'" in territory
           assert "V027_GEO_METHOD='GEO-RISK-B-0.27.0'" in model
           assert 'MISSING_IS_NOT_ZERO_STRICT' in model
           PY
-      - name: Validate v0.29.0 territory analytics
+      - name: Validate native OSFL module
         run: |
           python - <<'PY'
           from pathlib import Path
           html=Path('index.html').read_text(encoding='utf-8')
-          js=Path('v029-territory-analytics.js').read_text(encoding='utf-8')
-          css=Path('v029-territory-analytics.css').read_text(encoding='utf-8')
-          assert 'AML Analytical Workbench · v0.29.0' in html
-          assert 'v029-territory-analytics.css?b=0290' in html
-          assert 'v029-territory-analytics.js?b=0290' in html
-          assert html.rfind('v029-territory-analytics.js?b=0290') > html.rfind('v028-sanctions-ipa3.js?b=0290')
-          assert '?b=0280' not in html and '?b=0272' not in html
-          assert "const V029='0.29.0'" in js
-          assert "V029_ANALYTICS_VERSION='TERRITORY-ANALYTICS-0.29.0'" in js
-          assert "V022_STATE.method='B'" in js
-          assert 'Score B · Percentil robusto' in js
-          assert 'V029_FILTERS={region:null,profiles:new Set(),phenomena:new Set(),drivers:new Set(),matrix:new Set()}' in js
-          assert 'data-v029-filter' in js and 'data-v029-select' in js
-          assert 'MULTISOURCE_CONVERGENCE' in js
-          assert 'CEAD_ACCELERATION' in js
-          assert 'IPA_SANCTIONS' in js
-          assert 'RECENT_FORMATION' in js
-          assert 'phenomena_codes' in js and 'analytical_priority' in js
-          assert 'window.AML_TERRITORY_ANALYTICS=' in js
-          assert 'r.scores.B=' not in js
-          assert '.v029-filterbar' in css
-          assert '.v029-chart-grid' in css
-          assert '.v029-risk-table' in css
-          assert '.v029-narrative' in css
-          assert '.v029-filtered-out' in css
+          js=Path('v030-osfl.js').read_text(encoding='utf-8')
+          css=Path('v030-osfl.css').read_text(encoding='utf-8')
+          fix=Path('v0301-osfl-consistency.js').read_text(encoding='utf-8')
+          boot=Path('v0301-runtime-bootstrap.js').read_text(encoding='utf-8')
+
+          assert 'AML Analytical Workbench · v0.30.1' in html
+          assert 'v030-osfl.css?b=0300' in html
+          assert 'v030-osfl.js?b=0300' in html
+          assert 'v0301-osfl-consistency.js?b=0301' in html
+          assert 'v0301-runtime-bootstrap.js?b=0301' in html
+          assert 'v030-runtime-bootstrap.js' not in html
+          assert html.rfind('v0301-runtime-bootstrap.js?b=0301') > html.rfind('v0301-osfl-consistency.js?b=0301') > html.rfind('v030-osfl.js?b=0300')
+
+          # Native data contract: no static enriched entity JSON.
+          assert "const V030_ENTITY_VIEW='aml_v029_osfl_entity'" in js
+          assert "const V030_REGION_VIEW='aml_v029_osfl_region'" in js
+          assert "const V030_YEAR_VIEW='aml_v029_osfl_year'" in js
+          assert 'v023-osfl-entities.json' not in js and 'fetch(' not in js.split('const V030_CHILE',1)[0]
+          assert 'sb.from(V030_ENTITY_VIEW)' in js
+          assert 'aml_v_ipa3_mark_scores_v0_4' in js
+          assert 'aml_sii_entity_year' in js
+          assert 'aml_v028_sanctions_with_identity' in js
+          assert 'aml_uaf_entity_profile' in js
+          assert 'data-v030-open-entity360' in js
+
+          # Preserve/improve the supplied vector-map concept: 16 named regional geometries.
+          for name in ['Arica y Parinacota','Tarapacá','Antofagasta','Atacama','Coquimbo','Valparaíso','Metropolitana',"O'Higgins",'Maule','Ñuble','Biobío','La Araucanía','Los Ríos','Los Lagos','Aysén','Magallanes']:
+              assert name in js
+          assert 'V030_CHILE' in js and 'data-v030-map-region' in js
+          assert '.v030-map-stage' in css and '.v030-region' in css
+
+          # Semantics/guardrails and source/canonical reconciliation.
+          assert 'R.8' in js and 'aporte IPA 0' in js
+          assert 'IPA 3.0 · SHADOW' in js
+          assert 'OSFL sustantivas' in fix
+          assert 'public_body_reclassified' in fix
+          assert '100% del snapshot en Entity Hub' in fix
+          assert "const V0301_RUNTIME='0.30.1'" in boot
+          assert 'window.__AML_RUNTIME_VERSION_APPLIER__=v0301ApplyVersion' in boot
           PY
-      - name: Ensure CSP-safe v0.29 runtime
+      - name: Ensure CSP-safe final OSFL runtime
         run: |
-          if grep -E 'onclick=|onchange=|onmouseover=|style=' v029-territory-analytics.js; then
-            echo 'Inline handler/style found in v0.29 runtime.'
+          if grep -E 'onclick=|onchange=|onmouseover=|style=' v0301-osfl-consistency.js v0301-runtime-bootstrap.js; then
+            echo 'Inline handler/style found in final OSFL consistency runtime.'
             exit 1
           fi
-          grep -q 'EXPLANATORY_PROFILE_IS_NOT_CAUSAL_INFERENCE' docs/territory-analytics-v029.md
-          grep -q 'PHENOMENA_DO_NOT_CHANGE_SCORE_B' docs/territory-analytics-v029.md
