@@ -1,8 +1,10 @@
 {
-  "app_version": "0.34.1",
-  "build": "0341",
+  "app_version": "0.34.2",
+  "build": "0342",
   "auth_fix": "SUPABASE_ON_AUTH_STATE_CHANGE_DEFERRED",
   "published_from": "main",
   "feature": "SANCTIONS_V12_FINALIZED",
+  "runtime": "SINGLE_VISIBLE_VERSION_AUTHORITY",
+  "deployment": "GITHUB_PAGES_ACTIONS",
   "data_contract": "RADAR_SANCTIONS_ENTITY_HUB_V1"
 }
