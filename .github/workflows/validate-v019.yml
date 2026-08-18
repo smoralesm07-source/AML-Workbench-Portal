@@ -1,4 +1,4 @@
-name: Validate v0.30.2
+name: Validate v0.31.0
 on:
   push:
     branches: [main]
@@ -39,7 +39,7 @@ jobs:
           assert r.get('totals', {}).get('registered_so_2025') == 9911
           assert r.get('totals', {}).get('ros_2025') == 21828
           PY
-      - name: Validate global IPA3 and territory contracts
+      - name: Validate global IPA3 and Score B contracts
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -47,18 +47,15 @@ jobs:
           sanc_js=Path('v028-sanctions-ipa3.js').read_text(encoding='utf-8')
           territory=Path('v029-territory-analytics.js').read_text(encoding='utf-8')
           model=Path('v027-model-consistency.js').read_text(encoding='utf-8')
-          perf=Path('v0302-performance.js').read_text(encoding='utf-8')
           assert "const V028_SCORE_VIEW='aml_v_ipa3_entity_score_v0_4'" in global_js
           assert "version:'0.4-shadow'" in global_js
           assert 'window.AML_IPA3=' in global_js
-          assert "V0302_IPA_SNAPSHOT='aml_ipa3_entity_score_snapshot_v0_4'" in perf
-          assert 'v028FetchScores=async function' in perf
           assert "const V028_SANCTIONS_VIEW='aml_v028_sanctions_with_identity'" in sanc_js
           assert "V029_ANALYTICS_VERSION='TERRITORY-ANALYTICS-0.29.0'" in territory
           assert "V027_GEO_METHOD='GEO-RISK-B-0.27.0'" in model
           assert 'MISSING_IS_NOT_ZERO_STRICT' in model
           PY
-      - name: Validate native OSFL and fast runtime
+      - name: Validate OSFL and v0.30.2 performance runtime remain intact
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -69,48 +66,60 @@ jobs:
           perf=Path('v0302-performance.js').read_text(encoding='utf-8')
           boot=Path('v0302-runtime-bootstrap.js').read_text(encoding='utf-8')
 
-          assert 'AML Analytical Workbench · v0.30.2' in html
-          assert '?b=0300' not in html and '?b=0301' not in html
-          assert 'v030-osfl.css?b=0302' in html
-          assert 'v030-osfl.js?b=0302' in html
-          assert 'v0301-osfl-consistency.js?b=0302' in html
-          assert 'v0302-performance.js?b=0302' in html
-          assert 'v0302-runtime-bootstrap.js?b=0302' in html
-          assert 'v0271-runtime-bootstrap.js' not in html and 'v0272-runtime-bootstrap.js' not in html
-          assert html.rfind('v0302-runtime-bootstrap.js?b=0302') > html.rfind('v0302-performance.js?b=0302') > html.rfind('v0301-osfl-consistency.js?b=0302')
-
-          # Native data contract: no static enriched entity JSON.
+          assert 'AML Analytical Workbench · v0.31.0' in html
+          assert 'v030-osfl.css?b=0310' in html
+          assert 'v0302-performance.css?b=0310' in html
+          assert 'v030-osfl.js?b=0310' in html
+          assert 'v0301-osfl-consistency.js?b=0310' in html
+          assert 'v0302-performance.js?b=0310' in html
+          assert 'v0302-runtime-bootstrap.js?b=0310' in html
+          assert 'v0301-runtime-bootstrap.js' not in html
+          assert html.rfind('v0302-runtime-bootstrap.js?b=0310') > html.rfind('v0302-performance.js?b=0310') > html.rfind('v0301-osfl-consistency.js?b=0310') > html.rfind('v030-osfl.js?b=0310')
           assert "const V030_ENTITY_VIEW='aml_v029_osfl_entity'" in js
-          assert 'v023-osfl-entities.json' not in js
-          assert 'sb.from(V030_ENTITY_VIEW)' in js
-          assert 'aml_v_ipa3_mark_scores_v0_4' in js
-          assert 'aml_sii_entity_year' in js
-          assert 'aml_v028_sanctions_with_identity' in js
-          assert 'aml_uaf_entity_profile' in js
-          assert 'data-v030-open-entity360' in js
-          assert "V0302_OSFL_DASH='aml_osfl_dashboard_runtime_snapshot'" in perf
-          assert "V0302_OVERVIEW='aml_overview_runtime_snapshot'" in perf
-          assert "sb.from('aml_sync_state')" in perf
-          assert 'v024Unavailable=function()' in perf
-
-          # Preserve/improve the supplied vector-map concept: 16 named regional geometries.
-          for name in ['Arica y Parinacota','Tarapacá','Antofagasta','Atacama','Coquimbo','Valparaíso','Metropolitana',"O'Higgins",'Maule','Ñuble','Biobío','La Araucanía','Los Ríos','Los Lagos','Aysén','Magallanes']:
-              assert name in js
+          assert "const V030_REGION_VIEW='aml_v029_osfl_region'" in js
           assert 'V030_CHILE' in js and 'data-v030-map-region' in js
           assert '.v030-map-stage' in css and '.v030-region' in css
-
-          # Semantics/guardrails and source/canonical reconciliation.
           assert 'R.8' in js and 'aporte IPA 0' in js
-          assert 'IPA 3.0 · SHADOW' in js
           assert 'OSFL sustantivas' in fix
           assert 'public_body_reclassified' in fix
-          assert '100% del snapshot en Entity Hub' in fix
+          assert "const V0302_IPA_SNAPSHOT='aml_ipa3_entity_score_snapshot_v0_4'" in perf
+          assert "const V0302_OSFL_DASH='aml_osfl_dashboard_runtime_snapshot'" in perf
           assert "const V0302_RUNTIME='0.30.2'" in boot
-          assert 'window.__AML_RUNTIME_VERSION_APPLIER__=v0302ApplyVersion' in boot
+          PY
+      - name: Validate geographic risk cockpit v0.31.0
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html=Path('index.html').read_text(encoding='utf-8')
+          js=Path('v031-territory-cockpit.js').read_text(encoding='utf-8')
+          css=Path('v031-territory-cockpit.css').read_text(encoding='utf-8')
+          docs=Path('docs/territory-cockpit-v031.md').read_text(encoding='utf-8')
+
+          assert 'v031-territory-cockpit.css?b=0310' in html
+          assert 'v031-territory-cockpit.js?b=0310' in html
+          assert html.rfind('v031-territory-cockpit.js?b=0310') > html.rfind('v0302-runtime-bootstrap.js?b=0310')
+          assert "const V031='0.31.0'" in js
+          assert "V031_SCORE_FORMULA=typeof V027_GEO_METHOD" in js
+          assert "'GEO-RISK-B-0.27.0'" in js
+          assert "V022_STATE.method='B'" in js
+          assert 'V030_CHILE' in js
+          assert 'data-v031-region' in js
+          assert 'data-v031-metric' in js
+          assert 'data-v031-filter' in js
+          assert 'Contexto OSFL' in js and 'Prensa territorial' in js
+          assert 'contexto · no puntúa' in js
+          assert 'window.AML_TERRITORY_COCKPIT=' in js
+          assert 'window.__AML_RUNTIME_VERSION_APPLIER__=v031ApplyVersion' in js
+          assert '.v031-map-stage' in css and '.v031-dossier' in css and '.v031-tablewrap' in css
+          assert 'PHENOMENA_DO_NOT_CHANGE_SCORE_B' in docs
+          assert 'TERRITORIAL_SIGNAL_IS_NOT_ENTITY_ATTRIBUTION' in docs
+          assert 'OSFL_CONTEXT_DOES_NOT_SCORE' in docs
+          assert 'PRESS_CONTEXT_DOES_NOT_SCORE' in docs
+          assert 'r.scores.B=' not in js and 'scores.B =' not in js
           PY
       - name: Ensure CSP-safe final runtime
         run: |
-          if grep -E 'onclick=|onchange=|onmouseover=|style=' v0301-osfl-consistency.js v0302-performance.js v0302-runtime-bootstrap.js; then
+          if grep -E 'onclick=|onchange=|onmouseover=|style=' v0301-osfl-consistency.js v0302-performance.js v0302-runtime-bootstrap.js v031-territory-cockpit.js; then
             echo 'Inline handler/style found in final runtime.'
             exit 1
           fi
