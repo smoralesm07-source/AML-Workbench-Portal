@@ -1,0 +1,46 @@
+/* AML Workbench v0.28.0 · global IPA 3.0 entity presentation */
+.v028-ipa3-chip{
+  display:inline-flex;align-items:center;gap:5px;
+  margin-left:8px;padding:3px 7px;border-radius:999px;
+  font-size:10px;font-weight:800;line-height:1.2;white-space:nowrap;
+  border:1px solid var(--line,#d8dee8);background:#f7f8fa;color:#475569;
+  vertical-align:middle;
+}
+.v028-ipa3-chip.very-high{background:#fff1e8;border-color:#f0a46a;color:#8a3e0d}
+.v028-ipa3-chip.high{background:#fff7ed;border-color:#fdba74;color:#9a4b0b}
+.v028-ipa3-chip.medium{background:#fffaf0;border-color:#f4cf8c;color:#7a5713}
+.v028-ipa3-chip.low{background:#f8fafc;border-color:#cbd5e1;color:#475569}
+.v028-ipa3-chip.zero{background:#f8fafc;border-color:#e2e8f0;color:#64748b}
+.v028-ipa3-chip.error{background:#fff5f5;border-color:#fecaca;color:#991b1b}
+
+.v0202-alert-score.v028-ipa3-primary{
+  min-width:104px;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;
+}
+.v0202-alert-score.v028-ipa3-primary>b,
+.v0201-score.v028-ipa3-primary>b{font-variant-numeric:tabular-nums}
+.v0202-alert-score.v028-ipa3-primary>span,
+.v0201-score.v028-ipa3-primary>span{font-size:10px;font-weight:800;letter-spacing:.02em}
+.v0202-alert-score.v028-ipa3-primary>small,
+.v0201-score.v028-ipa3-primary>small{display:block;margin-top:2px;font-size:9px;font-weight:600;color:#64748b;white-space:nowrap}
+.v0202-alert-score.v028-ipa3-primary.very-high>b,
+.v0201-score.v028-ipa3-primary.very-high>b{color:#9a3412}
+.v0202-alert-score.v028-ipa3-primary.high>b,
+.v0201-score.v028-ipa3-primary.high>b{color:#b45309}
+.v0202-alert-score.v028-ipa3-primary.medium>b,
+.v0201-score.v028-ipa3-primary.medium>b{color:#8a6416}
+.v0202-alert-score.v028-ipa3-primary.low>b,
+.v0201-score.v028-ipa3-primary.low>b{color:#475569}
+.v0202-alert-score.v028-ipa3-primary.zero>b,
+.v0201-score.v028-ipa3-primary.zero>b{color:#64748b}
+
+.v024-cross-entities>[data-v024-cross-entity]>.v028-ipa3-chip{margin-left:auto}
+.v0205-table td>.v028-ipa3-chip{margin:0 6px 4px 0}
+.v0192-so-signals>.v028-ipa3-chip{margin:4px 0 0 0;width:max-content}
+.v024-sanction-events article .v028-ipa3-chip{margin:0 6px 4px 0}
+
+/* Keep v0.28.0 as the visible runtime label even if historical layers mutate textContent. */
+.v019-brand small[data-runtime-label]{font-size:0!important;line-height:1.35;min-height:14px;display:block}
+.v019-brand small[data-runtime-label]::after{
+  content:attr(data-runtime-label)!important;font-size:10.5px!important;font-weight:750;
+  letter-spacing:.02em;white-space:nowrap
+}
