@@ -12,6 +12,8 @@ on:
       - 'v034-sanctions-v12.css'
       - 'v0341-sanctions-hardening.js'
       - 'v0342-runtime.js'
+      - 'v0343-final.module.js'
+      - 'v0343-runtime.css'
       - 'tests/v0341-sanctions-contract.mjs'
       - 'docs/sanctions-module-v034.md'
       - '.github/workflows/validate-v034-sanctions.yml'
@@ -24,6 +26,7 @@ on:
       - 'v034-sanctions-v12.css'
       - 'v0341-sanctions-hardening.js'
       - 'v0342-runtime.js'
+      - 'v0343-final.module.js'
       - 'tests/v0341-sanctions-contract.mjs'
 
 permissions:
@@ -45,6 +48,7 @@ jobs:
           node --check v034-sanctions-v12-charts.js
           node --check v0341-sanctions-hardening.js
           node --check v0342-runtime.js
+          node --check v0343-final.module.js
 
       - name: Runtime contract fixture
         run: node tests/v0341-sanctions-contract.mjs
@@ -52,13 +56,13 @@ jobs:
       - name: Workbench integration contract
         shell: bash
         run: |
-          grep -q 'v034-sanctions-v12.css' index.html
-          grep -q 'v034-sanctions-v12-core.js' index.html
-          grep -q 'v034-sanctions-v12-ui.js' index.html
-          grep -q 'v034-sanctions-v12-charts.js' index.html
-          grep -q 'v0341-sanctions-hardening.js' index.html
-          grep -q 'v0342-runtime.js' index.html
-          grep -q '"app_version": "0.34.2"' build.json
+          grep -q 'v034-sanctions-v12.css?b=0343' index.html
+          grep -q 'v034-sanctions-v12-core.js?b=0343' index.html
+          grep -q 'v034-sanctions-v12-ui.js?b=0343' index.html
+          grep -q 'v034-sanctions-v12-charts.js?b=0343' index.html
+          grep -q 'v0341-sanctions-hardening.js?b=0343' index.html
+          grep -q 'v0343-final.module.js?b=0343' index.html
+          grep -q '"app_version": "0.34.3"' build.json
           grep -q 'aml_v028_sanctions_with_identity' v034-sanctions-v12-core.js
           grep -q 'aml_v0205_uaf_sii_reconciliation' v034-sanctions-v12-core.js
           grep -q 'Radar_sanciones/main/docs/data/events.json' v034-sanctions-v12-core.js
@@ -68,6 +72,8 @@ jobs:
           grep -q 'evidence_id' v0341-sanctions-hardening.js
           grep -q 'Potencial SO' v034-sanctions-v12-ui.js
           grep -q 'Índice de Exposición Relativa' v034-sanctions-v12-charts.js
+          grep -q "view==='sanctions'" v0343-final.module.js
+          grep -q 'AML_SANCTIONS_V12' v0343-final.module.js
           ! grep -q 'v0334-runtime-bootstrap.js' index.html
 
       - name: Live Radar Sanciones schema contract
