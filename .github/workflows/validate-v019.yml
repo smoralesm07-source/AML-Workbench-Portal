@@ -1,4 +1,4 @@
-name: Validate v0.27.2
+name: Validate v0.28.0
 on:
   push:
     branches: [main]
@@ -39,45 +39,50 @@ jobs:
           assert r.get('totals', {}).get('registered_so_2025') == 9911
           assert r.get('totals', {}).get('ros_2025') == 21828
           PY
-      - name: Validate v0.27.2 single visible version authority
+      - name: Validate v0.28.0 global IPA3 contract
         run: |
           python - <<'PY'
           from pathlib import Path
           html=Path('index.html').read_text(encoding='utf-8')
-          css=Path('v0272-runtime-version.css').read_text(encoding='utf-8')
-          boot=Path('v0272-runtime-bootstrap.js').read_text(encoding='utf-8')
-          legacy21=Path('v0211-bootstrap.css').read_text(encoding='utf-8')
-          legacy19=Path('v0192-ux.js').read_text(encoding='utf-8')
+          global_js=Path('v028-ipa3-global.js').read_text(encoding='utf-8')
+          sanc_js=Path('v028-sanctions-ipa3.js').read_text(encoding='utf-8')
+          css=Path('v028-ipa3-global.css').read_text(encoding='utf-8')
           model=Path('v027-model-consistency.js').read_text(encoding='utf-8')
-          source=Path('v027-source-null-hardening.js').read_text(encoding='utf-8')
 
-          assert 'AML Analytical Workbench · v0.27.2' in html
-          assert '?b=0271' not in html and '?b=0270' not in html
-          assert 'v0272-runtime-version.css?b=0272' in html
-          assert 'v0272-runtime-bootstrap.js?b=0272' in html
-          assert html.rfind('v0272-runtime-bootstrap.js?b=0272') > html.rfind('v0271-runtime-bootstrap.js?b=0272')
+          assert 'AML Analytical Workbench · v0.28.0' in html
+          assert '?b=0272' not in html and '?b=0271' not in html
+          assert 'v028-ipa3-global.css?b=0280' in html
+          assert 'v028-ipa3-global.js?b=0280' in html
+          assert 'v028-sanctions-ipa3.js?b=0280' in html
+          assert html.rfind('v028-sanctions-ipa3.js?b=0280') > html.rfind('v028-ipa3-global.js?b=0280') > html.rfind('v0272-runtime-bootstrap.js?b=0280')
 
-          # The visible label must no longer depend on mutable textContent.
+          assert "const V028='0.28.0'" in global_js
+          assert "const V028_SCORE_VIEW='aml_v_ipa3_entity_score_v0_4'" in global_js
+          assert "const V028_MARK_VIEW='aml_v_ipa3_mark_scores_v0_4'" in global_js
+          assert "const V028_COMPARE_VIEW='aml_v_ipa3_compare_ipa2_v0_4'" in global_js
+          assert "version:'0.4-shadow'" in global_js
+          assert 'window.AML_IPA3=' in global_js
+          assert 'MutationObserver' in global_js
+          assert '[data-open-entity]' in global_js
+          assert '[data-v0205-entity]' in global_js
+          assert '[data-v024-cross-entity]' in global_js
+          assert '[data-v024-sanction-entity]' in global_js
+          assert '.v0202-alert[data-v0202-finding]' in global_js
+          assert 'IPA2 hallazgo ref.' in global_js
+          assert 'v023LoadEntityIpa3=v028LoadEntityIpa3' in global_js
+          assert 'window.__AML_ACTIVE_VERSION__=V028' in global_js
           assert 'content:attr(data-runtime-label)!important' in css
-          assert "const V0272='0.27.2'" in boot
-          assert "badge.setAttribute('data-runtime-label',label)" in boot
-          assert 'window.__AML_ACTIVE_VERSION__=V0272' in boot
-          assert 'window.__AML_RUNTIME_VERSION_APPLIER__=v0272ApplyVersion' in boot
 
-          # Known historical writers may exist, but they cannot own the visible label.
-          assert "content:'Operational Radar · v0.21.1'" not in legacy21
-          assert 'setInterval(apply,1200)' in legacy19
+          assert "const V028_SANCTIONS_VIEW='aml_v028_sanctions_with_identity'" in sanc_js
+          assert 'sb.from(V028_SANCTIONS_VIEW)' in sanc_js
+          assert 'data-v028-entity-root' in sanc_js
 
-          # Core model consistency contracts remain present.
-          assert 'MISSING_IS_NOT_ZERO_STRICT' in model
           assert "V027_IPA_SCORE_VERSION='0.4-shadow'" in model
-          assert "cross:8.5,ipa:15" in model and 'context:8.5' not in model
-          assert 'a.positive_trend=a.yoy_pct===null?null' in source
-          assert 'const s=v027Number(f.aml_score)' in source
+          assert 'MISSING_IS_NOT_ZERO_STRICT' in model
           PY
-      - name: Ensure CSP-safe final runtime
+      - name: Ensure CSP-safe v0.28 runtime
         run: |
-          if grep -E 'onclick=|onchange=|onmouseover=|style=' v0271-runtime-bootstrap.js v0272-runtime-bootstrap.js; then
-            echo 'Inline handler/style found in final runtime.'
+          if grep -E 'onclick=|onchange=|onmouseover=|style=' v028-ipa3-global.js v028-sanctions-ipa3.js; then
+            echo 'Inline handler/style found in v0.28 runtime.'
             exit 1
           fi
