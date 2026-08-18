@@ -1,4 +1,4 @@
-name: Validate v0.30.2 Runtime under v0.31
+name: Validate Runtime Snapshots v0.31.1
 
 on:
   push:
@@ -9,6 +9,7 @@ on:
       - 'v0302-*.css'
       - 'v031-*.js'
       - 'v031-*.css'
+      - 'v0311-runtime-bootstrap.js'
       - 'v030-osfl.js'
       - 'v028-ipa3-global.js'
       - '.github/workflows/validate-v0302.yml'
@@ -19,6 +20,7 @@ on:
       - 'v0302-*.css'
       - 'v031-*.js'
       - 'v031-*.css'
+      - 'v0311-runtime-bootstrap.js'
       - '.github/workflows/validate-v0302.yml'
   workflow_dispatch:
 
@@ -33,32 +35,34 @@ jobs:
       - name: JavaScript syntax
         run: |
           node --check v0302-performance.js
-          node --check v0302-runtime-bootstrap.js
           node --check v031-territory-cockpit.js
-      - name: Validate retained runtime snapshots and final build order
+          node --check v0311-runtime-bootstrap.js
+      - name: Validate fast snapshots and final build order
         run: |
           python - <<'PY'
           from pathlib import Path
           html=Path('index.html').read_text(encoding='utf-8')
           perf=Path('v0302-performance.js').read_text(encoding='utf-8')
-          boot=Path('v0302-runtime-bootstrap.js').read_text(encoding='utf-8')
           cockpit=Path('v031-territory-cockpit.js').read_text(encoding='utf-8')
-          assert 'AML Analytical Workbench · v0.31.0' in html
-          assert '?b=0300' not in html and '?b=0301' not in html and '?b=0302' not in html
-          assert html.count('?b=0310') >= 50
-          assert 'v0302-performance.js?b=0310' in html
-          assert 'v0302-runtime-bootstrap.js?b=0310' in html
-          assert 'v031-territory-cockpit.js?b=0310' in html
-          assert html.rfind('v031-territory-cockpit.js?b=0310') > html.rfind('v0302-runtime-bootstrap.js?b=0310') > html.rfind('v0302-performance.js?b=0310')
+          boot=Path('v0311-runtime-bootstrap.js').read_text(encoding='utf-8')
+          assert 'AML Analytical Workbench · v0.31.1' in html
+          builds=set(__import__('re').findall(r'\?b=(\d+)',html))
+          assert builds=={'0311'}, builds
+          assert 'v0302-performance.js?b=0311' in html
+          assert 'v031-territory-cockpit.js?b=0311' in html
+          assert 'v0311-runtime-bootstrap.js?b=0311' in html
+          assert 'v0302-runtime-bootstrap.js' not in html
+          assert html.rfind('v0311-runtime-bootstrap.js?b=0311') > html.rfind('v031-territory-cockpit.js?b=0311') > html.rfind('v0302-performance.js?b=0311')
           assert 'v0271-runtime-bootstrap.js' not in html
           assert 'v0272-runtime-bootstrap.js' not in html
           assert "V0302_IPA_SNAPSHOT='aml_ipa3_entity_score_snapshot_v0_4'" in perf
           assert "V0302_OSFL_DASH='aml_osfl_dashboard_runtime_snapshot'" in perf
           assert "V0302_OVERVIEW='aml_overview_runtime_snapshot'" in perf
-          assert "sb.from('aml_sync_state')" in perf
+          assert "V0302_HEALTH_VIEW='aml_v0302_runtime_health'" in perf
+          assert 'v0302RuntimeStatus' in perf
           assert 'V0205_VIEW' not in perf
           assert 'v024Unavailable=function()' in perf
-          assert "const V0302_RUNTIME='0.30.2'" in boot
           assert "const V031='0.31.0'" in cockpit
-          assert 'window.__AML_RUNTIME_VERSION_APPLIER__=v031ApplyVersion' in cockpit
+          assert "const V0311_RUNTIME='0.31.1'" in boot
+          assert 'window.__AML_RUNTIME_VERSION_APPLIER__=v0311ApplyVersion' in boot
           PY
