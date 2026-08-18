@@ -5,7 +5,6 @@
   "published_from": "main",
   "feature": "SANCTIONS_V12_FINAL_RUNTIME",
   "runtime": "POST_MODULE_SINGLE_AUTHORITY",
-  "deployment": "GITHUB_PAGES_WORKFLOW_RUNTIME_REPAIR",
-  "deployment_trigger": "2026-08-18T17:19:00-04:00",
+  "deployment": "GITHUB_PAGES_WORKFLOW_STABLE",
   "data_contract": "RADAR_SANCTIONS_ENTITY_HUB_V1"
 }
