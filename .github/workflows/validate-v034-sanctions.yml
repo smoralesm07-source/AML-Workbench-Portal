@@ -5,11 +5,15 @@ on:
     branches: [main]
     paths:
       - 'index.html'
+      - 'build.json'
       - 'v034-sanctions-v12-core.js'
       - 'v034-sanctions-v12-ui.js'
       - 'v034-sanctions-v12-charts.js'
       - 'v034-sanctions-v12.css'
+      - 'v0341-sanctions-hardening.js'
+      - 'tests/v0341-sanctions-contract.mjs'
       - 'docs/sanctions-module-v034.md'
+      - '.github/workflows/validate-v034-sanctions.yml'
   pull_request:
     paths:
       - 'index.html'
@@ -17,6 +21,8 @@ on:
       - 'v034-sanctions-v12-ui.js'
       - 'v034-sanctions-v12-charts.js'
       - 'v034-sanctions-v12.css'
+      - 'v0341-sanctions-hardening.js'
+      - 'tests/v0341-sanctions-contract.mjs'
 
 permissions:
   contents: read
@@ -29,20 +35,60 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
       - name: JavaScript syntax
         run: |
           node --check v034-sanctions-v12-core.js
           node --check v034-sanctions-v12-ui.js
           node --check v034-sanctions-v12-charts.js
-      - name: Integration contract
+          node --check v0341-sanctions-hardening.js
+
+      - name: Runtime contract fixture
+        run: node tests/v0341-sanctions-contract.mjs
+
+      - name: Workbench integration contract
         shell: bash
         run: |
           grep -q 'v034-sanctions-v12.css' index.html
           grep -q 'v034-sanctions-v12-core.js' index.html
           grep -q 'v034-sanctions-v12-ui.js' index.html
           grep -q 'v034-sanctions-v12-charts.js' index.html
+          grep -q 'v0341-sanctions-hardening.js' index.html
+          grep -q '"app_version": "0.34.1"' build.json
           grep -q 'aml_v028_sanctions_with_identity' v034-sanctions-v12-core.js
           grep -q 'aml_v0205_uaf_sii_reconciliation' v034-sanctions-v12-core.js
           grep -q 'Radar_sanciones/main/docs/data/events.json' v034-sanctions-v12-core.js
+          grep -q 'entity_hub_v1.json' v0341-sanctions-hardening.js
+          grep -q 'rut_fuente' v0341-sanctions-hardening.js
+          grep -q 'source_record_id' v0341-sanctions-hardening.js
+          grep -q 'evidence_id' v0341-sanctions-hardening.js
           grep -q 'Potencial SO' v034-sanctions-v12-ui.js
           grep -q 'Índice de Exposición Relativa' v034-sanctions-v12-charts.js
+
+      - name: Live Radar Sanciones schema contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --connect-timeout 10 https://raw.githubusercontent.com/smoralesm07-source/Radar_sanciones/main/docs/data/events.json -o /tmp/sanctions-events.json
+          curl -fsSL --retry 3 --connect-timeout 10 https://raw.githubusercontent.com/smoralesm07-source/Radar_sanciones/main/docs/data/metadata.json -o /tmp/sanctions-meta.json
+          curl -fsSL --retry 3 --connect-timeout 10 https://raw.githubusercontent.com/smoralesm07-source/Radar_sanciones/main/docs/data/entity_hub_v1.json -o /tmp/sanctions-hub.json
+          python - <<'PY'
+          import json
+          events=json.load(open('/tmp/sanctions-events.json',encoding='utf-8'))
+          meta=json.load(open('/tmp/sanctions-meta.json',encoding='utf-8'))
+          hub=json.load(open('/tmp/sanctions-hub.json',encoding='utf-8'))
+          assert isinstance(events,list) and events, 'events.json vacío o inválido'
+          required={'supervisor','fecha','sujeto_fuente','id','entity_id'}
+          assert required.issubset(events[0]), f'faltan campos base: {required-set(events[0])}'
+          assert any(e.get('rut_fuente') for e in events), 'sin rut_fuente observable'
+          assert any(e.get('source_record_id') for e in events), 'sin source_record_id observable'
+          assert any(e.get('evidence_id') for e in events), 'sin evidence_id observable'
+          assert meta.get('bootstrap_pending') is False, 'Radar Sanciones aún en bootstrap'
+          assert int(meta.get('current_data_from_year',9999)) <= 2020, 'cobertura histórica insuficiente'
+          assert int(meta.get('event_count',0)) == len(events), 'metadata/event_count desalineado'
+          assert isinstance(hub,list) and hub, 'entity_hub_v1.json vacío o inválido'
+          h=next(x for x in hub if x.get('rut'))
+          for field in ('entity_id','rut','canonical_name','identity_status','identity_method','identity_confidence'):
+              assert field in h, f'Entity Hub sin {field}'
+          print(f'Radar contract OK: {len(events)} eventos, {len(hub)} identidades, corte {meta.get("latest_event_date")}')
+          PY
