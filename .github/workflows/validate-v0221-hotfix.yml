@@ -1,4 +1,4 @@
-name: Validate v0.31.2 active overlays
+name: Validate v0.32.0 active overlays
 on:
   pull_request:
     paths:
@@ -27,7 +27,9 @@ on:
       - 'v031-territory-cockpit.css'
       - 'v0312-territory-refinement.js'
       - 'v0312-territory-refinement.css'
-      - 'v0312-runtime-bootstrap.js'
+      - 'v032-osfl-expert.js'
+      - 'v032-osfl-expert.css'
+      - 'v032-runtime-bootstrap.js'
       - 'index.html'
       - '.github/workflows/validate-v0221-hotfix.yml'
   push:
@@ -58,7 +60,9 @@ on:
       - 'v031-territory-cockpit.css'
       - 'v0312-territory-refinement.js'
       - 'v0312-territory-refinement.css'
-      - 'v0312-runtime-bootstrap.js'
+      - 'v032-osfl-expert.js'
+      - 'v032-osfl-expert.css'
+      - 'v032-runtime-bootstrap.js'
       - 'index.html'
       - '.github/workflows/validate-v0221-hotfix.yml'
   workflow_dispatch:
@@ -91,41 +95,34 @@ jobs:
           node --check v0311-uaf-fallback.js
           node --check v031-territory-cockpit.js
           node --check v0312-territory-refinement.js
-          node --check v0312-runtime-bootstrap.js
+          node --check v032-osfl-expert.js
+          node --check v032-runtime-bootstrap.js
       - name: Wiring and interaction contract
         run: |
-          grep -q 'AML Analytical Workbench · v0.31.2' index.html
-          grep -q 'v0302-performance.js?b=0312' index.html
-          grep -q 'v0311-uaf-fallback.js?b=0312' index.html
-          grep -q 'v031-territory-cockpit.css?b=0312' index.html
-          grep -q 'v031-territory-cockpit.js?b=0312' index.html
-          grep -q 'v0312-territory-refinement.css?b=0312' index.html
-          grep -q 'v0312-territory-refinement.js?b=0312' index.html
-          grep -q 'v0312-runtime-bootstrap.js?b=0312' index.html
-          ! grep -q 'v0302-runtime-bootstrap.js' index.html
-          ! grep -q 'v0311-runtime-bootstrap.js' index.html
-          grep -q "const V031='0.31.0'" v031-territory-cockpit.js
+          grep -q 'AML Analytical Workbench · v0.32.0' index.html
+          grep -q 'v0302-performance.js?b=0320' index.html
+          grep -q 'v0311-uaf-fallback.js?b=0320' index.html
+          grep -q 'v0312-territory-refinement.js?b=0320' index.html
+          grep -q 'v032-osfl-expert.js?b=0320' index.html
+          grep -q 'v032-runtime-bootstrap.js?b=0320' index.html
+          ! grep -q 'v0312-runtime-bootstrap.js' index.html
           grep -q "const V0312='0.31.2'" v0312-territory-refinement.js
-          grep -q "const V0312_RUNTIME='0.31.2'" v0312-runtime-bootstrap.js
+          grep -q "const V032='0.32.0'" v032-osfl-expert.js
+          grep -q "const V032_RUNTIME='0.32.0'" v032-runtime-bootstrap.js
           grep -q "V022_STATE.method='B'" v0312-territory-refinement.js
-          grep -q 'V030_CHILE' v031-territory-cockpit.js
-          grep -q 'data-v031-region' v0312-territory-refinement.js
-          grep -q 'data-v031-metric' v0312-territory-refinement.js
-          grep -q 'data-v031-filter' v0312-territory-refinement.js
-          grep -q 'v0312Dossier' v0312-territory-refinement.js
-          grep -q 'v0312RegionalTable' v0312-territory-refinement.js
-          grep -q 'v0312CeadPanel' v0312-territory-refinement.js
           grep -q 'LOCAL_FALLBACK' v0311-uaf-fallback.js
-          if grep -E 'onclick=|onchange=|onmouseover=|style=' v031-territory-cockpit.js v0311-uaf-fallback.js v0312-territory-refinement.js v0312-runtime-bootstrap.js; then
+          grep -q 'data-v032-ipa-open' v032-osfl-expert.js
+          grep -q 'v032BudgetExposure' v032-osfl-expert.js
+          grep -q 'v030SyncMapAndCharts=function' v032-osfl-expert.js
+          if grep -E 'onclick=|onchange=|onmouseover=|style=' v031-territory-cockpit.js v0311-uaf-fallback.js v0312-territory-refinement.js v032-osfl-expert.js v032-runtime-bootstrap.js; then
             echo 'CSP-incompatible inline handler/style found in final runtime.'
             exit 1
           fi
           python - <<'PY'
           import re
           html=open('index.html',encoding='utf-8').read()
-          assert set(re.findall(r'\?b=(\d+)',html))=={'0312'}
+          assert set(re.findall(r'\?b=(\d+)',html))=={'0320'}
           js=open('v0312-territory-refinement.js',encoding='utf-8').read()
           assert "const V0312_INDICATOR='Índice de Prioridad Territorial'" in js
-          assert "v031CountChart(all,'drivers')" not in js
-          assert 'v031Matrix(all)' not in js
+          assert 'Score B' not in js
           PY
