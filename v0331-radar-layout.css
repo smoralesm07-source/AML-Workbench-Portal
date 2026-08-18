@@ -1,0 +1,119 @@
+/* AML Workbench v0.33.1 · Radar Integrado hierarchy refinement.
+ * Visual-only layer: preserves v0.24 data queries, drill-downs and scoring semantics.
+ */
+
+/* Auditoría de datos: compact collapsed bar, detail only on click. */
+.v024-audit{
+  margin:0 0 10px;
+  border:1px solid #dce6ea;
+  border-radius:8px;
+  background:#fff;
+  box-shadow:none;
+}
+.v024-audit-summary{
+  min-height:34px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:5px 10px;
+  background:#fff;
+}
+.v024-audit-summary:hover,.v024-audit-summary:focus-visible{background:#f8fafb}
+.v024-audit-title{flex:1;min-width:0;font-size:11px}
+.v024-audit-lights{display:none!important}
+.v024-audit-summary>b{
+  margin-left:auto;
+  font-size:10.5px;
+  font-weight:750;
+  color:#647985;
+  white-space:nowrap;
+}
+.v024-audit-summary>small{
+  min-width:58px;
+  font-size:0;
+  color:#71848e;
+  white-space:nowrap;
+  text-align:right;
+}
+.v024-audit-summary>small::after{content:'Desplegar';font-size:10px;font-weight:750}
+.v024-audit-summary[aria-expanded="true"]>small::after{content:'Ocultar'}
+.v024-audit-summary::after{
+  content:'›';
+  display:inline-block;
+  font-size:17px;
+  line-height:1;
+  color:#7d909a;
+  transform:rotate(90deg);
+  transition:transform .16s ease;
+}
+.v024-audit-summary[aria-expanded="true"]::after{transform:rotate(-90deg)}
+.v024-audit-detail{grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid #dce6ea}
+.v024-audit-detail[hidden]{display:none!important}
+
+/* New information hierarchy: UAF first and full width, then priority review. */
+.v0331-uaf-primary,.v0331-priority-primary{width:100%;margin-top:0}
+.v0331-priority-primary{margin-top:12px}
+.v0331-uaf-primary>.v019-card,.v0331-priority-primary>.v019-card{width:100%;min-width:0}
+.v0331-uaf-primary .v024-uaf-card{border-color:#ddd6ed;box-shadow:0 4px 18px rgba(55,43,79,.055)}
+.v0331-priority-primary .v024-priority{box-shadow:0 3px 14px rgba(32,56,70,.045)}
+
+/* Complementary block groups sanctions, context and public spending. */
+.v0331-support{
+  margin-top:12px;
+  padding:10px;
+  border:1px solid #dce6ea;
+  border-radius:12px;
+  background:#f6f9fa;
+}
+.v0331-support-head{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+  padding:1px 2px 9px;
+}
+.v0331-support-head>div>span{
+  display:block;
+  margin-bottom:2px;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.09em;
+  color:#7b8f99;
+}
+.v0331-support-head h2{margin:0;color:#294452;font-size:15px}
+.v0331-support-head p{margin:2px 0 0;color:#74858e;font-size:10.5px}
+.v0331-support-grid{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1.08fr) minmax(0,.92fr);
+  gap:10px;
+  align-items:start;
+}
+.v0331-support-grid>.v019-card{margin:0;min-width:0;height:100%}
+.v0331-support-grid>.v024-budget{margin-top:0}
+.v0331-support .v024-context-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+.v0331-support .v024-context-head{display:block}
+.v0331-support .v024-context-head .v0203-link{margin-top:7px}
+.v0331-support .v024-press-list>button{grid-template-columns:72px minmax(0,1fr)}
+.v0331-support .v024-press-list>button>strong{grid-column:2;text-align:left}
+.v0331-support .v024-sanction-chart svg{max-height:190px}
+
+@media(max-width:1180px){
+  .v0331-support-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .v0331-support-grid>.v024-budget{grid-column:1/-1}
+}
+@media(max-width:820px){
+  .v024-audit-summary>b{display:none}
+  .v024-audit-detail{grid-template-columns:1fr}
+  .v024-uaf-grid{grid-template-columns:1fr}
+  .v024-uaf-signals{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .v0331-support-grid{grid-template-columns:1fr}
+  .v0331-support-grid>.v024-budget{grid-column:auto}
+}
+@media(max-width:560px){
+  .v024-audit-summary{gap:7px;padding:5px 8px}
+  .v024-audit-summary>small{min-width:52px}
+  .v024-uaf-kpis{grid-template-columns:1fr}
+  .v024-uaf-signals{grid-template-columns:1fr}
+  .v0331-support{padding:8px}
+  .v0331-support-head{display:block}
+}
