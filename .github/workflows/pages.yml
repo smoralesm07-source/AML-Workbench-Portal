@@ -28,9 +28,12 @@ jobs:
           test -f index.html
           test -f build.json
           test -f v0342-runtime.js
+          test -f v0342-runtime.css
           grep -q 'AML Analytical Workbench · v0.34.2' index.html
+          grep -q 'data-aml-version="0.34.2"' index.html
           grep -q '"app_version": "0.34.2"' build.json
           grep -q 'v0342-runtime.js?b=0342' index.html
+          grep -q 'v0342-runtime.css?b=0342' index.html
           ! grep -q 'v0321-runtime-bootstrap.js' index.html
           ! grep -q 'v0331-runtime-bootstrap.js' index.html
           ! grep -q 'v0334-runtime-bootstrap.js' index.html
@@ -40,8 +43,6 @@ jobs:
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Prepare immutable site artifact
         shell: bash
@@ -58,6 +59,7 @@ jobs:
           touch _site/.nojekyll
           test -f _site/index.html
           test -f _site/v0342-runtime.js
+          test -f _site/v0342-runtime.css
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
