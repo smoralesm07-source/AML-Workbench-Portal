@@ -1,0 +1,46 @@
+name: Diagnose AML Workbench Pages cache
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  diagnose:
+    if: github.event.issue.title == '[cache-diagnostic] AML Workbench v0.34.3'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compare root and cache-busted responses
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set +e
+          BASE="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/"
+          curl -sS -D /tmp/root.headers -o /tmp/root.html "$BASE"
+          curl -sS -D /tmp/bust.headers -o /tmp/bust.html "${BASE}?runtime=0343-${GITHUB_RUN_ID}"
+          root_title=$(grep -o '<title>[^<]*' /tmp/root.html | head -1 | sed 's/<title>//')
+          bust_title=$(grep -o '<title>[^<]*' /tmp/bust.html | head -1 | sed 's/<title>//')
+          root_final=$(grep -c 'v0343-final.module.js?b=0343' /tmp/root.html)
+          bust_final=$(grep -c 'v0343-final.module.js?b=0343' /tmp/bust.html)
+          {
+            echo '## Pages cache diagnostic'
+            echo
+            echo "- Root title: \`${root_title}\`"
+            echo "- Root has v0343 final module: \`${root_final}\`"
+            echo "- Cache-busted title: \`${bust_title}\`"
+            echo "- Cache-busted has v0343 final module: \`${bust_final}\`"
+            echo
+            echo '### Root headers'
+            echo '```'
+            grep -iE '^(HTTP/|age:|cache-control:|etag:|last-modified:|x-cache:|via:|date:)' /tmp/root.headers
+            echo '```'
+            echo '### Cache-busted headers'
+            echo '```'
+            grep -iE '^(HTTP/|age:|cache-control:|etag:|last-modified:|x-cache:|via:|date:)' /tmp/bust.headers
+            echo '```'
+          } > /tmp/report.md
+          gh issue comment "${{ github.event.issue.number }}" --body-file /tmp/report.md
