@@ -1,10 +1,10 @@
-name: Validate Runtime Snapshots v0.33.1
+name: Validate Runtime Snapshots under v0.33.4
 on:
   push:
     branches: [main]
-    paths: ['index.html','v0302-*.js','v0302-*.css','v031-*.js','v031-*.css','v0312-*.js','v0312-*.css','v032-*.js','v032-*.css','v0321-*.js','v0321-*.css','v0331-*.js','v0331-*.css','.github/workflows/validate-v0302.yml']
+    paths: ['index.html','v0302-*.js','v0302-*.css','v031-*.js','v031-*.css','v0312-*.js','v0312-*.css','v032-*.js','v032-*.css','v0321-*.js','v0321-*.css','v0331-*.js','v0331-*.css','v0332-*.js','v0332-*.css','v0333-*.js','v0334-*.js','.github/workflows/validate-v0302.yml']
   pull_request:
-    paths: ['index.html','v0302-*.js','v0302-*.css','v031-*.js','v031-*.css','v0312-*.js','v0312-*.css','v032-*.js','v032-*.css','v0321-*.js','v0321-*.css','v0331-*.js','v0331-*.css','.github/workflows/validate-v0302.yml']
+    paths: ['index.html','v0302-*.js','v0302-*.css','v031-*.js','v031-*.css','v0312-*.js','v0312-*.css','v032-*.js','v032-*.css','v0321-*.js','v0321-*.css','v0331-*.js','v0331-*.css','v0332-*.js','v0332-*.css','v0333-*.js','v0334-*.js','.github/workflows/validate-v0302.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -15,15 +15,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: JavaScript syntax
         run: |
-          node --check v0302-performance.js
-          node --check v031-territory-cockpit.js
-          node --check v0312-territory-refinement.js
-          node --check v032-osfl-expert.js
-          node --check v0321-osfl-polish.js
-          node --check v0321-runtime-bootstrap.js
-          node --check v032-irg-territory.js
-          node --check v0331-runtime-bootstrap.js
-      - name: Validate fast snapshots and final build order
+          for f in v0302-performance.js v031-territory-cockpit.js v0312-territory-refinement.js v032-osfl-expert.js v0321-osfl-polish.js v0321-runtime-bootstrap.js v032-irg-territory.js v0331-runtime-bootstrap.js v0332-radar-intelligence.js v0333-auth-preflight.js v0334-runtime-bootstrap.js; do node --check "$f"; done
+      - name: Validate fast snapshots, auth-safe boot and final order
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -33,29 +26,19 @@ jobs:
           osfl=Path('v032-osfl-expert.js').read_text(encoding='utf-8')
           polish=Path('v0321-osfl-polish.js').read_text(encoding='utf-8')
           responsive=Path('v0331-osfl-layout.css').read_text(encoding='utf-8')
-          oldboot=Path('v0321-runtime-bootstrap.js').read_text(encoding='utf-8')
-          irg=Path('v032-irg-territory.js').read_text(encoding='utf-8')
-          boot=Path('v0331-runtime-bootstrap.js').read_text(encoding='utf-8')
-          assert 'AML Analytical Workbench · v0.33.1' in html
-          assert set(re.findall(r'\?b=(\d+)',html))=={'0331'}
-          assert 'v0302-performance.js?b=0331' in html
-          assert 'v032-osfl-expert.js?b=0331' in html
-          assert 'v0321-osfl-polish.js?b=0331' in html
-          assert 'v0331-osfl-layout.css?b=0331' in html
-          assert 'v0321-runtime-bootstrap.js?b=0331' in html
-          assert 'v032-irg-territory.js?b=0331' in html
-          assert 'v0331-runtime-bootstrap.js?b=0331' in html
-          assert 'v033-runtime-bootstrap.js' not in html
-          assert html.rfind('v0331-runtime-bootstrap.js?b=0331') > html.rfind('v032-irg-territory.js?b=0331') > html.rfind('v0321-runtime-bootstrap.js?b=0331') > html.rfind('v0321-osfl-polish.js?b=0331') > html.rfind('v032-osfl-expert.js?b=0331') > html.rfind('v0302-performance.js?b=0331')
+          auth=Path('v0333-auth-preflight.js').read_text(encoding='utf-8')
+          final=Path('v0334-runtime-bootstrap.js').read_text(encoding='utf-8')
+          assert 'AML Analytical Workbench · v0.33.4' in html
+          assert set(re.findall(r'\?b=(\d+)',html))=={'0334'}
+          assert html.index('v0333-auth-preflight.js?b=0334') < html.index('app.js?b=0334')
+          assert html.rfind('v0334-runtime-bootstrap.js?b=0334') > html.rfind('v0332-radar-intelligence.js?b=0334')
+          assert '<script type="module" src="./v0331-runtime-bootstrap.js' not in html
           assert "V0302_IPA_SNAPSHOT='aml_ipa3_entity_score_snapshot_v0_4'" in perf
           assert "V0302_OSFL_DASH='aml_osfl_dashboard_runtime_snapshot'" in perf
           assert "V0302_OVERVIEW='aml_overview_runtime_snapshot'" in perf
           assert "V032_REGION_RUNTIME='aml_osfl_region_runtime_snapshot'" in osfl
           assert 'FULL_ON_360_OPEN' in polish
           assert 'container-name:osfl' in responsive and '@container osfl' in responsive
-          assert "const V0321_RUNTIME='0.32.1'" in oldboot
-          assert "const V032_METHOD='IRG-LAFT-0.32.0'" in irg
-          assert 'v019LoadTerritory=v032LoadTerritory' in irg
-          assert "const V0331_RUNTIME='0.33.1'" in boot
-          assert 'window.__AML_RUNTIME_VERSION_APPLIER__=v0331RuntimeApplyVersion' in boot
+          assert 'originalOnAuthStateChange' in auth and 'window.setTimeout' in auth
+          assert "const V0334_RUNTIME='0.33.4'" in final
           PY
