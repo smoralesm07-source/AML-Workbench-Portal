@@ -1,4 +1,4 @@
-name: Validate v0.27.0 active overlays
+name: Validate v0.29.0 active overlays
 on:
   pull_request:
     paths:
@@ -13,6 +13,10 @@ on:
       - 'v026-territory-profile-legend.js'
       - 'v027-model-consistency.js'
       - 'v027-source-null-hardening.js'
+      - 'v028-ipa3-global.js'
+      - 'v028-sanctions-ipa3.js'
+      - 'v029-territory-analytics.js'
+      - 'v029-territory-analytics.css'
       - 'index.html'
       - '.github/workflows/validate-v0221-hotfix.yml'
   push:
@@ -29,6 +33,10 @@ on:
       - 'v026-territory-profile-legend.js'
       - 'v027-model-consistency.js'
       - 'v027-source-null-hardening.js'
+      - 'v028-ipa3-global.js'
+      - 'v028-sanctions-ipa3.js'
+      - 'v029-territory-analytics.js'
+      - 'v029-territory-analytics.css'
       - 'index.html'
       - '.github/workflows/validate-v0221-hotfix.yml'
   workflow_dispatch:
@@ -52,25 +60,26 @@ jobs:
           node --check v026-territory-profile-legend.js
           node --check v027-model-consistency.js
           node --check v027-source-null-hardening.js
-      - name: Wiring and hardening
+          node --check v028-ipa3-global.js
+          node --check v028-sanctions-ipa3.js
+          node --check v029-territory-analytics.js
+      - name: Wiring and interaction contract
         run: |
-          grep -q 'AML Analytical Workbench · v0.27.0' index.html
-          grep -q 'v027-model-consistency.js?b=0270' index.html
-          grep -q 'v027-source-null-hardening.js?b=0270' index.html
-          grep -q "V027_GEO_METHOD='GEO-RISK-B-0.27.0'" v027-model-consistency.js
-          grep -q "V027_IPA_SCORE_VERSION='0.4-shadow'" v027-model-consistency.js
-          grep -q "V027_IPA_REGION_VIEW='aml_v026_geo_ipa_region'" v027-model-consistency.js
-          grep -q 'MISSING_IS_NOT_ZERO_STRICT' v027-model-consistency.js
-          grep -q 'NO_SII_PROFILE_TECHNICAL_ONLY' v027-model-consistency.js
-          grep -q 'CORRELATED_GROUP_NOT_ADDITIVE' v027-model-consistency.js
-          grep -q 'a.positive_trend=a.yoy_pct===null?null' v027-source-null-hardening.js
-          grep -q 'const s=v027Number(f.aml_score)' v027-source-null-hardening.js
-          grep -q "window.__AML_ACTIVE_VERSION__=V027" v027-model-consistency.js
-          if grep -E 'onclick=|onchange=|style=' v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js v0241-reconciliation-restore.js v025-territory-ipa.js v025-territory-ipa-hardening.js v026-territory-causal-profile.js v026-territory-profile-legend.js v027-model-consistency.js v027-source-null-hardening.js; then
-            echo 'CSP-incompatible inline handler/style found'
+          grep -q 'AML Analytical Workbench · v0.29.0' index.html
+          grep -q 'v029-territory-analytics.css?b=0290' index.html
+          grep -q 'v029-territory-analytics.js?b=0290' index.html
+          grep -q "V022_STATE.method='B'" v029-territory-analytics.js
+          grep -q 'data-v029-filter' v029-territory-analytics.js
+          grep -q 'data-v029-select' v029-territory-analytics.js
+          grep -q 'v029UpdateMapFilter' v029-territory-analytics.js
+          grep -q 'v029PhenomenaFor' v029-territory-analytics.js
+          grep -q 'v029NarrativePanel' v029-territory-analytics.js
+          grep -q 'window.AML_TERRITORY_ANALYTICS=' v029-territory-analytics.js
+          if grep -E 'onclick=|onchange=|onmouseover=|style=' v029-territory-analytics.js; then
+            echo 'CSP-incompatible inline handler/style found in v0.29.'
             exit 1
           fi
-          if grep -E '\?b=(0211|0222|0230|0240|0241|0250|0260)' index.html; then
+          if grep -E '\?b=(0211|0222|0230|0240|0241|0250|0260|0270|0271|0272|0280)' index.html; then
             echo 'Stale asset cache-bust found'
             exit 1
           fi
