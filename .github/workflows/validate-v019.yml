@@ -1,4 +1,4 @@
-name: Validate v0.31.1
+name: Validate v0.31.2
 on:
   push:
     branches: [main]
@@ -39,7 +39,7 @@ jobs:
           assert r.get('totals', {}).get('registered_so_2025') == 9911
           assert r.get('totals', {}).get('ros_2025') == 21828
           PY
-      - name: Validate global IPA3 and Score B contracts
+      - name: Validate IPA3 and territorial scoring contracts
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -67,18 +67,19 @@ jobs:
           css=Path('v030-osfl.css').read_text(encoding='utf-8')
           fix=Path('v0301-osfl-consistency.js').read_text(encoding='utf-8')
           perf=Path('v0302-performance.js').read_text(encoding='utf-8')
-          boot=Path('v0311-runtime-bootstrap.js').read_text(encoding='utf-8')
+          boot=Path('v0312-runtime-bootstrap.js').read_text(encoding='utf-8')
 
-          assert 'AML Analytical Workbench · v0.31.1' in html
-          assert set(re.findall(r'\?b=(\d+)',html))=={'0311'}
-          assert 'v030-osfl.css?b=0311' in html
-          assert 'v0302-performance.css?b=0311' in html
-          assert 'v030-osfl.js?b=0311' in html
-          assert 'v0301-osfl-consistency.js?b=0311' in html
-          assert 'v0302-performance.js?b=0311' in html
-          assert 'v0311-runtime-bootstrap.js?b=0311' in html
+          assert 'AML Analytical Workbench · v0.31.2' in html
+          assert set(re.findall(r'\?b=(\d+)',html))=={'0312'}
+          assert 'v030-osfl.css?b=0312' in html
+          assert 'v0302-performance.css?b=0312' in html
+          assert 'v030-osfl.js?b=0312' in html
+          assert 'v0301-osfl-consistency.js?b=0312' in html
+          assert 'v0302-performance.js?b=0312' in html
+          assert 'v0312-runtime-bootstrap.js?b=0312' in html
           assert 'v0302-runtime-bootstrap.js' not in html
-          assert html.rfind('v0311-runtime-bootstrap.js?b=0311') > html.rfind('v031-territory-cockpit.js?b=0311') > html.rfind('v0302-performance.js?b=0311')
+          assert 'v0311-runtime-bootstrap.js' not in html
+          assert html.rfind('v0312-runtime-bootstrap.js?b=0312') > html.rfind('v0312-territory-refinement.js?b=0312') > html.rfind('v031-territory-cockpit.js?b=0312') > html.rfind('v0302-performance.js?b=0312')
           assert "const V030_ENTITY_VIEW='aml_v029_osfl_entity'" in js
           assert 'V030_CHILE' in js and 'data-v030-map-region' in js
           assert '.v030-map-stage' in css and '.v030-region' in css
@@ -89,37 +90,38 @@ jobs:
           assert "V0302_OVERVIEW='aml_overview_runtime_snapshot'" in perf
           assert "V0302_HEALTH_VIEW='aml_v0302_runtime_health'" in perf
           assert 'v0302RuntimeStatus' in perf
-          assert "const V0311_RUNTIME='0.31.1'" in boot
+          assert "const V0312_RUNTIME='0.31.2'" in boot
           PY
-      - name: Validate geographic risk cockpit v0.31
+      - name: Validate geographic risk clarity v0.31.2
         run: |
           python - <<'PY'
           from pathlib import Path
           html=Path('index.html').read_text(encoding='utf-8')
-          js=Path('v031-territory-cockpit.js').read_text(encoding='utf-8')
-          css=Path('v031-territory-cockpit.css').read_text(encoding='utf-8')
-          docs=Path('docs/territory-cockpit-v031.md').read_text(encoding='utf-8')
-          assert 'v031-territory-cockpit.css?b=0311' in html
-          assert 'v031-territory-cockpit.js?b=0311' in html
-          assert "const V031='0.31.0'" in js
-          assert "V031_SCORE_FORMULA=typeof V027_GEO_METHOD" in js
-          assert "'GEO-RISK-B-0.27.0'" in js
+          base=Path('v031-territory-cockpit.js').read_text(encoding='utf-8')
+          js=Path('v0312-territory-refinement.js').read_text(encoding='utf-8')
+          css=Path('v0312-territory-refinement.css').read_text(encoding='utf-8')
+          assert 'v0312-territory-refinement.css?b=0312' in html
+          assert 'v0312-territory-refinement.js?b=0312' in html
           assert "V022_STATE.method='B'" in js
-          assert 'V030_CHILE' in js
-          assert 'data-v031-region' in js and 'data-v031-metric' in js and 'data-v031-filter' in js
-          assert 'Contexto OSFL' in js and 'Prensa territorial' in js
-          assert 'contexto · no puntúa' in js
-          assert 'window.AML_TERRITORY_COCKPIT=' in js
-          assert '.v031-map-stage' in css and '.v031-dossier' in css and '.v031-tablewrap' in css
-          assert 'PHENOMENA_DO_NOT_CHANGE_SCORE_B' in docs
-          assert 'TERRITORIAL_SIGNAL_IS_NOT_ENTITY_ATTRIBUTION' in docs
-          assert 'OSFL_CONTEXT_DOES_NOT_SCORE' in docs
-          assert 'PRESS_CONTEXT_DOES_NOT_SCORE' in docs
-          assert 'r.scores.B=' not in js and 'scores.B =' not in js
+          assert "const V0312_INDICATOR='Índice de Prioridad Territorial'" in js
+          assert "const V0312_INDICATOR_SHORT='IPT'" in js
+          assert "V031_SCORE_FORMULA" in js and "scores?.B" in js
+          assert 'v0312CeadPanel' in js
+          assert 'Abrir CEAD oficial' in js and 'Ver dataset usado' in js
+          assert 'cead_catalog_art27_v4.json' in js
+          assert 'Qué delitos comprende esta familia' in js
+          assert "v031CountChart(all,'phenomena')" in js
+          assert "v031CountChart(all,'drivers')" not in js
+          assert 'v031Matrix(all)' not in js
+          assert 'v0312-tablewrap' in css and 'table-layout:fixed' in css
+          assert 'overflow-x:hidden!important' in css
+          assert 'window.AML_TERRITORY_CEAD=' in js
+          assert 'Score B' not in js
+          assert 'r.scores.B=' not in base and 'scores.B =' not in base
           PY
       - name: Ensure CSP-safe final runtime
         run: |
-          if grep -E 'onclick=|onchange=|onmouseover=|style=' v0301-osfl-consistency.js v0302-performance.js v031-territory-cockpit.js v0311-runtime-bootstrap.js; then
+          if grep -E 'onclick=|onchange=|onmouseover=|style=' v0301-osfl-consistency.js v0302-performance.js v031-territory-cockpit.js v0312-territory-refinement.js v0312-runtime-bootstrap.js; then
             echo 'Inline handler/style found in final runtime.'
             exit 1
           fi

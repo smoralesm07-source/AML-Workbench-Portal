@@ -1,4 +1,4 @@
-name: Validate Runtime Snapshots v0.31.1
+name: Validate Runtime Snapshots v0.31.2
 
 on:
   push:
@@ -9,7 +9,8 @@ on:
       - 'v0302-*.css'
       - 'v031-*.js'
       - 'v031-*.css'
-      - 'v0311-runtime-bootstrap.js'
+      - 'v0312-*.js'
+      - 'v0312-*.css'
       - 'v030-osfl.js'
       - 'v028-ipa3-global.js'
       - '.github/workflows/validate-v0302.yml'
@@ -20,7 +21,8 @@ on:
       - 'v0302-*.css'
       - 'v031-*.js'
       - 'v031-*.css'
-      - 'v0311-runtime-bootstrap.js'
+      - 'v0312-*.js'
+      - 'v0312-*.css'
       - '.github/workflows/validate-v0302.yml'
   workflow_dispatch:
 
@@ -36,23 +38,27 @@ jobs:
         run: |
           node --check v0302-performance.js
           node --check v031-territory-cockpit.js
-          node --check v0311-runtime-bootstrap.js
+          node --check v0312-territory-refinement.js
+          node --check v0312-runtime-bootstrap.js
       - name: Validate fast snapshots and final build order
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
           html=Path('index.html').read_text(encoding='utf-8')
           perf=Path('v0302-performance.js').read_text(encoding='utf-8')
           cockpit=Path('v031-territory-cockpit.js').read_text(encoding='utf-8')
-          boot=Path('v0311-runtime-bootstrap.js').read_text(encoding='utf-8')
-          assert 'AML Analytical Workbench · v0.31.1' in html
-          builds=set(__import__('re').findall(r'\?b=(\d+)',html))
-          assert builds=={'0311'}, builds
-          assert 'v0302-performance.js?b=0311' in html
-          assert 'v031-territory-cockpit.js?b=0311' in html
-          assert 'v0311-runtime-bootstrap.js?b=0311' in html
+          refine=Path('v0312-territory-refinement.js').read_text(encoding='utf-8')
+          boot=Path('v0312-runtime-bootstrap.js').read_text(encoding='utf-8')
+          assert 'AML Analytical Workbench · v0.31.2' in html
+          assert set(re.findall(r'\?b=(\d+)',html))=={'0312'}
+          assert 'v0302-performance.js?b=0312' in html
+          assert 'v031-territory-cockpit.js?b=0312' in html
+          assert 'v0312-territory-refinement.js?b=0312' in html
+          assert 'v0312-runtime-bootstrap.js?b=0312' in html
           assert 'v0302-runtime-bootstrap.js' not in html
-          assert html.rfind('v0311-runtime-bootstrap.js?b=0311') > html.rfind('v031-territory-cockpit.js?b=0311') > html.rfind('v0302-performance.js?b=0311')
+          assert 'v0311-runtime-bootstrap.js' not in html
+          assert html.rfind('v0312-runtime-bootstrap.js?b=0312') > html.rfind('v0312-territory-refinement.js?b=0312') > html.rfind('v031-territory-cockpit.js?b=0312') > html.rfind('v0302-performance.js?b=0312')
           assert 'v0271-runtime-bootstrap.js' not in html
           assert 'v0272-runtime-bootstrap.js' not in html
           assert "V0302_IPA_SNAPSHOT='aml_ipa3_entity_score_snapshot_v0_4'" in perf
@@ -63,6 +69,7 @@ jobs:
           assert 'V0205_VIEW' not in perf
           assert 'v024Unavailable=function()' in perf
           assert "const V031='0.31.0'" in cockpit
-          assert "const V0311_RUNTIME='0.31.1'" in boot
-          assert 'window.__AML_RUNTIME_VERSION_APPLIER__=v0311ApplyVersion' in boot
+          assert "const V0312='0.31.2'" in refine
+          assert "const V0312_RUNTIME='0.31.2'" in boot
+          assert 'window.__AML_RUNTIME_VERSION_APPLIER__=v0312RuntimeApplyVersion' in boot
           PY
