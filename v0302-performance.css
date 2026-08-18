@@ -1,0 +1,8 @@
+/* AML Workbench v0.30.2 · performance/audit states */
+.v024-audit.ok{border-color:#b9ded5;background:linear-gradient(90deg,#f2fbf8,#fff)}
+.v024-audit.pending{border-color:#ead1a1;background:linear-gradient(90deg,#fffaf0,#fff)}
+.v024-audit .v024-dot.ok{background:#1f9d78;box-shadow:0 0 0 3px rgba(31,157,120,.12)}
+.v024-audit .v024-dot.pending{background:#d99422;box-shadow:0 0 0 3px rgba(217,148,34,.12)}
+.v024-audit-summary>b{white-space:nowrap}
+.v024-audit-detail p{grid-column:1/-1;margin:8px 0 0;padding:10px 12px;border-radius:10px;background:#f6f8f9;color:#51636b}
+.v030-runtime-snapshot{font-size:11px;color:#71838b}
