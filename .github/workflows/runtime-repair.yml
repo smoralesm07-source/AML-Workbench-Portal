@@ -1,0 +1,139 @@
+name: Repair AML Workbench runtime v0.34.3
+
+on:
+  issues:
+    types: [opened]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  issues: write
+
+concurrency:
+  group: aml-workbench-runtime-repair
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    if: github.event_name == 'workflow_dispatch' || github.event.issue.title == '[runtime-repair] AML Workbench v0.34.3'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Patch runtime order, version and sanctions route
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('data-aml-version="0.34.2"','data-aml-version="0.34.3"')
+          s=s.replace('data-aml-build="0342"','data-aml-build="0343"')
+          s=s.replace('AML Analytical Workbench v0.34.2','AML Analytical Workbench v0.34.3')
+          s=s.replace('AML Analytical Workbench · v0.34.2','AML Analytical Workbench · v0.34.3')
+          s=s.replace('?b=0342','?b=0343')
+          if 'v0343-runtime.css' not in s:
+              s=s.replace('<link rel="stylesheet" href="./v0342-runtime.css?b=0343" />', '<link rel="stylesheet" href="./v0342-runtime.css?b=0343" />\n  <link rel="stylesheet" href="./v0343-runtime.css?b=0343" />')
+          if 'v0343-final.module.js' not in s:
+              s=s.replace('<script src="./v0342-runtime.js?b=0343"></script>', '<script src="./v0342-runtime.js?b=0343"></script>\n  <script type="module" src="./v0343-final.module.js?b=0343"></script>')
+          p.write_text(s,encoding='utf-8')
+
+          b=Path('build.json')
+          obj=json.loads(b.read_text(encoding='utf-8'))
+          obj.update({
+              'app_version':'0.34.3',
+              'build':'0343',
+              'feature':'SANCTIONS_V12_FINAL_RUNTIME',
+              'runtime':'POST_MODULE_SINGLE_AUTHORITY',
+              'deployment':'GITHUB_PAGES_WORKFLOW_RUNTIME_REPAIR'
+          })
+          b.write_text(json.dumps(obj,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+
+          for name in ('.github/workflows/validate-v0302.yml','.github/workflows/validate-v034-sanctions.yml'):
+              q=Path(name)
+              if q.exists():
+                  t=q.read_text(encoding='utf-8').replace('0.34.2','0.34.3').replace('0342','0343')
+                  q.write_text(t,encoding='utf-8')
+          PY
+
+          node --check v034-sanctions-v12-core.js
+          node --check v034-sanctions-v12-ui.js
+          node --check v034-sanctions-v12-charts.js
+          node --check v0341-sanctions-hardening.js
+          node --check v0342-runtime.js
+          node --check v0343-final.module.js
+
+          grep -q 'data-aml-version="0.34.3"' index.html
+          grep -q 'v034-sanctions-v12-core.js?b=0343' index.html
+          grep -q 'v034-sanctions-v12-ui.js?b=0343' index.html
+          grep -q 'v034-sanctions-v12-charts.js?b=0343' index.html
+          grep -q 'v0341-sanctions-hardening.js?b=0343' index.html
+          grep -q 'v0343-final.module.js?b=0343' index.html
+          grep -q "view==='sanctions'" v0343-final.module.js
+          grep -q 'AML_SANCTIONS_V12' v0343-final.module.js
+
+      - name: Commit repaired runtime to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html build.json .github/workflows/validate-v0302.yml .github/workflows/validate-v034-sanctions.yml
+          git commit -m 'fix: finalize runtime v0.34.3 and Sanciones v12 [skip ci]' || true
+          git push origin HEAD:main
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload repaired current tree
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: .
+
+      - name: Deploy repaired runtime
+        id: deploy
+        uses: actions/deploy-pages@v4
+
+      - name: Verify public artifact
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 12
+          URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/?runtime=0343-${GITHUB_RUN_ID}"
+          curl -fsSL -H 'Cache-Control: no-cache' "$URL" -o /tmp/public.html
+          grep -q 'AML Analytical Workbench · v0.34.3' /tmp/public.html
+          grep -q 'v0343-final.module.js?b=0343' /tmp/public.html
+          echo 'PUBLIC_OK=yes' >> "$GITHUB_ENV"
+
+      - name: Report result
+        if: always() && github.event_name == 'issues'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
+          VERIFY_OUTCOME: ${{ steps.verify.outcome }}
+          PAGE_URL: ${{ steps.deploy.outputs.page_url }}
+        shell: bash
+        run: |
+          cat > /tmp/report.md <<EOF
+          ## Runtime repair v0.34.3
+
+          - HEAD deployed: \`$(git rev-parse HEAD)\`
+          - deploy-pages: \`${DEPLOY_OUTCOME}\`
+          - public verification: \`${VERIFY_OUTCOME}\`
+          - public v0.34.3 + final module observed: \`${PUBLIC_OK:-no}\`
+          - Sanciones route pinned to AML_SANCTIONS_V12: \`yes\`
+          - URL: \`${PAGE_URL}\`
+          EOF
+          gh issue comment "${{ github.event.issue.number }}" --body-file /tmp/report.md
