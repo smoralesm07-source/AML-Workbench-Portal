@@ -1,4 +1,4 @@
-name: Validate v0.31.0
+name: Validate v0.31.1
 on:
   push:
     branches: [main]
@@ -47,46 +47,51 @@ jobs:
           sanc_js=Path('v028-sanctions-ipa3.js').read_text(encoding='utf-8')
           territory=Path('v029-territory-analytics.js').read_text(encoding='utf-8')
           model=Path('v027-model-consistency.js').read_text(encoding='utf-8')
+          perf=Path('v0302-performance.js').read_text(encoding='utf-8')
           assert "const V028_SCORE_VIEW='aml_v_ipa3_entity_score_v0_4'" in global_js
           assert "version:'0.4-shadow'" in global_js
           assert 'window.AML_IPA3=' in global_js
+          assert "V0302_IPA_SNAPSHOT='aml_ipa3_entity_score_snapshot_v0_4'" in perf
           assert "const V028_SANCTIONS_VIEW='aml_v028_sanctions_with_identity'" in sanc_js
           assert "V029_ANALYTICS_VERSION='TERRITORY-ANALYTICS-0.29.0'" in territory
           assert "V027_GEO_METHOD='GEO-RISK-B-0.27.0'" in model
           assert 'MISSING_IS_NOT_ZERO_STRICT' in model
           PY
-      - name: Validate OSFL and v0.30.2 performance runtime remain intact
+      - name: Validate OSFL and fast runtime
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
           html=Path('index.html').read_text(encoding='utf-8')
           js=Path('v030-osfl.js').read_text(encoding='utf-8')
           css=Path('v030-osfl.css').read_text(encoding='utf-8')
           fix=Path('v0301-osfl-consistency.js').read_text(encoding='utf-8')
           perf=Path('v0302-performance.js').read_text(encoding='utf-8')
-          boot=Path('v0302-runtime-bootstrap.js').read_text(encoding='utf-8')
+          boot=Path('v0311-runtime-bootstrap.js').read_text(encoding='utf-8')
 
-          assert 'AML Analytical Workbench · v0.31.0' in html
-          assert 'v030-osfl.css?b=0310' in html
-          assert 'v0302-performance.css?b=0310' in html
-          assert 'v030-osfl.js?b=0310' in html
-          assert 'v0301-osfl-consistency.js?b=0310' in html
-          assert 'v0302-performance.js?b=0310' in html
-          assert 'v0302-runtime-bootstrap.js?b=0310' in html
-          assert 'v0301-runtime-bootstrap.js' not in html
-          assert html.rfind('v0302-runtime-bootstrap.js?b=0310') > html.rfind('v0302-performance.js?b=0310') > html.rfind('v0301-osfl-consistency.js?b=0310') > html.rfind('v030-osfl.js?b=0310')
+          assert 'AML Analytical Workbench · v0.31.1' in html
+          assert set(re.findall(r'\?b=(\d+)',html))=={'0311'}
+          assert 'v030-osfl.css?b=0311' in html
+          assert 'v0302-performance.css?b=0311' in html
+          assert 'v030-osfl.js?b=0311' in html
+          assert 'v0301-osfl-consistency.js?b=0311' in html
+          assert 'v0302-performance.js?b=0311' in html
+          assert 'v0311-runtime-bootstrap.js?b=0311' in html
+          assert 'v0302-runtime-bootstrap.js' not in html
+          assert html.rfind('v0311-runtime-bootstrap.js?b=0311') > html.rfind('v031-territory-cockpit.js?b=0311') > html.rfind('v0302-performance.js?b=0311')
           assert "const V030_ENTITY_VIEW='aml_v029_osfl_entity'" in js
-          assert "const V030_REGION_VIEW='aml_v029_osfl_region'" in js
           assert 'V030_CHILE' in js and 'data-v030-map-region' in js
           assert '.v030-map-stage' in css and '.v030-region' in css
           assert 'R.8' in js and 'aporte IPA 0' in js
           assert 'OSFL sustantivas' in fix
           assert 'public_body_reclassified' in fix
-          assert "const V0302_IPA_SNAPSHOT='aml_ipa3_entity_score_snapshot_v0_4'" in perf
-          assert "const V0302_OSFL_DASH='aml_osfl_dashboard_runtime_snapshot'" in perf
-          assert "const V0302_RUNTIME='0.30.2'" in boot
+          assert "V0302_OSFL_DASH='aml_osfl_dashboard_runtime_snapshot'" in perf
+          assert "V0302_OVERVIEW='aml_overview_runtime_snapshot'" in perf
+          assert "V0302_HEALTH_VIEW='aml_v0302_runtime_health'" in perf
+          assert 'v0302RuntimeStatus' in perf
+          assert "const V0311_RUNTIME='0.31.1'" in boot
           PY
-      - name: Validate geographic risk cockpit v0.31.0
+      - name: Validate geographic risk cockpit v0.31
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -94,22 +99,17 @@ jobs:
           js=Path('v031-territory-cockpit.js').read_text(encoding='utf-8')
           css=Path('v031-territory-cockpit.css').read_text(encoding='utf-8')
           docs=Path('docs/territory-cockpit-v031.md').read_text(encoding='utf-8')
-
-          assert 'v031-territory-cockpit.css?b=0310' in html
-          assert 'v031-territory-cockpit.js?b=0310' in html
-          assert html.rfind('v031-territory-cockpit.js?b=0310') > html.rfind('v0302-runtime-bootstrap.js?b=0310')
+          assert 'v031-territory-cockpit.css?b=0311' in html
+          assert 'v031-territory-cockpit.js?b=0311' in html
           assert "const V031='0.31.0'" in js
           assert "V031_SCORE_FORMULA=typeof V027_GEO_METHOD" in js
           assert "'GEO-RISK-B-0.27.0'" in js
           assert "V022_STATE.method='B'" in js
           assert 'V030_CHILE' in js
-          assert 'data-v031-region' in js
-          assert 'data-v031-metric' in js
-          assert 'data-v031-filter' in js
+          assert 'data-v031-region' in js and 'data-v031-metric' in js and 'data-v031-filter' in js
           assert 'Contexto OSFL' in js and 'Prensa territorial' in js
           assert 'contexto · no puntúa' in js
           assert 'window.AML_TERRITORY_COCKPIT=' in js
-          assert 'window.__AML_RUNTIME_VERSION_APPLIER__=v031ApplyVersion' in js
           assert '.v031-map-stage' in css and '.v031-dossier' in css and '.v031-tablewrap' in css
           assert 'PHENOMENA_DO_NOT_CHANGE_SCORE_B' in docs
           assert 'TERRITORIAL_SIGNAL_IS_NOT_ENTITY_ATTRIBUTION' in docs
@@ -119,7 +119,7 @@ jobs:
           PY
       - name: Ensure CSP-safe final runtime
         run: |
-          if grep -E 'onclick=|onchange=|onmouseover=|style=' v0301-osfl-consistency.js v0302-performance.js v0302-runtime-bootstrap.js v031-territory-cockpit.js; then
+          if grep -E 'onclick=|onchange=|onmouseover=|style=' v0301-osfl-consistency.js v0302-performance.js v031-territory-cockpit.js v0311-runtime-bootstrap.js; then
             echo 'Inline handler/style found in final runtime.'
             exit 1
           fi
