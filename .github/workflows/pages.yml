@@ -22,7 +22,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout current main
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Validate v0.34.2 and Sanciones v12
         shell: bash
@@ -47,17 +47,6 @@ jobs:
           grep -q 'Consulta directa de entidad' v034-sanctions-v12-ui.js
           grep -q 'Concentración regional de sanciones' v034-sanctions-v12-ui.js
           grep -q 'Últimas sanciones · Top 5' v034-sanctions-v12-ui.js
-
-      - name: Switch Pages source to GitHub Actions
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          gh api --method PUT "repos/${GITHUB_REPOSITORY}/pages" \
-            -f build_type=workflow \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" >/dev/null
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
