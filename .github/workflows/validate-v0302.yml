@@ -1,13 +1,32 @@
-name: Validate Runtime Snapshots under v0.33.4
+name: Validate current AML Workbench runtime
+
 on:
   push:
     branches: [main]
-    paths: ['index.html','v0302-*.js','v0302-*.css','v031-*.js','v031-*.css','v0312-*.js','v0312-*.css','v032-*.js','v032-*.css','v0321-*.js','v0321-*.css','v0331-*.js','v0331-*.css','v0332-*.js','v0332-*.css','v0333-*.js','v0334-*.js','.github/workflows/validate-v0302.yml']
+    paths:
+      - 'index.html'
+      - 'build.json'
+      - 'v0302-*.js'
+      - 'v031-*.js'
+      - 'v0312-*.js'
+      - 'v032-*.js'
+      - 'v0321-*.js'
+      - 'v0331-*.js'
+      - 'v0332-*.js'
+      - 'v0333-*.js'
+      - 'v034*.js'
+      - '.github/workflows/validate-v0302.yml'
   pull_request:
-    paths: ['index.html','v0302-*.js','v0302-*.css','v031-*.js','v031-*.css','v0312-*.js','v0312-*.css','v032-*.js','v032-*.css','v0321-*.js','v0321-*.css','v0331-*.js','v0331-*.css','v0332-*.js','v0332-*.css','v0333-*.js','v0334-*.js','.github/workflows/validate-v0302.yml']
+    paths:
+      - 'index.html'
+      - 'build.json'
+      - 'v034*.js'
+      - '.github/workflows/validate-v0302.yml'
   workflow_dispatch:
+
 permissions:
   contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -15,8 +34,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: JavaScript syntax
         run: |
-          for f in v0302-performance.js v031-territory-cockpit.js v0312-territory-refinement.js v032-osfl-expert.js v0321-osfl-polish.js v0321-runtime-bootstrap.js v032-irg-territory.js v0331-runtime-bootstrap.js v0332-radar-intelligence.js v0333-auth-preflight.js v0334-runtime-bootstrap.js; do node --check "$f"; done
-      - name: Validate fast snapshots, auth-safe boot and final order
+          for f in v0302-performance.js v031-territory-cockpit.js v0312-territory-refinement.js v032-osfl-expert.js v0321-osfl-polish.js v032-irg-territory.js v0332-radar-intelligence.js v0333-auth-preflight.js v034-sanctions-v12-core.js v034-sanctions-v12-ui.js v034-sanctions-v12-charts.js v0341-sanctions-hardening.js v0342-runtime.js; do node --check "$f"; done
+      - name: Validate current build, auth-safe boot and single runtime authority
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -27,12 +46,17 @@ jobs:
           polish=Path('v0321-osfl-polish.js').read_text(encoding='utf-8')
           responsive=Path('v0331-osfl-layout.css').read_text(encoding='utf-8')
           auth=Path('v0333-auth-preflight.js').read_text(encoding='utf-8')
-          final=Path('v0334-runtime-bootstrap.js').read_text(encoding='utf-8')
-          assert 'AML Analytical Workbench · v0.33.4' in html
-          assert set(re.findall(r'\?b=(\d+)',html))=={'0334'}
-          assert html.index('v0333-auth-preflight.js?b=0334') < html.index('app.js?b=0334')
-          assert html.rfind('v0334-runtime-bootstrap.js?b=0334') > html.rfind('v0332-radar-intelligence.js?b=0334')
-          assert '<script type="module" src="./v0331-runtime-bootstrap.js' not in html
+          runtime=Path('v0342-runtime.js').read_text(encoding='utf-8')
+          build=Path('build.json').read_text(encoding='utf-8')
+          assert 'AML Analytical Workbench · v0.34.2' in html
+          assert '"app_version": "0.34.2"' in build
+          assert set(re.findall(r'\?b=(\d+)',html))=={'0342'}
+          assert html.index('v0333-auth-preflight.js?b=0342') < html.index('app.js?b=0342')
+          assert html.rfind('v0342-runtime.js?b=0342') > html.rfind('v0341-sanctions-hardening.js?b=0342')
+          for legacy in ('v0321-runtime-bootstrap.js','v0331-runtime-bootstrap.js','v0334-runtime-bootstrap.js'):
+              assert legacy not in html, f'legacy runtime still loaded: {legacy}'
+          assert "const V0342_RUNTIME='0.34.2'" in runtime
+          assert 'SINGLE_VISIBLE_VERSION_AUTHORITY' in build
           assert "V0302_IPA_SNAPSHOT='aml_ipa3_entity_score_snapshot_v0_4'" in perf
           assert "V0302_OSFL_DASH='aml_osfl_dashboard_runtime_snapshot'" in perf
           assert "V0302_OVERVIEW='aml_overview_runtime_snapshot'" in perf
@@ -40,5 +64,4 @@ jobs:
           assert 'FULL_ON_360_OPEN' in polish
           assert 'container-name:osfl' in responsive and '@container osfl' in responsive
           assert 'originalOnAuthStateChange' in auth and 'window.setTimeout' in auth
-          assert "const V0334_RUNTIME='0.33.4'" in final
           PY
