@@ -1,4 +1,4 @@
-name: Validate v0.29.0 active overlays
+name: Validate v0.31.0 active overlays
 on:
   pull_request:
     paths:
@@ -17,6 +17,14 @@ on:
       - 'v028-sanctions-ipa3.js'
       - 'v029-territory-analytics.js'
       - 'v029-territory-analytics.css'
+      - 'v030-osfl.js'
+      - 'v030-osfl.css'
+      - 'v0301-osfl-consistency.js'
+      - 'v0302-performance.js'
+      - 'v0302-performance.css'
+      - 'v0302-runtime-bootstrap.js'
+      - 'v031-territory-cockpit.js'
+      - 'v031-territory-cockpit.css'
       - 'index.html'
       - '.github/workflows/validate-v0221-hotfix.yml'
   push:
@@ -37,6 +45,14 @@ on:
       - 'v028-sanctions-ipa3.js'
       - 'v029-territory-analytics.js'
       - 'v029-territory-analytics.css'
+      - 'v030-osfl.js'
+      - 'v030-osfl.css'
+      - 'v0301-osfl-consistency.js'
+      - 'v0302-performance.js'
+      - 'v0302-performance.css'
+      - 'v0302-runtime-bootstrap.js'
+      - 'v031-territory-cockpit.js'
+      - 'v031-territory-cockpit.css'
       - 'index.html'
       - '.github/workflows/validate-v0221-hotfix.yml'
   workflow_dispatch:
@@ -63,23 +79,32 @@ jobs:
           node --check v028-ipa3-global.js
           node --check v028-sanctions-ipa3.js
           node --check v029-territory-analytics.js
+          node --check v030-osfl.js
+          node --check v0301-osfl-consistency.js
+          node --check v0302-performance.js
+          node --check v0302-runtime-bootstrap.js
+          node --check v031-territory-cockpit.js
       - name: Wiring and interaction contract
         run: |
-          grep -q 'AML Analytical Workbench · v0.29.0' index.html
-          grep -q 'v029-territory-analytics.css?b=0290' index.html
-          grep -q 'v029-territory-analytics.js?b=0290' index.html
-          grep -q "V022_STATE.method='B'" v029-territory-analytics.js
-          grep -q 'data-v029-filter' v029-territory-analytics.js
-          grep -q 'data-v029-select' v029-territory-analytics.js
-          grep -q 'v029UpdateMapFilter' v029-territory-analytics.js
-          grep -q 'v029PhenomenaFor' v029-territory-analytics.js
-          grep -q 'v029NarrativePanel' v029-territory-analytics.js
-          grep -q 'window.AML_TERRITORY_ANALYTICS=' v029-territory-analytics.js
-          if grep -E 'onclick=|onchange=|onmouseover=|style=' v029-territory-analytics.js; then
-            echo 'CSP-incompatible inline handler/style found in v0.29.'
+          grep -q 'AML Analytical Workbench · v0.31.0' index.html
+          grep -q 'v0302-performance.js?b=0310' index.html
+          grep -q 'v0302-runtime-bootstrap.js?b=0310' index.html
+          grep -q 'v031-territory-cockpit.css?b=0310' index.html
+          grep -q 'v031-territory-cockpit.js?b=0310' index.html
+          grep -q "const V031='0.31.0'" v031-territory-cockpit.js
+          grep -q "V022_STATE.method='B'" v031-territory-cockpit.js
+          grep -q 'V030_CHILE' v031-territory-cockpit.js
+          grep -q 'data-v031-region' v031-territory-cockpit.js
+          grep -q 'data-v031-metric' v031-territory-cockpit.js
+          grep -q 'data-v031-filter' v031-territory-cockpit.js
+          grep -q 'v031Dossier' v031-territory-cockpit.js
+          grep -q 'v031RegionalTable' v031-territory-cockpit.js
+          grep -q 'window.AML_TERRITORY_COCKPIT=' v031-territory-cockpit.js
+          if grep -E 'onclick=|onchange=|onmouseover=|style=' v031-territory-cockpit.js; then
+            echo 'CSP-incompatible inline handler/style found in v0.31.'
             exit 1
           fi
-          if grep -E '\?b=(0211|0222|0230|0240|0241|0250|0260|0270|0271|0272|0280)' index.html; then
+          if grep -E '\?b=(0211|0222|0230|0240|0241|0250|0260|0270|0271|0272|0280|0290|0300|0301|0302)' index.html; then
             echo 'Stale asset cache-bust found'
             exit 1
           fi
