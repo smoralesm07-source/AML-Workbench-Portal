@@ -1,6 +1,7 @@
 {
-  "app_version": "0.33.4",
-  "build": "0334",
+  "app_version": "0.34.0",
+  "build": "0340",
   "auth_fix": "SUPABASE_ON_AUTH_STATE_CHANGE_DEFERRED",
-  "published_from": "main"
+  "published_from": "main",
+  "feature": "SANCTIONS_V12_INTEGRATED"
 }
