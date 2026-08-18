@@ -1,0 +1,73 @@
+/* AML Workbench v0.33.2 · Radar Integrado: legibility, compact priority and richer insight surfaces. */
+
+/* Keep chart labels inside generous plot margins and above graphical marks. */
+.v0332-chart-safe{overflow:visible;padding-top:2px}
+.v0332-chart-safe svg{display:block;width:100%;height:auto;overflow:visible}
+.v0332-chart-safe .v0332-mark-label{paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round;fill:#304b5a}
+.v024-ros-chart .value,.v024-sanction-chart .value{pointer-events:none}
+.v024-ros-chart .xlabel,.v024-sanction-chart .xlabel{font-weight:650}
+
+/* Clickable UAF sanctioned KPI. */
+.v024-uaf-kpis>.v0332-uaf-kpi-action{appearance:none;width:100%;border:1px solid #e4ddf1;background:#faf8fd;border-radius:8px;padding:7px 9px;text-align:left;color:inherit;cursor:pointer}
+.v024-uaf-kpis>.v0332-uaf-kpi-action:hover,.v024-uaf-kpis>.v0332-uaf-kpi-action:focus-visible{background:#f2edf8;border-color:#bca8d6}
+.v024-uaf-kpis>.v0332-uaf-kpi-action span,.v024-uaf-kpis>.v0332-uaf-kpi-action b,.v024-uaf-kpis>.v0332-uaf-kpi-action small{display:block}
+.v024-uaf-kpis>.v0332-uaf-kpi-action span{font-size:10.5px;color:#6c6081}
+.v024-uaf-kpis>.v0332-uaf-kpi-action b{font-size:19px;color:#392b4f;margin:2px 0}
+.v024-uaf-kpis>.v0332-uaf-kpi-action small{font-size:10px;color:#6f5a8b;font-weight:750}
+
+/* Compress Qué revisar primero without losing drill-down. */
+.v0331-priority-primary{margin-top:9px}
+.v0331-priority-primary .v024-priority{padding:9px 11px}
+.v0331-priority-primary .v019-card-head{margin-bottom:4px}
+.v0331-priority-primary .v019-card-head h2{font-size:15px;margin-bottom:1px}
+.v0331-priority-primary .v019-card-head p{font-size:10.5px;margin:0}
+.v0331-priority-primary .v0202-alert-list{gap:4px}
+.v0331-priority-primary .v0202-alert.compact .v0202-alert-body{padding:6px 9px 7px}
+.v0331-priority-primary .v0202-alert-main{margin-top:4px}
+.v0331-priority-primary .v0202-alert h3{margin-bottom:2px}
+.v0331-priority-primary .v0202-alert-foot{margin-top:5px;padding-top:4px}
+.v0331-priority-primary .v0202-origin-strip{height:3px}
+
+/* Immediate analytical summaries. */
+.v0332-mini-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:2px 0 8px}
+.v0332-mini-kpis>div{border:1px solid #e0e8eb;background:#f9fbfb;border-radius:8px;padding:7px 8px;min-width:0}
+.v0332-mini-kpis span,.v0332-mini-kpis b,.v0332-mini-kpis small{display:block}
+.v0332-mini-kpis span{font-size:9.5px;color:#748690;text-transform:uppercase;letter-spacing:.03em}
+.v0332-mini-kpis b{font-size:16px;color:#294452;margin:2px 0}
+.v0332-mini-kpis small{font-size:9.5px;line-height:1.25;color:#758790}
+.v0332-insight-line{border-left:3px solid #91a6b1;background:#f7fafb;padding:6px 8px;margin:7px 0 5px;border-radius:0 7px 7px 0;color:#5d737f;font-size:10.5px;line-height:1.35}
+.v0332-insight-line b{color:#324f5f}
+
+/* Sanctions card: analysis first, chart second. */
+.v0332-sanction-intel .v024-sanction-chart{margin-top:2px}
+.v0331-support .v0332-sanction-intel .v024-sanction-chart svg{max-height:225px}
+
+/* Budget intelligence: stronger first frame, bars remain secondary. */
+.v0332-budget-intel{display:grid;gap:7px}
+.v0332-budget-kpis{margin:0}
+.v0332-budget-lead{appearance:none;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;border:1px solid #decda8;background:#fcfaf5;border-radius:8px;padding:8px 9px;text-align:left;color:inherit;cursor:pointer}
+.v0332-budget-lead:hover,.v0332-budget-lead:focus-visible{background:#f8f2e7;border-color:#c8ad78}
+.v0332-budget-lead span{min-width:0}
+.v0332-budget-lead small,.v0332-budget-lead b,.v0332-budget-lead em{display:block}
+.v0332-budget-lead small{font-size:8.5px;font-weight:900;letter-spacing:.06em;color:#8d713f}
+.v0332-budget-lead b{margin:2px 0;font-size:11.5px;color:#3d4e57}
+.v0332-budget-lead em{font-size:9.5px;font-style:normal;color:#7c8589;line-height:1.25}
+.v0332-budget-lead>strong{font-size:20px;color:#815f2a}
+.v0332-budget-tiers{margin:0}
+.v0332-budget-intel .v020-budget-list{margin-top:0}
+.v0332-budget-intel .v019-note{margin-top:0}
+
+/* Make complementary cards breathe enough for labels without wasting vertical space. */
+.v0331-support-grid{align-items:stretch}
+.v0331-support-grid>.v019-card{overflow:visible}
+.v0331-support .v024-sanctions,.v0331-support .v024-budget{padding:10px}
+.v0331-support .v024-sanctions>.v019-card-head,.v0331-support .v024-budget>.v019-card-head{margin-bottom:6px}
+
+@media(max-width:1180px){
+  .v0332-mini-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:760px){
+  .v0332-mini-kpis{grid-template-columns:1fr}
+  .v0332-budget-lead{grid-template-columns:1fr}
+  .v0332-budget-lead>strong{font-size:17px}
+}
