@@ -1,7 +1,8 @@
 {
-  "app_version": "0.34.0",
-  "build": "0340",
+  "app_version": "0.34.1",
+  "build": "0341",
   "auth_fix": "SUPABASE_ON_AUTH_STATE_CHANGE_DEFERRED",
   "published_from": "main",
-  "feature": "SANCTIONS_V12_INTEGRATED"
+  "feature": "SANCTIONS_V12_FINALIZED",
+  "data_contract": "RADAR_SANCTIONS_ENTITY_HUB_V1"
 }
