@@ -1,0 +1,319 @@
+/* AML Workbench v0.33.2 · OSFL modern light palette + contrast refresh */
+.v030-osfl{
+  --osfl-bg:#f6f8fa;
+  --osfl-surface:#ffffff;
+  --osfl-surface-soft:#f3f7f7;
+  --osfl-surface-blue:#f2f6fa;
+  --osfl-ink:#16252d;
+  --osfl-ink-2:#314750;
+  --osfl-muted:#5e7078;
+  --osfl-line:#dbe4e7;
+  --osfl-accent:#167a78;
+  --osfl-accent-2:#315f7d;
+  --osfl-accent-soft:#e7f4f2;
+  --osfl-gold:#a66b16;
+  --osfl-gold-soft:#fbf3e5;
+  --osfl-danger:#a84d4d;
+  color:var(--osfl-ink);
+}
+
+/* A cleaner visual canvas for the whole OSFL module. */
+.v030-osfl .v030-card,
+.v030-osfl .v030-explorer{
+  background:rgba(255,255,255,.97);
+  border-color:var(--osfl-line);
+  box-shadow:0 8px 24px rgba(25,50,62,.055);
+}
+.v030-osfl .v030-card:hover{
+  border-color:#cad9dd;
+  box-shadow:0 12px 28px rgba(25,50,62,.075);
+}
+.v030-osfl .v030-card-head h3,
+.v030-osfl .v030-entity-id h4,
+.v030-osfl .v030-rank span b,
+.v030-osfl .v030-map-side-title b{
+  color:var(--osfl-ink);
+}
+.v030-osfl .v030-card-head p,
+.v030-osfl .v030-hint,
+.v030-osfl .v030-map-note,
+.v030-osfl .v030-context-rule,
+.v030-osfl .v030-ipa-guard,
+.v030-osfl .v030-method-footer{
+  color:var(--osfl-muted);
+}
+.v030-osfl .v030-kicker,
+.v030-osfl .v030-card-head>div>span,
+.v030-osfl .v030-detail-head span{
+  color:#3d6e70;
+}
+
+/* Main OSFL intro: remove the heavy dark block and use a modern airy hero. */
+.v030-osfl .v030-hero{
+  border:1px solid #d8e3e6;
+  background:
+    radial-gradient(circle at 92% 14%,rgba(60,146,145,.13),transparent 28%),
+    radial-gradient(circle at 8% 90%,rgba(71,104,139,.08),transparent 30%),
+    linear-gradient(135deg,#fbfcfd 0%,#f4f8f8 52%,#f7f5ef 100%);
+  box-shadow:0 16px 38px rgba(24,52,65,.08);
+}
+.v030-osfl .v030-hero::after{
+  border-color:rgba(22,122,120,.065);
+}
+.v030-osfl .v030-hero h2{color:#14272f}
+.v030-osfl .v030-hero p{color:#465d66}
+.v030-osfl .v030-hero-tags span{
+  background:rgba(255,255,255,.9);
+  border-color:#d8e4e5;
+  color:#37565e;
+  box-shadow:0 2px 7px rgba(31,63,76,.035);
+}
+
+/* Score panel: light, legible and visually important without looking like a black box. */
+.v030-osfl .v030-hero-score{
+  position:relative;
+  overflow:hidden;
+  background:linear-gradient(145deg,#edf7f6 0%,#f5f8fb 55%,#fff9ee 100%);
+  color:var(--osfl-ink);
+  border:1px solid #cfe0e2;
+  box-shadow:0 10px 26px rgba(29,76,86,.10);
+}
+.v030-osfl .v030-hero-score::before{
+  content:'';
+  position:absolute;
+  inset:0 auto 0 0;
+  width:4px;
+  background:linear-gradient(180deg,#16817e,#3d6e91 62%,#c68a2a);
+}
+.v030-osfl .v030-hero-score span{
+  color:#496970;
+  font-weight:800;
+}
+.v030-osfl .v030-hero-score b{
+  color:#153944;
+  text-shadow:none;
+}
+.v030-osfl .v030-hero-score small{color:#506870}
+.v030-osfl .v030-hero-score em{
+  color:#8e5d17;
+  background:#fff4df;
+  border:1px solid #efdcb9;
+  border-radius:999px;
+  padding:5px 8px;
+}
+
+/* Metric strip becomes a set of quiet dashboard tiles instead of a segmented slab. */
+.v030-osfl .v030-hero-metrics,
+.v030-osfl .v032-hero-metrics{
+  gap:7px;
+  border:0;
+  background:transparent;
+  overflow:visible;
+}
+.v030-osfl .v030-hero-metrics>div{
+  border:1px solid #dbe5e7;
+  border-radius:12px;
+  background:rgba(255,255,255,.9);
+  box-shadow:0 4px 14px rgba(31,60,72,.04);
+}
+.v030-osfl .v030-hero-metrics>div.uaf{
+  background:linear-gradient(180deg,#f2f7fb,#edf5f7);
+  border-color:#d2e1e7;
+}
+.v030-osfl .v030-hero-metrics span{color:#587078}
+.v030-osfl .v030-hero-metrics b{color:#17343d}
+.v030-osfl .v030-hero-metrics small{color:#687b82}
+
+/* Controls and selections: more contemporary teal/blue interaction language. */
+.v030-osfl .v030-map-metrics button,
+.v030-osfl .v032-filter-chips button,
+.v030-osfl .v030-card-head>button,
+.v030-osfl .v030-selected-region button{
+  border-color:#d2dfe2;
+  color:#35545e;
+  background:#fff;
+}
+.v030-osfl .v030-map-metrics button:hover,
+.v030-osfl .v032-filter-chips button:hover,
+.v030-osfl .v030-card-head>button:hover{
+  background:#eef6f6;
+  border-color:#bcd5d5;
+}
+.v030-osfl .v030-map-metrics button.active{
+  background:#176f70;
+  border-color:#176f70;
+  color:#fff;
+}
+.v030-osfl .v030-selected-region{
+  background:linear-gradient(135deg,#e9f5f4,#f3f7fa);
+  color:var(--osfl-ink);
+  border:1px solid #cddfe1;
+}
+.v030-osfl .v030-selected-region>span,
+.v030-osfl .v030-selected-region div small{color:#587078}
+.v030-osfl .v030-selected-region button{color:#275c63;background:#fff}
+
+/* Public-source and IPA tiles: card-like, differentiated by accent not darkness. */
+.v030-osfl .v030-band-grid button,
+.v030-osfl .v030-public-grid button,
+.v030-osfl .v030-public-grid>div,
+.v030-osfl .v032-sii-kpis>div,
+.v030-osfl .v032-sii-year{
+  background:#fff;
+  border-color:#dfe7e9;
+  box-shadow:0 3px 10px rgba(28,57,68,.03);
+}
+.v030-osfl .v030-band-grid button:hover,
+.v030-osfl .v030-public-grid button:hover{
+  background:#f1f7f7;
+  border-color:#c9dddf;
+}
+.v030-osfl .v030-band-grid button.selected,
+.v030-osfl .v030-public-grid button.selected,
+.v030-osfl .v032-ipa-card .v030-band-grid button.selected{
+  outline:2px solid #1b7775;
+  outline-offset:1px;
+  background:#eaf5f4;
+}
+.v030-osfl .v030-public-grid b,
+.v030-osfl .v030-band-grid b,
+.v030-osfl .v032-sii-kpis b,
+.v030-osfl .v032-sii-year header b{color:#173640}
+.v030-osfl .v032-public-grid .v032-budget-tile{
+  background:linear-gradient(135deg,#fffaf0,#f8f5ec);
+  border-color:#eadfc9;
+}
+.v030-osfl .v032-public-summary{
+  background:linear-gradient(90deg,#edf7f5,#f3f7fa);
+  border:1px solid #d7e6e5;
+}
+.v030-osfl .v032-public-summary b{color:#17605f}
+
+/* Entity result cards: stronger reading order and more polished hover/focus state. */
+.v030-osfl .v030-entity-list{gap:7px;padding:8px;background:#f7f9fa}
+.v030-osfl .v030-entity-row{
+  border:1px solid #dfe7e9;
+  border-radius:13px;
+  overflow:hidden;
+  background:#fff;
+  box-shadow:0 3px 10px rgba(30,58,69,.035);
+}
+.v030-osfl .v030-entity-main{
+  border:0;
+  background:#fff;
+  transition:background .15s ease,box-shadow .15s ease;
+}
+.v030-osfl .v030-entity-main:hover{
+  background:linear-gradient(90deg,#f7fbfb,#fbfcfd);
+}
+.v030-osfl .v030-entity-id>span{color:#3f7374}
+.v030-osfl .v030-entity-id>small,
+.v030-osfl .v030-entity-econ small{color:#677a81}
+.v030-osfl .v030-entity-econ span{color:#526b73}
+.v030-osfl .v030-entity-econ b{color:#243f48}
+.v030-osfl .v030-entity-ipa{
+  background:#f2f7f8;
+  border:1px solid #dce7e9;
+}
+.v030-osfl .v030-entity-ipa b{color:#1d505a}
+.v030-osfl .v030-open-arrow{color:#2e6d72}
+.v030-osfl .v030-tag{background:#edf2f3;color:#51666d}
+.v030-osfl .v030-tag.r8,.v030-osfl .v030-tag.uaf{background:#edf4f8;color:#365f78}
+.v030-osfl .v030-tag.public{background:#fbf2e3;color:#8a631f}
+.v030-osfl .v030-tag.san{background:#f8eaea;color:#914848}
+.v030-osfl .v030-tag.good{background:#e9f5ef;color:#397257}
+
+/* 360 profile sheets: replace the dark header with a light premium profile header. */
+.v030-osfl .v032-drawer,
+.v030-osfl .v030-drawer{
+  background:#f7f9fa;
+  color:var(--osfl-ink);
+}
+.v030-osfl .v032-drawer-head{
+  position:relative;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 92% 15%,rgba(22,122,120,.14),transparent 28%),
+    linear-gradient(135deg,#f7fbfb 0%,#edf4f7 62%,#fbf5e9 100%);
+  color:var(--osfl-ink);
+  border:1px solid #cedee2;
+  box-shadow:0 8px 22px rgba(27,61,73,.08);
+}
+.v030-osfl .v032-drawer-head::before{
+  content:'';
+  position:absolute;
+  left:0;top:0;bottom:0;width:5px;
+  background:linear-gradient(180deg,#137d79,#416f8e,#c38528);
+}
+.v030-osfl .v032-drawer-head>span{color:#437276!important}
+.v030-osfl .v032-drawer-head h2{color:#153039!important}
+.v030-osfl .v032-drawer-head p{color:#516970!important}
+.v030-osfl .v032-drawer-head .v030-tag,
+.v030-osfl .v032-drawer-head .v030-tag.r8,
+.v030-osfl .v032-drawer-head .v030-tag.public,
+.v030-osfl .v032-drawer-head .v030-tag.uaf,
+.v030-osfl .v032-drawer-head .v030-tag.san,
+.v030-osfl .v032-drawer-head .v030-tag.good{
+  background:rgba(255,255,255,.9);
+  color:#38565e;
+  border:1px solid #d3e0e2;
+}
+.v030-osfl .v032-drawer .v030-drawer-score{
+  background:#fff;
+  border-color:#dbe5e7;
+  box-shadow:0 4px 14px rgba(31,60,72,.035);
+}
+.v030-osfl .v032-drawer .v030-drawer-score b{color:#173740}
+.v030-osfl .v032-drawer .v030-drawer-score span,
+.v030-osfl .v032-drawer .v030-drawer-score small,
+.v030-osfl .v032-drawer .v030-drawer-score em{color:#526a72}
+.v030-osfl .v032-detail-grid>div,
+.v030-osfl .v032-drawer .v030-detail-section{
+  background:#fff;
+  border-color:#dfe7e9;
+  box-shadow:0 3px 10px rgba(29,58,69,.025);
+}
+.v030-osfl .v032-detail-grid span{color:#597079!important}
+.v030-osfl .v032-detail-grid b{color:#17333c!important}
+.v030-osfl .v032-detail-grid small{color:#667980!important}
+.v030-osfl .v032-drawer .v030-detail-head span{color:#477175}
+.v030-osfl .v032-drawer .v030-detail-head b{color:#183740}
+.v030-osfl .v032-drawer .v030-drawer-actions button{
+  background:#176f70;
+  color:#fff;
+  border-color:#176f70;
+  box-shadow:0 4px 12px rgba(23,111,112,.14);
+}
+.v030-osfl .v032-drawer .v030-drawer-actions button:hover{background:#125f61}
+.v030-osfl .v032-drawer .v030-drawer-guard{
+  background:#eef4f5;
+  border-color:#d9e5e7;
+  color:#526970;
+}
+
+/* History and public-budget subsections: preserve meaning with softer categorical colors. */
+.v030-osfl .v032-sales-year{background:#fff;border-color:#dfe7e9}
+.v030-osfl .v032-sales-year header b{color:#203d46}
+.v030-osfl .v032-sales-year progress::-webkit-progress-value{background:#4c8f8a}
+.v030-osfl .v032-sales-year.up progress::-webkit-progress-value{background:#36816a}
+.v030-osfl .v032-sales-year.down progress::-webkit-progress-value{background:#b5655c}
+.v030-osfl .v032-budget-section{background:linear-gradient(180deg,#fff,#fdfaf4)!important}
+.v030-osfl .v032-budget-summary>div{
+  background:#fffaf0;
+  border-color:#eadfca;
+}
+.v030-osfl .v032-budget-summary b{color:#5d461f}
+.v030-osfl .v032-budget-warning,
+.v030-osfl .v032-budget-empty{background:#fbf4e8;color:#6d5b3d}
+
+/* Visible keyboard focus for interactive OSFL cards. */
+.v030-osfl button:focus-visible,
+.v030-osfl .v030-entity-main:focus-visible{
+  outline:3px solid rgba(22,122,120,.28);
+  outline-offset:2px;
+}
+
+@media(max-width:760px){
+  .v030-osfl .v030-entity-list{padding:5px}
+  .v030-osfl .v030-hero-score{min-height:132px}
+}
