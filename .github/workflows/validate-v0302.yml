@@ -34,8 +34,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: JavaScript syntax
         run: |
-          for f in v0302-performance.js v031-territory-cockpit.js v0312-territory-refinement.js v032-osfl-expert.js v0321-osfl-polish.js v032-irg-territory.js v0332-radar-intelligence.js v0333-auth-preflight.js v034-sanctions-v12-core.js v034-sanctions-v12-ui.js v034-sanctions-v12-charts.js v0341-sanctions-hardening.js v0342-runtime.js; do node --check "$f"; done
-      - name: Validate current build, auth-safe boot and single runtime authority
+          for f in v0302-performance.js v031-territory-cockpit.js v0312-territory-refinement.js v032-osfl-expert.js v0321-osfl-polish.js v032-irg-territory.js v0332-radar-intelligence.js v0333-auth-preflight.js v034-sanctions-v12-core.js v034-sanctions-v12-ui.js v034-sanctions-v12-charts.js v0341-sanctions-hardening.js v0342-runtime.js v0343-final.module.js; do node --check "$f"; done
+      - name: Validate current build, auth-safe boot and final post-module authority
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -46,17 +46,19 @@ jobs:
           polish=Path('v0321-osfl-polish.js').read_text(encoding='utf-8')
           responsive=Path('v0331-osfl-layout.css').read_text(encoding='utf-8')
           auth=Path('v0333-auth-preflight.js').read_text(encoding='utf-8')
-          runtime=Path('v0342-runtime.js').read_text(encoding='utf-8')
+          runtime=Path('v0343-final.module.js').read_text(encoding='utf-8')
           build=Path('build.json').read_text(encoding='utf-8')
-          assert 'AML Analytical Workbench · v0.34.2' in html
-          assert '"app_version": "0.34.2"' in build
-          assert set(re.findall(r'\?b=(\d+)',html))=={'0342'}
-          assert html.index('v0333-auth-preflight.js?b=0342') < html.index('app.js?b=0342')
-          assert html.rfind('v0342-runtime.js?b=0342') > html.rfind('v0341-sanctions-hardening.js?b=0342')
+          assert 'AML Analytical Workbench · v0.34.3' in html
+          assert '"app_version": "0.34.3"' in build
+          assert set(re.findall(r'\?b=(\d+)',html))=={'0343'}
+          assert html.index('v0333-auth-preflight.js?b=0343') < html.index('app.js?b=0343')
+          assert html.rfind('v0343-final.module.js?b=0343') > html.rfind('v032-irg-territory.js?b=0343')
+          assert html.rfind('v0343-final.module.js?b=0343') > html.rfind('v0341-sanctions-hardening.js?b=0343')
           for legacy in ('v0321-runtime-bootstrap.js','v0331-runtime-bootstrap.js','v0334-runtime-bootstrap.js'):
               assert legacy not in html, f'legacy runtime still loaded: {legacy}'
-          assert "const V0342_RUNTIME='0.34.2'" in runtime
-          assert 'SINGLE_VISIBLE_VERSION_AUTHORITY' in build
+          assert "const VERSION='0.34.3'" in runtime
+          assert "view==='sanctions'" in runtime and 'AML_SANCTIONS_V12' in runtime
+          assert 'POST_MODULE_SINGLE_AUTHORITY' in build
           assert "V0302_IPA_SNAPSHOT='aml_ipa3_entity_score_snapshot_v0_4'" in perf
           assert "V0302_OSFL_DASH='aml_osfl_dashboard_runtime_snapshot'" in perf
           assert "V0302_OVERVIEW='aml_overview_runtime_snapshot'" in perf
