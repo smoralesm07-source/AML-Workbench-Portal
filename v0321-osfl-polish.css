@@ -1,2 +1,10 @@
-/* AML Workbench v0.32.1 · final OSFL interaction polish */
-.v032-public-grid button.selected{outline:2px solid #294b36;outline-offset:1px;background:#f0f6f2}.v032-public-grid button.selected span{color:#496654}.v032-public-grid button.selected b{color:#203c2b}
+/* AML Workbench v0.33.2 · OSFL interaction polish + modern theme */
+@import url("./v0332-osfl-modern.css?b=0332");
+
+.v032-public-grid button.selected{
+  outline:2px solid #1b7775;
+  outline-offset:1px;
+  background:#eaf5f4;
+}
+.v032-public-grid button.selected span{color:#456a70}
+.v032-public-grid button.selected b{color:#173640}
