@@ -24,6 +24,18 @@ jobs:
       - name: Checkout current main
         uses: actions/checkout@v4
 
+      - name: Verify current release contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'data-aml-version="0.34.3"' index.html
+          grep -q 'v0343-final.module.js?b=0343' index.html
+          grep -q 'v034-sanctions-v12-core.js?b=0343' index.html
+          grep -q 'v034-sanctions-v12-ui.js?b=0343' index.html
+          grep -q 'v034-sanctions-v12-charts.js?b=0343' index.html
+          grep -q 'v0341-sanctions-hardening.js?b=0343' index.html
+          grep -q '"app_version": "0.34.3"' build.json
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
