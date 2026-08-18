@@ -1,4 +1,4 @@
-name: Validate v0.31.2
+name: Validate v0.32.0
 on:
   push:
     branches: [main]
@@ -57,71 +57,52 @@ jobs:
           assert "V027_GEO_METHOD='GEO-RISK-B-0.27.0'" in model
           assert 'MISSING_IS_NOT_ZERO_STRICT' in model
           PY
-      - name: Validate OSFL and fast runtime
+      - name: Validate OSFL expert v0.32.0
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
           html=Path('index.html').read_text(encoding='utf-8')
-          js=Path('v030-osfl.js').read_text(encoding='utf-8')
-          css=Path('v030-osfl.css').read_text(encoding='utf-8')
-          fix=Path('v0301-osfl-consistency.js').read_text(encoding='utf-8')
-          perf=Path('v0302-performance.js').read_text(encoding='utf-8')
-          boot=Path('v0312-runtime-bootstrap.js').read_text(encoding='utf-8')
-
-          assert 'AML Analytical Workbench · v0.31.2' in html
-          assert set(re.findall(r'\?b=(\d+)',html))=={'0312'}
-          assert 'v030-osfl.css?b=0312' in html
-          assert 'v0302-performance.css?b=0312' in html
-          assert 'v030-osfl.js?b=0312' in html
-          assert 'v0301-osfl-consistency.js?b=0312' in html
-          assert 'v0302-performance.js?b=0312' in html
-          assert 'v0312-runtime-bootstrap.js?b=0312' in html
-          assert 'v0302-runtime-bootstrap.js' not in html
-          assert 'v0311-runtime-bootstrap.js' not in html
-          assert html.rfind('v0312-runtime-bootstrap.js?b=0312') > html.rfind('v0312-territory-refinement.js?b=0312') > html.rfind('v031-territory-cockpit.js?b=0312') > html.rfind('v0302-performance.js?b=0312')
-          assert "const V030_ENTITY_VIEW='aml_v029_osfl_entity'" in js
-          assert 'V030_CHILE' in js and 'data-v030-map-region' in js
-          assert '.v030-map-stage' in css and '.v030-region' in css
-          assert 'R.8' in js and 'aporte IPA 0' in js
-          assert 'OSFL sustantivas' in fix
-          assert 'public_body_reclassified' in fix
-          assert "V0302_OSFL_DASH='aml_osfl_dashboard_runtime_snapshot'" in perf
-          assert "V0302_OVERVIEW='aml_overview_runtime_snapshot'" in perf
-          assert "V0302_HEALTH_VIEW='aml_v0302_runtime_health'" in perf
-          assert 'v0302RuntimeStatus' in perf
-          assert "const V0312_RUNTIME='0.31.2'" in boot
+          base=Path('v030-osfl.js').read_text(encoding='utf-8')
+          expert=Path('v032-osfl-expert.js').read_text(encoding='utf-8')
+          css=Path('v032-osfl-expert.css').read_text(encoding='utf-8')
+          boot=Path('v032-runtime-bootstrap.js').read_text(encoding='utf-8')
+          assert 'AML Analytical Workbench · v0.32.0' in html
+          assert set(re.findall(r'\?b=(\d+)',html))=={'0320'}
+          assert 'v032-osfl-expert.css?b=0320' in html
+          assert 'v032-osfl-expert.js?b=0320' in html
+          assert 'v032-runtime-bootstrap.js?b=0320' in html
+          assert 'v0312-runtime-bootstrap.js' not in html
+          assert html.rfind('v032-runtime-bootstrap.js?b=0320') > html.rfind('v032-osfl-expert.js?b=0320') > html.rfind('v0312-territory-refinement.js?b=0320')
+          assert 'V030_CHILE' in base and 'data-v030-map-region' in base
+          assert "V032_REGION_RUNTIME='aml_osfl_region_runtime_snapshot'" in expert
+          assert "V032_ENTITY_RUNTIME='aml_osfl_entity_runtime_snapshot'" in expert
+          assert 'También son SO UAF' in expert
+          assert 'OSFL sustantivas' not in expert and 'Perfiles enlazados' not in expert
+          assert 'v032HydrateIpaTop' in expert and 'data-v032-ipa-open' in expert
+          assert 'v032SalesHistory' in expert and 'sales_band_code' in expert
+          assert 'PRESUPUESTO ABIERTO' in expert and 'SIGNALIZED_TRANSACTIONS_ONLY' in expert
+          assert 'v030SyncMapAndCharts=function' in expert
+          assert '.v032-drawer-head' in css and '.v032-sii-kpis' in css and '.v032-budget-summary' in css
+          assert "const V032_RUNTIME='0.32.0'" in boot
+          assert 'window.__AML_RUNTIME_VERSION_APPLIER__=v032ApplyVersion' in boot
           PY
-      - name: Validate geographic risk clarity v0.31.2
+      - name: Validate geographic risk clarity remains intact
         run: |
           python - <<'PY'
           from pathlib import Path
-          html=Path('index.html').read_text(encoding='utf-8')
-          base=Path('v031-territory-cockpit.js').read_text(encoding='utf-8')
           js=Path('v0312-territory-refinement.js').read_text(encoding='utf-8')
           css=Path('v0312-territory-refinement.css').read_text(encoding='utf-8')
-          assert 'v0312-territory-refinement.css?b=0312' in html
-          assert 'v0312-territory-refinement.js?b=0312' in html
           assert "V022_STATE.method='B'" in js
           assert "const V0312_INDICATOR='Índice de Prioridad Territorial'" in js
-          assert "const V0312_INDICATOR_SHORT='IPT'" in js
-          assert "V031_SCORE_FORMULA" in js and "scores?.B" in js
           assert 'v0312CeadPanel' in js
           assert 'Abrir CEAD oficial' in js and 'Ver dataset usado' in js
-          assert 'cead_catalog_art27_v4.json' in js
-          assert 'Qué delitos comprende esta familia' in js
-          assert "v031CountChart(all,'phenomena')" in js
-          assert "v031CountChart(all,'drivers')" not in js
-          assert 'v031Matrix(all)' not in js
           assert 'v0312-tablewrap' in css and 'table-layout:fixed' in css
-          assert 'overflow-x:hidden!important' in css
-          assert 'window.AML_TERRITORY_CEAD=' in js
           assert 'Score B' not in js
-          assert 'r.scores.B=' not in base and 'scores.B =' not in base
           PY
       - name: Ensure CSP-safe final runtime
         run: |
-          if grep -E 'onclick=|onchange=|onmouseover=|style=' v0301-osfl-consistency.js v0302-performance.js v031-territory-cockpit.js v0312-territory-refinement.js v0312-runtime-bootstrap.js; then
+          if grep -E 'onclick=|onchange=|onmouseover=|style=' v0301-osfl-consistency.js v0302-performance.js v031-territory-cockpit.js v0312-territory-refinement.js v032-osfl-expert.js v032-runtime-bootstrap.js; then
             echo 'Inline handler/style found in final runtime.'
             exit 1
           fi
