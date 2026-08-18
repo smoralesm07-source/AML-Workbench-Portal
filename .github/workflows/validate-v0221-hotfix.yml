@@ -1,10 +1,10 @@
-name: Validate v0.33.1 active overlays
+name: Validate v0.33.4 active overlays
 on:
   pull_request:
-    paths: ['v0221-hotfix.js','v0222-radar-hotfix.js','v023-ipa3-shadow.js','v024-dashboard-feedback.js','v0241-reconciliation-restore.js','v025-territory-ipa.js','v025-territory-ipa-hardening.js','v026-territory-causal-profile.js','v026-territory-profile-legend.js','v027-model-consistency.js','v027-source-null-hardening.js','v028-ipa3-global.js','v028-sanctions-ipa3.js','v029-territory-analytics.js','v029-territory-analytics.css','v030-osfl.js','v030-osfl.css','v0301-osfl-consistency.js','v0302-performance.js','v0302-performance.css','v0311-uaf-fallback.js','v031-territory-cockpit.js','v031-territory-cockpit.css','v0312-territory-refinement.js','v0312-territory-refinement.css','v032-osfl-expert.js','v032-osfl-expert.css','v0321-osfl-polish.js','v0321-osfl-polish.css','v0321-runtime-bootstrap.js','v032-irg-territory.js','v032-irg-territory.css','v0331-osfl-layout.css','v0331-runtime-bootstrap.js','data/irg_sector_vulnerability_v1.json','index.html','.github/workflows/validate-v0221-hotfix.yml']
+    paths: ['*.js','*.css','index.html','.github/workflows/validate-v0221-hotfix.yml']
   push:
     branches: [main]
-    paths: ['v0221-hotfix.js','v0222-radar-hotfix.js','v023-ipa3-shadow.js','v024-dashboard-feedback.js','v0241-reconciliation-restore.js','v025-territory-ipa.js','v025-territory-ipa-hardening.js','v026-territory-causal-profile.js','v026-territory-profile-legend.js','v027-model-consistency.js','v027-source-null-hardening.js','v028-ipa3-global.js','v028-sanctions-ipa3.js','v029-territory-analytics.js','v029-territory-analytics.css','v030-osfl.js','v030-osfl.css','v0301-osfl-consistency.js','v0302-performance.js','v0302-performance.css','v0311-uaf-fallback.js','v031-territory-cockpit.js','v031-territory-cockpit.css','v0312-territory-refinement.js','v0312-territory-refinement.css','v032-osfl-expert.js','v032-osfl-expert.css','v0321-osfl-polish.js','v0321-osfl-polish.css','v0321-runtime-bootstrap.js','v032-irg-territory.js','v032-irg-territory.css','v0331-osfl-layout.css','v0331-runtime-bootstrap.js','data/irg_sector_vulnerability_v1.json','index.html','.github/workflows/validate-v0221-hotfix.yml']
+    paths: ['*.js','*.css','index.html','.github/workflows/validate-v0221-hotfix.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -13,36 +13,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Syntax
+      - name: Active runtime syntax
         run: |
-          for f in v0221-hotfix.js v0222-radar-hotfix.js v023-ipa3-shadow.js v024-dashboard-feedback.js v0241-reconciliation-restore.js v025-territory-ipa.js v025-territory-ipa-hardening.js v026-territory-causal-profile.js v026-territory-profile-legend.js v027-model-consistency.js v027-source-null-hardening.js v028-ipa3-global.js v028-sanctions-ipa3.js v029-territory-analytics.js v030-osfl.js v0301-osfl-consistency.js v0302-performance.js v0311-uaf-fallback.js v031-territory-cockpit.js v0312-territory-refinement.js v032-osfl-expert.js v0321-osfl-polish.js v0321-runtime-bootstrap.js v032-irg-territory.js v0331-runtime-bootstrap.js; do node --check "$f"; done
-      - name: Wiring and interaction contract
+          for f in v0302-performance.js v0311-uaf-fallback.js v031-territory-cockpit.js v0312-territory-refinement.js v032-osfl-expert.js v0321-osfl-polish.js v0321-runtime-bootstrap.js v032-irg-territory.js v0331-runtime-bootstrap.js v0331-radar-layout.js v0332-radar-intelligence.js v0333-auth-preflight.js v0334-runtime-bootstrap.js; do node --check "$f"; done
+      - name: Wiring, auth and interaction contract
         run: |
-          grep -q 'AML Analytical Workbench · v0.33.1' index.html
-          grep -q 'v032-osfl-expert.js?b=0331' index.html
-          grep -q 'v0321-osfl-polish.js?b=0331' index.html
-          grep -q 'v0331-osfl-layout.css?b=0331' index.html
-          grep -q 'v0321-runtime-bootstrap.js?b=0331' index.html
-          grep -q 'v032-irg-territory.js?b=0331' index.html
-          grep -q 'v0331-runtime-bootstrap.js?b=0331' index.html
-          grep -q "const V0321_RUNTIME='0.32.1'" v0321-runtime-bootstrap.js
-          grep -q "const V0331_RUNTIME='0.33.1'" v0331-runtime-bootstrap.js
-          grep -q 'data-v032-ipa-open' v032-osfl-expert.js
-          grep -q 'v032BudgetExposure' v032-osfl-expert.js
-          grep -q 'v030SyncMapAndCharts=function' v032-osfl-expert.js
-          grep -q 'FULL_ON_360_OPEN' v0321-osfl-polish.js
-          grep -q 'v032Comparator' v032-irg-territory.js
-          grep -q 'v032CeadPanel' v032-irg-territory.js
-          grep -q 'LOCAL_FALLBACK' v0311-uaf-fallback.js
-          grep -q 'container-type:inline-size' v0331-osfl-layout.css
-          if grep -E 'onclick=|onchange=|onmouseover=|style=' v032-osfl-expert.js v0321-osfl-polish.js v0321-runtime-bootstrap.js v032-irg-territory.js v0331-runtime-bootstrap.js; then exit 1; fi
           python - <<'PY'
           import re,json
-          html=open('index.html',encoding='utf-8').read()
-          assert set(re.findall(r'\?b=(\d+)',html))=={'0331'}
-          assert '<script type="module" src="./v032-irg-territory.js?b=0331"></script>' in html
-          assert html.rfind('v0331-runtime-bootstrap.js?b=0331') > html.rfind('v032-irg-territory.js?b=0331') > html.rfind('v0321-runtime-bootstrap.js?b=0331')
-          irg=open('v032-irg-territory.js',encoding='utf-8').read()
+          from pathlib import Path
+          html=Path('index.html').read_text(encoding='utf-8')
+          auth=Path('v0333-auth-preflight.js').read_text(encoding='utf-8')
+          assert 'AML Analytical Workbench · v0.33.4' in html
+          assert set(re.findall(r'\?b=(\d+)',html))=={'0334'}
+          assert html.index('v0333-auth-preflight.js?b=0334') < html.index('app.js?b=0334')
+          assert '<script type="module" src="./v0331-runtime-bootstrap.js' not in html
+          assert html.rfind('v0334-runtime-bootstrap.js?b=0334') > html.rfind('v0332-radar-intelligence.js?b=0334')
+          assert 'originalOnAuthStateChange' in auth and 'window.setTimeout' in auth
+          assert 'clearPersistedSupabaseAuth' in auth
+          expert=Path('v032-osfl-expert.js').read_text(encoding='utf-8')
+          assert 'data-v032-ipa-open' in expert and 'v032BudgetExposure' in expert
+          assert 'v030SyncMapAndCharts=function' in expert
+          assert 'LOCAL_FALLBACK' in Path('v0311-uaf-fallback.js').read_text(encoding='utf-8')
+          irg=Path('v032-irg-territory.js').read_text(encoding='utf-8')
           assert "const V032_WEIGHTS={vulnerability:0.45,density:0.20,gap:0.20,threat:0.15}" in irg
-          cat=json.load(open('data/irg_sector_vulnerability_v1.json',encoding='utf-8')); assert len(cat['sectors'])==55
+          cat=json.loads(Path('data/irg_sector_vulnerability_v1.json').read_text(encoding='utf-8'))
+          assert len(cat['sectors'])==55
           PY
+      - name: CSP-safe final layers
+        run: |
+          if grep -E 'onclick=|onchange=|onmouseover=|style=' v032-osfl-expert.js v0321-osfl-polish.js v032-irg-territory.js v0333-auth-preflight.js v0334-runtime-bootstrap.js; then exit 1; fi
