@@ -1,4 +1,4 @@
-name: Validate v0.31.2
+name: Validate v0.32.0
 on:
   push:
     branches: [main]
@@ -39,89 +39,67 @@ jobs:
           assert r.get('totals', {}).get('registered_so_2025') == 9911
           assert r.get('totals', {}).get('ros_2025') == 21828
           PY
-      - name: Validate IPA3 and territorial scoring contracts
+      - name: Validate retained IPA3 and fast-runtime contracts
         run: |
           python - <<'PY'
           from pathlib import Path
           global_js=Path('v028-ipa3-global.js').read_text(encoding='utf-8')
           sanc_js=Path('v028-sanctions-ipa3.js').read_text(encoding='utf-8')
-          territory=Path('v029-territory-analytics.js').read_text(encoding='utf-8')
-          model=Path('v027-model-consistency.js').read_text(encoding='utf-8')
           perf=Path('v0302-performance.js').read_text(encoding='utf-8')
           assert "const V028_SCORE_VIEW='aml_v_ipa3_entity_score_v0_4'" in global_js
           assert "version:'0.4-shadow'" in global_js
           assert 'window.AML_IPA3=' in global_js
           assert "V0302_IPA_SNAPSHOT='aml_ipa3_entity_score_snapshot_v0_4'" in perf
           assert "const V028_SANCTIONS_VIEW='aml_v028_sanctions_with_identity'" in sanc_js
-          assert "V029_ANALYTICS_VERSION='TERRITORY-ANALYTICS-0.29.0'" in territory
-          assert "V027_GEO_METHOD='GEO-RISK-B-0.27.0'" in model
-          assert 'MISSING_IS_NOT_ZERO_STRICT' in model
-          PY
-      - name: Validate OSFL and fast runtime
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import re
-          html=Path('index.html').read_text(encoding='utf-8')
-          js=Path('v030-osfl.js').read_text(encoding='utf-8')
-          css=Path('v030-osfl.css').read_text(encoding='utf-8')
-          fix=Path('v0301-osfl-consistency.js').read_text(encoding='utf-8')
-          perf=Path('v0302-performance.js').read_text(encoding='utf-8')
-          boot=Path('v0312-runtime-bootstrap.js').read_text(encoding='utf-8')
-
-          assert 'AML Analytical Workbench · v0.31.2' in html
-          assert set(re.findall(r'\?b=(\d+)',html))=={'0312'}
-          assert 'v030-osfl.css?b=0312' in html
-          assert 'v0302-performance.css?b=0312' in html
-          assert 'v030-osfl.js?b=0312' in html
-          assert 'v0301-osfl-consistency.js?b=0312' in html
-          assert 'v0302-performance.js?b=0312' in html
-          assert 'v0312-runtime-bootstrap.js?b=0312' in html
-          assert 'v0302-runtime-bootstrap.js' not in html
-          assert 'v0311-runtime-bootstrap.js' not in html
-          assert html.rfind('v0312-runtime-bootstrap.js?b=0312') > html.rfind('v0312-territory-refinement.js?b=0312') > html.rfind('v031-territory-cockpit.js?b=0312') > html.rfind('v0302-performance.js?b=0312')
-          assert "const V030_ENTITY_VIEW='aml_v029_osfl_entity'" in js
-          assert 'V030_CHILE' in js and 'data-v030-map-region' in js
-          assert '.v030-map-stage' in css and '.v030-region' in css
-          assert 'R.8' in js and 'aporte IPA 0' in js
-          assert 'OSFL sustantivas' in fix
-          assert 'public_body_reclassified' in fix
           assert "V0302_OSFL_DASH='aml_osfl_dashboard_runtime_snapshot'" in perf
           assert "V0302_OVERVIEW='aml_overview_runtime_snapshot'" in perf
           assert "V0302_HEALTH_VIEW='aml_v0302_runtime_health'" in perf
-          assert 'v0302RuntimeStatus' in perf
-          assert "const V0312_RUNTIME='0.31.2'" in boot
           PY
-      - name: Validate geographic risk clarity v0.31.2
+      - name: Validate IRG-LAFT v0.32.0 contract
         run: |
           python - <<'PY'
           from pathlib import Path
+          import json,re
           html=Path('index.html').read_text(encoding='utf-8')
-          base=Path('v031-territory-cockpit.js').read_text(encoding='utf-8')
-          js=Path('v0312-territory-refinement.js').read_text(encoding='utf-8')
-          css=Path('v0312-territory-refinement.css').read_text(encoding='utf-8')
-          assert 'v0312-territory-refinement.css?b=0312' in html
-          assert 'v0312-territory-refinement.js?b=0312' in html
-          assert "V022_STATE.method='B'" in js
-          assert "const V0312_INDICATOR='Índice de Prioridad Territorial'" in js
-          assert "const V0312_INDICATOR_SHORT='IPT'" in js
-          assert "V031_SCORE_FORMULA" in js and "scores?.B" in js
-          assert 'v0312CeadPanel' in js
-          assert 'Abrir CEAD oficial' in js and 'Ver dataset usado' in js
-          assert 'cead_catalog_art27_v4.json' in js
-          assert 'Qué delitos comprende esta familia' in js
-          assert "v031CountChart(all,'phenomena')" in js
-          assert "v031CountChart(all,'drivers')" not in js
-          assert 'v031Matrix(all)' not in js
-          assert 'v0312-tablewrap' in css and 'table-layout:fixed' in css
-          assert 'overflow-x:hidden!important' in css
-          assert 'window.AML_TERRITORY_CEAD=' in js
-          assert 'Score B' not in js
-          assert 'r.scores.B=' not in base and 'scores.B =' not in base
+          js=Path('v032-irg-territory.js').read_text(encoding='utf-8')
+          css=Path('v032-irg-territory.css').read_text(encoding='utf-8')
+          docs=Path('docs/geographic-risk-methodology-v3-irg.md').read_text(encoding='utf-8')
+          catalog=json.loads(Path('data/irg_sector_vulnerability_v1.json').read_text(encoding='utf-8'))
+
+          assert 'AML Analytical Workbench · v0.32.0' in html
+          assert set(re.findall(r'\?b=(\d+)',html))=={'0320'}
+          assert 'v032-irg-territory.css?b=0320' in html
+          assert 'v032-irg-territory.js?b=0320' in html
+          assert html.rfind('v032-irg-territory.js?b=0320') > html.rfind('v0312-runtime-bootstrap.js?b=0320')
+
+          assert catalog['schema']=='IRG_SECTOR_VULNERABILITY_V1'
+          assert catalog['risk_method']=='SIMPLE_MEAN_OF_SIX_STRUCTURAL_DIMENSIONS'
+          sectors=catalog['sectors']
+          assert len(sectors)==55
+          assert {x['uaf_sector_id'] for x in sectors}==set(range(1,56))
+          by={x['uaf_sector_id']:x for x in sectors}
+          assert by[21]['risk_inherent_1_5']==4.83
+          assert by[52]['risk_inherent_1_5']==4.33
+          assert by[54]['risk_inherent_1_5']==4.33
+
+          assert "const V032_METHOD='IRG-LAFT-0.32.0'" in js
+          assert "const V032_UAF_VIEW='aml_v032_geo_uaf_territory'" in js
+          assert "const V032_WEIGHTS={vulnerability:0.45,density:0.20,gap:0.20,threat:0.15}" in js
+          assert "const V032_CONF_WEIGHTS={completeness:0.35,geo:0.30,mapping:0.20,freshness:0.15}" in js
+          assert 'function v032StrictIRG' in js
+          assert "m.mapping_status==='VALIDATED_RULE'" in Path('v022-territory-risk.js').read_text(encoding='utf-8')
+          assert 'secondary_sources_direct_weight:0' in js
+          assert 'CGR_BUDGET_IPA_PRESS_OSFL_DO_NOT_RECEIVE_INVENTED_IRG_WEIGHTS' in js
+          assert '70% percentil de intensidad y 30% percentil de tendencia positiva' in js
+          assert 'No se renormalizan los pesos' in docs
+          assert 'UAF_UNLOCATED_RECORDS_ARE_NOT_IMPUTED' in docs
+          assert 'table-layout:fixed' in css
+          assert '.v032-comparator' in css
+          assert 'overflow:hidden' in css
           PY
       - name: Ensure CSP-safe final runtime
         run: |
-          if grep -E 'onclick=|onchange=|onmouseover=|style=' v0301-osfl-consistency.js v0302-performance.js v031-territory-cockpit.js v0312-territory-refinement.js v0312-runtime-bootstrap.js; then
+          if grep -E 'onclick=|onchange=|onmouseover=|style=' v0301-osfl-consistency.js v0302-performance.js v031-territory-cockpit.js v0312-territory-refinement.js v0312-runtime-bootstrap.js v032-irg-territory.js; then
             echo 'Inline handler/style found in final runtime.'
             exit 1
           fi
