@@ -5,6 +5,6 @@
   "published_from": "main",
   "feature": "SANCTIONS_V12_FINALIZED",
   "runtime": "SINGLE_VISIBLE_VERSION_AUTHORITY",
-  "deployment": "GITHUB_PAGES_ACTIONS",
+  "deployment": "GITHUB_PAGES_BRANCH_FORCED_REFRESH",
   "data_contract": "RADAR_SANCTIONS_ENTITY_HUB_V1"
 }
