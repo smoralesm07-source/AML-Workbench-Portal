@@ -1,0 +1,45 @@
+name: Force current AML Workbench Pages build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+
+concurrency:
+  group: aml-workbench-pages-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v6
+
+      - name: Validate Sanciones v12 is the active route
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'AML Analytical Workbench · v0.34.2' index.html
+          grep -q 'v034-sanctions-v12-core.js?b=0342' index.html
+          grep -q 'v034-sanctions-v12-ui.js?b=0342' index.html
+          grep -q 'v034-sanctions-v12-charts.js?b=0342' index.html
+          grep -q 'v0341-sanctions-hardening.js?b=0342' index.html
+          grep -q 'loadSanctions=v034Load' v034-sanctions-v12-core.js
+          grep -q 'Consulta directa de entidad' v034-sanctions-v12-ui.js
+          grep -q 'Últimas sanciones · Top 5' v034-sanctions-v12-ui.js
+          grep -q 'Concentración regional de sanciones' v034-sanctions-v12-ui.js
+
+      - name: Request GitHub Pages build from latest main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/builds" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28"
