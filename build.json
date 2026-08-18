@@ -1,0 +1,6 @@
+{
+  "app_version": "0.33.4",
+  "build": "0334",
+  "auth_fix": "SUPABASE_ON_AUTH_STATE_CHANGE_DEFERRED",
+  "published_from": "main"
+}
