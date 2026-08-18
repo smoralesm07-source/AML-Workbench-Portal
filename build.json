@@ -1,11 +1,11 @@
 {
-  "app_version": "0.34.2",
-  "build": "0342",
+  "app_version": "0.34.3",
+  "build": "0343",
   "auth_fix": "SUPABASE_ON_AUTH_STATE_CHANGE_DEFERRED",
   "published_from": "main",
-  "feature": "SANCTIONS_V12_FINALIZED",
-  "runtime": "SINGLE_VISIBLE_VERSION_AUTHORITY",
-  "deployment": "GITHUB_ACTIONS_ACTIVE",
+  "feature": "SANCTIONS_V12_FINAL_RUNTIME",
+  "runtime": "POST_MODULE_SINGLE_AUTHORITY",
+  "deployment": "GITHUB_PAGES_WORKFLOW_RUNTIME_REPAIR",
   "deployment_trigger": "2026-08-18T17:19:00-04:00",
   "data_contract": "RADAR_SANCTIONS_ENTITY_HUB_V1"
 }
