@@ -35,6 +35,17 @@ jobs:
           grep -q 'v034-sanctions-v12-charts.js?b=0343' index.html
           grep -q 'v0341-sanctions-hardening.js?b=0343' index.html
           grep -q '"app_version": "0.34.3"' build.json
+          grep -q 'PUBLIC_ENTITY_CONTEXT_V1' build.json
+          grep -q 'v0344-public-entities.module.js?b=0343' v0343-final.module.js
+          test -f v0344-public-entities.module.js
+          test -f v0344-public-entities.css
+
+      - name: Validate final JavaScript layers
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check v0343-final.module.js
+          node --check v0344-public-entities.module.js
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
