@@ -4,6 +4,7 @@
  * Stability policy:
  * - never clear a valid persisted session merely because PostgREST is slow;
  * - defer onAuthStateChange callbacks to the next macrotask;
+ * - isolate the current ATLAS auth session from legacy/default Supabase storage;
  * - leave the canonical boot/watchdog layer in charge of bounded retries;
  * - preserve Microsoft Entra + Supabase Auth + allowlist/RLS separation.
  */
@@ -11,7 +12,9 @@
   const app=document.querySelector('#app');
   const sdk=window.supabase;
   const sdkReady=!!(sdk&&typeof sdk.createClient==='function');
+  const STORAGE_KEY='atlas-aml-auth-session-v2';
   window.__AML_SUPABASE_SDK_READY__=sdkReady;
+  window.__ATLAS_AUTH_STORAGE_KEY__=STORAGE_KEY;
 
   if(!sdkReady){
     console.error('[ATLAS] Supabase JS SDK unavailable; authentication bootstrap aborted.');
@@ -29,6 +32,12 @@
   if(!sdk.__ATLAS_AUTH_CALLBACK_SAFE__){
     const originalCreateClient=sdk.createClient.bind(sdk);
     sdk.createClient=function(...args){
+      const priorOptions=(args[2]&&typeof args[2]==='object')?args[2]:{};
+      args[2]={
+        ...priorOptions,
+        auth:{...(priorOptions.auth||{}),storageKey:STORAGE_KEY}
+      };
+
       const client=originalCreateClient(...args);
       const auth=client?.auth;
       if(auth&&typeof auth.onAuthStateChange==='function'&&!auth.__ATLAS_AUTH_CALLBACK_SAFE__){
@@ -55,6 +64,6 @@
     if(title!=='Iniciando sesión segura…')return;
     const p=app.querySelector('.auth-card p');
     if(p)p.textContent='La sesión sigue siendo válida. ATLAS está esperando respuesta de autorización y datos protegidos…';
-    window.__ATLAS_AUTH_PREFLIGHT__={stage:'backend-wait',checkedAt:new Date().toISOString()};
+    window.__ATLAS_AUTH_PREFLIGHT__={stage:'backend-wait',checkedAt:new Date().toISOString(),storageKey:STORAGE_KEY};
   },9000);
 })();
