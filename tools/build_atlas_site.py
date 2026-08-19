@@ -8,6 +8,7 @@ import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+LEGACY_UNPUBLISHED_ASSETS = {"atlas-auth-stability-0440.js"}
 
 
 def load_json(name: str):
@@ -139,10 +140,18 @@ def build(out_dir: Path):
     if data_dir.exists():
         shutil.copytree(data_dir, out_dir / "data", dirs_exist_ok=True)
 
-    # Static media are current assets and may be published as-is.
+    # Static media are current assets and may be published as-is, except legacy
+    # executable assets retired from the canonical runtime. Keeping those files
+    # out of the Pages artifact prevents stale HTML/browser caches from executing
+    # old session-recovery behavior after a new release is published.
     assets_dir = ROOT / "assets"
     if assets_dir.exists():
-        shutil.copytree(assets_dir, out_dir / "assets", dirs_exist_ok=True)
+        shutil.copytree(
+            assets_dir,
+            out_dir / "assets",
+            dirs_exist_ok=True,
+            ignore=shutil.ignore_patterns(*sorted(LEGACY_UNPUBLISHED_ASSETS)),
+        )
     for pattern in ("*.png", "*.svg", "*.ico", "*.webp", "*.jpg", "*.jpeg"):
         for src in ROOT.glob(pattern):
             copy_file(src, out_dir / src.name)
@@ -164,12 +173,17 @@ def build(out_dir: Path):
 
     if "?b=" in template:
         raise SystemExit("legacy ?b= cache key remains in built index")
+    if "atlas-auth-stability-0440.js" in template:
+        raise SystemExit("legacy standalone auth runtime remains in built index")
     for source_name in source_assets:
         if f"./{source_name}" in template:
             raise SystemExit(f"source fragment leaked into production index: {source_name}")
     for name in forbidden:
         if name in template or (out_dir / name).exists():
             raise SystemExit(f"forbidden runtime asset leaked into Pages artifact: {name}")
+    for name in LEGACY_UNPUBLISHED_ASSETS:
+        if (out_dir / "assets" / name).exists():
+            raise SystemExit(f"legacy executable asset leaked into Pages artifact: assets/{name}")
 
     (out_dir / "index.html").write_text(template, encoding="utf-8")
     (out_dir / ".nojekyll").write_text("", encoding="utf-8")
@@ -184,6 +198,7 @@ def build(out_dir: Path):
         "published_css": [compiled_css],
         "published_js": compiled_js,
         "historical_source_assets_published": False,
+        "legacy_auth_runtime_published": False,
         "visible_version_authority": "atlas-release-guard.js",
     }
     (out_dir / "atlas-runtime-report.json").write_text(json.dumps(runtime_report, ensure_ascii=False, indent=2), encoding="utf-8")
