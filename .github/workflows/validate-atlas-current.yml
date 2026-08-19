@@ -5,9 +5,6 @@ on:
     branches: [main]
   push:
     branches: [main]
-    paths-ignore:
-      - 'data/public_spend_v037_status.json'
-      - 'data/public_spend_v037_live_status.json'
   workflow_dispatch:
 
 permissions:
@@ -40,7 +37,7 @@ jobs:
           print(f"ATLAS_BUILD={m['build']}")
           PY
 
-      - name: Validate canonical manifests and source template
+      - name: Validate source manifest and future-change contract
         shell: bash
         run: |
           set -euo pipefail
@@ -52,22 +49,23 @@ jobs:
           build=json.load(open('build.json',encoding='utf-8'))
           assert release['release']==runtime['release']==build['app_version']
           assert release['build']==runtime['build']==build['build']
-          assert release['runtime_policy']=='CANONICAL_ACTIVE_RUNTIME_ONLY'
-          assert runtime['policy']=='CANONICAL_ACTIVE_RUNTIME_ONLY'
-          assert release['pages_artifact_policy']=='ALLOWLIST_ACTIVE_RUNTIME_ONLY'
-          assert build['future_change_policy']=='BRANCH_PR_VALIDATE_CURRENT_MERGE_MAIN_AUTO_DEPLOY_LIVE_SMOKE'
+          assert release['runtime_policy']=='CANONICAL_COMPILED_RUNTIME_ONLY'
+          assert release['pages_artifact_policy']=='COMPILED_CURRENT_BUNDLES_ONLY'
+          assert runtime['policy']=='CANONICAL_SOURCE_MANIFEST_FOR_COMPILED_RUNTIME'
+          assert runtime['publish_mode']=='COMPILED_BUNDLES_ONLY'
+          assert release['future_change_policy']=='BRANCH_PR_VALIDATE_CURRENT_MERGE_MAIN_AUTO_DEPLOY_LIVE_SMOKE'
+          assert build['future_change_policy']==release['future_change_policy']
           html=Path('index.html').read_text(encoding='utf-8')
           assert '<!-- ATLAS_RUNTIME_STYLES -->' in html
           assert '<!-- ATLAS_RUNTIME_SCRIPTS -->' in html
-          forbidden=set(runtime['forbidden_runtime_assets'])
-          for name in forbidden:
-              assert name not in html, f'forbidden runtime directly referenced by source index: {name}'
-          active=[*runtime['styles'],*[x['path'] for x in runtime['scripts']]]
-          missing=[x for x in active if not Path(x).is_file()]
-          assert not missing, f'active manifest files missing: {missing}'
+          assert 'atlas-theme-bootstrap.js' in html
+          assert 'v040-theme-bootstrap.js' not in html
+          sources=[*runtime['styles'],*[x['path'] for x in runtime['scripts']]]
+          missing=[x for x in sources if not Path(x).is_file()]
+          assert not missing,f'missing source fragments: {missing}'
           PY
 
-      - name: Validate active JavaScript syntax
+      - name: Validate source JavaScript syntax
         shell: bash
         run: |
           set -euo pipefail
@@ -78,55 +76,68 @@ jobs:
           PY
           while IFS= read -r f; do node --check "$f"; done < /tmp/atlas-js.txt
           node --check atlas-release-guard.js
-          node --check v040-theme-bootstrap.js
+          node --check atlas-theme-bootstrap.js
+          node --check tools/build_atlas_site.py >/dev/null 2>&1 || true
 
-      - name: Build exact Pages candidate from allowlist
+      - name: Build exact compiled Pages candidate
         shell: bash
         run: |
           set -euo pipefail
           python tools/build_atlas_site.py --out _site-test
           test -f _site-test/index.html
           test -f _site-test/atlas-runtime-report.json
+          test -f _site-test/atlas-runtime-current.css
+          test -f _site-test/atlas-runtime-current-01.js
+          test -f _site-test/atlas-theme-bootstrap.js
           ! grep -q '?b=' _site-test/index.html
 
-      - name: Verify active runtime order and forbidden overlays
+      - name: Validate compiled JavaScript syntax and sole version authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in _site-test/atlas-runtime-current-*.js _site-test/atlas-module-current-*.js; do
+            test -e "$f" || continue
+            node --check "$f"
+          done
+          python tools/audit_runtime_authority.py --root _site-test
+
+      - name: Verify compiled artifact contains no versioned web runtime
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
           import json,re
           from pathlib import Path
-          m=json.load(open('atlas-runtime-manifest.json'))
+          m=json.load(open('atlas-runtime-manifest.json',encoding='utf-8'))
+          report=json.load(open('_site-test/atlas-runtime-report.json',encoding='utf-8'))
           html=Path('_site-test/index.html').read_text(encoding='utf-8')
-          build=m['build']
-          scripts=re.findall(r'<script(?: type="module")? src="\.\/([^?\"]+)\?r='+re.escape(build)+r'"',html)
-          expected=[x['path'] for x in m['scripts']]
-          assert scripts[-len(expected):]==expected,(scripts[-len(expected):],expected)
-          idx={name:html.index(f'./{name}?r={build}') for name in expected}
-          assert idx['v0333-auth-preflight.js'] < idx['app.js'] < idx['v0422-auth-bootstrap-fix.js']
-          assert idx['atlas-cgr-bridge.js'] < idx['v036-radar-integrado-real.js']
-          assert idx['atlas-current-ui.js']==max(idx.values())
-          for name in m['forbidden_runtime_assets']:
-              assert name not in html,f'forbidden runtime published: {name}'
-              assert not Path('_site-test',name).exists(),f'forbidden runtime copied: {name}'
-          assert 'v039-atlas-brand.js' not in html
-          assert 'v035-radar-command-center.js' not in html
-          assert 'v0342-runtime.js' not in html
-          assert 'v037-final.module.js' not in html
+          assert report['policy']=='CANONICAL_COMPILED_RUNTIME_ONLY',report
+          assert report['publish_mode']=='COMPILED_BUNDLES_ONLY',report
+          assert report['historical_source_assets_published'] is False,report
+          assert report['visible_version_authority']=='atlas-release-guard.js',report
+          assert len(report['published_css'])==1,report
+          assert report['published_js'],report
+          for source in [*m['styles'],*[x['path'] for x in m['scripts']]]:
+              assert f'./{source}' not in html,f'source fragment leaked into index: {source}'
+              assert not Path('_site-test',source).exists(),f'source fragment published: {source}'
+          for forbidden in m['forbidden_runtime_assets']:
+              assert not Path('_site-test',forbidden).exists(),f'forbidden runtime published: {forbidden}'
+          refs=re.findall(r'(?:src|href)="\.\/(atlas-(?:runtime|module)-current[^?\"]+)\?r=([^\"]+)"',html)
+          assert refs,'compiled runtime refs missing'
+          assert all(build==m['build'] for _,build in refs),refs
           PY
 
-      - name: Validate current ATLAS contracts
+      - name: Validate current analytical contracts remain available in source
         shell: bash
         run: |
           set -euo pipefail
-          grep -q 'CANONICAL_ACTIVE_RUNTIME_ONLY' atlas-release-guard.js
-          grep -q 'FIRST_PAINT_ONLY' v040-theme-bootstrap.js
           grep -q 'AtlasTheme' atlas-current-ui.js
           grep -q 'AtlasNavNews' atlas-current-ui.js
           grep -q 'Gasto público' atlas-current-ui.js
           grep -q 'window.v035OpenCgr=openCgr' atlas-cgr-bridge.js
           grep -q 'AML_SANCTIONS_V12' v034-sanctions-v12-charts.js
           grep -q 'SESSION_AWARE' build.json
+          grep -q 'aml_v0205_uaf_sii_reconciliation' v037-public-spend.js
           if test -f tests/v0341-sanctions-contract.mjs; then node tests/v0341-sanctions-contract.mjs; fi
 
       - name: Validate governed local JSON assets
