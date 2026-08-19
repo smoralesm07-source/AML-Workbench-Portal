@@ -1,12 +1,12 @@
 'use strict';
 
 /* ATLAS AML · single active release authority.
- * v0.42.2 keeps the release guard non-recursive and pairs it with a non-recursive
- * AIE brand observer so bootstrap/auth tasks cannot be starved by mutation loops.
+ * v0.42.3 makes ATLAS the only visible/runtime version authority and requires
+ * legacy runtime layers to delegate instead of rewriting historical versions.
  */
 (function atlasSingleReleaseAuthority(){
-  const RELEASE='0.42.2';
-  const BUILD='0422';
+  const RELEASE='0.42.3';
+  const BUILD='0423';
   const PRODUCT='ATLAS AML';
   const TAGLINE='Plataforma Integrada de Inteligencia y Riesgo';
   const MANIFEST='./atlas-release.json';
@@ -48,11 +48,14 @@
         if(strong&&strong.textContent!==PRODUCT)strong.textContent=PRODUCT;
         const small=brand.querySelector('small');
         if(small){
-          if(/(?:Operational Radar|WorkBench|Workbench|\bv?0\.\d+)/i.test(small.textContent||''))small.textContent=TAGLINE;
+          const label=`v${RELEASE}`;
+          if(small.textContent!==label)small.textContent=label;
           if(small.dataset.activeVersion!==RELEASE)small.dataset.activeVersion=RELEASE;
+          if(small.getAttribute('aria-label')!==`Versión ${RELEASE}`)small.setAttribute('aria-label',`Versión ${RELEASE}`);
+          if(small.getAttribute('data-runtime-label')!==label)small.setAttribute('data-runtime-label',label);
         }
       });
-      window.__ATLAS_RELEASE_GUARD_HEALTH__={status:'ready',release:RELEASE,build:BUILD,mutationPolicy:'ROOT_ATTRIBUTES_ONLY',checkedAt:new Date().toISOString()};
+      window.__ATLAS_RELEASE_GUARD_HEALTH__={status:'ready',release:RELEASE,build:BUILD,mutationPolicy:'ROOT_ATTRIBUTES_ONLY',visibleVersionPolicy:'ATLAS_RELEASE_GUARD_ONLY',checkedAt:new Date().toISOString()};
     }finally{applying=false;}
   }
 
