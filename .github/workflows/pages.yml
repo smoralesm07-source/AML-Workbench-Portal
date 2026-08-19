@@ -60,12 +60,15 @@ jobs:
           node --check v040-theme-bootstrap.js
           node --check v0402-aie-brand.js
           node --check v0422-auth-bootstrap-fix.js
+          node --check v0206-stability.js
           node --check v0333-auth-preflight.js
           node --check app.js
           grep -q "const RELEASE='0.42.2'" atlas-release-guard.js
           grep -q "const BUILD='0422'" atlas-release-guard.js
           grep -q "CHILD_INSERTIONS_ONLY_NO_CHARACTERDATA_LOOP" v0402-aie-brand.js
           ! grep -q "characterData:true" v0402-aie-brand.js
+          grep -q "ATLAS_LEGACY_VERSION_WATCHERS_DISABLED" v0206-stability.js
+          ! grep -q "VERSION_OBSERVER.observe" v0206-stability.js
           grep -q "audit is best-effort" v0422-auth-bootstrap-fix.js
           grep -q "AUTH_TIMEOUT=6500" v0422-auth-bootstrap-fix.js
 
@@ -100,7 +103,7 @@ jobs:
           s='\n'.join(line for line in s.splitlines() if 'v035-final.module.js' not in line and 'v036-final.module.js' not in line)+'\n'
 
           critical=[
-            'atlas-release-guard.js','v040-theme-bootstrap.js','v0333-auth-preflight.js','app.js',
+            'atlas-release-guard.js','v040-theme-bootstrap.js','v0333-auth-preflight.js','app.js','v0206-stability.js',
             'v039-atlas-brand.css','v040-theme-system.css','v036-radar-integrado-runtime-fix.js',
             'v0402-reconciliation-live.js','v038-final.module.js','v039-atlas-brand.js'
           ]
@@ -127,6 +130,7 @@ jobs:
           grep -q "v040-theme-bootstrap.js?r=${ATLAS_BUILD}" _site/index.html
           grep -q "v0333-auth-preflight.js?r=${ATLAS_BUILD}" _site/index.html
           grep -q "app.js?r=${ATLAS_BUILD}" _site/index.html
+          grep -q "v0206-stability.js?r=${ATLAS_BUILD}" _site/index.html
           grep -q "v0422-auth-bootstrap-fix.js?r=${ATLAS_BUILD}" _site/index.html
 
       - name: Configure GitHub Pages
@@ -152,10 +156,14 @@ jobs:
           curl --fail --silent --show-error --location --retry 10 --retry-delay 2 "$url" -o /tmp/atlas.html
           grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" /tmp/atlas.html
           grep -q "data-aml-build=\"${ATLAS_BUILD}\"" /tmp/atlas.html
+          grep -q "v0206-stability.js?r=${ATLAS_BUILD}" /tmp/atlas.html
           grep -q "v0422-auth-bootstrap-fix.js?r=${ATLAS_BUILD}" /tmp/atlas.html
           curl --fail --silent --show-error --location "${PAGE_URL%/}/v0402-aie-brand.js?r=${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/aie.js
+          curl --fail --silent --show-error --location "${PAGE_URL%/}/v0206-stability.js?r=${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/legacy.js
           curl --fail --silent --show-error --location "${PAGE_URL%/}/v0422-auth-bootstrap-fix.js?r=${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/authfix.js
           ! grep -q "characterData:true" /tmp/aie.js
           grep -q "CHILD_INSERTIONS_ONLY_NO_CHARACTERDATA_LOOP" /tmp/aie.js
+          grep -q "ATLAS_LEGACY_VERSION_WATCHERS_DISABLED" /tmp/legacy.js
+          ! grep -q "VERSION_OBSERVER.observe" /tmp/legacy.js
           grep -q "audit is best-effort" /tmp/authfix.js
           grep -q "AUTH_TIMEOUT=6500" /tmp/authfix.js
