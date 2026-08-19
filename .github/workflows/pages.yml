@@ -52,6 +52,8 @@ jobs:
           grep -q 'VISIBILITY_NOT_RISK' build.json
           grep -q 'SECTOR_SIGNAL_NOT_INDIVIDUAL_NONCOMPLIANCE' build.json
           grep -q 'MATRIX_FILTERS_DRIVE_UAF_SII_SANCTIONS_OSFL_PRESS_SECTOR_CROSSES' build.json
+          grep -q 'UNIQUE_ENTITY_COUNT_VIA_HEAD_COUNT_AND_UAF_SECTOR_ARRAY_OVERLAP' build.json
+          grep -q 'SECTOR_COUNTS_ARE_NOT_ASSUMED_UNIQUE_ACROSS_MULTI_SECTOR_ENTITIES' build.json
           grep -q 'EXPLICIT_LABEL_ALIASES_ONLY_NO_FUZZY_MATCHING' build.json
           grep -q 'GLOBAL_LEXICAL_STATE_NOT_WINDOW_STATE' build.json
           grep -q 'v034-sanctions-v12-core.js?b=0343' index.html
@@ -153,6 +155,9 @@ jobs:
           grep -q "stateBinding:'GLOBAL_LEXICAL_STATE'" v036-radar-integrado-runtime-fix.js
           grep -q 'windowStateDependency:false' v036-radar-integrado-runtime-fix.js
           grep -q 'crossSectorRetry:true' v036-radar-integrado-runtime-fix.js
+          grep -q 'aml_v024_uaf_cross_entity' v036-radar-integrado-runtime-fix.js
+          grep -q "uniqueCrossCounts:'HEAD_COUNT_WITH_ARRAY_OVERLAP'" v036-radar-integrado-runtime-fix.js
+          grep -q 'sectorSumIsNotUniqueEntityCount:true' v036-radar-integrado-runtime-fix.js
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
