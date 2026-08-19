@@ -47,12 +47,14 @@ jobs:
           assert 'v0443-auth-ui-stability.js' in scripts
           assert 'v0442-session-stability.module.js' in scripts
           assert 'v0444-backend-stability.js' in scripts
+          assert 'v0391-entity-entry.js' in scripts
+          assert m['scripts'][-1]['path']=='v0442-session-stability.module.js'
           print(f"ATLAS_RELEASE={r['release']}")
           print(f"ATLAS_BUILD={r['build']}")
           PY
           echo "Deploying $(git rev-parse HEAD) · ${ATLAS_RELEASE:-release-loaded-next-step}"
 
-      - name: Validate token and session authority
+      - name: Validate token, session and Entity 360 authority
         shell: bash
         run: |
           set -euo pipefail
@@ -60,11 +62,21 @@ jobs:
           node --check v0443-auth-ui-stability.js
           node --check v0442-session-stability.module.js
           node --check v0444-backend-stability.js
+          node --check v0391-entity-entry.js
           ! grep -qE 'auth\.setSession\(|refresh_token\s*:' v0422-auth-bootstrap-fix.js
           ! grep -qE 'auth\.setSession\(|refresh_token\s*:' v0443-auth-ui-stability.js
           ! grep -qE 'auth\.setSession\(|refresh_token\s*:' v0442-session-stability.module.js
           grep -q 'SUPABASE_CLIENT_ONLY_NO_MANUAL_REPLAY' v0442-session-stability.module.js
           grep -q 'refreshTokenReplay:false' v0443-auth-ui-stability.js
+          grep -q 'ENTITY360_HTML_PRODUCTION_ADAPTATION_0445' v0391-entity-entry.js
+          grep -q "\['identity','01','Identidad'\]" v0391-entity-entry.js
+          grep -q "\['character','02','Caracterización'\]" v0391-entity-entry.js
+          grep -q "\['timeline','03','Cronología'\]" v0391-entity-entry.js
+          grep -q "\['network','04','Red de exposición'\]" v0391-entity-entry.js
+          grep -q "\['signals','05','Señales y convergencia'\]" v0391-entity-entry.js
+          grep -q "\['evidence','06','Evidencia y decisión'\]" v0391-entity-entry.js
+          grep -q 'sixLensRendererPinned' v0442-session-stability.module.js
+          grep -q '.a45-cover' v0391-entity-entry.css
 
       - name: Compile current ATLAS runtime
         shell: bash
@@ -92,6 +104,9 @@ jobs:
           done
           python tools/audit_runtime_authority.py --root _site
           grep -R -q 'aml_v0444_uaf_sii_summary' _site/atlas-runtime-current-*.js
+          grep -R -q 'ENTITY360_HTML_PRODUCTION_ADAPTATION_0445' _site/atlas-runtime-current-*.js
+          grep -q '.a45-cover' _site/atlas-runtime-current.css
+          grep -q '.a45-lenses' _site/atlas-runtime-current.css
           ! grep -R -qE 'auth\.setSession\(|refresh_token\s*:' _site/atlas-runtime-current-*.js _site/atlas-module-current-*.js
           python - <<'PY'
           import json
