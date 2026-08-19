@@ -26,7 +26,7 @@ jobs:
         run: |
           node --check v0434-reconciliation-command.js
           node --check v0435-reconciliation-fix.js
-      - name: Validate reconciliation contract
+      - name: Validate reconciliation contract and runtime guard
         run: node tests/v0435-reconciliation-contract.mjs
       - name: Validate analytics SQL source
         run: |
@@ -38,4 +38,6 @@ jobs:
           python tools/build_atlas_site.py --out _site-reconciliation
           test -f _site-reconciliation/atlas-runtime-current.css
           test -f _site-reconciliation/index.html
-          grep -q '0436' _site-reconciliation/index.html
+          grep -q '0.43.7' _site-reconciliation/index.html
+          grep -q '0437' _site-reconciliation/index.html
+          grep -R -q 'VIEW_SCOPED_TOKEN+FAIL_SOFT_AGGREGATES+STRUCTURED_ERRORS' _site-reconciliation/atlas-runtime-current-*.js
