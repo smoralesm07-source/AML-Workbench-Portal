@@ -1,8 +1,6 @@
 'use strict';
 
-/* ATLAS AML · auth branding is intentionally CSS-only.
- * The previous DOM observer was removed because it could contend with the
- * application's own rendering observers and freeze the unauthenticated page.
- * Keep this file as a no-op for backward-compatible cached index.html files.
+/* ATLAS AML · auth branding remains CSS-only to protect login stability.
+ * HQ AIE artwork is loaded by v0426-auth-brand.css from assets/atlas-aie-auth-hq.webp.
  */
-window.__ATLAS_AUTH_BRAND__={mode:'css-only',status:'ready'};
+window.__ATLAS_AUTH_BRAND__={mode:'css-only',status:'ready',asset:'assets/atlas-aie-auth-hq.webp'};
