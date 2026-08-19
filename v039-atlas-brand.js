@@ -29,6 +29,82 @@ const ATLAS_NAV_META={
 };
 
 function atlasEsc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+/* Visible-language contract: ATLAS uses “Entidad 360” in Spanish.
+ * This never mutates technical identifiers such as entity_id, table names,
+ * audit schemas, data-* attributes, function names, or persisted payloads.
+ */
+function atlasEntityTerminology(value){
+  return String(value??'')
+    .replace(/\bPUBLIC\s+ENTITY\b/g,'ENTIDAD PÚBLICA')
+    .replace(/\bPublic\s+Entity\b/g,'Entidad pública')
+    .replace(/\bpublic\s+entity\b/g,'entidad pública')
+    .replace(/\bENTITY\s+ID\b/g,'ID DE ENTIDAD')
+    .replace(/\bEntity\s+ID\b/g,'ID de Entidad')
+    .replace(/\bentity\s+id\b/g,'ID de Entidad')
+    .replace(/\bENTITY\s+360\b/g,'ENTIDAD 360')
+    .replace(/\bEntity\s+360\b/g,'Entidad 360')
+    .replace(/\bentity\s+360\b/g,'Entidad 360')
+    .replace(/\bENTITIES\b/g,'ENTIDADES')
+    .replace(/\bEntities\b/g,'Entidades')
+    .replace(/\bentities\b/g,'entidades')
+    .replace(/\bENTITY\b/g,'ENTIDAD')
+    .replace(/\bEntity\b/g,'Entidad')
+    .replace(/\bentity\b/g,'entidad');
+}
+
+function atlasLocalizeVisibleEntityTerms(root=document.body){
+  if(!root)return;
+  const skip=new Set(['SCRIPT','STYLE','TEMPLATE','CODE','PRE','KBD','SAMP']);
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{
+    acceptNode(node){
+      const parent=node.parentElement;
+      if(!parent||skip.has(parent.tagName))return NodeFilter.FILTER_REJECT;
+      return /\b(?:ENTITY|Entity|entity|ENTITIES|Entities|entities)\b/.test(node.nodeValue||'')
+        ? NodeFilter.FILTER_ACCEPT
+        : NodeFilter.FILTER_REJECT;
+    }
+  });
+  const nodes=[];
+  while(walker.nextNode())nodes.push(walker.currentNode);
+  for(const node of nodes){
+    const next=atlasEntityTerminology(node.nodeValue);
+    if(next!==node.nodeValue)node.nodeValue=next;
+  }
+  for(const el of root.querySelectorAll?.('[aria-label],[title],[placeholder]')||[]){
+    for(const attr of ['aria-label','title','placeholder']){
+      if(!el.hasAttribute(attr))continue;
+      const current=el.getAttribute(attr)||'';
+      const next=atlasEntityTerminology(current);
+      if(next!==current)el.setAttribute(attr,next);
+    }
+  }
+}
+
+let atlasTerminologyObserver=null;
+let atlasTerminologyQueued=false;
+function atlasQueueTerminology(){
+  if(atlasTerminologyQueued)return;
+  atlasTerminologyQueued=true;
+  queueMicrotask(()=>{
+    atlasTerminologyQueued=false;
+    atlasLocalizeVisibleEntityTerms(document.body);
+  });
+}
+function atlasStartTerminologyGuard(){
+  if(!document.body)return;
+  atlasLocalizeVisibleEntityTerms(document.body);
+  if(atlasTerminologyObserver)return;
+  atlasTerminologyObserver=new MutationObserver(atlasQueueTerminology);
+  atlasTerminologyObserver.observe(document.body,{
+    childList:true,
+    subtree:true,
+    characterData:true,
+    attributes:true,
+    attributeFilter:['aria-label','title','placeholder']
+  });
+}
+
 function atlasIcon(name){
   const paths={
     grid:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
@@ -199,6 +275,7 @@ function atlasApplyBrand(){
   atlasEnhanceNav();
   atlasBindNavObserver();
   atlasEnsureThemeToggle();
+  atlasQueueTerminology();
 }
 
 window.AtlasNavNews={set:atlasSetNews,clear:atlasClearNews,all:atlasReadNews,markSeen:atlasClearNews};
@@ -206,6 +283,13 @@ window.AtlasTheme={
   get:themeNow,
   set:(theme)=>atlasSetTheme(theme),
   toggle:()=>atlasSetTheme(themeNow()==='dark'?'light':'dark')
+};
+window.AtlasTerminology={
+  language:'es',
+  entity360:'Entidad 360',
+  entityId:'ID de Entidad',
+  translate:atlasEntityTerminology,
+  apply:()=>atlasLocalizeVisibleEntityTerms(document.body)
 };
 window.addEventListener('atlas:nav-news',e=>{
   const d=e.detail||{};if(d.view)atlasSetNews(d.view,d);
@@ -225,5 +309,6 @@ if(atlasRoot){
   const atlasObserver=new MutationObserver(()=>queueMicrotask(atlasApplyBrand));
   atlasObserver.observe(atlasRoot,{childList:true});
 }
+atlasStartTerminologyGuard();
 atlasApplyBrand();
 for(const ms of [0,120,320,700,1300,2500,5000])setTimeout(atlasApplyBrand,ms);
