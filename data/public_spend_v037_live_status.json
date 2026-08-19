@@ -3,9 +3,9 @@
   "product_name": "ATLAS AML",
   "entity360_ui": "0.38.0",
   "public_spend_ui": "13.1",
-  "pages_deploy": "cancelled",
-  "live_smoke": "failure",
-  "status": "failure",
+  "pages_deploy": "success",
+  "live_smoke": "success",
+  "status": "success",
   "required_assets": [
     "v039-atlas-brand.js",
     "v039-atlas-brand.css",
