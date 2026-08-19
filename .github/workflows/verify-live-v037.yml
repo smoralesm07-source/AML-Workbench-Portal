@@ -34,6 +34,7 @@ jobs:
           grep -q 'data-aml-build="0390"' /tmp/live.html
           grep -q 'ATLAS AML' /tmp/live.html
           grep -q 'Plataforma Integrada de Inteligencia y Riesgo' /tmp/live.html
+          grep -q 'v040-theme-bootstrap.js?b=0400' /tmp/live.html
           grep -q 'v039-atlas-brand.js?b=0390' /tmp/live.html
           grep -q 'v039-atlas-brand.css?b=0390' /tmp/live.html
           grep -q 'v0391-entity-entry.js?b=0391' /tmp/live.html
@@ -45,11 +46,23 @@ jobs:
           grep -q 'v038-entity360.css?b=0380' /tmp/live.html
           grep -q 'v038-final.module.js?b=0390' /tmp/live.html
           grep -q 'v036-radar-integrado-crosswalk.js?b=0360' /tmp/live.html
+
           curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "${URL%/}/v0391-entity-entry.js?b=0391" -o /tmp/entity-entry.js
           curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "${URL%/}/v0391-entity-entry.css?b=0391" -o /tmp/entity-entry.css
           grep -q 'v0391LoadEntities' /tmp/entity-entry.js
           grep -q 'FORCE_V038_RENDERER\|v038Render(pkg,false)' /tmp/entity-entry.js
           grep -q 'v0391-entry-hero' /tmp/entity-entry.css
+
+          curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "${URL%/}/v040-theme-bootstrap.js?b=0400" -o /tmp/theme-bootstrap.js
+          curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "${URL%/}/v0401-radar-graphics-fix.js?b=0401" -o /tmp/radar-graphics.js
+          curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "${URL%/}/v0401-radar-graphics-fix.css?b=0401" -o /tmp/radar-graphics.css
+          grep -q 'v0401-radar-graphics-fix.css?b=0401' /tmp/theme-bootstrap.js
+          grep -q 'v0401-radar-graphics-fix.js?b=0401' /tmp/theme-bootstrap.js
+          grep -q 'CSP_BLOCKED_INLINE_QUANTITATIVE_STYLES' /tmp/radar-graphics.js
+          grep -q 'v0401RepairAsym' /tmp/radar-graphics.js
+          grep -q 'v0401RepairReconciliation' /tmp/radar-graphics.js
+          grep -q 'v0401Audit' /tmp/radar-graphics.js
+          grep -q 'data-v0401-graphics' /tmp/radar-graphics.css
 
       - name: Publish stable live status
         if: always()
@@ -70,10 +83,12 @@ jobs:
             'entity360_ui':'0.38.0',
             'entity_entry_patch':'0391',
             'public_spend_ui':'13.1',
+            'radar_integrado_graphics_fix':'0401',
+            'graphics_policy':'CSP_SAFE_RUNTIME_SCALE',
             'pages_deploy':deploy,
             'live_smoke':live,
             'status':'success' if ok else 'failure',
-            'required_assets':['v039-atlas-brand.js','v039-atlas-brand.css','v0391-entity-entry.js','v0391-entity-entry.css','v038-entity360.js','v038-entity360.css','v038-final.module.js','v037-public-spend.js','v037-public-spend.css','v037-final.module.js'],
+            'required_assets':['v040-theme-bootstrap.js','v0401-radar-graphics-fix.js','v0401-radar-graphics-fix.css','v039-atlas-brand.js','v039-atlas-brand.css','v0391-entity-entry.js','v0391-entity-entry.css','v038-entity360.js','v038-entity360.css','v038-final.module.js','v037-public-spend.js','v037-public-spend.css','v037-final.module.js'],
             'preserved_assets':['v036-radar-integrado-crosswalk.js']
           }
           Path('data/public_spend_v037_live_status.json').write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding='utf-8')
@@ -82,7 +97,7 @@ jobs:
           git config user.email "aml-workbench-bot@users.noreply.github.com"
           git add data/public_spend_v037_live_status.json
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "ci: publica smoke live ATLAS AML v0.39 · Entidades 0391"
+          git commit -m "ci: publica smoke live ATLAS AML v0.39 · gráficos Radar 0401"
           git pull --rebase origin main
           git push origin main
 
