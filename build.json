@@ -24,6 +24,7 @@
   "public_spend_ui_contract": "V13.1_SINGLE_MARK_TOGGLE+OPTIONAL_UAF_REFERENCE",
   "public_spend_service_grain": "PARTIDA_CAPITULO",
   "public_spend_provider_policy": "PROVEEDOR_SOURCE_TRUE_AND_NOT_INTRAESTADO_AND_NOT_PUBLIC_NAME",
+  "public_spend_provider_metrics": "FULL_PRIVATE_RELATION_UNIVERSE",
   "public_spend_identity_policy": "RUT_OR_ENTITY_ID_EXACT_ONLY",
   "public_spend_marks_policy": "PRIORITIZATION_NOT_FINDINGS",
   "public_spend_payment_policy": "FECHA_PAGO_AND_MONTO_PAGO",
