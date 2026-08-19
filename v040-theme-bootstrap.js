@@ -2,7 +2,7 @@
   'use strict';
 
   const KEY='atlas-aml:theme:v1';
-  const RELEASE_BUILD='0423';
+  const RELEASE_BUILD='0424';
   let theme='dark';
   try{
     const saved=localStorage.getItem(KEY);
