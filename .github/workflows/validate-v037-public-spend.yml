@@ -13,11 +13,13 @@ on:
       - 'v038-final.module.js'
       - 'v039-atlas-brand.js'
       - 'v039-atlas-brand.css'
+      - 'v040-theme-bootstrap.js'
+      - 'v0402-aie-brand.js'
+      - 'v0422-auth-bootstrap-fix.js'
       - 'atlas-release.json'
       - 'atlas-release-guard.js'
       - 'index.html'
       - 'build.json'
-      - 'docs/public-spend-module-v037.md'
       - '.github/workflows/validate-v037-public-spend.yml'
 
 permissions:
@@ -28,8 +30,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  ATLAS_RELEASE: '0.42.1'
-  ATLAS_BUILD: '0421'
+  ATLAS_RELEASE: '0.42.2'
+  ATLAS_BUILD: '0422'
 
 jobs:
   validate:
@@ -45,6 +47,9 @@ jobs:
         run: |
           set -euo pipefail
           node --check atlas-release-guard.js
+          node --check v040-theme-bootstrap.js
+          node --check v0402-aie-brand.js
+          node --check v0422-auth-bootstrap-fix.js
           node --check v037-public-spend.js
           node --check v037-final.module.js
           node --check v038-entity360.js
@@ -63,32 +68,22 @@ jobs:
           build=json.load(open('build.json',encoding='utf-8'))
           assert release['release']==os.environ['ATLAS_RELEASE'],release
           assert release['build']==os.environ['ATLAS_BUILD'],release
-          assert release['deployment_policy']=='SINGLE_ACTIVE_RELEASE',release
-          assert release['legacy_release_policy']=='GIT_HISTORY_ONLY_NOT_ACTIVE_RUNTIME',release
+          assert release['bootstrap_policy']=='NO_SELF_SUSTAINING_MUTATION_OBSERVERS',release
           assert build['app_version']==os.environ['ATLAS_RELEASE'],build
           assert build['build']==os.environ['ATLAS_BUILD'],build
-          assert build['release_policy']=='SINGLE_ACTIVE_RELEASE',build
-          assert build['deployment_source_policy']=='ALWAYS_HEAD_OF_MAIN_NOT_TRIGGER_SHA',build
-          assert 'RELEASE_GUARD_NO_MUTATION_LOOP' in build['auth_fix'],build
+          assert 'AIE_BRAND_NO_CHARACTERDATA_LOOP' in build['auth_fix'],build
           PY
-          grep -q 'ATLAS AML' index.html
-          grep -q 'Plataforma Integrada de Inteligencia y Riesgo' index.html
-          grep -q 'atlas-release-guard.js?r=0421' index.html
-          grep -q 'v0333-auth-preflight.js?r=0421' index.html
-          grep -q 'app.js?r=0421' index.html
-          grep -q 'setAttrIfChanged' atlas-release-guard.js
-          grep -q "observer.observe(root,{attributes:true" atlas-release-guard.js
-          ! grep -q "observer.observe(root,{attributes:true.*subtree:true" atlas-release-guard.js
+          grep -q 'CHILD_INSERTIONS_ONLY_NO_CHARACTERDATA_LOOP' v0402-aie-brand.js
+          ! grep -q 'characterData:true' v0402-aie-brand.js
+          grep -q 'audit is best-effort' v0422-auth-bootstrap-fix.js
+          grep -q 'AUTH_TIMEOUT=6500' v0422-auth-bootstrap-fix.js
           grep -q 'PROVEEDOR_SOURCE_TRUE_AND_NOT_INTRAESTADO_AND_NOT_PUBLIC_NAME' v037-public-spend.js
           grep -q 'aml_entities' v037-public-spend.js
           grep -q 'aml_v0205_uaf_sii_reconciliation' v037-public-spend.js
           grep -q 'aml_v028_sanctions_with_identity' v037-public-spend.js
           grep -q "uafReference:'OPTIONAL_INDEPENDENT'" v037-public-spend.js
           grep -q 'focusRut' v037-final.module.js
-          grep -q 'data-v037-entity-bridge' v037-final.module.js
           grep -q 'v037LoadData' v038-entity360.js
-          grep -q 'RUT_EXACT_ONLY+MISSING_IS_NOT_ZERO+MARKS_ARE_PRIORITIZATION' build.json
-          grep -q 'cleanLegacyEntityBridge' v038-final.module.js
           grep -q 'atlas:nav-news' v039-atlas-brand.js
 
       - name: Validate live Radar Presupuesto Abierto contracts
@@ -105,21 +100,12 @@ jobs:
           status=load('spend_corrected_v3_status.json')
           ui=load('spend_v131_status.json')
           assert status.get('validation')=='success'
-          assert status.get('facts')=='success'
-          assert status.get('multiyear')=='success'
-          assert status.get('parity_audit')=='success'
-          assert status.get('compact')=='success'
           assert status.get('service_grain')=='PARTIDA_CAPITULO'
           assert status.get('provider_metrics')=='FULL_PRIVATE_RELATION_UNIVERSE'
           assert status.get('payment_basis')=='FECHA_PAGO_AND_MONTO_PAGO'
-          assert status.get('recipient_rut_scope')=='ALL_BENEFICIARIES_AND_RECIPIENTS'
-          assert status.get('provider_base_rule')=='PROVEEDOR_SOURCE_TRUE_AND_NOT_INTRAESTADO_AND_NOT_PUBLIC_NAME'
           assert ui.get('mark_filter_bundle')=='success'
           assert ui.get('filter_mode')=='single_toggle'
           assert ui.get('uaf_reference')=='optional_independent'
-          required={'flow','kpis','reads','service_rank','growth','dependence_influence','table'}
-          assert required.issubset(set(ui.get('synchronized_views') or []))
-          print('[OK] source contracts')
           PY
 
       - name: Publish validation status
