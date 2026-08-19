@@ -30,12 +30,23 @@ function v035UafFusionFoot(core){
   return `<div class="v035-uaf-fusion-foot"><div><span>Huella UAF en Fusion ${v035Help('uaf_cross')}</span><b>${v035Fmt(three)}</b><small>SO observados en 3+ fuentes · ${v035Fmt(sanctioned)} con sanción materializada</small></div><div class="v035-cross-chips">${cross.length?cross.map(r=>`<span><b>${v035Fmt(r.uaf_entities)}</b>${esc(labels[r.radar_id]||String(r.radar_id||'Fuente').replace('RADAR_',''))}</span>`).join(''):'<span>Sin cruces materializados</span>'}</div></div>`;
 }
 
-const v035PatchBaseUafSituation=v035UafSituation;
+/* One denominator for the live UAF↔SII universe. 2025 reportability remains a separate historical snapshot below. */
 v035UafSituation=function(core,uaf,counts){
-  const html=v035PatchBaseUafSituation(core,uaf,counts);
-  const close=html.lastIndexOf('</section>');
-  if(close<0)return html;
-  return `${html.slice(0,close)}${v035UafFusionFoot(core)}${html.slice(close)}`;
+  const c=counts||{total:0,active:0,terminated:0,noSii:0,matched:0};
+  const total=v019Num(c.total)||v019Array(core?.uafRegions).reduce((a,r)=>a+v019Num(r.uaf_observed),0);
+  const matched=v019Num(c.matched);
+  const gapPairs=v019Array(core?.gaps).reduce((a,r)=>a+v019Num(r.candidate_pairs),0);
+  const topGap=v019Array(core?.gapSectors).slice().sort((a,b)=>v019Num(b.candidate_pairs)-v019Num(a.candidate_pairs))[0];
+  return `<section class="v035-uaf-zone">
+    <div class="v035-section-title"><div><span>01 · SITUACIÓN UAF Y SUJETOS OBLIGADOS</span><h2>Registro, conciliación y brecha supervisiva</h2><p>Primera lectura operativa del universo UAF antes de profundizar en cualquier otro radar.</p></div><span class="v035-live-badge">UAF + SII + Fusion</span></div>
+    <div class="v035-kpi-grid v035-kpi-grid-3">
+      <article class="v035-kpi"><div class="v035-kpi-top">${v035HelpLabel('SO observados UAF','uaf_total')}<span class="v035-kpi-chip">universo</span></div><b>${v035Fmt(total)}</b><p>universo UAF materializado en Fusion</p></article>
+      <article class="v035-kpi accent"><div class="v035-kpi-top">${v035HelpLabel('Cobertura de conciliación','sii_coverage')}<span class="v035-kpi-chip">UAF↔SII</span></div><b>${v035Pct(matched,total)}</b><p>${v035Fmt(matched)} con perfil SII · activos o terminados</p></article>
+      <article class="v035-kpi warn"><div class="v035-kpi-top">${v035HelpLabel('Screening potencial no inscrito','gap_screening')}<span class="v035-kpi-chip">validar</span></div><b>${v035Fmt(gapPairs)}</b><p>${topGap?`mayor volumen: ${esc(v019Truncate(topGap.sector_name,42))}`:'pares RUT–actividad candidatos'}</p></article>
+    </div>
+    <div class="v035-uaf-analysis-grid">${v035ReconRail(c)}${v035GapSectors(core)}</div>
+    ${v035UafFusionFoot(core)}
+  </section>`;
 };
 
 const v035PatchBaseBind=v035Bind;
