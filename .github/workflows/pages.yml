@@ -3,6 +3,9 @@ name: Deploy ATLAS AML Portal
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'data/public_spend_v037_status.json'
+      - 'data/public_spend_v037_live_status.json'
   workflow_dispatch:
 
 permissions:
