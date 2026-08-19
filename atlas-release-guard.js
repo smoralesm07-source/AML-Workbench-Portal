@@ -50,8 +50,9 @@
       });
       window.__ATLAS_RELEASE_GUARD_HEALTH__={
         status:'ready',release:RELEASE,build:BUILD,mutationPolicy:'ROOT_ATTRIBUTES_ONLY',
-        visibleVersionPolicy:'ATLAS_RELEASE_GUARD_ONLY',assetCoherency:'ALL_ACTIVE_LOCAL_JS_CSS_PINNED_TO_CURRENT_BUILD',
-        runtimePolicy:'CANONICAL_ACTIVE_RUNTIME_ONLY',uiAuthority:'ATLAS_CURRENT_UI_LAST_WRITER',checkedAt:new Date().toISOString()
+        visibleVersionPolicy:'ATLAS_RELEASE_GUARD_ONLY',assetCoherency:'COMPILED_CURRENT_BUNDLES_PINNED_TO_BUILD',
+        runtimePolicy:'CANONICAL_COMPILED_RUNTIME_ONLY',uiAuthority:'ATLAS_CURRENT_UI_LAST_WRITER',
+        sourceFragmentPolicy:'VERSIONED_SOURCE_FILES_GIT_ONLY_COMPILED_BEFORE_PUBLISH',checkedAt:new Date().toISOString()
       };
     }finally{applying=false;}
   }
@@ -87,7 +88,7 @@
       applyRelease();return false;
     }
   }
-  const api={product:PRODUCT,policy:'SINGLE_ACTIVE_RELEASE',runtimePolicy:'CANONICAL_ACTIVE_RUNTIME_ONLY',apply:applyRelease,verify:verifyManifest};
+  const api={product:PRODUCT,policy:'SINGLE_ACTIVE_RELEASE',runtimePolicy:'CANONICAL_COMPILED_RUNTIME_ONLY',apply:applyRelease,verify:verifyManifest};
   Object.defineProperties(api,{version:{get:()=>active.release},build:{get:()=>active.build}});
   window.AtlasRelease=api;
   applyRelease();
