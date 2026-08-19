@@ -28,26 +28,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -q 'data-aml-version="0.35.0"' index.html
-          grep -q 'data-aml-build="0350"' index.html
-          grep -q 'v035-radar-command-center.css?b=0350' index.html
-          grep -q 'v035-radar-command-center-patch.css?b=0350' index.html
-          grep -q 'v035-radar-command-center.js?b=0350' index.html
-          grep -q 'v035-radar-command-center-patch.js?b=0350' index.html
-          grep -q 'v035-final.module.js?b=0350' index.html
+          grep -q 'data-aml-version="0.36.0"' index.html
+          grep -q 'data-aml-build="0360"' index.html
+          grep -q 'v036-radar-integrado-real.css?b=0360' index.html
+          grep -q 'v036-radar-integrado-real.js?b=0360' index.html
+          grep -q 'v036-final.module.js?b=0360' index.html
+          grep -q '"app_version": "0.36.0"' build.json
+          grep -q 'RADAR_INTEGRADO_REAL_V036' build.json
+          grep -q 'RADARINTEGRADOREAL_HTML_PRODUCTION_ADAPTATION' build.json
+          grep -q 'VISIBILITY_NOT_RISK' build.json
+          grep -q 'SECTOR_SIGNAL_NOT_INDIVIDUAL_NONCOMPLIANCE' build.json
           grep -q 'v034-sanctions-v12-core.js?b=0343' index.html
-          grep -q 'v034-sanctions-v12-ui.js?b=0343' index.html
-          grep -q 'v034-sanctions-v12-charts.js?b=0343' index.html
-          grep -q 'v0341-sanctions-hardening.js?b=0343' index.html
-          grep -q '"app_version": "0.35.0"' build.json
-          grep -q 'RADAR_INTEGRADO_UAF_COMMAND_CENTER' build.json
-          grep -q 'UAF_ANALYTICS_ABSORBED_IN_RADAR_INTEGRADO' build.json
           grep -q 'v0344-public-entities.module.js?b=0343' v0343-final.module.js
-          test -f v035-radar-command-center.js
-          test -f v035-radar-command-center.css
-          test -f v035-radar-command-center-patch.js
-          test -f v035-radar-command-center-patch.css
-          test -f v035-final.module.js
+          test -f v036-radar-integrado-real.js
+          test -f v036-radar-integrado-real.css
+          test -f v036-final.module.js
           test -f v0344-public-entities.module.js
           test -f v0344-public-entities.css
 
@@ -55,11 +50,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node --check v036-radar-integrado-real.js
+          node --check v036-final.module.js
           node --check v035-radar-command-center.js
           node --check v035-radar-command-center-patch.js
-          node --check v035-final.module.js
           node --check v0343-final.module.js
           node --check v0344-public-entities.module.js
+
+      - name: Verify Radar Integrado analytical contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'Situación UAF · el padrón y su asimetría' v036-radar-integrado-real.js
+          grep -q 'Análisis de reportabilidad · silencios por industria' v036-radar-integrado-real.js
+          grep -q 'Señales del sistema' v036-radar-integrado-real.js
+          grep -q 'Convergencia entre radares' v036-radar-integrado-real.js
+          grep -q 'Entrar al análisis' v036-radar-integrado-real.js
+          grep -q 'Silencio estructural' v036-radar-integrado-real.js
+          grep -q 'Convergencia es visibilidad, no riesgo' v036-radar-integrado-real.js
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -73,7 +81,7 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Smoke test deployed v0.35
+      - name: Smoke test deployed v0.36
         shell: bash
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
@@ -81,6 +89,7 @@ jobs:
           set -euo pipefail
           test -n "$PAGE_URL"
           curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "${PAGE_URL%/}/" -o /tmp/aml-workbench-page.html
-          grep -q 'data-aml-version="0.35.0"' /tmp/aml-workbench-page.html
-          grep -q 'v035-radar-command-center.js?b=0350' /tmp/aml-workbench-page.html
-          grep -q 'v035-final.module.js?b=0350' /tmp/aml-workbench-page.html
+          grep -q 'data-aml-version="0.36.0"' /tmp/aml-workbench-page.html
+          grep -q 'v036-radar-integrado-real.js?b=0360' /tmp/aml-workbench-page.html
+          grep -q 'v036-radar-integrado-real.css?b=0360' /tmp/aml-workbench-page.html
+          grep -q 'v036-final.module.js?b=0360' /tmp/aml-workbench-page.html
