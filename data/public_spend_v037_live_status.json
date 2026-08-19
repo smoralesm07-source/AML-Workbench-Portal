@@ -1,30 +1,22 @@
 {
-  "workbench_version": "0.42.4",
-  "build": "0424",
+  "workbench_version": "0.42.5",
+  "build": "0425",
   "product_name": "ATLAS AML",
   "release_policy": "SINGLE_ACTIVE_RELEASE",
-  "legacy_release_policy": "GIT_HISTORY_ONLY_NOT_ACTIVE_RUNTIME",
   "pages_deploy": "success",
-  "live_smoke": "failure",
-  "status": "failure",
+  "live_smoke": "success",
+  "status": "success",
   "visible_version_authority": "ATLAS_RELEASE_GUARD_ONLY",
   "asset_coherency_policy": "ALL_LOCAL_JS_CSS_PINNED_TO_CURRENT_BUILD",
+  "ui_authority_policy": "ATLAS_CURRENT_UI_LAST_WRITER",
+  "navigation_policy": "UNIFORM_LEVEL_NO_LEGACY_PSEUDO_MARKERS",
   "required_assets": [
     "atlas-release.json",
     "atlas-release-guard.js",
-    "v0342-runtime.js",
-    "v0343-final.module.js",
-    "v038-entity360.js",
-    "v0391-entity-entry.js",
-    "v037-public-spend.js",
-    "v040-theme-bootstrap.js",
-    "v0402-aie-brand.js",
-    "v0422-auth-bootstrap-fix.js",
-    "v0333-auth-preflight.js",
-    "app.js"
-  ],
-  "blocked_runtime_authorities": [
-    "v035-final.module.js",
-    "v036-final.module.js"
+    "atlas-current-ui.js",
+    "atlas-current-ui.css",
+    "v037-final.module.js",
+    "v038-final.module.js",
+    "v040-theme-bootstrap.js"
   ]
 }
