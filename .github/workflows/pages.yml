@@ -18,8 +18,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  ATLAS_RELEASE: '0.42.0'
-  ATLAS_BUILD: '0420'
+  ATLAS_RELEASE: '0.42.1'
+  ATLAS_BUILD: '0421'
 
 jobs:
   deploy:
@@ -57,6 +57,10 @@ jobs:
           PY
           test -f atlas-release-guard.js
           node --check atlas-release-guard.js
+          grep -q "const RELEASE='0.42.1'" atlas-release-guard.js
+          grep -q "const BUILD='0421'" atlas-release-guard.js
+          grep -q "observer.observe(root,{attributes:true" atlas-release-guard.js
+          ! grep -q "observer.observe(root,{attributes:true.*subtree:true" atlas-release-guard.js
           node --check v036-radar-integrado-runtime-fix.js
           node --check v0402-reconciliation-live.js
 
@@ -85,40 +89,31 @@ jobs:
           s=p.read_text(encoding='utf-8')
           rel=os.environ['ATLAS_RELEASE']; build=os.environ['ATLAS_BUILD']
 
-          # Canonical document identity.
           s=re.sub(r'data-aml-version="[^"]+"',f'data-aml-version="{rel}"',s,count=1)
           s=re.sub(r'data-aml-build="[^"]+"',f'data-aml-build="{build}"',s,count=1)
           if 'data-atlas-release=' not in s:
               s=s.replace('<html lang="es" ',f'<html lang="es" data-atlas-release="{rel}" data-atlas-release-policy="single-active" ',1)
+          else:
+              s=re.sub(r'data-atlas-release="[^"]+"',f'data-atlas-release="{rel}"',s,count=1)
           s=re.sub(r'<title>.*?</title>',f'<title>ATLAS AML · v{rel}</title>',s,count=1,flags=re.S)
 
-          # Release guard is the first local runtime authority after CSP.
-          guard=f'  <script src="./atlas-release-guard.js?r={build}"></script>\n'
-          if 'atlas-release-guard.js' not in s:
-              marker='  <script src="./v040-theme-bootstrap.js?b=0400"></script>\n'
-              s=s.replace(marker,guard+marker,1)
-
-          # Never execute obsolete final runtime authorities again.
           s='\n'.join(line for line in s.splitlines() if 'v035-final.module.js' not in line and 'v036-final.module.js' not in line)+'\n'
 
-          # Force fresh copies of every layer that has changed after the old 0.39 shell.
-          replacements={
-            './v040-theme-bootstrap.js?b=0400':f'./v040-theme-bootstrap.js?r={build}',
-            './v039-atlas-brand.css?b=0390':f'./v039-atlas-brand.css?r={build}',
-            './v040-theme-system.css?b=0400':f'./v040-theme-system.css?r={build}',
-            './v036-radar-integrado-runtime-fix.js?b=0360':f'./v036-radar-integrado-runtime-fix.js?r={build}',
-            './v0402-reconciliation-live.js?b=0402':f'./v0402-reconciliation-live.js?r={build}',
-            './v038-final.module.js?b=0390':f'./v038-final.module.js?r={build}',
-            './v039-atlas-brand.js?b=0390':f'./v039-atlas-brand.js?r={build}',
-          }
-          for old,new in replacements.items(): s=s.replace(old,new)
+          # Current source entrypoint already carries release-scoped URLs. Normalize
+          # the critical bootstrap/runtime layers again as a defensive build step.
+          critical=[
+            'atlas-release-guard.js','v040-theme-bootstrap.js','v0333-auth-preflight.js','app.js',
+            'v039-atlas-brand.css','v040-theme-system.css','v036-radar-integrado-runtime-fix.js',
+            'v0402-reconciliation-live.js','v038-final.module.js','v039-atlas-brand.js'
+          ]
+          for asset in critical:
+              s=re.sub(rf'(\./{re.escape(asset)})(?:\?[^"\']*)?',rf'\1?r={build}',s)
 
           p.write_text(s,encoding='utf-8')
           PY
 
           touch _site/.nojekyll
 
-          # Production artifact must contain exactly one app entry point and current release authority.
           test -f _site/index.html
           test -f _site/atlas-release.json
           test -f _site/atlas-release-guard.js
@@ -131,6 +126,8 @@ jobs:
           grep -q "data-aml-build=\"${ATLAS_BUILD}\"" _site/index.html
           grep -q "data-atlas-release=\"${ATLAS_RELEASE}\"" _site/index.html
           grep -q "atlas-release-guard.js?r=${ATLAS_BUILD}" _site/index.html
+          grep -q "v0333-auth-preflight.js?r=${ATLAS_BUILD}" _site/index.html
+          grep -q "app.js?r=${ATLAS_BUILD}" _site/index.html
           ! grep -q 'v035-final.module.js' _site/index.html
           ! grep -q 'v036-final.module.js' _site/index.html
 
@@ -159,6 +156,8 @@ jobs:
           grep -q "data-aml-build=\"${ATLAS_BUILD}\"" /tmp/atlas.html
           grep -q "data-atlas-release=\"${ATLAS_RELEASE}\"" /tmp/atlas.html
           grep -q "atlas-release-guard.js?r=${ATLAS_BUILD}" /tmp/atlas.html
+          grep -q "v0333-auth-preflight.js?r=${ATLAS_BUILD}" /tmp/atlas.html
+          grep -q "app.js?r=${ATLAS_BUILD}" /tmp/atlas.html
           ! grep -q 'v035-final.module.js' /tmp/atlas.html
           ! grep -q 'v036-final.module.js' /tmp/atlas.html
           curl --fail --silent --show-error --location "${PAGE_URL%/}/atlas-release.json?_atlas=${stamp}" -o /tmp/release.json
