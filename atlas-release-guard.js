@@ -1,16 +1,14 @@
 'use strict';
 
 /* ATLAS AML · single active release authority.
- * The guard is release-agnostic: the built HTML provides the initial release and
- * atlas-release.json is the source of truth. Future releases do not require
- * editing this file.
+ * Reliability rule: a release mismatch is diagnostic only while the app is open.
+ * ATLAS must never reload/replace an authenticated page merely because GitHub Pages
+ * is publishing a newer bundle. The next normal page load picks up the new release.
  */
 (function atlasSingleReleaseAuthority(){
   const PRODUCT='ATLAS AML';
   const TAGLINE='Plataforma Integrada de Inteligencia y Riesgo';
   const MANIFEST='./atlas-release.json';
-  const MAX_RELOADS=2;
-  const RELOAD_KEY='atlas-release-reload-count';
   const root=document.documentElement;
   const active={
     release:String(root.getAttribute('data-atlas-release')||root.getAttribute('data-aml-version')||'current'),
@@ -52,6 +50,7 @@
         status:'ready',release:RELEASE,build:BUILD,mutationPolicy:'ROOT_ATTRIBUTES_ONLY',
         visibleVersionPolicy:'ATLAS_RELEASE_GUARD_ONLY',assetCoherency:'COMPILED_CURRENT_BUNDLES_PINNED_TO_BUILD',
         runtimePolicy:'CANONICAL_COMPILED_RUNTIME_ONLY',uiAuthority:'ATLAS_CURRENT_UI_LAST_WRITER',
+        updatePolicy:'NO_ACTIVE_SESSION_RELOAD',
         sourceFragmentPolicy:'VERSIONED_SOURCE_FILES_GIT_ONLY_COMPILED_BEFORE_PUBLISH',checkedAt:new Date().toISOString()
       };
     }finally{applying=false;}
@@ -65,30 +64,26 @@
     });
     observer.observe(root,{attributes:true,attributeFilter:['data-aml-version','data-aml-build','data-atlas-release']});
   }
-  function reloadCurrent(manifest){
-    const key=`${manifest.release}:${manifest.build}`;
-    const count=Number(sessionStorage.getItem(RELOAD_KEY)||0);
-    const url=new URL(location.href);
-    if(url.searchParams.get('atlas_release')===key||count>=MAX_RELOADS)return;
-    sessionStorage.setItem(RELOAD_KEY,String(count+1));
-    url.searchParams.set('atlas_release',key);url.searchParams.set('_atlas',Date.now().toString(36));
-    location.replace(url.toString());
-  }
   async function verifyManifest(){
     try{
       const url=new URL(MANIFEST,location.href);url.searchParams.set('_atlas',Date.now().toString(36));
       const res=await fetch(url.toString(),{cache:'no-store',headers:{'Cache-Control':'no-cache'}});
       if(!res.ok)throw new Error(`release manifest HTTP ${res.status}`);
       const manifest=await res.json();window.__ATLAS_RELEASE_MANIFEST__=manifest;
-      if(String(manifest.release)!==active.release||String(manifest.build)!==active.build){reloadCurrent(manifest);return false;}
-      sessionStorage.removeItem(RELOAD_KEY);applyRelease();return true;
+      const mismatch=String(manifest.release)!==active.release||String(manifest.build)!==active.build;
+      window.__ATLAS_RELEASE_MISMATCH__=mismatch?{
+        active:{...active},available:{release:String(manifest.release),build:String(manifest.build)},
+        action:'defer-until-next-page-load',checkedAt:new Date().toISOString()
+      }:null;
+      applyRelease();
+      return !mismatch;
     }catch(error){
       console.warn('[ATLAS] release manifest check unavailable',error);
-      window.__ATLAS_RELEASE_GUARD_HEALTH__={status:'manifest-unavailable',release:active.release,build:active.build,error:String(error?.message||error),checkedAt:new Date().toISOString()};
+      window.__ATLAS_RELEASE_GUARD_HEALTH__={status:'manifest-unavailable',release:active.release,build:active.build,error:String(error?.message||error),updatePolicy:'NO_ACTIVE_SESSION_RELOAD',checkedAt:new Date().toISOString()};
       applyRelease();return false;
     }
   }
-  const api={product:PRODUCT,policy:'SINGLE_ACTIVE_RELEASE',runtimePolicy:'CANONICAL_COMPILED_RUNTIME_ONLY',apply:applyRelease,verify:verifyManifest};
+  const api={product:PRODUCT,policy:'SINGLE_ACTIVE_RELEASE',runtimePolicy:'CANONICAL_COMPILED_RUNTIME_ONLY',updatePolicy:'NO_ACTIVE_SESSION_RELOAD',apply:applyRelease,verify:verifyManifest};
   Object.defineProperties(api,{version:{get:()=>active.release},build:{get:()=>active.build}});
   window.AtlasRelease=api;
   applyRelease();
