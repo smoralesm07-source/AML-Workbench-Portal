@@ -46,7 +46,7 @@ jobs:
           grep -q 'PUBLIC_SPEND_V131_NATIVE' build.json
           grep -q 'RADAR_PRESUPUESTO_ABIERTO_V131' build.json
           grep -q 'PARTIDA_CAPITULO' build.json
-          grep -q 'FULL_PRIVATE_RELATION_UNIVERSE' v037-public-spend.js
+          grep -q 'FULL_PRIVATE_RELATION_UNIVERSE' build.json
           grep -q 'PROVEEDOR_SOURCE_TRUE_AND_NOT_INTRAESTADO_AND_NOT_PUBLIC_NAME' v037-public-spend.js
           grep -q 'aml_entities' v037-public-spend.js
           grep -q 'aml_v0205_uaf_sii_reconciliation' v037-public-spend.js
