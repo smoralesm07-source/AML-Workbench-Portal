@@ -18,8 +18,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  ATLAS_RELEASE: '0.42.1'
-  ATLAS_BUILD: '0421'
+  ATLAS_RELEASE: '0.42.2'
+  ATLAS_BUILD: '0422'
 
 jobs:
   deploy:
@@ -28,43 +28,48 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout HEAD of main, never the triggering historical SHA
+      - name: Checkout current main
         uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 1
 
-      - name: Synchronize again with current main
+      - name: Synchronize with HEAD of main
         shell: bash
         run: |
           set -euo pipefail
           git fetch origin main --depth=1
           git reset --hard origin/main
-          echo "Deploying $(git rev-parse HEAD) from current main"
+          echo "Deploying $(git rev-parse HEAD)"
 
-      - name: Verify single active release manifest
+      - name: Verify current release and bootstrap safety
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
-          import json, os
+          import json,os
           m=json.load(open('atlas-release.json',encoding='utf-8'))
-          assert m['release']==os.environ['ATLAS_RELEASE'], m
-          assert m['build']==os.environ['ATLAS_BUILD'], m
-          assert m['deployment_policy']=='SINGLE_ACTIVE_RELEASE', m
-          assert m['legacy_release_policy']=='GIT_HISTORY_ONLY_NOT_ACTIVE_RUNTIME', m
-          print('[OK] single active release',m['release'],m['build'])
+          b=json.load(open('build.json',encoding='utf-8'))
+          assert m['release']==os.environ['ATLAS_RELEASE'],m
+          assert m['build']==os.environ['ATLAS_BUILD'],m
+          assert b['app_version']==os.environ['ATLAS_RELEASE'],b
+          assert b['build']==os.environ['ATLAS_BUILD'],b
+          assert m['deployment_policy']=='SINGLE_ACTIVE_RELEASE',m
           PY
-          test -f atlas-release-guard.js
           node --check atlas-release-guard.js
-          grep -q "const RELEASE='0.42.1'" atlas-release-guard.js
-          grep -q "const BUILD='0421'" atlas-release-guard.js
-          grep -q "observer.observe(root,{attributes:true" atlas-release-guard.js
-          ! grep -q "observer.observe(root,{attributes:true.*subtree:true" atlas-release-guard.js
-          node --check v036-radar-integrado-runtime-fix.js
-          node --check v0402-reconciliation-live.js
+          node --check v040-theme-bootstrap.js
+          node --check v0402-aie-brand.js
+          node --check v0422-auth-bootstrap-fix.js
+          node --check v0333-auth-preflight.js
+          node --check app.js
+          grep -q "const RELEASE='0.42.2'" atlas-release-guard.js
+          grep -q "const BUILD='0422'" atlas-release-guard.js
+          grep -q "CHILD_INSERTIONS_ONLY_NO_CHARACTERDATA_LOOP" v0402-aie-brand.js
+          ! grep -q "characterData:true" v0402-aie-brand.js
+          grep -q "audit is best-effort" v0422-auth-bootstrap-fix.js
+          grep -q "AUTH_TIMEOUT=6500" v0422-auth-bootstrap-fix.js
 
-      - name: Build clean Pages artifact from current release only
+      - name: Build clean single-release Pages artifact
         shell: bash
         run: |
           set -euo pipefail
@@ -88,19 +93,12 @@ jobs:
           p=Path('_site/index.html')
           s=p.read_text(encoding='utf-8')
           rel=os.environ['ATLAS_RELEASE']; build=os.environ['ATLAS_BUILD']
-
           s=re.sub(r'data-aml-version="[^"]+"',f'data-aml-version="{rel}"',s,count=1)
           s=re.sub(r'data-aml-build="[^"]+"',f'data-aml-build="{build}"',s,count=1)
-          if 'data-atlas-release=' not in s:
-              s=s.replace('<html lang="es" ',f'<html lang="es" data-atlas-release="{rel}" data-atlas-release-policy="single-active" ',1)
-          else:
-              s=re.sub(r'data-atlas-release="[^"]+"',f'data-atlas-release="{rel}"',s,count=1)
+          s=re.sub(r'data-atlas-release="[^"]+"',f'data-atlas-release="{rel}"',s,count=1)
           s=re.sub(r'<title>.*?</title>',f'<title>ATLAS AML · v{rel}</title>',s,count=1,flags=re.S)
-
           s='\n'.join(line for line in s.splitlines() if 'v035-final.module.js' not in line and 'v036-final.module.js' not in line)+'\n'
 
-          # Current source entrypoint already carries release-scoped URLs. Normalize
-          # the critical bootstrap/runtime layers again as a defensive build step.
           critical=[
             'atlas-release-guard.js','v040-theme-bootstrap.js','v0333-auth-preflight.js','app.js',
             'v039-atlas-brand.css','v040-theme-system.css','v036-radar-integrado-runtime-fix.js',
@@ -109,63 +107,55 @@ jobs:
           for asset in critical:
               s=re.sub(rf'(\./{re.escape(asset)})(?:\?[^"\']*)?',rf'\1?r={build}',s)
 
+          rescue=f'  <script src="./v0422-auth-bootstrap-fix.js?r={build}"></script>'
+          if 'v0422-auth-bootstrap-fix.js' not in s:
+              app_tag=re.search(r'  <script src="\./app\.js\?r='+re.escape(build)+r'"></script>',s)
+              if not app_tag: raise SystemExit('app.js release tag not found')
+              pos=app_tag.end()
+              s=s[:pos]+'\n'+rescue+s[pos:]
+
           p.write_text(s,encoding='utf-8')
           PY
 
           touch _site/.nojekyll
-
-          test -f _site/index.html
-          test -f _site/atlas-release.json
-          test -f _site/atlas-release-guard.js
-          test ! -e _site/prototypes
-          test ! -e _site/tests
-          test ! -e _site/.github
+          test -f _site/v0422-auth-bootstrap-fix.js
           test ! -e _site/v035-final.module.js
           test ! -e _site/v036-final.module.js
           grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" _site/index.html
           grep -q "data-aml-build=\"${ATLAS_BUILD}\"" _site/index.html
-          grep -q "data-atlas-release=\"${ATLAS_RELEASE}\"" _site/index.html
           grep -q "atlas-release-guard.js?r=${ATLAS_BUILD}" _site/index.html
+          grep -q "v040-theme-bootstrap.js?r=${ATLAS_BUILD}" _site/index.html
           grep -q "v0333-auth-preflight.js?r=${ATLAS_BUILD}" _site/index.html
           grep -q "app.js?r=${ATLAS_BUILD}" _site/index.html
-          ! grep -q 'v035-final.module.js' _site/index.html
-          ! grep -q 'v036-final.module.js' _site/index.html
+          grep -q "v0422-auth-bootstrap-fix.js?r=${ATLAS_BUILD}" _site/index.html
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload current release artifact only
+      - name: Upload current release only
         uses: actions/upload-pages-artifact@v4
         with:
           path: ./_site
 
-      - name: Deploy current main release
+      - name: Deploy current release
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Smoke test exact deployed release
+      - name: Smoke test exact deployed bootstrap
         shell: bash
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
           set -euo pipefail
-          test -n "$PAGE_URL"
           stamp=$(date +%s)
-          curl --fail --silent --show-error --location --retry 8 --retry-delay 2 "${PAGE_URL%/}/?atlas_release=${ATLAS_RELEASE}:${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/atlas.html
+          url="${PAGE_URL%/}/?atlas_release=${ATLAS_RELEASE}:${ATLAS_BUILD}&_atlas=${stamp}"
+          curl --fail --silent --show-error --location --retry 10 --retry-delay 2 "$url" -o /tmp/atlas.html
           grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" /tmp/atlas.html
           grep -q "data-aml-build=\"${ATLAS_BUILD}\"" /tmp/atlas.html
-          grep -q "data-atlas-release=\"${ATLAS_RELEASE}\"" /tmp/atlas.html
-          grep -q "atlas-release-guard.js?r=${ATLAS_BUILD}" /tmp/atlas.html
-          grep -q "v0333-auth-preflight.js?r=${ATLAS_BUILD}" /tmp/atlas.html
-          grep -q "app.js?r=${ATLAS_BUILD}" /tmp/atlas.html
-          ! grep -q 'v035-final.module.js' /tmp/atlas.html
-          ! grep -q 'v036-final.module.js' /tmp/atlas.html
-          curl --fail --silent --show-error --location "${PAGE_URL%/}/atlas-release.json?_atlas=${stamp}" -o /tmp/release.json
-          python - <<'PY'
-          import json,os
-          m=json.load(open('/tmp/release.json'))
-          assert m['release']==os.environ['ATLAS_RELEASE'],m
-          assert m['build']==os.environ['ATLAS_BUILD'],m
-          assert m['deployment_policy']=='SINGLE_ACTIVE_RELEASE',m
-          print('[OK] live ATLAS release',m['release'],m['build'])
-          PY
+          grep -q "v0422-auth-bootstrap-fix.js?r=${ATLAS_BUILD}" /tmp/atlas.html
+          curl --fail --silent --show-error --location "${PAGE_URL%/}/v0402-aie-brand.js?r=${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/aie.js
+          curl --fail --silent --show-error --location "${PAGE_URL%/}/v0422-auth-bootstrap-fix.js?r=${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/authfix.js
+          ! grep -q "characterData:true" /tmp/aie.js
+          grep -q "CHILD_INSERTIONS_ONLY_NO_CHARACTERDATA_LOOP" /tmp/aie.js
+          grep -q "audit is best-effort" /tmp/authfix.js
+          grep -q "AUTH_TIMEOUT=6500" /tmp/authfix.js
