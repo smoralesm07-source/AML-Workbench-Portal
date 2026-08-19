@@ -14,7 +14,7 @@ function cleanLegacyEntityBridge(){
   document.querySelectorAll('[data-v037-entity-bridge]').forEach(el=>el.remove());
 }
 function ensureAtlasAssets(){
-  if(!document.querySelector('link[data-atlas-v039]')){
+  if(!document.querySelector('link[href*="v039-atlas-brand.css"]')){
     const link=document.createElement('link');
     link.rel='stylesheet';
     link.href='./v039-atlas-brand.css?b=0390';
