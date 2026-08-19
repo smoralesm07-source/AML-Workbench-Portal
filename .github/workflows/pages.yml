@@ -17,10 +17,6 @@ concurrency:
   group: atlas-aml-pages
   cancel-in-progress: true
 
-env:
-  ATLAS_RELEASE: '0.42.5'
-  ATLAS_BUILD: '0425'
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -42,102 +38,58 @@ jobs:
           git reset --hard origin/main
           echo "Deploying $(git rev-parse HEAD)"
 
-      - name: Verify current release and UI authority
+      - name: Load release metadata from single source of truth
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "ATLAS_RELEASE=$(python -c \"import json; print(json.load(open('atlas-release.json'))['release'])\")" >> "$GITHUB_ENV"
+          echo "ATLAS_BUILD=$(python -c \"import json; print(json.load(open('atlas-release.json'))['build'])\")" >> "$GITHUB_ENV"
+
+      - name: Verify canonical runtime contract
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
-          import json,os
-          release=json.load(open('atlas-release.json',encoding='utf-8'))
-          build=json.load(open('build.json',encoding='utf-8'))
-          assert release['release']==os.environ['ATLAS_RELEASE'],release
-          assert release['build']==os.environ['ATLAS_BUILD'],release
-          assert release['ui_authority_policy']=='ATLAS_CURRENT_UI_LAST_WRITER',release
-          assert release['navigation_policy']=='UNIFORM_LEVEL_NO_LEGACY_PSEUDO_MARKERS',release
-          assert build['app_version']==os.environ['ATLAS_RELEASE'],build
-          assert build['build']==os.environ['ATLAS_BUILD'],build
-          assert build['ui_authority_policy']=='ATLAS_CURRENT_UI_LAST_WRITER',build
+          import json
+          r=json.load(open('atlas-release.json',encoding='utf-8'))
+          m=json.load(open('atlas-runtime-manifest.json',encoding='utf-8'))
+          b=json.load(open('build.json',encoding='utf-8'))
+          assert r['release']==m['release']==b['app_version']
+          assert r['build']==m['build']==b['build']
+          assert r['runtime_policy']=='CANONICAL_ACTIVE_RUNTIME_ONLY'
+          assert r['pages_artifact_policy']=='ALLOWLIST_ACTIVE_RUNTIME_ONLY'
+          assert m['policy']=='CANONICAL_ACTIVE_RUNTIME_ONLY'
+          assert b['future_change_policy']=='BRANCH_PR_VALIDATE_CURRENT_MERGE_MAIN_AUTO_DEPLOY_LIVE_SMOKE'
           PY
           node --check atlas-release-guard.js
-          node --check atlas-current-ui.js
           node --check v040-theme-bootstrap.js
-          node --check v037-final.module.js
-          node --check v038-final.module.js
-          node --check v0422-auth-bootstrap-fix.js
-          grep -q "const RELEASE='0.42.5'" atlas-release-guard.js
-          grep -q "const BUILD='0425'" atlas-release-guard.js
-          grep -q "atlas-current-ui.css" v040-theme-bootstrap.js
-          grep -q "atlas-current-ui.js" v040-theme-bootstrap.js
-          grep -q "atlas:nav-refresh" v037-final.module.js
-          grep -q "atlas-release-guard-via-v037-compat" v037-final.module.js
-          grep -q "atlas-release-guard-via-v038-compat" v038-final.module.js
-          ! grep -q "window.__AML_ACTIVE_VERSION__=VERSION" v037-final.module.js
-          ! grep -q "window.__AML_ACTIVE_VERSION__=VERSION" v038-final.module.js
-          grep -q 'data-view="public-spend"' atlas-current-ui.css
-          grep -q 'content:none!important' atlas-current-ui.css
+          node --check atlas-current-ui.js
+          node --check atlas-cgr-bridge.js
+          grep -q 'manifest-driven' atlas-release-guard.js
+          grep -q 'FIRST_PAINT_ONLY' v040-theme-bootstrap.js
+          grep -q 'AtlasTheme' atlas-current-ui.js
+          grep -q 'window.v035OpenCgr=openCgr' atlas-cgr-bridge.js
 
-      - name: Build clean coherent Pages artifact
+      - name: Build allowlisted current runtime only
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf _site
-          mkdir _site
-          rsync -a ./ _site/ \
-            --exclude '.git' \
-            --exclude '.github' \
-            --exclude '_site' \
-            --exclude 'prototypes' \
-            --exclude 'tests' \
-            --exclude 'docs' \
-            --exclude '*.md' \
-            --exclude '.pages-*' \
-            --exclude 'v035-final.module.js' \
-            --exclude 'v036-final.module.js'
-
-          python - <<'PY'
-          from pathlib import Path
-          import os,re
-          rel=os.environ['ATLAS_RELEASE']; build=os.environ['ATLAS_BUILD']
-          index=Path('_site/index.html')
-          s=index.read_text(encoding='utf-8')
-          s=re.sub(r'data-aml-version="[^"]+"',f'data-aml-version="{rel}"',s,count=1)
-          s=re.sub(r'data-aml-build="[^"]+"',f'data-aml-build="{build}"',s,count=1)
-          s=re.sub(r'data-atlas-release="[^"]+"',f'data-atlas-release="{rel}"',s,count=1)
-          s=re.sub(r'<title>.*?</title>',f'<title>ATLAS AML · v{rel}</title>',s,count=1,flags=re.S)
-          s='\n'.join(line for line in s.splitlines() if 'v035-final.module.js' not in line and 'v036-final.module.js' not in line)+'\n'
-          index.write_text(s,encoding='utf-8')
-
-          # Every same-origin JS/CSS reference, including dynamic imports, belongs
-          # to one build. Historical ?b=03xx keys never enter the Pages artifact.
-          static_ref=re.compile(r'(\./[A-Za-z0-9_./-]+\.(?:js|css))(?:\?[^\"\'`\s<>)]+)?')
-          for path in list(Path('_site').rglob('*.html'))+list(Path('_site').rglob('*.js')):
-              text=path.read_text(encoding='utf-8')
-              text=static_ref.sub(lambda m:f'{m.group(1)}?r={build}',text)
-              path.write_text(text,encoding='utf-8')
-
-          s=index.read_text(encoding='utf-8')
-          rescue=f'  <script src="./v0422-auth-bootstrap-fix.js?r={build}"></script>'
-          if 'v0422-auth-bootstrap-fix.js' not in s:
-              app_tag=re.search(r'  <script src="\./app\.js\?r='+re.escape(build)+r'"></script>',s)
-              if not app_tag: raise SystemExit('app.js release tag not found')
-              pos=app_tag.end();s=s[:pos]+'\n'+rescue+s[pos:]
-              index.write_text(s,encoding='utf-8')
-
-          refs=re.findall(r'(?:src|href)="(\./[^\"]+\.(?:js|css)(?:\?[^\"]*)?)"',index.read_text(encoding='utf-8'))
-          stale=[x for x in refs if f'?r={build}' not in x]
-          if stale: raise SystemExit('stale local assets: '+', '.join(stale[:20]))
-          PY
-
-          touch _site/.nojekyll
+          python tools/build_atlas_site.py --out _site
+          test -f _site/index.html
+          test -f _site/atlas-runtime-report.json
           test -f _site/atlas-current-ui.js
-          test -f _site/atlas-current-ui.css
-          test ! -e _site/v035-final.module.js
-          test ! -e _site/v036-final.module.js
+          test -f _site/atlas-cgr-bridge.js
+          test ! -e _site/v0342-runtime.js
+          test ! -e _site/v0343-final.module.js
+          test ! -e _site/v035-radar-command-center.js
+          test ! -e _site/v037-final.module.js
+          test ! -e _site/v038-final.module.js
+          test ! -e _site/v039-atlas-brand.js
           grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" _site/index.html
           grep -q "data-aml-build=\"${ATLAS_BUILD}\"" _site/index.html
+          grep -q "atlas-current-ui.js?r=${ATLAS_BUILD}" _site/index.html
+          grep -q "atlas-cgr-bridge.js?r=${ATLAS_BUILD}" _site/index.html
           ! grep -q '?b=' _site/index.html
-          grep -q "atlas-current-ui.js?r=${ATLAS_BUILD}" _site/v040-theme-bootstrap.js
-          grep -q "atlas-current-ui.css?r=${ATLAS_BUILD}" _site/v040-theme-bootstrap.js
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -151,27 +103,34 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Smoke test current UI authority
+      - name: Smoke test exact canonical release
         shell: bash
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
           set -euo pipefail
           stamp=$(date +%s)
-          url="${PAGE_URL%/}/?atlas_release=${ATLAS_RELEASE}:${ATLAS_BUILD}&_atlas=${stamp}"
-          curl --fail --silent --show-error --location --retry 10 --retry-delay 2 "$url" -o /tmp/atlas.html
+          base="${PAGE_URL%/}"
+          curl -fsSL --retry 10 --retry-delay 2 "$base/?atlas_release=${ATLAS_RELEASE}:${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/atlas.html
+          curl -fsSL "$base/atlas-release.json?_atlas=${stamp}" -o /tmp/release.json
+          curl -fsSL "$base/atlas-runtime-report.json?_atlas=${stamp}" -o /tmp/runtime.json
+          curl -fsSL "$base/atlas-current-ui.js?r=${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/current.js
+          python - <<'PY'
+          import json,os
+          r=json.load(open('/tmp/release.json'))
+          rt=json.load(open('/tmp/runtime.json'))
+          assert r['release']==os.environ['ATLAS_RELEASE'] and r['build']==os.environ['ATLAS_BUILD'],r
+          assert rt['release']==os.environ['ATLAS_RELEASE'] and rt['build']==os.environ['ATLAS_BUILD'],rt
+          assert rt['policy']=='CANONICAL_ACTIVE_RUNTIME_ONLY',rt
+          PY
           grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" /tmp/atlas.html
           grep -q "data-aml-build=\"${ATLAS_BUILD}\"" /tmp/atlas.html
-          ! grep -q '?b=' /tmp/atlas.html
-          base="${PAGE_URL%/}"
-          curl -fsSL "$base/v040-theme-bootstrap.js?r=${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/theme.js
-          curl -fsSL "$base/atlas-current-ui.js?r=${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/current.js
-          curl -fsSL "$base/atlas-current-ui.css?r=${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/current.css
-          curl -fsSL "$base/v037-final.module.js?r=${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/v037.js
-          curl -fsSL "$base/v038-final.module.js?r=${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/v038.js
-          grep -q "atlas-current-ui.js?r=${ATLAS_BUILD}" /tmp/theme.js
-          grep -q "atlas-current-ui.css?r=${ATLAS_BUILD}" /tmp/theme.js
+          grep -q "atlas-current-ui.js?r=${ATLAS_BUILD}" /tmp/atlas.html
           grep -q "Gasto público" /tmp/current.js
-          grep -q "content:none!important" /tmp/current.css
-          grep -q "atlas-release-guard-via-v037-compat" /tmp/v037.js
-          grep -q "atlas-release-guard-via-v038-compat" /tmp/v038.js
+          ! grep -q '?b=' /tmp/atlas.html
+          for old in v0342-runtime.js v0343-final.module.js v035-radar-command-center.js v037-final.module.js v038-final.module.js v039-atlas-brand.js; do
+            if curl -fsS "$base/$old?_atlas=${stamp}" -o /dev/null; then
+              echo "Historical runtime unexpectedly published: $old"
+              exit 1
+            fi
+          done
