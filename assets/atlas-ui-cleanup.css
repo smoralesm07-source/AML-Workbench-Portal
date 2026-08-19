@@ -1,0 +1,5 @@
+/* ATLAS AML UI cleanup · 2026-08-19
+ * User-requested removal of the institutional-context overview strip.
+ * Public-entity recognition and analytical rules remain active in Entity 360.
+ */
+#v0344-public-overview{display:none!important}
