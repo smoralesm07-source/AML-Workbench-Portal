@@ -1,7 +1,7 @@
 {
   "schema": "ATLAS_RUNTIME_MANIFEST_V1",
-  "release": "0.43.9",
-  "build": "0439",
+  "release": "0.44.0",
+  "build": "0440",
   "policy": "CANONICAL_SOURCE_MANIFEST_FOR_COMPILED_RUNTIME",
   "publish_mode": "COMPILED_BUNDLES_ONLY",
   "notes": "Versioned files below are source fragments retained in Git for traceability and build composition. They are not published as individual web assets; Pages compiles them into canonical ATLAS current bundles and neutralizes historical version authority operations.",
