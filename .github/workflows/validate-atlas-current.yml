@@ -151,6 +151,7 @@ jobs:
           grep -q 'SESSION_AWARE' build.json
           grep -q 'aml_v0205_uaf_sii_reconciliation' v037-public-spend.js
           if test -f tests/v0435-reconciliation-contract.mjs; then node tests/v0435-reconciliation-contract.mjs; fi
+          node tests/atlas-entity-search-current.mjs
 
       - name: Validate governed local JSON assets
         shell: bash

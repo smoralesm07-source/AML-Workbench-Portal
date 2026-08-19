@@ -9,12 +9,11 @@ const manifest=JSON.parse(fs.readFileSync('atlas-runtime-manifest.json','utf8'))
 const release=JSON.parse(fs.readFileSync('atlas-release.json','utf8'));
 const build=JSON.parse(fs.readFileSync('build.json','utf8'));
 
-assert.equal(release.release,'0.43.7');
-assert.equal(release.build,'0437');
-assert.equal(manifest.release,'0.43.7');
-assert.equal(manifest.build,'0437');
-assert.equal(build.app_version,'0.43.7');
-assert.equal(build.build,'0437');
+// The reconciliation feature remains valid across future ATLAS releases.
+assert.equal(release.release,manifest.release);
+assert.equal(release.release,build.app_version);
+assert.equal(release.build,manifest.build);
+assert.equal(release.build,build.build);
 
 for(const needle of [
   'aml_v0434_uaf_sii_sector',
@@ -55,7 +54,7 @@ assert.ok(shellPos>=0&&metaPos>shellPos,'Conciliación shell must render before 
 assert.ok(hardening.includes('error.message,error.details,error.hint,error.code'),'structured Supabase errors must be surfaced');
 assert.ok(!hardening.includes('e?.message||e'),'legacy [object Object] fallback must not remain in hotfix authority');
 assert.ok(hardening.includes("if(!isCurrent(token))return;\n      await v0434RenderPage()"),'stale response must be rejected before page render');
-assert.ok(hardening.includes("renderFatal(error,token)"),'fatal errors must be view-scoped');
+assert.ok(hardening.includes('renderFatal(error,token)'),'fatal errors must be view-scoped');
 
 assert.ok(!command.includes("script-src 'unsafe-inline'"));
 assert.ok(css.includes('var(--atlas-accent-hi)'));
@@ -63,14 +62,17 @@ assert.ok(css.includes('.v0434-matrix'));
 assert.ok(css.includes('.v0434-candidate-layout'));
 assert.ok(sql.includes('security_invoker = true'));
 assert.ok(sql.includes('grant select on public.aml_v0434_uaf_sii_sector to authenticated'));
-assert.ok(manifest.styles.at(-2)==='v0434-reconciliation-command.css');
-assert.ok(manifest.styles.at(-1)==='v0435-reconciliation-fix.css');
-assert.ok(manifest.scripts.at(-2).path==='v0434-reconciliation-command.js');
-assert.ok(manifest.scripts.at(-1).path==='v0435-reconciliation-fix.js');
+
+const styleCommand=manifest.styles.indexOf('v0434-reconciliation-command.css');
+const styleFix=manifest.styles.indexOf('v0435-reconciliation-fix.css');
+assert.ok(styleCommand>=0&&styleFix>styleCommand,'reconciliation CSS order must be preserved');
+const scriptCommand=manifest.scripts.findIndex(x=>x.path==='v0434-reconciliation-command.js');
+const scriptFix=manifest.scripts.findIndex(x=>x.path==='v0435-reconciliation-fix.js');
+assert.ok(scriptCommand>=0&&scriptFix>scriptCommand,'reconciliation JS order must be preserved');
 assert.ok(manifest.scripts.some(x=>x.path==='atlas-sanctions-v12-route.js'));
 assert.match(build.reconciliation_candidate_policy,/PRESELECTION_NOT_LEGAL_STATUS/);
 assert.match(build.reconciliation_runtime_guard,/VIEW_SCOPED_TOKEN/);
 assert.match(build.reconciliation_runtime_guard,/FAIL_SOFT_AGGREGATES/);
 assert.match(release.reconciliation_policy,/VIEW_SCOPED_ASYNC_GUARD/);
 
-console.log('ATLAS reconciliation 0.43.7 runtime-guard contract OK');
+console.log(`ATLAS reconciliation runtime-guard contract OK under release ${release.release}/${release.build}`);
