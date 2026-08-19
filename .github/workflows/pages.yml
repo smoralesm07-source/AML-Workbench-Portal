@@ -62,11 +62,16 @@ jobs:
           assert m['policy']=='CANONICAL_SOURCE_MANIFEST_FOR_COMPILED_RUNTIME'
           assert m['publish_mode']=='COMPILED_BUNDLES_ONLY'
           assert r['future_change_policy']=='BRANCH_PR_VALIDATE_CURRENT_MERGE_MAIN_AUTO_DEPLOY_LIVE_SMOKE'
+          assert m['scripts'][-1]['path']=='v0442-session-stability.module.js'
+          assert 'v0441-session-shell-guard.module.js' not in [x['path'] for x in m['scripts']]
           PY
           node --check atlas-release-guard.js
           node --check atlas-theme-bootstrap.js
+          node --check v0442-session-stability.module.js
           grep -q 'release-agnostic' atlas-release-guard.js
           grep -q 'FIRST_PAINT_ONLY' atlas-theme-bootstrap.js
+          grep -q 'SUPABASE_CLIENT_ONLY_NO_MANUAL_REPLAY' v0442-session-stability.module.js
+          ! grep -qE 'auth\.setSession\(|refresh_token\s*:' v0442-session-stability.module.js
 
       - name: Compile current ATLAS runtime
         shell: bash
@@ -103,6 +108,7 @@ jobs:
           for source in [*m['styles'],*[x['path'] for x in m['scripts']]]:
               assert not Path('_site',source).exists(),f'source fragment published: {source}'
           PY
+          ! grep -R -qE 'auth\.setSession\(|refresh_token\s*:' _site/atlas-module-current-*.js
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -143,7 +149,7 @@ jobs:
           grep -q "atlas-runtime-current.css?r=${ATLAS_BUILD}" /tmp/atlas.html
           grep -q "atlas-runtime-current-01.js?r=${ATLAS_BUILD}" /tmp/atlas.html
           ! grep -q '?b=' /tmp/atlas.html
-          for old in v0222-radar-hotfix.js v028-ipa3-global.js v032-irg-territory.js v0342-runtime.js v035-radar-command-center.js v037-public-spend.js v038-entity360.js v039-atlas-brand.js v040-theme-bootstrap.js; do
+          for old in v0222-radar-hotfix.js v028-ipa3-global.js v032-irg-territory.js v0342-runtime.js v035-radar-command-center.js v037-public-spend.js v038-entity360.js v039-atlas-brand.js v040-theme-bootstrap.js v0441-session-shell-guard.module.js; do
             if curl -fsS "$base/$old?_atlas=${stamp}" -o /dev/null; then
               echo "Versioned source/runtime unexpectedly published: $old"
               exit 1
