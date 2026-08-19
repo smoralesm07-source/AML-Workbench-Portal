@@ -1,0 +1,14 @@
+/* ATLAS AML · Radar Integrado graphics integrity v0.40.1 */
+.v036-asym .v036-track{position:relative}
+.v036-asym .v036-fill{transition:width .22s ease,background-color .18s ease,opacity .18s ease;will-change:width}
+.v036-asym .v036-fill[aria-valuenow="0"]{min-width:0!important}
+.v036-flow button[data-v036-recon]{min-width:42px;transition:flex-grow .22s ease,background-color .18s ease;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04)}
+.v036-flow button[data-v036-recon="active"]{color:#fff}
+.v036-flow button[data-v036-recon="terminated"]{color:#fff}
+.v036-flow button[data-v036-recon="unmatched"]{color:#fff}
+.v036-real[data-v0401-graphics="degraded"] .v036-asym .v036-track,.v036-real[data-v0401-graphics="degraded"] .v036-flow{outline:1px dashed var(--atlas-warn);outline-offset:2px}
+.v036-deck .v036-grid2+.v036-grid2{margin-top:14px}
+.v036-deck>.v036-card+.v036-filters{margin-top:14px}
+.v036-chart-legend i,.v036-legend i,.v036-mxname small i{transition:background-color .18s ease}
+html[data-atlas-theme="light"] .v036-flow button[data-v036-recon]{box-shadow:inset 0 0 0 1px rgba(20,37,54,.06)}
+@media (prefers-reduced-motion:reduce){.v036-asym .v036-fill,.v036-flow button[data-v036-recon],.v036-chart-legend i,.v036-legend i,.v036-mxname small i{transition:none!important}}
