@@ -1,4 +1,4 @@
-name: Validate Gasto Público · Workbench v0.38
+name: Validate Gasto Público · ATLAS AML v0.39
 
 on:
   workflow_dispatch:
@@ -11,6 +11,8 @@ on:
       - 'v038-entity360.js'
       - 'v038-entity360.css'
       - 'v038-final.module.js'
+      - 'v039-atlas-brand.js'
+      - 'v039-atlas-brand.css'
       - 'index.html'
       - 'build.json'
       - 'docs/public-spend-module-v037.md'
@@ -20,7 +22,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: validate-public-spend-workbench-v038
+  group: validate-public-spend-atlas-v039
   cancel-in-progress: true
 
 jobs:
@@ -37,20 +39,25 @@ jobs:
           node --check v037-final.module.js
           node --check v038-entity360.js
           node --check v038-final.module.js
+          node --check v039-atlas-brand.js
 
-      - name: Validate Workbench integration contract
+      - name: Validate ATLAS Workbench integration contract
         id: app
         run: |
           set -euo pipefail
-          grep -q 'data-aml-version="0.38.0"' index.html
-          grep -q 'data-aml-build="0380"' index.html
+          grep -q 'data-aml-version="0.39.0"' index.html
+          grep -q 'data-aml-build="0390"' index.html
+          grep -q 'ATLAS AML' index.html
+          grep -q 'v039-atlas-brand.css?b=0390' index.html
+          grep -q 'v039-atlas-brand.js?b=0390' index.html
           grep -q 'v037-public-spend.css?b=0370' index.html
           grep -q 'v037-public-spend.js?b=0370' index.html
           grep -q 'v037-final.module.js?b=0370' index.html
           grep -q 'v038-entity360.css?b=0380' index.html
           grep -q 'v038-entity360.js?b=0380' index.html
-          grep -q 'v038-final.module.js?b=0380' index.html
-          grep -q '"app_version": "0.38.0"' build.json
+          grep -q 'v038-final.module.js?b=0390' index.html
+          grep -q '"app_version": "0.39.0"' build.json
+          grep -q 'ATLAS_AML_V039' build.json
           grep -q 'PUBLIC_SPEND_V131_NATIVE' build.json
           grep -q 'ENTITY360_V038' build.json
           grep -q 'RADAR_PRESUPUESTO_ABIERTO_V131' build.json
@@ -66,6 +73,7 @@ jobs:
           grep -q 'v037LoadData' v038-entity360.js
           grep -q 'RUT_EXACT_ONLY+MISSING_IS_NOT_ZERO+MARKS_ARE_PRIORITIZATION' build.json
           grep -q 'cleanLegacyEntityBridge' v038-final.module.js
+          grep -q 'atlas:nav-news' v039-atlas-brand.js
 
       - name: Validate live Radar Presupuesto Abierto contracts
         id: source
@@ -75,7 +83,7 @@ jobs:
           import json, urllib.request
           base='https://raw.githubusercontent.com/smoralesm07-source/Rada_Presupuesto_Abierto/main/docs/data/'
           def load(name):
-              req=urllib.request.Request(base+name,headers={'User-Agent':'AML-Workbench-v038-validation'})
+              req=urllib.request.Request(base+name,headers={'User-Agent':'ATLAS-AML-v039-validation'})
               with urllib.request.urlopen(req,timeout=60) as r:
                   return json.load(r)
           status=load('spend_corrected_v3_status.json')
@@ -112,7 +120,8 @@ jobs:
           ok=all(os.environ.get(k)=='success' for k in ('JS','APP','SOURCE'))
           payload={
             'generated_at':datetime.now(timezone.utc).isoformat(timespec='seconds'),
-            'workbench_version':'0.38.0',
+            'workbench_version':'0.39.0',
+            'product_name':'ATLAS AML',
             'entity360_ui':'0.38.0',
             'public_spend_ui':'13.1',
             'javascript':os.environ.get('JS'),
@@ -129,7 +138,7 @@ jobs:
           git config user.email "aml-workbench-bot@users.noreply.github.com"
           git add data/public_spend_v037_status.json
           if ! git diff --cached --quiet; then
-            git commit -m "ci: publica validación Gasto Público · Workbench v0.38"
+            git commit -m "ci: publica validación Gasto Público · ATLAS AML v0.39"
             git pull --rebase origin main
             git push origin main
           fi
