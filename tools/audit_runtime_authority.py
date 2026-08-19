@@ -21,7 +21,7 @@ SESSION_FORBIDDEN_PATTERNS = {
 }
 
 LEGACY_AUTH_ASSET = 'assets/atlas-auth-stability-0440.js'
-CURRENT_FINAL_AUTH_MARKER = 'SUPABASE_SESSION_SOURCE_OF_TRUTH+DOUBLE_LOCAL_RECHECK'
+CURRENT_FINAL_AUTH_MARKER = 'SUPABASE_CLIENT_ONLY_NO_MANUAL_REPLAY'
 
 
 def main():
@@ -50,8 +50,6 @@ def main():
             print(f' - {path}: {rule} at line(s) {lines}')
         raise SystemExit(1)
 
-    # Session reliability: no compiled production code may manually replay a
-    # Supabase session/refresh token. Supabase JS owns refresh-token rotation.
     session_violations=[]
     for path in files:
         text=path.read_text(encoding='utf-8')
@@ -66,8 +64,6 @@ def main():
             print(f' - {path}: {rule} at line(s) {lines}')
         raise SystemExit(1)
 
-    # Legacy 0.44.0 recovery code must not be published or referenced. It was a
-    # standalone asset outside the canonical runtime and could trigger reloads.
     legacy_asset=root/LEGACY_AUTH_ASSET
     if legacy_asset.exists():
         raise SystemExit(f'Legacy auth runtime unexpectedly published: {LEGACY_AUTH_ASSET}')
@@ -78,7 +74,6 @@ def main():
     if 'atlas-auth-stability-0440.js' in index_text:
         raise SystemExit('Legacy auth runtime is still referenced by compiled index.html')
 
-    # Reliability contract 1: a release publication must never evict an active session.
     release_guard=root/'atlas-release-guard.js'
     if not release_guard.is_file():
         raise SystemExit('Missing compiled atlas-release-guard.js')
@@ -89,7 +84,6 @@ def main():
     if 'NO_ACTIVE_SESSION_RELOAD' not in guard_text:
         raise SystemExit('atlas-release-guard.js is missing NO_ACTIVE_SESSION_RELOAD reliability contract')
 
-    # Reliability contract 2: the final module must own auth recovery + approved Entity 360.
     if not modules:
         raise SystemExit('No compiled ATLAS modules found; final reliability authority missing')
     final_module=modules[-1]
@@ -97,28 +91,43 @@ def main():
     required_final_markers=(
         '__ATLAS_RUNTIME_RELIABILITY__',
         CURRENT_FINAL_AUTH_MARKER,
-        'V0391_ENTRY+V038_ENTITY360',
+        'ENTITY360_REFERENCE_0445_SIX_LENSES',
         '__ATLAS_ENTITY_AUTHORITY_FINAL__',
+        'sixLensRendererPinned',
     )
     missing=[m for m in required_final_markers if m not in final_text]
     if missing:
         raise SystemExit(f'Final runtime module {final_module.name} is missing reliability authority markers: {missing}')
 
-    # Reliability contract 3: expert Entity 360 source must be present in compiled classic runtime.
     classic_text='\n'.join(p.read_text(encoding='utf-8') for p in classic)
     entity_markers=(
-        'ENTITY 360 · ACCESO ANALÍTICO',
-        'ENTITY360_EXPERT_CURRENT',
-        'PLANNED_LANDING_EXACT_ON_DEMAND_ONLY',
+        'ENTITY360_HTML_PRODUCTION_ADAPTATION_0445',
+        "['identity','01','Identidad']",
+        "['character','02','Caracterización']",
+        "['timeline','03','Cronología']",
+        "['network','04','Red de exposición']",
+        "['signals','05','Señales y convergencia']",
+        "['evidence','06','Evidencia y decisión']",
     )
     missing_entity=[m for m in entity_markers if m not in classic_text]
     if missing_entity:
         raise SystemExit(f'Compiled Entity 360 authority is incomplete: {missing_entity}')
 
+    reconciliation_markers=(
+        'AtlasReconciliationFilters',
+        "matrixVisible:false",
+        "v0434Matrix=()=>''",
+        'Filtros interactivos',
+    )
+    missing_recon=[m for m in reconciliation_markers if m not in classic_text]
+    if missing_recon:
+        raise SystemExit(f'Compiled reconciliation interaction authority is incomplete: {missing_recon}')
+
     print(
         f'ATLAS compiled runtime authority OK: {len(files)} bundle/module asset(s); '
         'atlas-release-guard.js remains the sole version authority; '
-        f'{final_module.name} owns final session/Entity 360 reliability authority; '
+        f'{final_module.name} owns passive final session/Entity 360 authority; '
+        'reconciliation bubble matrix is removed and reversible cross-filters are active; '
         'legacy auth replay/reload runtime is absent'
     )
 
