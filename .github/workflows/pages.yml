@@ -65,7 +65,8 @@ jobs:
           node --check v040-theme-bootstrap.js
           node --check atlas-current-ui.js
           node --check atlas-cgr-bridge.js
-          grep -q 'manifest-driven' atlas-release-guard.js
+          grep -q 'release-agnostic' atlas-release-guard.js
+          grep -q 'CANONICAL_ACTIVE_RUNTIME_ONLY' atlas-release-guard.js
           grep -q 'FIRST_PAINT_ONLY' v040-theme-bootstrap.js
           grep -q 'AtlasTheme' atlas-current-ui.js
           grep -q 'window.v035OpenCgr=openCgr' atlas-cgr-bridge.js
