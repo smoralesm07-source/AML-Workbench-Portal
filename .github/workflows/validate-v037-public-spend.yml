@@ -1,0 +1,122 @@
+name: Validate Gasto Público v0.37
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'v037-public-spend.js'
+      - 'v037-public-spend.css'
+      - 'v037-final.module.js'
+      - 'index.html'
+      - 'build.json'
+      - 'docs/public-spend-module-v037.md'
+      - '.github/workflows/validate-v037-public-spend.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: validate-public-spend-v037
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate JavaScript syntax
+        id: js
+        run: |
+          set -euo pipefail
+          node --check v037-public-spend.js
+          node --check v037-final.module.js
+
+      - name: Validate Workbench integration contract
+        id: app
+        run: |
+          set -euo pipefail
+          grep -q 'data-aml-version="0.37.0"' index.html
+          grep -q 'data-aml-build="0370"' index.html
+          grep -q 'v037-public-spend.css?b=0370' index.html
+          grep -q 'v037-public-spend.js?b=0370' index.html
+          grep -q 'v037-final.module.js?b=0370' index.html
+          grep -q '"app_version": "0.37.0"' build.json
+          grep -q 'PUBLIC_SPEND_V131_NATIVE' build.json
+          grep -q 'RADAR_PRESUPUESTO_ABIERTO_V131' build.json
+          grep -q 'PARTIDA_CAPITULO' build.json
+          grep -q 'FULL_PRIVATE_RELATION_UNIVERSE' v037-public-spend.js
+          grep -q 'PROVEEDOR_SOURCE_TRUE_AND_NOT_INTRAESTADO_AND_NOT_PUBLIC_NAME' v037-public-spend.js
+          grep -q 'aml_entities' v037-public-spend.js
+          grep -q 'aml_v0205_uaf_sii_reconciliation' v037-public-spend.js
+          grep -q 'aml_v028_sanctions_with_identity' v037-public-spend.js
+          grep -q "uafReference:'OPTIONAL_INDEPENDENT'" v037-public-spend.js
+          grep -q 'focusRut' v037-final.module.js
+          grep -q 'data-v037-entity-bridge' v037-final.module.js
+
+      - name: Validate live Radar Presupuesto Abierto contracts
+        id: source
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, urllib.request
+          base='https://raw.githubusercontent.com/smoralesm07-source/Rada_Presupuesto_Abierto/main/docs/data/'
+          def load(name):
+              req=urllib.request.Request(base+name,headers={'User-Agent':'AML-Workbench-v037-validation'})
+              with urllib.request.urlopen(req,timeout=60) as r:
+                  return json.load(r)
+          status=load('spend_corrected_v3_status.json')
+          ui=load('spend_v131_status.json')
+          assert status.get('validation')=='success'
+          assert status.get('facts')=='success'
+          assert status.get('multiyear')=='success'
+          assert status.get('parity_audit')=='success'
+          assert status.get('compact')=='success'
+          assert status.get('service_grain')=='PARTIDA_CAPITULO'
+          assert status.get('provider_metrics')=='FULL_PRIVATE_RELATION_UNIVERSE'
+          assert status.get('payment_basis')=='FECHA_PAGO_AND_MONTO_PAGO'
+          assert status.get('recipient_rut_scope')=='ALL_BENEFICIARIES_AND_RECIPIENTS'
+          assert status.get('provider_base_rule')=='PROVEEDOR_SOURCE_TRUE_AND_NOT_INTRAESTADO_AND_NOT_PUBLIC_NAME'
+          assert ui.get('mark_filter_bundle')=='success'
+          assert ui.get('filter_mode')=='single_toggle'
+          assert ui.get('uaf_reference')=='optional_independent'
+          required={'flow','kpis','reads','service_rank','growth','dependence_influence','table'}
+          assert required.issubset(set(ui.get('synchronized_views') or []))
+          print('[OK] source contracts')
+          PY
+
+      - name: Publish validation status
+        if: always()
+        env:
+          JS: ${{ steps.js.outcome }}
+          APP: ${{ steps.app.outcome }}
+          SOURCE: ${{ steps.source.outcome }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          ok=all(os.environ.get(k)=='success' for k in ('JS','APP','SOURCE'))
+          payload={
+            'generated_at':datetime.now(timezone.utc).isoformat(timespec='seconds'),
+            'workbench_version':'0.37.0',
+            'public_spend_ui':'13.1',
+            'javascript':os.environ.get('JS'),
+            'app_contract':os.environ.get('APP'),
+            'source_contract':os.environ.get('SOURCE'),
+            'status':'success' if ok else 'failure',
+            'identity_policy':'RUT_OR_ENTITY_ID_EXACT_ONLY',
+            'marks_policy':'PRIORITIZATION_NOT_FINDINGS',
+            'uaf_reference':'OPTIONAL_INDEPENDENT'
+          }
+          Path('data/public_spend_v037_status.json').write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding='utf-8')
+          PY
+          git config user.name "aml-workbench-bot"
+          git config user.email "aml-workbench-bot@users.noreply.github.com"
+          git add data/public_spend_v037_status.json
+          if ! git diff --cached --quiet; then
+            git commit -m "ci: publica validación Gasto Público v0.37"
+            git pull --rebase origin main
+            git push origin main
+          fi
