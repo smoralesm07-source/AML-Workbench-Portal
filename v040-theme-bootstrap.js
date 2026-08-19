@@ -2,12 +2,13 @@
   'use strict';
 
   const KEY='atlas-aml:theme:v1';
+  const RELEASE_BUILD='0422';
   let theme='dark';
   try{
     const saved=localStorage.getItem(KEY);
     if(saved==='light'||saved==='dark')theme=saved;
   }catch{}
-  document.documentElement.setAttribute('data-atlas-theme',theme);
+  if(document.documentElement.getAttribute('data-atlas-theme')!==theme)document.documentElement.setAttribute('data-atlas-theme',theme);
   document.documentElement.style.colorScheme=theme;
 
   function addStyle(href,key){
@@ -27,14 +28,12 @@
     document.head.appendChild(script);
   }
 
-  /* Styles may load immediately; behavior waits until the legacy/runtime scripts
-   * have completed so the AIE brand layer is the final authority in the header. */
-  addStyle('./v0401-radar-graphics-fix.css?b=0401','radar-graphics-css');
-  addStyle('./v0402-aie-brand.css?b=0402','aie-brand-css');
+  addStyle(`./v0401-radar-graphics-fix.css?r=${RELEASE_BUILD}`,'radar-graphics-css');
+  addStyle(`./v0402-aie-brand.css?r=${RELEASE_BUILD}`,'aie-brand-css');
 
   function loadRuntimeFixes(){
-    addScript('./v0401-radar-graphics-fix.js?b=0401','radar-graphics-js');
-    addScript('./v0402-aie-brand.js?b=0402','aie-brand-js');
+    addScript(`./v0401-radar-graphics-fix.js?r=${RELEASE_BUILD}`,'radar-graphics-js');
+    addScript(`./v0402-aie-brand.js?r=${RELEASE_BUILD}`,'aie-brand-js');
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadRuntimeFixes,{once:true});
