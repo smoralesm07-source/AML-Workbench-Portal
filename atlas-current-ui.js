@@ -59,9 +59,9 @@
       const small=brand.querySelector('small');if(small){
         const label=`v${version}`;
         if(small.textContent!==label)small.textContent=label;
-        small.dataset.activeVersion=version;
-        small.setAttribute('aria-label',`Versión ${version}`);
-        small.setAttribute('data-runtime-label',label);
+        if(small.dataset.activeVersion!==version)small.dataset.activeVersion=version;
+        if(small.getAttribute('aria-label')!==`Versión ${version}`)small.setAttribute('aria-label',`Versión ${version}`);
+        if(small.getAttribute('data-runtime-label')!==label)small.setAttribute('data-runtime-label',label);
       }
     });
     document.querySelectorAll('.topbar .eyebrow,.v18-pagehead .eyebrow').forEach(el=>{
@@ -75,8 +75,8 @@
     :'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.4A8.5 8.5 0 0 1 8.6 4 8.5 8.5 0 1 0 20 15.4Z"/></svg>';}
   function setTheme(value,{persist=true,emit=true}={}){
     const next=value==='light'?'light':'dark',prev=themeNow();
-    document.documentElement.setAttribute('data-atlas-theme',next);
-    document.documentElement.style.colorScheme=next;
+    if(document.documentElement.getAttribute('data-atlas-theme')!==next)document.documentElement.setAttribute('data-atlas-theme',next);
+    if(document.documentElement.style.colorScheme!==next)document.documentElement.style.colorScheme=next;
     window.__ATLAS_THEME__=next;
     if(persist){try{localStorage.setItem(THEME_KEY,next);}catch{}}
     ensureThemeToggle();
@@ -93,7 +93,8 @@
       if(anchor&&anchor.parentNode===host)host.insertBefore(button,anchor);else host.appendChild(button);
     }
     const theme=themeNow(),target=theme==='dark'?'claro':'oscuro';
-    button.innerHTML=`<span class="atlas-theme-icon">${themeSvg(theme)}</span><span class="atlas-theme-label">${theme==='dark'?'Claro':'Oscuro'}</span>`;
+    const html=`<span class="atlas-theme-icon">${themeSvg(theme)}</span><span class="atlas-theme-label">${theme==='dark'?'Claro':'Oscuro'}</span>`;
+    if(button.innerHTML!==html)button.innerHTML=html;
     button.title=`Cambiar a tema ${target}`;button.setAttribute('aria-label',`Cambiar a tema ${target}`);button.setAttribute('aria-pressed',String(theme==='light'));
     if(!button.dataset.atlasThemeBound){button.addEventListener('click',()=>setTheme(themeNow()==='dark'?'light':'dark'));button.dataset.atlasThemeBound='1';}
   }
@@ -120,12 +121,17 @@
       if(!META[view])continue;
       const malformed=!button.classList.contains('atlas-nav-btn')||!button.querySelector('.atlas-nav-icon')||!button.querySelector('.atlas-nav-text')||button.querySelector('.atlas-nav-text')?.textContent!==META[view].label;
       if(malformed)rebuildButton(button,view);else{
-        const oldBadge=button.querySelector('.atlas-nav-news');const wanted=newsBadge(view);
-        if(!wanted&&oldBadge)oldBadge.remove();else if(wanted&&!oldBadge){const chevron=button.querySelector('.atlas-nav-chevron');chevron?.insertAdjacentHTML('beforebegin',wanted);}
+        const oldBadge=button.querySelector('.atlas-nav-news'),wanted=newsBadge(view);
+        if(!wanted&&oldBadge)oldBadge.remove();
+        else if(wanted&&!oldBadge){const chevron=button.querySelector('.atlas-nav-chevron');chevron?.insertAdjacentHTML('beforebegin',wanted);}
       }
       button.style.removeProperty('margin-left');button.style.removeProperty('padding-left');
       button.querySelectorAll('.v030-nav-dot,[data-legacy-nav-marker]').forEach(el=>el.remove());
     }
+
+    /* Reorder while the nav observer is disconnected. This is intentionally
+       idempotent from the observer's perspective: our own writes are never
+       observed, so settling cannot schedule itself forever. */
     nav.querySelectorAll('.v019-nav-label,.atlas-nav-section').forEach(el=>el.remove());
     for(const group of GROUPS){
       const present=group.views.filter(view=>buttons.has(view));if(!present.length)continue;
@@ -133,8 +139,7 @@
       for(const view of present)nav.appendChild(buttons.get(view));
     }
     for(const [view,button] of buttons)if(!META[view])nav.appendChild(button);
-    applyIdentity();ensureThemeToggle();
-    window.__ATLAS_NAV_HEALTH__={status:'ready',version:release(),publicSpendAligned:!!nav.querySelector('[data-view="public-spend"].atlas-nav-btn'),checkedAt:new Date().toISOString()};
+    window.__ATLAS_NAV_HEALTH__={status:'ready',version:release(),publicSpendAligned:!!nav.querySelector('[data-view="public-spend"].atlas-nav-btn'),observerPolicy:'DISCONNECT_DURING_SETTLE',checkedAt:new Date().toISOString()};
     return true;
   }
 
@@ -145,29 +150,53 @@
   function localize(root){
     if(!root)return;const skip=new Set(['SCRIPT','STYLE','TEMPLATE','CODE','PRE','KBD','SAMP']);
     const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode(node){const p=node.parentElement;if(!p||skip.has(p.tagName))return NodeFilter.FILTER_REJECT;return /\b(?:ENTITY|Entity|entity)\s+(?:360|ID)\b|\b(?:PUBLIC ENTITY|Public Entity|public entity)\b/.test(node.nodeValue||'')?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT;}});
-    const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);for(const node of nodes){const next=translate(node.nodeValue);if(next!==node.nodeValue)node.nodeValue=next;}
+    const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+    for(const node of nodes){const next=translate(node.nodeValue);if(next!==node.nodeValue)node.nodeValue=next;}
   }
 
-  let queued=false,observedNav=null,navObserver=null,bodyObserver=null;
+  let queued=false,settling=false,observedNav=null,navObserver=null,bodyObserver=null;
   function queueSettle(){if(queued)return;queued=true;queueMicrotask(()=>{queued=false;settle();});}
-  function bindObservers(){
-    const nav=document.querySelector('.v019-nav');
-    if(nav&&nav!==observedNav){navObserver?.disconnect();observedNav=nav;navObserver=new MutationObserver(records=>{if(records.some(r=>r.addedNodes.length))queueSettle();});navObserver.observe(nav,{childList:true});}
-    if(document.body&&!bodyObserver){bodyObserver=new MutationObserver(records=>{for(const record of records)for(const node of record.addedNodes)if(node.nodeType===1)localize(node);});bodyObserver.observe(document.body,{childList:true,subtree:true});}
+  function observeNav(nav){
+    if(!nav){navObserver?.disconnect();observedNav=null;return;}
+    if(nav!==observedNav){navObserver?.disconnect();observedNav=nav;navObserver=new MutationObserver(records=>{
+      if(settling)return;
+      if(records.some(r=>r.addedNodes.length||r.removedNodes.length))queueSettle();
+    });}
+    navObserver.observe(nav,{childList:true});
   }
-  function settle(){normalizeNav();applyIdentity();ensureThemeToggle();localize(document.body);bindObservers();}
+  function bindBodyObserver(){
+    if(document.body&&!bodyObserver){bodyObserver=new MutationObserver(records=>{
+      for(const record of records)for(const node of record.addedNodes)if(node.nodeType===1)localize(node);
+    });bodyObserver.observe(document.body,{childList:true,subtree:true});}
+  }
+  function settle(){
+    if(settling)return;
+    settling=true;
+    try{
+      navObserver?.disconnect();
+      normalizeNav();
+      applyIdentity();
+      ensureThemeToggle();
+      localize(document.body);
+      bindBodyObserver();
+    }finally{
+      observeNav(document.querySelector('.v019-nav'));
+      settling=false;
+    }
+  }
 
-  if(typeof window.shell==='function'){const baseShell=window.shell;window.shell=function(...args){const result=baseShell(...args);queueMicrotask(settle);return result;};}
+  if(typeof window.shell==='function'){const baseShell=window.shell;window.shell=function(...args){const result=baseShell(...args);queueSettle();return result;};}
   if(typeof window.navigate==='function'){const baseNavigate=window.navigate;window.navigate=async function(...args){const result=await baseNavigate(...args);settle();return result;};}
 
   window.addEventListener('atlas:nav-refresh',settle);
   window.addEventListener('atlas:themechange',settle);
   window.addEventListener('atlas:nav-news',e=>{const d=e.detail||{};if(d.view)setNews(d.view,d);});
-  window.AtlasCurrentUI={refresh:settle,version:release};
+  window.AtlasCurrentUI={refresh:settle,version:release,observerPolicy:'DISCONNECT_DURING_SETTLE'};
   window.AtlasTheme={get:themeNow,set:value=>setTheme(value),toggle:()=>setTheme(themeNow()==='dark'?'light':'dark')};
   window.AtlasNavNews={set:setNews,clear:view=>setNews(view,null),all:readNews,markSeen:view=>setNews(view,null)};
   window.AtlasTerminology={language:'es',entity360:'Entidad 360',entityId:'ID de Entidad',translate,apply:()=>localize(document.body)};
 
-  setTheme(themeNow(),{persist:false,emit:false});settle();
-  for(const ms of [0,80,240,600,1200])setTimeout(settle,ms);
+  setTheme(themeNow(),{persist:false,emit:false});
+  settle();
+  for(const ms of [80,240,600,1200])setTimeout(settle,ms);
 })();
