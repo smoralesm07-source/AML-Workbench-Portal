@@ -1,8 +1,9 @@
 'use strict';
 
-/* AML Workbench v0.34.2 · single visible runtime/version authority.
- * Historical feature modules remain loaded for compatibility, but they are not
- * allowed to become visible version authorities. This layer is loaded last.
+/* Legacy v0.34.2 compatibility layer.
+ * ATLAS current release is the ONLY visible/runtime version authority.
+ * This file preserves the historical shell sequencing but must never write
+ * 0.34.2 into document metadata, globals or visible branding again.
  */
 const V0342_RUNTIME='0.34.2';
 const V0342_BUILD='0342';
@@ -15,35 +16,52 @@ function v0342ApplyVersion(){
     }
   }catch{}
 
-  window.__AML_ACTIVE_VERSION__=V0342_RUNTIME;
-  window.__AML_BUILD__=V0342_BUILD;
-  window.__AML_VERSION_SOURCE__='v0342-runtime';
+  if(window.AtlasRelease&&typeof window.AtlasRelease.apply==='function'){
+    window.AtlasRelease.apply();
+  }
 
-  document.title=`AML Analytical Workbench · v${V0342_RUNTIME}`;
-  document.documentElement.setAttribute('data-aml-version',V0342_RUNTIME);
-  document.documentElement.setAttribute('data-aml-build',V0342_BUILD);
+  const current=String(
+    window.__ATLAS_ACTIVE_VERSION__ ||
+    document.documentElement.getAttribute('data-atlas-release') ||
+    document.documentElement.getAttribute('data-aml-version') ||
+    'current'
+  );
+  const build=String(
+    window.__ATLAS_RELEASE_BUILD__ ||
+    document.documentElement.getAttribute('data-aml-build') ||
+    ''
+  );
 
-  const runtimeLabel=`Operational Radar · v${V0342_RUNTIME}`;
-  document.querySelectorAll('.v019-brand small').forEach((el)=>{
-    el.textContent=runtimeLabel;
-    el.setAttribute('data-runtime-label',runtimeLabel);
-    el.setAttribute('aria-label',runtimeLabel);
-    el.dataset.activeVersion=V0342_RUNTIME;
+  window.__AML_ACTIVE_VERSION__=current;
+  if(build)window.__AML_BUILD__=build;
+  window.__AML_VERSION_SOURCE__='atlas-release-guard-via-v0342-compat';
+  document.title=`ATLAS AML · v${current}`;
+
+  document.querySelectorAll('.v019-brand').forEach((brand)=>{
+    const strong=brand.querySelector('strong');
+    if(strong&&strong.textContent!=='ATLAS AML')strong.textContent='ATLAS AML';
+    const small=brand.querySelector('small');
+    if(small){
+      const label=`v${current}`;
+      if(small.textContent!==label)small.textContent=label;
+      small.setAttribute('data-runtime-label',label);
+      small.setAttribute('aria-label',`Versión ${current}`);
+      small.dataset.activeVersion=current;
+    }
   });
 
   document.querySelectorAll('.topbar .eyebrow').forEach((el)=>{
-    const text=String(el.textContent||'');
-    if(/AML Analytical Workbench/i.test(text)||/\bv\d+\.\d+(?:\.\d+)?\b/.test(text)){
-      el.textContent=`AML Analytical Workbench · v${V0342_RUNTIME}`;
-    }
+    const wanted=`ATLAS AML · v${current}`;
+    if(el.textContent!==wanted)el.textContent=wanted;
   });
 }
 
 if(typeof shell==='function'){
   const v0342BaseShell=shell;
   shell=function(...args){
-    v0342BaseShell(...args);
+    const result=v0342BaseShell(...args);
     v0342ApplyVersion();
+    return result;
   };
 }
 
