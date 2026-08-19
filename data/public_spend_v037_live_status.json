@@ -1,11 +1,14 @@
 {
-  "workbench_version": "0.38.0",
+  "workbench_version": "0.39.0",
+  "product_name": "ATLAS AML",
   "entity360_ui": "0.38.0",
   "public_spend_ui": "13.1",
-  "pages_deploy": "failure",
-  "live_smoke": "success",
+  "pages_deploy": "cancelled",
+  "live_smoke": "failure",
   "status": "failure",
   "required_assets": [
+    "v039-atlas-brand.js",
+    "v039-atlas-brand.css",
     "v038-entity360.js",
     "v038-entity360.css",
     "v038-final.module.js",
