@@ -1,0 +1,1 @@
+Conciliacion UAF-SII 0.43.6: tax status, termination cohorts, sector matrix, potential-SO screening and Entity 360 drilldown.
