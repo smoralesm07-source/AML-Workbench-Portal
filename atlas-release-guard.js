@@ -1,13 +1,12 @@
 'use strict';
 
 /* ATLAS AML · single active release authority.
- * v0.42.1 fixes the bootstrap deadlock introduced by observing and rewriting
- * the same release attributes unconditionally. Historical compatibility layers
- * may remain as source dependencies, but only this guard owns the active release.
+ * v0.42.2 keeps the release guard non-recursive and pairs it with a non-recursive
+ * AIE brand observer so bootstrap/auth tasks cannot be starved by mutation loops.
  */
 (function atlasSingleReleaseAuthority(){
-  const RELEASE='0.42.1';
-  const BUILD='0421';
+  const RELEASE='0.42.2';
+  const BUILD='0422';
   const PRODUCT='ATLAS AML';
   const TAGLINE='Plataforma Integrada de Inteligencia y Riesgo';
   const MANIFEST='./atlas-release.json';
@@ -53,25 +52,19 @@
           if(small.dataset.activeVersion!==RELEASE)small.dataset.activeVersion=RELEASE;
         }
       });
-      window.__ATLAS_RELEASE_GUARD_HEALTH__={status:'ready',release:RELEASE,build:BUILD,checkedAt:new Date().toISOString()};
+      window.__ATLAS_RELEASE_GUARD_HEALTH__={status:'ready',release:RELEASE,build:BUILD,mutationPolicy:'ROOT_ATTRIBUTES_ONLY',checkedAt:new Date().toISOString()};
     }finally{applying=false;}
   }
 
   function queueApply(){
     if(queued)return;
     queued=true;
-    queueMicrotask(()=>{
-      queued=false;
-      applyRelease();
-    });
+    queueMicrotask(()=>{queued=false;applyRelease();});
   }
 
   function watchRelease(){
     applyRelease();
     if(observer)return;
-    /* Observe only the root release attributes. Never observe subtree/childList:
-     * applyRelease also updates visible labels, and observing those mutations can
-     * create a self-sustaining microtask loop that starves Supabase auth promises. */
     observer=new MutationObserver(()=>{
       if(root.getAttribute('data-aml-version')!==RELEASE ||
          root.getAttribute('data-aml-build')!==BUILD ||
@@ -117,14 +110,7 @@
     }
   }
 
-  window.AtlasRelease={
-    version:RELEASE,
-    build:BUILD,
-    product:PRODUCT,
-    policy:'SINGLE_ACTIVE_RELEASE',
-    apply:applyRelease,
-    verify:verifyManifest
-  };
+  window.AtlasRelease={version:RELEASE,build:BUILD,product:PRODUCT,policy:'SINGLE_ACTIVE_RELEASE',apply:applyRelease,verify:verifyManifest};
 
   applyRelease();
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watchRelease,{once:true});
