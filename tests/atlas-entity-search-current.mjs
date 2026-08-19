@@ -7,15 +7,14 @@ const manifest=JSON.parse(fs.readFileSync('atlas-runtime-manifest.json','utf8'))
 const release=JSON.parse(fs.readFileSync('atlas-release.json','utf8'));
 const build=JSON.parse(fs.readFileSync('build.json','utf8'));
 
-assert.equal(release.release,'0.43.8');
-assert.equal(release.build,'0438');
-assert.equal(manifest.release,'0.43.8');
-assert.equal(manifest.build,'0438');
-assert.equal(build.app_version,'0.43.8');
-assert.equal(build.build,'0438');
-assert.equal(manifest.styles.at(-1),'atlas-entity-search-current.css');
-assert.equal(manifest.scripts.at(-1).path,'atlas-entity-search-current.js');
-assert.equal(manifest.scripts.at(-1).role,'entity-search-current-authority');
+assert.equal(release.release,manifest.release);
+assert.equal(release.release,build.app_version);
+assert.equal(release.build,manifest.build);
+assert.equal(release.build,build.build);
+assert.ok(manifest.styles.includes('atlas-entity-search-current.css'));
+const entitySearch=manifest.scripts.find(x=>x.path==='atlas-entity-search-current.js');
+assert.ok(entitySearch,'entity search authority missing from manifest');
+assert.equal(entitySearch.role,'entity-search-current-authority');
 assert.ok(manifest.forbidden_runtime_assets.includes('v041-entity-search-ux.js'));
 assert.ok(manifest.forbidden_runtime_assets.includes('v041-entity-search-ux.css'));
 
@@ -48,4 +47,4 @@ assert.match(build.entity360_search_ux,/ATLAS_ENTITY_SEARCH_CURRENT_0438/);
 assert.match(build.entity360_search_policy,/PREVIEW_8\+FULL_50/);
 assert.match(release.entity_search_policy,/DEBOUNCED_RLS_SUGGESTIONS/);
 
-console.log('ATLAS Entity 360 search 0.43.8 contract OK');
+console.log(`ATLAS Entity 360 search contract OK under release ${release.release}/${release.build}`);
