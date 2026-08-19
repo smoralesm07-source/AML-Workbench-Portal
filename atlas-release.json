@@ -1,0 +1,10 @@
+{
+  "product": "ATLAS AML",
+  "release": "0.42.0",
+  "build": "0420",
+  "channel": "current",
+  "deployment_policy": "SINGLE_ACTIVE_RELEASE",
+  "source_branch": "main",
+  "cache_policy": "MANIFEST_NO_STORE_AND_RELEASE_QUERY_BUST",
+  "legacy_release_policy": "GIT_HISTORY_ONLY_NOT_ACTIVE_RUNTIME"
+}
