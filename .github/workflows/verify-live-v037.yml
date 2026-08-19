@@ -15,8 +15,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  ATLAS_RELEASE: '0.42.0'
-  ATLAS_BUILD: '0420'
+  ATLAS_RELEASE: '0.42.1'
+  ATLAS_BUILD: '0421'
 
 jobs:
   smoke:
@@ -40,6 +40,8 @@ jobs:
           grep -q "data-aml-build=\"${ATLAS_BUILD}\"" /tmp/live.html
           grep -q "data-atlas-release=\"${ATLAS_RELEASE}\"" /tmp/live.html
           grep -q "atlas-release-guard.js?r=${ATLAS_BUILD}" /tmp/live.html
+          grep -q "v0333-auth-preflight.js?r=${ATLAS_BUILD}" /tmp/live.html
+          grep -q "app.js?r=${ATLAS_BUILD}" /tmp/live.html
           grep -q 'ATLAS AML' /tmp/live.html
           grep -q 'Plataforma Integrada de Inteligencia y Riesgo' /tmp/live.html
           ! grep -q 'v035-final.module.js' /tmp/live.html
@@ -58,6 +60,9 @@ jobs:
           grep -q "SINGLE_ACTIVE_RELEASE" /tmp/release-guard.js
           grep -q "atlas-release-reload-count" /tmp/release-guard.js
           grep -q "cache:'no-store'" /tmp/release-guard.js
+          grep -q "setAttrIfChanged" /tmp/release-guard.js
+          grep -q "observer.observe(root,{attributes:true" /tmp/release-guard.js
+          ! grep -q "observer.observe(root,{attributes:true.*subtree:true" /tmp/release-guard.js
 
       - name: Publish current live status
         if: always()
@@ -82,7 +87,8 @@ jobs:
             'live_smoke':live,
             'status':'success' if ok else 'failure',
             'required_assets':['atlas-release.json','atlas-release-guard.js','v040-theme-bootstrap.js','v0401-radar-graphics-fix.js','v0401-radar-graphics-fix.css','v0402-reconciliation-live.js','v039-atlas-brand.js','v039-atlas-brand.css','v0391-entity-entry.js','v0391-entity-entry.css','v038-entity360.js','v038-entity360.css','v038-final.module.js','v037-public-spend.js','v037-public-spend.css','v037-final.module.js'],
-            'blocked_runtime_authorities':['v035-final.module.js','v036-final.module.js']
+            'blocked_runtime_authorities':['v035-final.module.js','v036-final.module.js'],
+            'bootstrap_policy':'RELEASE_GUARD_NO_SELF_MUTATION_LOOP'
           }
           Path('data/public_spend_v037_live_status.json').write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding='utf-8')
           PY
