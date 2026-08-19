@@ -1,9 +1,9 @@
-name: Verify Live ATLAS AML v0.39
+name: Verify Live ATLAS AML current release
 
 on:
   workflow_run:
     workflows:
-      - 'Deploy ATLAS AML Portal'
+      - 'Deploy current ATLAS AML release'
     types: [completed]
   workflow_dispatch:
 
@@ -11,8 +11,12 @@ permissions:
   contents: write
 
 concurrency:
-  group: verify-live-atlas-v039
+  group: verify-live-atlas-current
   cancel-in-progress: true
+
+env:
+  ATLAS_RELEASE: '0.42.0'
+  ATLAS_BUILD: '0420'
 
 jobs:
   smoke:
@@ -21,50 +25,41 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
+          fetch-depth: 1
 
-      - name: Verify served ATLAS AML v0.39 assets
+      - name: Verify exact served ATLAS release
         id: live
         continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
           URL='https://smoralesm07-source.github.io/AML-Workbench-Portal/'
-          curl --fail --silent --show-error --location --retry 8 --retry-delay 3 "$URL" -o /tmp/live.html
-          grep -q 'data-aml-version="0.39.0"' /tmp/live.html
-          grep -q 'data-aml-build="0390"' /tmp/live.html
+          stamp=$(date +%s)
+          curl --fail --silent --show-error --location --retry 10 --retry-delay 3 "${URL}?atlas_release=${ATLAS_RELEASE}:${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/live.html
+          grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" /tmp/live.html
+          grep -q "data-aml-build=\"${ATLAS_BUILD}\"" /tmp/live.html
+          grep -q "data-atlas-release=\"${ATLAS_RELEASE}\"" /tmp/live.html
+          grep -q "atlas-release-guard.js?r=${ATLAS_BUILD}" /tmp/live.html
           grep -q 'ATLAS AML' /tmp/live.html
           grep -q 'Plataforma Integrada de Inteligencia y Riesgo' /tmp/live.html
-          grep -q 'v040-theme-bootstrap.js?b=0400' /tmp/live.html
-          grep -q 'v039-atlas-brand.js?b=0390' /tmp/live.html
-          grep -q 'v039-atlas-brand.css?b=0390' /tmp/live.html
-          grep -q 'v0391-entity-entry.js?b=0391' /tmp/live.html
-          grep -q 'v0391-entity-entry.css?b=0391' /tmp/live.html
-          grep -q 'v037-public-spend.js?b=0370' /tmp/live.html
-          grep -q 'v037-public-spend.css?b=0370' /tmp/live.html
-          grep -q 'v037-final.module.js?b=0370' /tmp/live.html
-          grep -q 'v038-entity360.js?b=0380' /tmp/live.html
-          grep -q 'v038-entity360.css?b=0380' /tmp/live.html
-          grep -q 'v038-final.module.js?b=0390' /tmp/live.html
-          grep -q 'v036-radar-integrado-crosswalk.js?b=0360' /tmp/live.html
+          ! grep -q 'v035-final.module.js' /tmp/live.html
+          ! grep -q 'v036-final.module.js' /tmp/live.html
 
-          curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "${URL%/}/v0391-entity-entry.js?b=0391" -o /tmp/entity-entry.js
-          curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "${URL%/}/v0391-entity-entry.css?b=0391" -o /tmp/entity-entry.css
-          grep -q 'v0391LoadEntities' /tmp/entity-entry.js
-          grep -q 'FORCE_V038_RENDERER\|v038Render(pkg,false)' /tmp/entity-entry.js
-          grep -q 'v0391-entry-hero' /tmp/entity-entry.css
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 2 "${URL}atlas-release.json?_atlas=${stamp}" -o /tmp/release.json
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 2 "${URL}atlas-release-guard.js?r=${ATLAS_BUILD}" -o /tmp/release-guard.js
+          python - <<'PY'
+          import json,os
+          m=json.load(open('/tmp/release.json'))
+          assert m['release']==os.environ['ATLAS_RELEASE'],m
+          assert m['build']==os.environ['ATLAS_BUILD'],m
+          assert m['deployment_policy']=='SINGLE_ACTIVE_RELEASE',m
+          assert m['legacy_release_policy']=='GIT_HISTORY_ONLY_NOT_ACTIVE_RUNTIME',m
+          PY
+          grep -q "SINGLE_ACTIVE_RELEASE" /tmp/release-guard.js
+          grep -q "atlas-release-reload-count" /tmp/release-guard.js
+          grep -q "cache:'no-store'" /tmp/release-guard.js
 
-          curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "${URL%/}/v040-theme-bootstrap.js?b=0400" -o /tmp/theme-bootstrap.js
-          curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "${URL%/}/v0401-radar-graphics-fix.js?b=0401" -o /tmp/radar-graphics.js
-          curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "${URL%/}/v0401-radar-graphics-fix.css?b=0401" -o /tmp/radar-graphics.css
-          grep -q 'v0401-radar-graphics-fix.css?b=0401' /tmp/theme-bootstrap.js
-          grep -q 'v0401-radar-graphics-fix.js?b=0401' /tmp/theme-bootstrap.js
-          grep -q 'CSP_BLOCKED_INLINE_QUANTITATIVE_STYLES' /tmp/radar-graphics.js
-          grep -q 'v0401RepairAsym' /tmp/radar-graphics.js
-          grep -q 'v0401RepairReconciliation' /tmp/radar-graphics.js
-          grep -q 'v0401Audit' /tmp/radar-graphics.js
-          grep -q 'data-v0401-graphics' /tmp/radar-graphics.css
-
-      - name: Publish stable live status
+      - name: Publish current live status
         if: always()
         env:
           LIVE: ${{ steps.live.outcome }}
@@ -72,24 +67,22 @@ jobs:
         shell: bash
         run: |
           python - <<'PY'
-          import json, os
+          import json,os
           from pathlib import Path
           live=os.environ.get('LIVE')
           deploy=os.environ.get('DEPLOY_CONCLUSION') or 'manual'
           ok=(live=='success' and deploy in ('success','manual'))
           payload={
-            'workbench_version':'0.39.0',
+            'workbench_version':os.environ['ATLAS_RELEASE'],
+            'build':os.environ['ATLAS_BUILD'],
             'product_name':'ATLAS AML',
-            'entity360_ui':'0.38.0',
-            'entity_entry_patch':'0391',
-            'public_spend_ui':'13.1',
-            'radar_integrado_graphics_fix':'0401',
-            'graphics_policy':'CSP_SAFE_RUNTIME_SCALE',
+            'release_policy':'SINGLE_ACTIVE_RELEASE',
+            'legacy_release_policy':'GIT_HISTORY_ONLY_NOT_ACTIVE_RUNTIME',
             'pages_deploy':deploy,
             'live_smoke':live,
             'status':'success' if ok else 'failure',
-            'required_assets':['v040-theme-bootstrap.js','v0401-radar-graphics-fix.js','v0401-radar-graphics-fix.css','v039-atlas-brand.js','v039-atlas-brand.css','v0391-entity-entry.js','v0391-entity-entry.css','v038-entity360.js','v038-entity360.css','v038-final.module.js','v037-public-spend.js','v037-public-spend.css','v037-final.module.js'],
-            'preserved_assets':['v036-radar-integrado-crosswalk.js']
+            'required_assets':['atlas-release.json','atlas-release-guard.js','v040-theme-bootstrap.js','v0401-radar-graphics-fix.js','v0401-radar-graphics-fix.css','v0402-reconciliation-live.js','v039-atlas-brand.js','v039-atlas-brand.css','v0391-entity-entry.js','v0391-entity-entry.css','v038-entity360.js','v038-entity360.css','v038-final.module.js','v037-public-spend.js','v037-public-spend.css','v037-final.module.js'],
+            'blocked_runtime_authorities':['v035-final.module.js','v036-final.module.js']
           }
           Path('data/public_spend_v037_live_status.json').write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding='utf-8')
           PY
@@ -97,10 +90,10 @@ jobs:
           git config user.email "aml-workbench-bot@users.noreply.github.com"
           git add data/public_spend_v037_live_status.json
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "ci: publica smoke live ATLAS AML v0.39 · gráficos Radar 0401"
+          git commit -m "ci: publica smoke live ATLAS AML current release"
           git pull --rebase origin main
           git push origin main
 
-      - name: Fail if live ATLAS AML v0.39 is not served
+      - name: Fail if current release is not served
         if: steps.live.outcome != 'success' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != 'success')
         run: exit 1
