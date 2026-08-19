@@ -15,6 +15,14 @@ PATTERNS = {
     'legacy_visible_version_literal': re.compile(r'Operational\s+Radar\s*·\s*v', re.I),
 }
 
+SESSION_FORBIDDEN_PATTERNS = {
+    'manual_set_session': re.compile(r'auth\.setSession\s*\('),
+    'manual_refresh_token_payload': re.compile(r'refresh_token\s*:'),
+}
+
+LEGACY_AUTH_ASSET = 'assets/atlas-auth-stability-0440.js'
+CURRENT_FINAL_AUTH_MARKER = 'SUPABASE_SESSION_SOURCE_OF_TRUTH+DOUBLE_LOCAL_RECHECK'
+
 
 def main():
     parser=argparse.ArgumentParser()
@@ -42,6 +50,34 @@ def main():
             print(f' - {path}: {rule} at line(s) {lines}')
         raise SystemExit(1)
 
+    # Session reliability: no compiled production code may manually replay a
+    # Supabase session/refresh token. Supabase JS owns refresh-token rotation.
+    session_violations=[]
+    for path in files:
+        text=path.read_text(encoding='utf-8')
+        for rule,pattern in SESSION_FORBIDDEN_PATTERNS.items():
+            matches=list(pattern.finditer(text))
+            if matches:
+                lines=[text.count('\n',0,m.start())+1 for m in matches[:8]]
+                session_violations.append((path.name,rule,lines))
+    if session_violations:
+        print('Compiled ATLAS session-authority violations detected:')
+        for path,rule,lines in session_violations:
+            print(f' - {path}: {rule} at line(s) {lines}')
+        raise SystemExit(1)
+
+    # Legacy 0.44.0 recovery code must not be published or referenced. It was a
+    # standalone asset outside the canonical runtime and could trigger reloads.
+    legacy_asset=root/LEGACY_AUTH_ASSET
+    if legacy_asset.exists():
+        raise SystemExit(f'Legacy auth runtime unexpectedly published: {LEGACY_AUTH_ASSET}')
+    index_path=root/'index.html'
+    if not index_path.is_file():
+        raise SystemExit('Missing compiled index.html')
+    index_text=index_path.read_text(encoding='utf-8')
+    if 'atlas-auth-stability-0440.js' in index_text:
+        raise SystemExit('Legacy auth runtime is still referenced by compiled index.html')
+
     # Reliability contract 1: a release publication must never evict an active session.
     release_guard=root/'atlas-release-guard.js'
     if not release_guard.is_file():
@@ -60,7 +96,7 @@ def main():
     final_text=final_module.read_text(encoding='utf-8')
     required_final_markers=(
         '__ATLAS_RUNTIME_RELIABILITY__',
-        'DOUBLE_SESSION_CHECK+SERVER_TOKEN_VERIFY',
+        CURRENT_FINAL_AUTH_MARKER,
         'V0391_ENTRY+V038_ENTITY360',
         '__ATLAS_ENTITY_AUTHORITY_FINAL__',
     )
@@ -82,7 +118,8 @@ def main():
     print(
         f'ATLAS compiled runtime authority OK: {len(files)} bundle/module asset(s); '
         'atlas-release-guard.js remains the sole version authority; '
-        f'{final_module.name} owns final session/Entity 360 reliability authority'
+        f'{final_module.name} owns final session/Entity 360 reliability authority; '
+        'legacy auth replay/reload runtime is absent'
     )
 
 
