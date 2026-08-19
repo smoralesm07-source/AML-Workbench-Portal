@@ -13,6 +13,8 @@
   "radar_integrado_priority_queue": "SECONDARY_ENTITY_FINDING_QUEUE_WITHOUT_UNIVERSAL_RISK_SCORE",
   "radar_integrado_sector_crosswalk": "EXPLICIT_LABEL_ALIASES_ONLY_NO_FUZZY_MATCHING",
   "radar_integrado_public_spend_bridge": "V037_NATIVE_PUBLIC_SPEND_ROUTE",
+  "radar_integrado_state_binding": "GLOBAL_LEXICAL_STATE_NOT_WINDOW_STATE",
+  "radar_integrado_runtime_fix": "V036_GOVERNED_STATE_POST_RENDER_BINDING",
   "public_entity_source": "Radar_SII/config/public_entities_registry.csv",
   "public_entity_identity_policy": "RUT_OR_ENTITY_ID_EXACT_ONLY",
   "public_entity_risk_policy": "PUBLIC_STATUS_IS_CONTEXT_NOT_ADVERSE_SIGNAL",
