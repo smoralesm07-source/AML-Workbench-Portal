@@ -1,6 +1,6 @@
 {
-  "app_version": "0.42.3",
-  "build": "0423",
+  "app_version": "0.42.4",
+  "build": "0424",
   "product_name": "ATLAS AML",
   "product_tagline": "Plataforma Integrada de Inteligencia y Riesgo",
   "visible_identity": "ATLAS_AML_CURRENT",
@@ -8,7 +8,8 @@
   "legacy_release_policy": "GIT_HISTORY_ONLY_NOT_ACTIVE_RUNTIME",
   "deployment_source_policy": "ALWAYS_HEAD_OF_MAIN_NOT_TRIGGER_SHA",
   "pages_artifact_policy": "CLEAN_SITE_CURRENT_RELEASE_ONLY",
-  "cache_policy": "MANIFEST_NO_STORE+RELEASE_QUERY_BUST+STALE_DOCUMENT_SELF_RELOAD",
+  "cache_policy": "GLOBAL_LOCAL_JS_CSS_RELEASE_QUERY_BUST+MANIFEST_NO_STORE+STALE_DOCUMENT_SELF_RELOAD",
+  "asset_coherency_policy": "ALL_LOCAL_JS_CSS_PINNED_TO_CURRENT_BUILD",
   "navigation_contract": "UNIFORM_LEVEL_GROUPED_BY_PURPOSE+EVENT_DRIVEN_UNREAD_NEWS",
   "theme_system": "ATLAS_THEME_SYSTEM_V040",
   "theme_default": "DARK_RADAR_INTEGRADO",
