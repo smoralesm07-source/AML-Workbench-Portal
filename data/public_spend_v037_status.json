@@ -1,16 +1,17 @@
 {
-  "generated_at": "2026-08-19T15:23:38+00:00",
-  "workbench_version": "0.42.2",
-  "build": "0422",
+  "generated_at": "2026-08-19T15:25:12+00:00",
+  "workbench_version": "0.42.3",
+  "build": "0423",
   "product_name": "ATLAS AML",
   "release_policy": "SINGLE_ACTIVE_RELEASE",
   "entity360_ui": "0.38.0",
   "public_spend_ui": "13.1",
   "javascript": "success",
-  "app_contract": "failure",
-  "source_contract": "skipped",
-  "status": "failure",
+  "app_contract": "success",
+  "source_contract": "success",
+  "status": "success",
   "identity_policy": "RUT_OR_ENTITY_ID_EXACT_ONLY",
   "marks_policy": "PRIORITIZATION_NOT_FINDINGS",
-  "uaf_reference": "OPTIONAL_INDEPENDENT"
+  "uaf_reference": "OPTIONAL_INDEPENDENT",
+  "visible_version_authority": "ATLAS_RELEASE_GUARD_ONLY"
 }
