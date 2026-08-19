@@ -5,11 +5,18 @@
   const BUILD=document.documentElement.getAttribute('data-aml-build')||'current';
   const HARD_WATCHDOG=10000;
   const DIRECT_TIMEOUT=4500;
-  const SESSION_RECHECK_MS=1200;
 
   function now(){return new Date().toISOString();}
   function status(stage,extra={}){
-    window.__ATLAS_AUTH_BOOT__={release:RELEASE,build:BUILD,stage,checkedAt:now(),...extra};
+    window.__ATLAS_AUTH_BOOT__={
+      release:RELEASE,
+      build:BUILD,
+      stage,
+      authMutation:false,
+      refreshTokenReplay:false,
+      checkedAt:now(),
+      ...extra
+    };
   }
   function host(){return document.querySelector('#app');}
   function title(){return host()?.querySelector('.auth-card h1')?.textContent?.trim()||'';}
@@ -24,14 +31,9 @@
     const p=host()?.querySelector('.auth-card p');
     if(p)p.textContent=text;
   }
-  function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
 
-  /* Startup circuit breaker.
-     The legacy reconciliation code can issue multiple PostgREST count=exact
-     requests while the home screen is hydrating. On the current dataset those
-     scans are expensive enough to degrade PostgreSQL/Auth. Install this guard
-     before feature bundles run so those requests can never participate in boot.
-     RLS and the underlying governed views remain unchanged. */
+  /* Startup circuit breaker: never allow legacy exact reconciliation counts to
+     participate in authentication/bootstrap. RLS and governed views are unchanged. */
   function installReconciliationCircuitBreaker(){
     if(typeof sb==='undefined'||!sb?.from||sb.__atlasReconCircuitBreaker)return;
     const guarded=new Set(['aml_v0205_uaf_sii_reconciliation','aml_v0210_uaf_sii_reconciliation']);
@@ -92,63 +94,6 @@
     }finally{clearTimeout(timer);}
   }
 
-  const originalRenderLogin=typeof renderLogin==='function'?renderLogin:null;
-  let loginValidationInFlight=false;
-  let explicitLogout=false;
-
-  document.addEventListener('click',event=>{
-    if(event.target?.closest?.('#logout')){
-      explicitLogout=true;
-      try{sessionStorage.setItem('atlas-explicit-logout','1');}catch(_error){}
-      status('explicit-logout');
-    }
-  },true);
-
-  async function readStableSession(){
-    if(typeof sb==='undefined'||!sb?.auth)return null;
-    let first=null;
-    try{first=(await sb.auth.getSession())?.data?.session||null;}catch(_error){}
-    if(first)return first;
-    await sleep(SESSION_RECHECK_MS);
-    try{return (await sb.auth.getSession())?.data?.session||null;}catch(_error){return null;}
-  }
-
-  function renderVerifiedLogin(){
-    if(originalRenderLogin)return originalRenderLogin();
-  }
-
-  async function guardedRenderLogin(){
-    if(explicitLogout){
-      status('login-after-explicit-logout');
-      return renderVerifiedLogin();
-    }
-    if(loginValidationInFlight)return;
-    loginValidationInFlight=true;
-    status('login-transition-verifying-session');
-    try{
-      const session=await readStableSession();
-      if(session){
-        try{sessionStorage.removeItem('atlas-explicit-logout');}catch(_error){}
-        if(typeof state!=='undefined')state.user=session.user;
-        status('login-suppressed-session-still-valid',{userId:session.user?.id||null});
-        await recoverAccess({force:true});
-        return;
-      }
-      status('login-confirmed-no-session');
-      renderVerifiedLogin();
-    }finally{
-      loginValidationInFlight=false;
-    }
-  }
-
-  /* The legacy auth listener may ask to render the login card on a transient
-     SIGNED_OUT-like client event even though the persisted Supabase session is
-     still valid. Never discard an authenticated shell until the local session
-     has been checked twice. Explicit logout is never intercepted. */
-  if(originalRenderLogin){
-    try{renderLogin=guardedRenderLogin;}catch(_error){window.renderLogin=guardedRenderLogin;}
-  }
-
   function openProtectedDegraded(session,error){
     if(typeof state!=='undefined'){
       state.user=session.user;
@@ -157,22 +102,11 @@
     window.__ATLAS_DEGRADED_AUTH__={active:true,reason:String(error?.message||error||'backend-timeout'),at:now()};
     status('protected-degraded',{reason:window.__ATLAS_DEGRADED_AUTH__.reason});
     if(typeof loadOverview==='function'){
-      try{
-        const result=loadOverview();
-        Promise.resolve(result).catch(err=>console.warn('[ATLAS] degraded overview hydration failed',err));
-      }catch(err){console.warn('[ATLAS] degraded overview render failed',err);}
+      try{Promise.resolve(loadOverview()).catch(err=>console.warn('[ATLAS] degraded overview hydration failed',err));}
+      catch(err){console.warn('[ATLAS] degraded overview render failed',err);}
     }else if(typeof shell==='function'){
       shell('Resumen operativo','ATLAS abierto en modo protegido; la base de datos está respondiendo con lentitud.');
     }
-    window.setTimeout(()=>{
-      const contentNode=document.querySelector('#content');
-      if(contentNode&&!contentNode.querySelector('.atlas-backend-warning')){
-        const note=document.createElement('div');
-        note.className='notice atlas-backend-warning';
-        note.textContent='Modo protegido: la autenticación Microsoft está activa, pero Supabase está degradado. RLS continúa protegiendo los datos; algunos módulos pueden tardar o no responder hasta que se recupere la base.';
-        contentNode.prepend(note);
-      }
-    },250);
   }
 
   async function recoverAccess(options={}){
@@ -185,11 +119,9 @@
       if(sessionResult?.error)throw sessionResult.error;
       const session=sessionResult?.data?.session||null;
       if(!session){
-        status('no-session-after-verification');
-        return renderVerifiedLogin();
+        status('no-session');
+        return;
       }
-      explicitLogout=false;
-      try{sessionStorage.removeItem('atlas-explicit-logout');}catch(_error){}
       if(typeof state!=='undefined')state.user=session.user;
 
       let access=null;
@@ -200,8 +132,7 @@
         if(typeof state!=='undefined')state.access=access;
         status('authorized',{role:access.role||'viewer'});
         if(!hasShell()&&typeof loadOverview==='function'){
-          const result=loadOverview();
-          Promise.resolve(result).catch(error=>console.warn('[ATLAS] overview hydration failed',error));
+          Promise.resolve(loadOverview()).catch(error=>console.warn('[ATLAS] overview hydration failed',error));
         }
         if(typeof auditSession==='function')Promise.resolve().then(()=>auditSession()).catch(()=>{});
         return;
@@ -217,8 +148,6 @@
         return;
       }
 
-      /* A backend timeout is not an authorization denial. Keep the authenticated
-         shell available; every data request is still enforced by Supabase RLS. */
       if(hasShell()){
         window.__ATLAS_DEGRADED_AUTH__={active:true,reason:String(lastError?.message||lastError||'backend-timeout'),at:now()};
         status('protected-degraded-shell-retained',{reason:window.__ATLAS_DEGRADED_AUTH__.reason});
@@ -226,18 +155,9 @@
       }
       openProtectedDegraded(session,lastError);
     }catch(error){
-      const session=await readStableSession();
-      if(session){
-        if(hasShell()){
-          window.__ATLAS_DEGRADED_AUTH__={active:true,reason:String(error?.message||error),at:now()};
-          status('protected-degraded-shell-retained',{reason:window.__ATLAS_DEGRADED_AUTH__.reason});
-          return;
-        }
-        openProtectedDegraded(session,error);
-        return;
-      }
-      status('login-confirmed-after-session-check');
-      renderVerifiedLogin();
+      status('bootstrap-error',{error:String(error?.message||error)});
+      /* Deliberately do not render login or mutate auth state here. The canonical
+         Supabase auth event flow owns session end; this layer only rescues startup. */
     }
   }
 
