@@ -80,6 +80,12 @@ jobs:
           node --check atlas-release-guard.js
           node --check v040-theme-bootstrap.js
 
+      - name: Enforce sole runtime version authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/audit_runtime_authority.py
+
       - name: Build exact Pages candidate from allowlist
         shell: bash
         run: |
