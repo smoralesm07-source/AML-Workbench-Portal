@@ -1,13 +1,13 @@
 'use strict';
 
 /* ATLAS AML · single active release authority.
- * From v0.42.0 onward, historical source layers may remain in Git history or as
- * internal compatibility dependencies, but they are not allowed to reclaim the
- * visible/runtime release or keep a stale document alive.
+ * v0.42.1 fixes the bootstrap deadlock introduced by observing and rewriting
+ * the same release attributes unconditionally. Historical compatibility layers
+ * may remain as source dependencies, but only this guard owns the active release.
  */
 (function atlasSingleReleaseAuthority(){
-  const RELEASE='0.42.0';
-  const BUILD='0420';
+  const RELEASE='0.42.1';
+  const BUILD='0421';
   const PRODUCT='ATLAS AML';
   const TAGLINE='Plataforma Integrada de Inteligencia y Riesgo';
   const MANIFEST='./atlas-release.json';
@@ -16,15 +16,20 @@
   const root=document.documentElement;
   let applying=false;
   let observer=null;
+  let queued=false;
+
+  function setAttrIfChanged(name,value){
+    if(root.getAttribute(name)!==value)root.setAttribute(name,value);
+  }
 
   function applyRelease(){
     if(applying)return;
     applying=true;
     try{
-      root.setAttribute('data-aml-version',RELEASE);
-      root.setAttribute('data-aml-build',BUILD);
-      root.setAttribute('data-atlas-release',RELEASE);
-      root.setAttribute('data-atlas-release-policy','single-active');
+      setAttrIfChanged('data-aml-version',RELEASE);
+      setAttrIfChanged('data-aml-build',BUILD);
+      setAttrIfChanged('data-atlas-release',RELEASE);
+      setAttrIfChanged('data-atlas-release-policy','single-active');
       window.__AML_ACTIVE_VERSION__=RELEASE;
       window.__AML_BUILD__=BUILD;
       window.__ATLAS_ACTIVE_VERSION__=RELEASE;
@@ -34,7 +39,7 @@
       const wantedTitle=`${PRODUCT} · v${RELEASE}`;
       if(document.title!==wantedTitle)document.title=wantedTitle;
       const meta=document.querySelector('meta[name="application-name"]');
-      if(meta)meta.content=`${PRODUCT} · ${TAGLINE}`;
+      if(meta&&meta.content!==`${PRODUCT} · ${TAGLINE}`)meta.content=`${PRODUCT} · ${TAGLINE}`;
 
       document.querySelectorAll('.topbar .eyebrow,.v18-pagehead .eyebrow').forEach(el=>{
         if(el.textContent!==wantedTitle)el.textContent=wantedTitle;
@@ -45,17 +50,36 @@
         const small=brand.querySelector('small');
         if(small){
           if(/(?:Operational Radar|WorkBench|Workbench|\bv?0\.\d+)/i.test(small.textContent||''))small.textContent=TAGLINE;
-          small.dataset.activeVersion=RELEASE;
+          if(small.dataset.activeVersion!==RELEASE)small.dataset.activeVersion=RELEASE;
         }
       });
+      window.__ATLAS_RELEASE_GUARD_HEALTH__={status:'ready',release:RELEASE,build:BUILD,checkedAt:new Date().toISOString()};
     }finally{applying=false;}
+  }
+
+  function queueApply(){
+    if(queued)return;
+    queued=true;
+    queueMicrotask(()=>{
+      queued=false;
+      applyRelease();
+    });
   }
 
   function watchRelease(){
     applyRelease();
     if(observer)return;
-    observer=new MutationObserver(()=>queueMicrotask(applyRelease));
-    observer.observe(root,{attributes:true,attributeFilter:['data-aml-version','data-aml-build','data-atlas-release'],childList:true,subtree:true});
+    /* Observe only the root release attributes. Never observe subtree/childList:
+     * applyRelease also updates visible labels, and observing those mutations can
+     * create a self-sustaining microtask loop that starves Supabase auth promises. */
+    observer=new MutationObserver(()=>{
+      if(root.getAttribute('data-aml-version')!==RELEASE ||
+         root.getAttribute('data-aml-build')!==BUILD ||
+         root.getAttribute('data-atlas-release')!==RELEASE){
+        queueApply();
+      }
+    });
+    observer.observe(root,{attributes:true,attributeFilter:['data-aml-version','data-aml-build','data-atlas-release']});
   }
 
   function reloadCurrent(manifest){
@@ -87,6 +111,7 @@
       return true;
     }catch(error){
       console.warn('[ATLAS] release manifest check unavailable',error);
+      window.__ATLAS_RELEASE_GUARD_HEALTH__={status:'manifest-unavailable',release:RELEASE,build:BUILD,error:String(error?.message||error),checkedAt:new Date().toISOString()};
       applyRelease();
       return false;
     }
@@ -106,6 +131,7 @@
   else watchRelease();
   window.addEventListener('pageshow',()=>void verifyManifest());
   window.addEventListener('focus',()=>void verifyManifest());
+  window.addEventListener('atlas:themechange',queueApply);
   void verifyManifest();
   for(const ms of [0,120,350,900,1800,4000,8000])setTimeout(applyRelease,ms);
 })();
