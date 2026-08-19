@@ -144,7 +144,12 @@ if(typeof window.navigate==='function'){
   window.navigate=async function(view,...args){const r=await baseNavigate(view,...args);atlasApplyBrand();return r;};
 }
 
-const atlasObserver=new MutationObserver(()=>atlasApplyBrand());
-atlasObserver.observe(document.documentElement,{childList:true,subtree:true});
+/* Watch only shell replacement at #app level. Observing the whole subtree would
+ * also observe ATLAS' own menu reordering and create a feedback loop. */
+const atlasRoot=document.querySelector('#app');
+if(atlasRoot){
+  const atlasObserver=new MutationObserver(()=>queueMicrotask(atlasApplyBrand));
+  atlasObserver.observe(atlasRoot,{childList:true});
+}
 atlasApplyBrand();
 for(const ms of [0,120,320,700,1300])setTimeout(atlasApplyBrand,ms);
