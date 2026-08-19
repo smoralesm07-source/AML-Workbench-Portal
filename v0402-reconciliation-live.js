@@ -1,15 +1,17 @@
 'use strict';
 
-/* ATLAS AML v0.40.2 · UAF ↔ SII reconciliation live authority
- * Fresh asset URL isolates reconciliation from legacy browser caches.
- * Counts are read only after an authenticated Supabase session exists.
- * A zero result is never treated as an authoritative business value.
+/* ATLAS AML · UAF ↔ SII reconciliation live authority
+ * Session-aware, no-zero-cache and view-scoped. The observer is debounced and
+ * never starts a second reconciliation request while one is already running.
  */
 (function atlasReconciliationLive(){
   const VIEW='aml_v0210_uaf_sii_reconciliation';
   let lastGood=null;
   let hydrateToken=0;
-  let queued=false;
+  let hydrateTimer=null;
+  let inFlight=null;
+
+  function isOverview(){return typeof state!=='undefined'&&state.view==='overview';}
 
   async function count(status){
     let q=sb.from(VIEW).select('entity_id',{count:'exact',head:true});
@@ -45,7 +47,7 @@
 
   function render(counts){
     const ctx=window.__AML_V036_CONTEXT;
-    if(!ctx||typeof state==='undefined'||state.view!=='overview')return;
+    if(!ctx||!isOverview())return;
     ctx.counts=counts;
     try{if(typeof V036_STATE!=='undefined')V036_STATE.ctx=ctx;}catch{}
     const flow=document.querySelector('.v036-flow');
@@ -68,6 +70,7 @@
   }
 
   function markUnavailable(error){
+    if(!isOverview())return;
     const flow=document.querySelector('.v036-flow');
     const card=flow?.closest('.v036-card');
     if(card){
@@ -76,28 +79,35 @@
       if(copy)copy.textContent='Conciliación temporalmente no disponible bajo la sesión actual; no se interpreta como cero.';
     }
     window.__AML_UAF_SII_RECONCILIATION__={status:'degraded',source:VIEW,error:String(error?.message||error),checkedAt:new Date().toISOString()};
-    console.warn('[ATLAS v0.40.2] UAF↔SII reconciliation unavailable',error);
+    console.warn('[ATLAS] UAF↔SII reconciliation unavailable',error);
   }
 
   async function hydrate(){
+    if(!isOverview()||!document.querySelector('.v036-flow'))return null;
+    if(inFlight)return inFlight;
     const ctx=window.__AML_V036_CONTEXT;
-    if(!ctx||typeof state==='undefined'||state.view!=='overview')return;
+    if(!ctx)return null;
     const token=++hydrateToken;
-    try{
-      const counts=await loadCounts();
-      if(token!==hydrateToken)return;
-      render(counts);
-    }catch(error){
-      if(token!==hydrateToken)return;
-      if(lastGood){render(lastGood);return;}
-      markUnavailable(error);
-    }
+    inFlight=(async()=>{
+      try{
+        const counts=await loadCounts();
+        if(token!==hydrateToken||!isOverview())return counts;
+        render(counts);
+        return counts;
+      }catch(error){
+        if(token!==hydrateToken||!isOverview())return null;
+        if(lastGood){render(lastGood);return lastGood;}
+        markUnavailable(error);
+        return null;
+      }finally{inFlight=null;}
+    })();
+    return inFlight;
   }
 
-  function queueHydrate(){
-    if(queued)return;
-    queued=true;
-    queueMicrotask(()=>{queued=false;void hydrate();});
+  function queueHydrate(delay=180){
+    clearTimeout(hydrateTimer);
+    if(!isOverview()||!document.querySelector('.v036-flow'))return;
+    hydrateTimer=setTimeout(()=>{hydrateTimer=null;void hydrate();},delay);
   }
 
   if(typeof v0205LoadCounts==='function'){
@@ -116,20 +126,21 @@
 
   const root=document.querySelector('#app')||document.documentElement;
   new MutationObserver(()=>{
-    if(document.querySelector('.v036-flow'))queueHydrate();
+    if(isOverview()&&document.querySelector('.v036-flow'))queueHydrate(220);
+    else clearTimeout(hydrateTimer);
   }).observe(root,{childList:true,subtree:true});
 
   try{
     sb.auth.onAuthStateChange((event,session)=>{
       if(event==='SIGNED_OUT'){
-        lastGood=null;
+        clearTimeout(hydrateTimer);lastGood=null;hydrateToken++;
         try{if(typeof V0205_COUNTS!=='undefined')V0205_COUNTS=null;}catch{}
         return;
       }
-      if(event==='SIGNED_IN'&&session)setTimeout(queueHydrate,0);
+      if(event==='SIGNED_IN'&&session)queueHydrate(250);
     });
-  }catch(error){console.warn('[ATLAS v0.40.2] auth reconciliation listener unavailable',error);}
+  }catch(error){console.warn('[ATLAS] auth reconciliation listener unavailable',error);}
 
-  for(const ms of [0,120,500,1200,2500])setTimeout(queueHydrate,ms);
-  window.__ATLAS_RECONCILIATION_RUNTIME__={version:'0.40.2',view:VIEW,policy:'SESSION_AWARE_NO_ZERO_CACHE',hydrate:()=>hydrate(),getLastGood:()=>lastGood};
+  for(const ms of [250,1600])setTimeout(()=>queueHydrate(120),ms);
+  window.__ATLAS_RECONCILIATION_RUNTIME__={version:'current',view:VIEW,policy:'SESSION_AWARE_NO_ZERO_CACHE+VIEW_SCOPED_DEBOUNCE+SINGLE_IN_FLIGHT',hydrate:()=>hydrate(),getLastGood:()=>lastGood};
 })();
