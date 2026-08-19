@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  const VERSION=String(document.documentElement.getAttribute('data-aml-version')||window.__AML_ACTIVE_VERSION__||window.__ATLAS_ACTIVE_VERSION__||'0.39.0');
+  const VERSION=String(document.documentElement.getAttribute('data-aml-version')||window.__AML_ACTIVE_VERSION__||window.__ATLAS_ACTIVE_VERSION__||'0.42.2');
   const VERSION_LABEL=`v${VERSION}`;
   const BRAND_SVG=`<svg class="atlas-aie-logo" viewBox="0 0 64 64" role="img" aria-label="AIE · Inteligencia Estratégica" focusable="false">
     <g fill="none" stroke="var(--atlas-logo-line)" stroke-linecap="round" stroke-linejoin="round">
@@ -25,31 +25,36 @@
     </g>
   </svg>`;
 
+  function setText(el,value){if(el&&el.textContent!==value)el.textContent=value;}
+  function setAttr(el,name,value){if(el&&el.getAttribute(name)!==value)el.setAttribute(name,value);}
+  function setData(el,name,value){if(el&&el.dataset[name]!==value)el.dataset[name]=value;}
+
   function apply(){
     document.querySelectorAll('.v019-brand').forEach(brand=>{
       const mark=brand.querySelector('.mark');
       if(mark){
         if(!mark.querySelector('.atlas-aie-logo'))mark.innerHTML=BRAND_SVG;
-        mark.setAttribute('aria-label','AIE · Inteligencia Estratégica');
-        mark.setAttribute('title','AIE · Inteligencia Estratégica');
+        setAttr(mark,'aria-label','AIE · Inteligencia Estratégica');
+        setAttr(mark,'title','AIE · Inteligencia Estratégica');
       }
       const strong=brand.querySelector('strong');
-      if(strong)strong.textContent='ATLAS AML';
+      setText(strong,'ATLAS AML');
       const small=brand.querySelector('small');
       if(small){
-        small.textContent=VERSION_LABEL;
-        small.dataset.activeVersion=VERSION;
-        small.setAttribute('aria-label',`Versión ${VERSION}`);
+        setText(small,VERSION_LABEL);
+        setData(small,'activeVersion',VERSION);
+        setAttr(small,'aria-label',`Versión ${VERSION}`);
       }
     });
 
-    document.querySelectorAll('.brand-copy strong,.v18-brand strong').forEach(el=>{el.textContent='ATLAS AML';});
+    document.querySelectorAll('.brand-copy strong,.v18-brand strong').forEach(el=>setText(el,'ATLAS AML'));
     document.querySelectorAll('.brand-copy span,.brand-copy small,.v18-brand small').forEach(el=>{
       if(!el.closest('.v18-session')){
-        el.textContent=VERSION_LABEL;
-        el.dataset.activeVersion=VERSION;
+        setText(el,VERSION_LABEL);
+        setData(el,'activeVersion',VERSION);
       }
     });
+    window.__ATLAS_AIE_BRAND_HEALTH__={status:'ready',version:VERSION,mutationPolicy:'CHILD_INSERTIONS_ONLY_NO_CHARACTERDATA_LOOP',checkedAt:new Date().toISOString()};
   }
 
   let queued=false;
@@ -62,9 +67,11 @@
   apply();
   const root=document.querySelector('#app')||document.body;
   if(root){
-    const observer=new MutationObserver(queue);
-    observer.observe(root,{childList:true,subtree:true,characterData:true});
+    const observer=new MutationObserver((records)=>{
+      if(records.some(r=>r.type==='childList'&&(r.addedNodes?.length||r.removedNodes?.length)))queue();
+    });
+    observer.observe(root,{childList:true,subtree:true});
   }
   window.addEventListener('atlas:themechange',queue);
-  for(const ms of [0,80,220,500,900,1500,2600,4200,5600,7200,9000])setTimeout(apply,ms);
+  for(const ms of [0,120,500,1500,4000,8000])setTimeout(apply,ms);
 })();
