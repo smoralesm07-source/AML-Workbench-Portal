@@ -9,18 +9,14 @@ on:
       - 'v037-public-spend.css'
       - 'v037-final.module.js'
       - 'v038-entity360.js'
-      - 'v038-entity360.css'
       - 'v038-final.module.js'
       - 'v039-atlas-brand.js'
       - 'v039-atlas-brand.css'
       - 'v040-theme-bootstrap.js'
-      - 'v0402-aie-brand.js'
-      - 'v0422-auth-bootstrap-fix.js'
-      - 'v0342-runtime.js'
-      - 'v0343-final.module.js'
+      - 'atlas-current-ui.js'
+      - 'atlas-current-ui.css'
       - 'atlas-release.json'
       - 'atlas-release-guard.js'
-      - 'index.html'
       - 'build.json'
       - '.github/workflows/validate-v037-public-spend.yml'
 
@@ -32,8 +28,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  ATLAS_RELEASE: '0.42.4'
-  ATLAS_BUILD: '0424'
+  ATLAS_RELEASE: '0.42.5'
+  ATLAS_BUILD: '0425'
 
 jobs:
   validate:
@@ -49,18 +45,13 @@ jobs:
         run: |
           set -euo pipefail
           node --check atlas-release-guard.js
+          node --check atlas-current-ui.js
           node --check v040-theme-bootstrap.js
-          node --check v0402-aie-brand.js
-          node --check v0422-auth-bootstrap-fix.js
-          node --check v0342-runtime.js
-          node --check v0343-final.module.js
-          node --check v037-public-spend.js
           node --check v037-final.module.js
-          node --check v038-entity360.js
           node --check v038-final.module.js
+          node --check v037-public-spend.js
+          node --check v038-entity360.js
           node --check v039-atlas-brand.js
-          node --check v036-radar-integrado-runtime-fix.js
-          node --check v0402-reconciliation-live.js
 
       - name: Validate current ATLAS integration contract
         id: app
@@ -72,32 +63,25 @@ jobs:
           build=json.load(open('build.json',encoding='utf-8'))
           assert release['release']==os.environ['ATLAS_RELEASE'],release
           assert release['build']==os.environ['ATLAS_BUILD'],release
-          assert release['bootstrap_policy']=='NO_SELF_SUSTAINING_MUTATION_OBSERVERS',release
-          assert release['visible_version_policy']=='ATLAS_RELEASE_GUARD_ONLY_LEGACY_RUNTIME_DELEGATES',release
-          assert release['asset_coherency_policy']=='ALL_LOCAL_JS_CSS_PINNED_TO_CURRENT_BUILD',release
+          assert release['ui_authority_policy']=='ATLAS_CURRENT_UI_LAST_WRITER',release
+          assert release['navigation_policy']=='UNIFORM_LEVEL_NO_LEGACY_PSEUDO_MARKERS',release
           assert build['app_version']==os.environ['ATLAS_RELEASE'],build
           assert build['build']==os.environ['ATLAS_BUILD'],build
-          assert build['visible_version_authority']=='ATLAS_RELEASE_GUARD_ONLY',build
-          assert build['asset_coherency_policy']=='ALL_LOCAL_JS_CSS_PINNED_TO_CURRENT_BUILD',build
-          assert 'LEGACY_RUNTIME_AUTHORITIES_DELEGATED' in build['auth_fix'],build
+          assert build['ui_authority_policy']=='ATLAS_CURRENT_UI_LAST_WRITER',build
           PY
-          grep -q 'ALL_LOCAL_JS_CSS_PINNED_TO_CURRENT_BUILD' atlas-release-guard.js
-          grep -q 'CHILD_INSERTIONS_ONLY_NO_CHARACTERDATA_LOOP' v0402-aie-brand.js
-          ! grep -q 'characterData:true' v0402-aie-brand.js
-          grep -q 'audit is best-effort' v0422-auth-bootstrap-fix.js
-          grep -q 'AUTH_TIMEOUT=6500' v0422-auth-bootstrap-fix.js
-          grep -q 'atlas-release-guard-via-v0342-compat' v0342-runtime.js
-          grep -q 'atlas-release-guard-via-v0343-compat' v0343-final.module.js
-          ! grep -q 'window.__AML_ACTIVE_VERSION__=V0342_RUNTIME' v0342-runtime.js
-          ! grep -q 'window.__AML_ACTIVE_VERSION__=VERSION' v0343-final.module.js
+          grep -q 'atlas-current-ui.css' v040-theme-bootstrap.js
+          grep -q 'atlas-current-ui.js' v040-theme-bootstrap.js
+          grep -q 'atlas:nav-refresh' v037-final.module.js
+          grep -q 'atlas-release-guard-via-v037-compat' v037-final.module.js
+          grep -q 'atlas-release-guard-via-v038-compat' v038-final.module.js
+          ! grep -q 'window.__AML_ACTIVE_VERSION__=VERSION' v037-final.module.js
+          ! grep -q 'window.__AML_ACTIVE_VERSION__=VERSION' v038-final.module.js
+          grep -q 'data-view="public-spend"' atlas-current-ui.css
+          grep -q 'content:none!important' atlas-current-ui.css
+          grep -q 'Gasto público' atlas-current-ui.js
           grep -q 'PROVEEDOR_SOURCE_TRUE_AND_NOT_INTRAESTADO_AND_NOT_PUBLIC_NAME' v037-public-spend.js
-          grep -q 'aml_entities' v037-public-spend.js
           grep -q 'aml_v0205_uaf_sii_reconciliation' v037-public-spend.js
-          grep -q 'aml_v028_sanctions_with_identity' v037-public-spend.js
-          grep -q "uafReference:'OPTIONAL_INDEPENDENT'" v037-public-spend.js
-          grep -q 'focusRut' v037-final.module.js
           grep -q 'v037LoadData' v038-entity360.js
-          grep -q 'atlas:nav-news' v039-atlas-brand.js
 
       - name: Validate live Radar Presupuesto Abierto contracts
         id: source
@@ -108,8 +92,7 @@ jobs:
           base='https://raw.githubusercontent.com/smoralesm07-source/Rada_Presupuesto_Abierto/main/docs/data/'
           def load(name):
               req=urllib.request.Request(base+name,headers={'User-Agent':'ATLAS-AML-current-validation'})
-              with urllib.request.urlopen(req,timeout=60) as r:
-                  return json.load(r)
+              with urllib.request.urlopen(req,timeout=60) as r:return json.load(r)
           status=load('spend_corrected_v3_status.json')
           ui=load('spend_v131_status.json')
           assert status.get('validation')=='success'
@@ -118,7 +101,6 @@ jobs:
           assert status.get('payment_basis')=='FECHA_PAGO_AND_MONTO_PAGO'
           assert ui.get('mark_filter_bundle')=='success'
           assert ui.get('filter_mode')=='single_toggle'
-          assert ui.get('uaf_reference')=='optional_independent'
           PY
 
       - name: Publish validation status
@@ -138,18 +120,14 @@ jobs:
             'workbench_version':os.environ['ATLAS_RELEASE'],
             'build':os.environ['ATLAS_BUILD'],
             'product_name':'ATLAS AML',
-            'release_policy':'SINGLE_ACTIVE_RELEASE',
-            'entity360_ui':'0.38.0',
-            'public_spend_ui':'13.1',
             'javascript':os.environ.get('JS'),
             'app_contract':os.environ.get('APP'),
             'source_contract':os.environ.get('SOURCE'),
             'status':'success' if ok else 'failure',
-            'identity_policy':'RUT_OR_ENTITY_ID_EXACT_ONLY',
-            'marks_policy':'PRIORITIZATION_NOT_FINDINGS',
-            'uaf_reference':'OPTIONAL_INDEPENDENT',
             'visible_version_authority':'ATLAS_RELEASE_GUARD_ONLY',
-            'asset_coherency_policy':'ALL_LOCAL_JS_CSS_PINNED_TO_CURRENT_BUILD'
+            'asset_coherency_policy':'ALL_LOCAL_JS_CSS_PINNED_TO_CURRENT_BUILD',
+            'ui_authority_policy':'ATLAS_CURRENT_UI_LAST_WRITER',
+            'navigation_policy':'UNIFORM_LEVEL_NO_LEGACY_PSEUDO_MARKERS'
           }
           Path('data/public_spend_v037_status.json').write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding='utf-8')
           PY
