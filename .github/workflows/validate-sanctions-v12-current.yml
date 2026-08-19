@@ -1,0 +1,126 @@
+name: Validate approved Sanciones v12 current
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'atlas-release.json'
+      - 'build.json'
+      - 'atlas-runtime-manifest.json'
+      - 'atlas-sanctions-v12-approved-*.js'
+      - 'atlas-sanctions-v12-approved-*.css'
+      - 'tools/build_atlas_site.py'
+      - '.github/workflows/validate-sanctions-v12-current.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'atlas-release.json'
+      - 'build.json'
+      - 'atlas-runtime-manifest.json'
+      - 'atlas-sanctions-v12-approved-*.js'
+      - 'atlas-sanctions-v12-approved-*.css'
+      - 'tools/build_atlas_site.py'
+      - '.github/workflows/validate-sanctions-v12-current.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate canonical Sanciones source contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          release=json.load(open('atlas-release.json',encoding='utf-8'))
+          build=json.load(open('build.json',encoding='utf-8'))
+          manifest=json.load(open('atlas-runtime-manifest.json',encoding='utf-8'))
+          assert release['release']==build['app_version']==manifest['release']
+          assert release['build']==build['build']==manifest['build']
+          assert build['sanctions_ui_contract']=='APPROVED_V12_ATLAS_THEME_NATIVE'
+          assert build['sanctions_data_contract']=='RADAR_SANCTIONS+ENTITY_HUB_V1+WORKBENCH_IDENTITY+UAF_RECONCILIATION'
+          scripts=[x['path'] for x in manifest['scripts']]
+          styles=list(manifest['styles'])
+          approved_js=[f'atlas-sanctions-v12-approved-{i:02d}.js' for i in range(1,7)]
+          approved_css=[f'atlas-sanctions-v12-approved-{i:02d}.css' for i in range(1,5)]
+          assert all(x in scripts for x in approved_js),scripts
+          assert all(x in styles for x in approved_css),styles
+          old_js={'v034-sanctions-v12-core.js','v034-sanctions-v12-ui.js','v034-sanctions-v12-charts.js','v0341-sanctions-hardening.js'}
+          assert not old_js.intersection(scripts),old_js.intersection(scripts)
+          assert 'v034-sanctions-v12.css' not in styles
+          ui_pos=scripts.index('atlas-current-ui.js')
+          assert scripts[ui_pos-6:ui_pos]==approved_js,scripts[ui_pos-8:ui_pos+1]
+          for path in approved_js+approved_css:
+              assert Path(path).is_file(),path
+          PY
+
+      - name: Validate approved source syntax and semantic markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in atlas-sanctions-v12-approved-*.js; do node --check "$f"; done
+          grep -q 'AML_SANCTIONS_V12_APPROVED' atlas-sanctions-v12-approved-06.js
+          grep -q 'sv12LoadSanctionsApproved' atlas-sanctions-v12-approved-06.js
+          grep -q 'RADAR_SANCTIONS+ENTITY_HUB_V1+WORKBENCH_IDENTITY+UAF_RECONCILIATION' build.json
+          grep -q 'Consulta directa de entidad' atlas-sanctions-v12-approved-01.js
+          grep -q 'Últimas sanciones · Top 5' atlas-sanctions-v12-approved-01.js
+          grep -q 'Concentración regional de sanciones' atlas-sanctions-v12-approved-01.js
+          grep -q 'Materias sancionatorias' atlas-sanctions-v12-approved-01.js
+          grep -q 'Sanciones por supervisor' atlas-sanctions-v12-approved-01.js
+          grep -q 'Entidades sancionadas' atlas-sanctions-v12-approved-01.js
+          grep -q 'Potenciales SO' atlas-sanctions-v12-approved-01.js
+          grep -q 'IER' atlas-sanctions-v12-approved-01.js
+          grep -q -- '--atlas-panel' atlas-sanctions-v12-approved-01.css
+          grep -q -- '--atlas-accent' atlas-sanctions-v12-approved-01.css
+          grep -q -- '--atlas-uaf' atlas-sanctions-v12-approved-01.css
+
+      - name: Build exact canonical Pages candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/build_atlas_site.py --out _site-sanctions
+          for f in _site-sanctions/atlas-runtime-current-*.js _site-sanctions/atlas-module-current-*.js; do
+            test -e "$f" || continue
+            node --check "$f"
+          done
+          grep -R -q 'AML_SANCTIONS_V12_APPROVED' _site-sanctions/atlas-runtime-current-*.js
+          grep -R -q 'Consulta directa de entidad' _site-sanctions/atlas-runtime-current-*.js
+          grep -R -q 'Últimas sanciones · Top 5' _site-sanctions/atlas-runtime-current-*.js
+          grep -R -q 'Concentración regional de sanciones' _site-sanctions/atlas-runtime-current-*.js
+          grep -R -q 'Materias sancionatorias' _site-sanctions/atlas-runtime-current-*.js
+          grep -R -q 'Sanciones por supervisor' _site-sanctions/atlas-runtime-current-*.js
+          grep -R -q 'Entidades sancionadas' _site-sanctions/atlas-runtime-current-*.js
+          grep -q '.sv12-approved' _site-sanctions/atlas-runtime-current.css
+          ! grep -R -q 'v0341-sanctions-hardening.js' _site-sanctions/index.html
+
+      - name: Verify live Radar Sanciones upstream contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 --connect-timeout 10 https://raw.githubusercontent.com/smoralesm07-source/Radar_sanciones/main/docs/data/metadata.json -o /tmp/sanctions-meta.json
+          curl -fsSL --retry 3 --connect-timeout 10 https://raw.githubusercontent.com/smoralesm07-source/Radar_sanciones/main/docs/data/entity_hub_v1.json -o /tmp/sanctions-hub.json
+          python - <<'PY'
+          import json
+          meta=json.load(open('/tmp/sanctions-meta.json',encoding='utf-8'))
+          hub=json.load(open('/tmp/sanctions-hub.json',encoding='utf-8'))
+          assert meta.get('bootstrap_pending') is False,meta
+          assert int(meta.get('current_data_from_year',9999))<=2020,meta
+          assert int(meta.get('event_count',0))>0,meta
+          assert isinstance(hub,list) and hub, 'Entity Hub vacío'
+          sample=next(x for x in hub if x.get('rut'))
+          for k in ('entity_id','rut','canonical_name','identity_status','identity_method','identity_confidence'):
+              assert k in sample,k
+          print(f"Radar Sanciones OK · {meta.get('event_count')} eventos · corte {meta.get('latest_event_date')} · {len(hub)} identidades")
+          PY
