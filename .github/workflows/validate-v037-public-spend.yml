@@ -1,4 +1,4 @@
-name: Validate Gasto Público · ATLAS AML v0.39
+name: Validate Gasto Público · ATLAS AML current
 
 on:
   workflow_dispatch:
@@ -13,6 +13,8 @@ on:
       - 'v038-final.module.js'
       - 'v039-atlas-brand.js'
       - 'v039-atlas-brand.css'
+      - 'atlas-release.json'
+      - 'atlas-release-guard.js'
       - 'index.html'
       - 'build.json'
       - 'docs/public-spend-module-v037.md'
@@ -22,47 +24,55 @@ permissions:
   contents: write
 
 concurrency:
-  group: validate-public-spend-atlas-v039
+  group: validate-public-spend-atlas-current
   cancel-in-progress: true
+
+env:
+  ATLAS_RELEASE: '0.42.0'
+  ATLAS_BUILD: '0420'
 
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
 
       - name: Validate JavaScript syntax
         id: js
         run: |
           set -euo pipefail
+          node --check atlas-release-guard.js
           node --check v037-public-spend.js
           node --check v037-final.module.js
           node --check v038-entity360.js
           node --check v038-final.module.js
           node --check v039-atlas-brand.js
+          node --check v036-radar-integrado-runtime-fix.js
+          node --check v0402-reconciliation-live.js
 
-      - name: Validate ATLAS Workbench integration contract
+      - name: Validate current ATLAS integration contract
         id: app
         run: |
           set -euo pipefail
-          grep -q 'data-aml-version="0.39.0"' index.html
-          grep -q 'data-aml-build="0390"' index.html
+          python - <<'PY'
+          import json,os
+          release=json.load(open('atlas-release.json',encoding='utf-8'))
+          build=json.load(open('build.json',encoding='utf-8'))
+          assert release['release']==os.environ['ATLAS_RELEASE'],release
+          assert release['build']==os.environ['ATLAS_BUILD'],release
+          assert release['deployment_policy']=='SINGLE_ACTIVE_RELEASE',release
+          assert release['legacy_release_policy']=='GIT_HISTORY_ONLY_NOT_ACTIVE_RUNTIME',release
+          assert build['app_version']==os.environ['ATLAS_RELEASE'],build
+          assert build['build']==os.environ['ATLAS_BUILD'],build
+          assert build['release_policy']=='SINGLE_ACTIVE_RELEASE',build
+          assert build['deployment_source_policy']=='ALWAYS_HEAD_OF_MAIN_NOT_TRIGGER_SHA',build
+          PY
           grep -q 'ATLAS AML' index.html
-          grep -q 'v039-atlas-brand.css?b=0390' index.html
-          grep -q 'v039-atlas-brand.js?b=0390' index.html
-          grep -q 'v037-public-spend.css?b=0370' index.html
-          grep -q 'v037-public-spend.js?b=0370' index.html
-          grep -q 'v037-final.module.js?b=0370' index.html
-          grep -q 'v038-entity360.css?b=0380' index.html
-          grep -q 'v038-entity360.js?b=0380' index.html
-          grep -q 'v038-final.module.js?b=0390' index.html
-          grep -q '"app_version": "0.39.0"' build.json
-          grep -q 'ATLAS_AML_V039' build.json
-          grep -q 'PUBLIC_SPEND_V131_NATIVE' build.json
-          grep -q 'ENTITY360_V038' build.json
-          grep -q 'RADAR_PRESUPUESTO_ABIERTO_V131' build.json
-          grep -q 'PARTIDA_CAPITULO' build.json
-          grep -q 'FULL_PRIVATE_RELATION_UNIVERSE' build.json
+          grep -q 'Plataforma Integrada de Inteligencia y Riesgo' index.html
+          grep -q 'SINGLE_ACTIVE_RELEASE' atlas-release-guard.js
           grep -q 'PROVEEDOR_SOURCE_TRUE_AND_NOT_INTRAESTADO_AND_NOT_PUBLIC_NAME' v037-public-spend.js
           grep -q 'aml_entities' v037-public-spend.js
           grep -q 'aml_v0205_uaf_sii_reconciliation' v037-public-spend.js
@@ -83,7 +93,7 @@ jobs:
           import json, urllib.request
           base='https://raw.githubusercontent.com/smoralesm07-source/Rada_Presupuesto_Abierto/main/docs/data/'
           def load(name):
-              req=urllib.request.Request(base+name,headers={'User-Agent':'ATLAS-AML-v039-validation'})
+              req=urllib.request.Request(base+name,headers={'User-Agent':'ATLAS-AML-current-validation'})
               with urllib.request.urlopen(req,timeout=60) as r:
                   return json.load(r)
           status=load('spend_corrected_v3_status.json')
@@ -114,14 +124,16 @@ jobs:
           SOURCE: ${{ steps.source.outcome }}
         run: |
           python - <<'PY'
-          import json, os
-          from datetime import datetime, timezone
+          import json,os
+          from datetime import datetime,timezone
           from pathlib import Path
           ok=all(os.environ.get(k)=='success' for k in ('JS','APP','SOURCE'))
           payload={
             'generated_at':datetime.now(timezone.utc).isoformat(timespec='seconds'),
-            'workbench_version':'0.39.0',
+            'workbench_version':os.environ['ATLAS_RELEASE'],
+            'build':os.environ['ATLAS_BUILD'],
             'product_name':'ATLAS AML',
+            'release_policy':'SINGLE_ACTIVE_RELEASE',
             'entity360_ui':'0.38.0',
             'public_spend_ui':'13.1',
             'javascript':os.environ.get('JS'),
@@ -138,7 +150,7 @@ jobs:
           git config user.email "aml-workbench-bot@users.noreply.github.com"
           git add data/public_spend_v037_status.json
           if ! git diff --cached --quiet; then
-            git commit -m "ci: publica validación Gasto Público · ATLAS AML v0.39"
+            git commit -m "ci: publica validación Gasto Público · ATLAS AML current"
             git pull --rebase origin main
             git push origin main
           fi
