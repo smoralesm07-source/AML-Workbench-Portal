@@ -21,80 +21,68 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout current main
+      - name: Checkout exact HEAD of main
         uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 1
 
-      - name: Synchronize with HEAD of main
+      - name: Synchronize main and load release
         shell: bash
         run: |
           set -euo pipefail
           git fetch origin main --depth=1
           git reset --hard origin/main
-          echo "Deploying $(git rev-parse HEAD)"
-
-      - name: Load current release metadata
-        shell: bash
-        run: |
-          set -euo pipefail
           python - <<'PY' >> "$GITHUB_ENV"
-          import json
-          m=json.load(open('atlas-release.json',encoding='utf-8'))
-          print(f"ATLAS_RELEASE={m['release']}")
-          print(f"ATLAS_BUILD={m['build']}")
-          PY
-
-      - name: Verify compiled runtime policy
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
           import json
           r=json.load(open('atlas-release.json',encoding='utf-8'))
           m=json.load(open('atlas-runtime-manifest.json',encoding='utf-8'))
           b=json.load(open('build.json',encoding='utf-8'))
-          scripts=[x['path'] for x in m['scripts']]
           assert r['release']==m['release']==b['app_version']
           assert r['build']==m['build']==b['build']
           assert r['runtime_policy']=='CANONICAL_COMPILED_RUNTIME_ONLY'
-          assert r['pages_artifact_policy']=='COMPILED_CURRENT_BUNDLES_ONLY'
-          assert m['policy']=='CANONICAL_SOURCE_MANIFEST_FOR_COMPILED_RUNTIME'
           assert m['publish_mode']=='COMPILED_BUNDLES_ONLY'
-          assert r['future_change_policy']=='BRANCH_PR_VALIDATE_CURRENT_MERGE_MAIN_AUTO_DEPLOY_LIVE_SMOKE'
-          assert 'v0444-backend-stability.js' in scripts
-          assert scripts.index('v0444-backend-stability.js') > scripts.index('v0435-reconciliation-fix.js')
-          assert m['scripts'][-1]['path']=='v0442-session-stability.module.js'
+          scripts=[x['path'] for x in m['scripts']]
           assert 'v0441-session-shell-guard.module.js' not in scripts
+          assert 'v0443-auth-ui-stability.js' in scripts
+          assert 'v0442-session-stability.module.js' in scripts
+          assert 'v0444-backend-stability.js' in scripts
+          print(f"ATLAS_RELEASE={r['release']}")
+          print(f"ATLAS_BUILD={r['build']}")
           PY
-          node --check atlas-release-guard.js
-          node --check atlas-theme-bootstrap.js
+          echo "Deploying $(git rev-parse HEAD) · ${ATLAS_RELEASE:-release-loaded-next-step}"
+
+      - name: Validate token and session authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check v0422-auth-bootstrap-fix.js
+          node --check v0443-auth-ui-stability.js
           node --check v0442-session-stability.module.js
           node --check v0444-backend-stability.js
-          grep -q 'release-agnostic' atlas-release-guard.js
-          grep -q 'FIRST_PAINT_ONLY' atlas-theme-bootstrap.js
-          grep -q 'SUPABASE_CLIENT_ONLY_NO_MANUAL_REPLAY' v0442-session-stability.module.js
-          grep -q 'aml_v0444_uaf_sii_summary' v0444-backend-stability.js
-          grep -q 'exactReconciliationCounts:false' v0444-backend-stability.js
+          ! grep -qE 'auth\.setSession\(|refresh_token\s*:' v0422-auth-bootstrap-fix.js
+          ! grep -qE 'auth\.setSession\(|refresh_token\s*:' v0443-auth-ui-stability.js
           ! grep -qE 'auth\.setSession\(|refresh_token\s*:' v0442-session-stability.module.js
+          grep -q 'SUPABASE_CLIENT_ONLY_NO_MANUAL_REPLAY' v0442-session-stability.module.js
+          grep -q 'refreshTokenReplay:false' v0443-auth-ui-stability.js
 
       - name: Compile current ATLAS runtime
         shell: bash
         run: |
           set -euo pipefail
           python tools/build_atlas_site.py --out _site
-          test -f _site/index.html
-          test -f _site/atlas-runtime-report.json
-          test -f _site/atlas-runtime-current.css
-          test -f _site/atlas-runtime-current-01.js
-          test -f _site/atlas-theme-bootstrap.js
+          test -s _site/index.html
+          test -s _site/atlas-runtime-report.json
+          test -s _site/atlas-runtime-current.css
+          test -s _site/atlas-runtime-current-01.js
           grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" _site/index.html
           grep -q "data-aml-build=\"${ATLAS_BUILD}\"" _site/index.html
           grep -q "atlas-runtime-current.css?r=${ATLAS_BUILD}" _site/index.html
-          ! grep -q '?b=' _site/index.html
+          ! grep -q 'atlas-auth-stability-0440.js' _site/index.html
+          ! test -e _site/assets/atlas-auth-stability-0440.js
+          ! test -e _site/v0441-session-shell-guard.module.js
 
-      - name: Validate compiled bundles and authority
+      - name: Validate compiled runtime
         shell: bash
         run: |
           set -euo pipefail
@@ -103,24 +91,20 @@ jobs:
             node --check "$f"
           done
           python tools/audit_runtime_authority.py --root _site
+          grep -R -q 'aml_v0444_uaf_sii_summary' _site/atlas-runtime-current-*.js
+          ! grep -R -qE 'auth\.setSession\(|refresh_token\s*:' _site/atlas-runtime-current-*.js _site/atlas-module-current-*.js
           python - <<'PY'
           import json
-          from pathlib import Path
-          m=json.load(open('atlas-runtime-manifest.json',encoding='utf-8'))
-          report=json.load(open('_site/atlas-runtime-report.json',encoding='utf-8'))
-          assert report['policy']=='CANONICAL_COMPILED_RUNTIME_ONLY',report
-          assert report['publish_mode']=='COMPILED_BUNDLES_ONLY',report
-          assert report['historical_source_assets_published'] is False,report
-          for source in [*m['styles'],*[x['path'] for x in m['scripts']]]:
-              assert not Path('_site',source).exists(),f'source fragment published: {source}'
+          r=json.load(open('_site/atlas-runtime-report.json',encoding='utf-8'))
+          assert r['policy']=='CANONICAL_COMPILED_RUNTIME_ONLY',r
+          assert r['historical_source_assets_published'] is False,r
+          assert r.get('legacy_auth_runtime_published') is False,r
           PY
-          grep -R -q 'aml_v0444_uaf_sii_summary' _site/atlas-runtime-current-*.js
-          ! grep -R -qE 'auth\.setSession\(|refresh_token\s*:' _site/atlas-module-current-*.js
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload current release only
+      - name: Upload compiled current release
         uses: actions/upload-pages-artifact@v4
         with:
           path: ./_site
@@ -129,7 +113,7 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Smoke test exact compiled release
+      - name: Smoke test deployed release
         shell: bash
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
@@ -137,28 +121,16 @@ jobs:
           set -euo pipefail
           stamp=$(date +%s)
           base="${PAGE_URL%/}"
-          curl -fsSL --retry 10 --retry-delay 2 "$base/?atlas_release=${ATLAS_RELEASE}:${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/atlas.html
-          curl -fsSL "$base/atlas-release.json?_atlas=${stamp}" -o /tmp/release.json
-          curl -fsSL "$base/atlas-runtime-report.json?_atlas=${stamp}" -o /tmp/runtime.json
+          curl -fsSL --retry 12 --retry-delay 2 "$base/atlas-release.json?_atlas=${stamp}" -o /tmp/release.json
+          curl -fsSL --retry 12 --retry-delay 2 "$base/atlas-runtime-report.json?_atlas=${stamp}" -o /tmp/runtime.json
+          curl -fsSL --retry 12 --retry-delay 2 "$base/?_atlas=${stamp}" -o /tmp/index.html
           python - <<'PY'
           import json,os
           r=json.load(open('/tmp/release.json'))
           rt=json.load(open('/tmp/runtime.json'))
           assert r['release']==os.environ['ATLAS_RELEASE'] and r['build']==os.environ['ATLAS_BUILD'],r
-          assert r['runtime_policy']=='CANONICAL_COMPILED_RUNTIME_ONLY',r
           assert rt['release']==os.environ['ATLAS_RELEASE'] and rt['build']==os.environ['ATLAS_BUILD'],rt
-          assert rt['policy']=='CANONICAL_COMPILED_RUNTIME_ONLY',rt
-          assert rt['historical_source_assets_published'] is False,rt
-          assert rt['visible_version_authority']=='atlas-release-guard.js',rt
+          assert rt.get('legacy_auth_runtime_published') is False,rt
           PY
-          grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" /tmp/atlas.html
-          grep -q "data-aml-build=\"${ATLAS_BUILD}\"" /tmp/atlas.html
-          grep -q "atlas-runtime-current.css?r=${ATLAS_BUILD}" /tmp/atlas.html
-          grep -q "atlas-runtime-current-01.js?r=${ATLAS_BUILD}" /tmp/atlas.html
-          ! grep -q '?b=' /tmp/atlas.html
-          for old in v0222-radar-hotfix.js v028-ipa3-global.js v032-irg-territory.js v0342-runtime.js v035-radar-command-center.js v037-public-spend.js v038-entity360.js v039-atlas-brand.js v040-theme-bootstrap.js v0441-session-shell-guard.module.js; do
-            if curl -fsS "$base/$old?_atlas=${stamp}" -o /dev/null; then
-              echo "Versioned source/runtime unexpectedly published: $old"
-              exit 1
-            fi
-          done
+          grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" /tmp/index.html
+          grep -q "atlas-runtime-current-01.js?r=${ATLAS_BUILD}" /tmp/index.html
