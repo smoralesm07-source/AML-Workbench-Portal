@@ -1,0 +1,15 @@
+{
+  "workbench_version": "0.37.0",
+  "public_spend_ui": "13.1",
+  "pages_deploy": "success",
+  "live_smoke": "success",
+  "status": "success",
+  "required_assets": [
+    "v037-public-spend.js",
+    "v037-public-spend.css",
+    "v037-final.module.js"
+  ],
+  "preserved_assets": [
+    "v036-radar-integrado-crosswalk.js"
+  ]
+}
