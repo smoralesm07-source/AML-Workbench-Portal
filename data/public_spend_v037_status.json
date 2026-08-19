@@ -1,11 +1,12 @@
 {
-  "generated_at": "2026-08-19T11:32:44+00:00",
-  "workbench_version": "0.37.0",
+  "generated_at": "2026-08-19T11:36:19+00:00",
+  "workbench_version": "0.38.0",
+  "entity360_ui": "0.38.0",
   "public_spend_ui": "13.1",
   "javascript": "success",
-  "app_contract": "failure",
-  "source_contract": "skipped",
-  "status": "failure",
+  "app_contract": "success",
+  "source_contract": "success",
+  "status": "success",
   "identity_policy": "RUT_OR_ENTITY_ID_EXACT_ONLY",
   "marks_policy": "PRIORITIZATION_NOT_FINDINGS",
   "uaf_reference": "OPTIONAL_INDEPENDENT"
