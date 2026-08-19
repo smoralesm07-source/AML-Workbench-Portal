@@ -72,9 +72,20 @@ jobs:
           python - <<'PY' > /tmp/atlas-js.txt
           import json
           m=json.load(open('atlas-runtime-manifest.json'))
-          for x in m['scripts']: print(x['path'])
+          segmented={f'atlas-sanctions-v12-approved-{i:02d}.js' for i in range(1,7)}
+          for x in m['scripts']:
+              if x['path'] not in segmented:
+                  print(x['path'])
           PY
           while IFS= read -r f; do node --check "$f"; done < /tmp/atlas-js.txt
+          cat \
+            atlas-sanctions-v12-approved-01.js \
+            atlas-sanctions-v12-approved-02.js \
+            atlas-sanctions-v12-approved-03.js \
+            atlas-sanctions-v12-approved-04.js \
+            atlas-sanctions-v12-approved-05.js \
+            atlas-sanctions-v12-approved-06.js > /tmp/atlas-sanctions-v12-approved.js
+          node --check /tmp/atlas-sanctions-v12-approved.js
           node --check atlas-release-guard.js
           node --check atlas-theme-bootstrap.js
           node --check tools/build_atlas_site.py >/dev/null 2>&1 || true
@@ -135,10 +146,11 @@ jobs:
           grep -q 'AtlasNavNews' atlas-current-ui.js
           grep -q 'Gasto público' atlas-current-ui.js
           grep -q 'window.v035OpenCgr=openCgr' atlas-cgr-bridge.js
-          grep -q 'AML_SANCTIONS_V12' v034-sanctions-v12-charts.js
+          grep -q 'AML_SANCTIONS_V12_APPROVED' atlas-sanctions-v12-approved-06.js
+          grep -q 'legacyFrozenRouteBypassed:true' atlas-sanctions-v12-route.js
           grep -q 'SESSION_AWARE' build.json
           grep -q 'aml_v0205_uaf_sii_reconciliation' v037-public-spend.js
-          if test -f tests/v0341-sanctions-contract.mjs; then node tests/v0341-sanctions-contract.mjs; fi
+          if test -f tests/v0435-reconciliation-contract.mjs; then node tests/v0435-reconciliation-contract.mjs; fi
 
       - name: Validate governed local JSON assets
         shell: bash
