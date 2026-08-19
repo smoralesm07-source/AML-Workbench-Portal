@@ -1,0 +1,47 @@
+name: Validate Entidades integration 0391
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'v0391-entity-entry.js'
+      - 'v0391-entity-entry.css'
+      - 'v038-entity360.js'
+      - 'index.html'
+      - 'build.json'
+      - '.github/workflows/validate-v0391-entity-entry.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-entity-entry-0391
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate JavaScript
+        run: |
+          set -euo pipefail
+          node --check v038-entity360.js
+          node --check v0391-entity-entry.js
+      - name: Verify integration contract
+        run: |
+          set -euo pipefail
+          grep -q 'v0391-entity-entry.css?b=0391' index.html
+          grep -q 'v0391-entity-entry.js?b=0391' index.html
+          grep -q 'ENTITY_ENTRY_V0391' build.json
+          grep -q 'NEW_ENTITIES_LANDING+SEARCH_RESULTS+FEATURED_HIGH_COVERAGE+FORCE_V038_RENDERER' build.json
+          grep -q 'v0391LoadEntities' v0391-entity-entry.js
+          grep -q 'v0391SearchEntities' v0391-entity-entry.js
+          grep -q 'v0203OpenEntity' v0391-entity-entry.js
+          grep -q 'v038Render(pkg,false)' v0391-entity-entry.js
+          grep -q 'Caracteriza una entidad antes de interpretar sus señales' v0391-entity-entry.js
+          grep -q 'Ausencia ≠ cero' v0391-entity-entry.js
+          grep -q 'Prioridad ≠ probabilidad' v0391-entity-entry.js
+          test -f v0391-entity-entry.js
+          test -f v0391-entity-entry.css
