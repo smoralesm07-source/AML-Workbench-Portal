@@ -5,6 +5,7 @@
   const BUILD=document.documentElement.getAttribute('data-aml-build')||'current';
   const HARD_WATCHDOG=10000;
   const DIRECT_TIMEOUT=4500;
+  const SESSION_RECHECK_MS=1200;
 
   function now(){return new Date().toISOString();}
   function status(stage,extra={}){
@@ -23,6 +24,7 @@
     const p=host()?.querySelector('.auth-card p');
     if(p)p.textContent=text;
   }
+  function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
 
   /* Startup circuit breaker.
      The legacy reconciliation code can issue multiple PostgREST count=exact
@@ -90,6 +92,63 @@
     }finally{clearTimeout(timer);}
   }
 
+  const originalRenderLogin=typeof renderLogin==='function'?renderLogin:null;
+  let loginValidationInFlight=false;
+  let explicitLogout=false;
+
+  document.addEventListener('click',event=>{
+    if(event.target?.closest?.('#logout')){
+      explicitLogout=true;
+      try{sessionStorage.setItem('atlas-explicit-logout','1');}catch(_error){}
+      status('explicit-logout');
+    }
+  },true);
+
+  async function readStableSession(){
+    if(typeof sb==='undefined'||!sb?.auth)return null;
+    let first=null;
+    try{first=(await sb.auth.getSession())?.data?.session||null;}catch(_error){}
+    if(first)return first;
+    await sleep(SESSION_RECHECK_MS);
+    try{return (await sb.auth.getSession())?.data?.session||null;}catch(_error){return null;}
+  }
+
+  function renderVerifiedLogin(){
+    if(originalRenderLogin)return originalRenderLogin();
+  }
+
+  async function guardedRenderLogin(){
+    if(explicitLogout){
+      status('login-after-explicit-logout');
+      return renderVerifiedLogin();
+    }
+    if(loginValidationInFlight)return;
+    loginValidationInFlight=true;
+    status('login-transition-verifying-session');
+    try{
+      const session=await readStableSession();
+      if(session){
+        try{sessionStorage.removeItem('atlas-explicit-logout');}catch(_error){}
+        if(typeof state!=='undefined')state.user=session.user;
+        status('login-suppressed-session-still-valid',{userId:session.user?.id||null});
+        await recoverAccess({force:true});
+        return;
+      }
+      status('login-confirmed-no-session');
+      renderVerifiedLogin();
+    }finally{
+      loginValidationInFlight=false;
+    }
+  }
+
+  /* The legacy auth listener may ask to render the login card on a transient
+     SIGNED_OUT-like client event even though the persisted Supabase session is
+     still valid. Never discard an authenticated shell until the local session
+     has been checked twice. Explicit logout is never intercepted. */
+  if(originalRenderLogin){
+    try{renderLogin=guardedRenderLogin;}catch(_error){window.renderLogin=guardedRenderLogin;}
+  }
+
   function openProtectedDegraded(session,error){
     if(typeof state!=='undefined'){
       state.user=session.user;
@@ -116,18 +175,21 @@
     },250);
   }
 
-  async function recoverAccess(){
-    if(hasShell())return status('rendered');
-    setDetail('Autenticación correcta. Verificando autorización…');
+  async function recoverAccess(options={}){
+    const force=options?.force===true;
+    if(hasShell()&&!force)return status('rendered');
+    if(!hasShell())setDetail('Autenticación correcta. Verificando autorización…');
     try{
       if(typeof sb==='undefined'||!sb?.auth)throw new Error('Cliente de autenticación no disponible.');
       const sessionResult=await sb.auth.getSession();
       if(sessionResult?.error)throw sessionResult.error;
       const session=sessionResult?.data?.session||null;
       if(!session){
-        if(typeof renderLogin==='function')return renderLogin();
-        throw new Error('No existe una sesión activa.');
+        status('no-session-after-verification');
+        return renderVerifiedLogin();
       }
+      explicitLogout=false;
+      try{sessionStorage.removeItem('atlas-explicit-logout');}catch(_error){}
       if(typeof state!=='undefined')state.user=session.user;
 
       let access=null;
@@ -137,7 +199,7 @@
       if(access&&access.enabled){
         if(typeof state!=='undefined')state.access=access;
         status('authorized',{role:access.role||'viewer'});
-        if(typeof loadOverview==='function'){
+        if(!hasShell()&&typeof loadOverview==='function'){
           const result=loadOverview();
           Promise.resolve(result).catch(error=>console.warn('[ATLAS] overview hydration failed',error));
         }
@@ -155,15 +217,27 @@
         return;
       }
 
-      /* Critical rule: a backend timeout is not an authorization denial. Open the
-         authenticated shell in protected degraded mode. RLS remains the security
-         boundary and will continue to deny data if the user is not authorized. */
+      /* A backend timeout is not an authorization denial. Keep the authenticated
+         shell available; every data request is still enforced by Supabase RLS. */
+      if(hasShell()){
+        window.__ATLAS_DEGRADED_AUTH__={active:true,reason:String(lastError?.message||lastError||'backend-timeout'),at:now()};
+        status('protected-degraded-shell-retained',{reason:window.__ATLAS_DEGRADED_AUTH__.reason});
+        return;
+      }
       openProtectedDegraded(session,lastError);
     }catch(error){
-      const sessionResult=typeof sb!=='undefined'&&sb?.auth?await sb.auth.getSession().catch(()=>null):null;
-      const session=sessionResult?.data?.session||null;
-      if(session){openProtectedDegraded(session,error);return;}
-      if(typeof renderLogin==='function')renderLogin();
+      const session=await readStableSession();
+      if(session){
+        if(hasShell()){
+          window.__ATLAS_DEGRADED_AUTH__={active:true,reason:String(error?.message||error),at:now()};
+          status('protected-degraded-shell-retained',{reason:window.__ATLAS_DEGRADED_AUTH__.reason});
+          return;
+        }
+        openProtectedDegraded(session,error);
+        return;
+      }
+      status('login-confirmed-after-session-check');
+      renderVerifiedLogin();
     }
   }
 
@@ -178,5 +252,5 @@
 
   status('watchdog-scheduled',{watchdogMs:HARD_WATCHDOG});
   window.setTimeout(()=>void watchdog(),HARD_WATCHDOG);
-  window.AtlasAuthBootstrap={release:RELEASE,build:BUILD,retry:recoverAccess,status:()=>window.__ATLAS_AUTH_BOOT__};
+  window.AtlasAuthBootstrap={release:RELEASE,build:BUILD,retry:()=>recoverAccess({force:true}),status:()=>window.__ATLAS_AUTH_BOOT__};
 })();
