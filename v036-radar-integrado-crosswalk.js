@@ -29,6 +29,21 @@ v036SectorEquivalent=function(a,b){
   return false;
 };
 
+function v036DecorateNativeSpendCard(){
+  if(!window.__AML_PUBLIC_SPEND__?.load)return;
+  const card=document.querySelector('[data-v036-radar="budget"]');
+  if(!card||card.dataset.v037Native==='1')return;
+  card.dataset.v037Native='1';
+  const state=card.querySelector('.v036-rcard-head span');
+  const big=card.querySelector('strong');
+  const copy=card.querySelector('p');
+  const foot=card.querySelector('.v036-rcard-foot');
+  if(state)state.textContent='v13.1 native';
+  if(big)big.textContent='v13.1';
+  if(copy)copy.textContent='Módulo nativo de Gasto Público conectado a Radar Presupuesto Abierto, Entity Hub y cruces exactos por RUT.';
+  if(foot)foot.innerHTML='<span>Grano <b>partida/capítulo</b></span><span>Marcas <b>priorización</b></span>';
+}
+
 /* Workbench v0.37 introduced a native Gasto Público route after the v0.36
  * command center was built. Prefer that full module from Radar Integrado and
  * suppress the older preview action without changing any other radar card. */
@@ -40,9 +55,16 @@ document.addEventListener('click',e=>{
   void window.navigate?.('public-spend');
 },true);
 
+const v036SpendObserver=new MutationObserver(()=>{
+  if(window.state?.view==='overview')v036DecorateNativeSpendCard();
+});
+v036SpendObserver.observe(document.documentElement,{childList:true,subtree:true});
+queueMicrotask(v036DecorateNativeSpendCard);
+
 window.__AML_V036_SECTOR_CROSSWALK__={
   mode:'EXPLICIT_SECTOR_ALIASES_ONLY',
   fuzzy:false,
   aliases:V036_SECTOR_CROSS_ALIASES.length,
-  publicSpendBridge:'V037_NATIVE_ROUTE'
+  publicSpendBridge:'V037_NATIVE_ROUTE',
+  publicSpendPresentation:'V13_1_NATIVE'
 };
