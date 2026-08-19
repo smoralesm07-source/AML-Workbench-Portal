@@ -3,6 +3,7 @@
 /* AML Workbench v0.34.3 · final post-module runtime authority.
  * Runs as the last module so deferred v032 territory code cannot reclaim the app version.
  * Also pins the Sanciones route to the accepted v12 loader.
+ * Public Entity Context v1 is loaded only after this runtime authority is established.
  */
 const VERSION='0.34.3';
 const BUILD='0343';
@@ -87,3 +88,16 @@ if(document.readyState==='loading'){
   setTimeout(applyVersion,0);
   setTimeout(applyVersion,100);
 }
+
+/* Post-runtime context layer. It is intentionally additive: it must not replace
+ * sanctions v12, auth, routing or the core data contracts. */
+if(!document.querySelector('link[data-aml-public-entities]')){
+  const css=document.createElement('link');
+  css.rel='stylesheet';
+  css.href='./v0344-public-entities.css?b=0343';
+  css.dataset.amlPublicEntities='1';
+  document.head.appendChild(css);
+}
+import('./v0344-public-entities.module.js?b=0343').catch((error)=>{
+  console.warn('[AML] Public Entity Context module could not be loaded:',error);
+});
