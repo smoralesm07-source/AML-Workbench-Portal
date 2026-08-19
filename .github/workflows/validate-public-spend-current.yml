@@ -12,6 +12,7 @@ on:
       - 'atlas-runtime-manifest.json'
       - 'atlas-release.json'
       - 'build.json'
+      - 'tools/build_atlas_site.py'
       - '.github/workflows/validate-public-spend-current.yml'
   push:
     branches: [main]
@@ -24,6 +25,7 @@ on:
       - 'atlas-runtime-manifest.json'
       - 'atlas-release.json'
       - 'build.json'
+      - 'tools/build_atlas_site.py'
       - '.github/workflows/validate-public-spend-current.yml'
   workflow_dispatch:
 
@@ -42,7 +44,7 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Validate local integration
+      - name: Validate source integration and compiled policy
         shell: bash
         run: |
           set -euo pipefail
@@ -54,6 +56,8 @@ jobs:
           r=json.load(open('atlas-release.json'))
           m=json.load(open('atlas-runtime-manifest.json'))
           assert r['release']==m['release'] and r['build']==m['build']
+          assert r['runtime_policy']=='CANONICAL_COMPILED_RUNTIME_ONLY'
+          assert m['publish_mode']=='COMPILED_BUNDLES_ONLY'
           paths=[x['path'] for x in m['scripts']]
           assert 'v037-public-spend.js' in paths
           assert 'v038-entity360.js' in paths
@@ -64,6 +68,11 @@ jobs:
           grep -q 'aml_v0205_uaf_sii_reconciliation' v037-public-spend.js
           grep -q 'v037LoadData' v038-entity360.js
           grep -q 'Gasto público' atlas-current-ui.js
+          python tools/build_atlas_site.py --out _site-public-spend
+          test -f _site-public-spend/atlas-runtime-current.css
+          test ! -e _site-public-spend/v037-public-spend.js
+          test ! -e _site-public-spend/v037-public-spend.css
+          test ! -e _site-public-spend/v038-entity360.js
 
       - name: Validate live Radar Presupuesto Abierto contracts
         shell: bash
