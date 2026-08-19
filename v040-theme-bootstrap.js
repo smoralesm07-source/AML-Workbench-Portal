@@ -2,7 +2,7 @@
   'use strict';
 
   const KEY='atlas-aml:theme:v1';
-  const RELEASE_BUILD='0424';
+  const RELEASE_BUILD='0425';
   let theme='dark';
   try{
     const saved=localStorage.getItem(KEY);
@@ -30,10 +30,12 @@
 
   addStyle(`./v0401-radar-graphics-fix.css?r=${RELEASE_BUILD}`,'radar-graphics-css');
   addStyle(`./v0402-aie-brand.css?r=${RELEASE_BUILD}`,'aie-brand-css');
+  addStyle(`./atlas-current-ui.css?r=${RELEASE_BUILD}`,'current-ui-css');
 
   function loadRuntimeFixes(){
     addScript(`./v0401-radar-graphics-fix.js?r=${RELEASE_BUILD}`,'radar-graphics-js');
     addScript(`./v0402-aie-brand.js?r=${RELEASE_BUILD}`,'aie-brand-js');
+    addScript(`./atlas-current-ui.js?r=${RELEASE_BUILD}`,'current-ui-js');
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadRuntimeFixes,{once:true});
