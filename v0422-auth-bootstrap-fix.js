@@ -24,6 +24,57 @@
     if(p)p.textContent=text;
   }
 
+  /* Startup circuit breaker.
+     The legacy reconciliation code can issue multiple PostgREST count=exact
+     requests while the home screen is hydrating. On the current dataset those
+     scans are expensive enough to degrade PostgreSQL/Auth. Install this guard
+     before feature bundles run so those requests can never participate in boot.
+     RLS and the underlying governed views remain unchanged. */
+  function installReconciliationCircuitBreaker(){
+    if(typeof sb==='undefined'||!sb?.from||sb.__atlasReconCircuitBreaker)return;
+    const guarded=new Set(['aml_v0205_uaf_sii_reconciliation','aml_v0210_uaf_sii_reconciliation']);
+    const originalFrom=sb.from.bind(sb);
+    const emptyResult={data:null,count:0,error:null,status:200,statusText:'OK'};
+    function noopQuery(){
+      const q={};
+      ['eq','neq','gt','gte','lt','lte','in','is','or','contains','order','range','limit','match','filter','not'].forEach(method=>{q[method]=()=>q;});
+      q.then=(resolve,reject)=>Promise.resolve(emptyResult).then(resolve,reject);
+      q.catch=reject=>Promise.resolve(emptyResult).catch(reject);
+      q.finally=handler=>Promise.resolve(emptyResult).finally(handler);
+      return q;
+    }
+    sb.from=function(table){
+      const builder=originalFrom(table);
+      if(!guarded.has(String(table))||!builder?.select)return builder;
+      const originalSelect=builder.select.bind(builder);
+      builder.select=function(columns,options){
+        const exact=options&&options.count==='exact';
+        if(!exact)return originalSelect(columns,options);
+        if(options.head===true){
+          window.__ATLAS_RECONCILIATION_CIRCUIT_BREAKER__.blockedHeadCounts++;
+          return noopQuery();
+        }
+        window.__ATLAS_RECONCILIATION_CIRCUIT_BREAKER__.downgradedExactCounts++;
+        const safe={...options};
+        delete safe.count;
+        safe.head=false;
+        return originalSelect(columns,safe);
+      };
+      return builder;
+    };
+    sb.__atlasReconCircuitBreaker=true;
+    window.__ATLAS_RECONCILIATION_CIRCUIT_BREAKER__={
+      active:true,
+      release:RELEASE,
+      build:BUILD,
+      tables:[...guarded],
+      blockedHeadCounts:0,
+      downgradedExactCounts:0,
+      installedAt:now()
+    };
+  }
+  try{installReconciliationCircuitBreaker();}catch(error){console.warn('[ATLAS] reconciliation circuit breaker unavailable',error);}
+
   async function directAllowlist(session){
     if(!session?.access_token||!session?.user?.id)throw new Error('Sesión autenticada no disponible.');
     const base=(typeof SUPABASE_URL!=='undefined'&&SUPABASE_URL)||'https://ldmtlwzqaqmegedktlxr.supabase.co';
