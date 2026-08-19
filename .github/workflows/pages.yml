@@ -35,6 +35,7 @@ jobs:
           grep -q 'v036-radar-integrado-real.js?b=0360' index.html
           grep -q 'v036-radar-integrado-hardening.js?b=0360' index.html
           grep -q 'v036-radar-integrado-crosswalk.js?b=0360' index.html
+          grep -q 'v036-radar-integrado-runtime-fix.js?b=0360' index.html
           grep -q 'v036-final.module.js?b=0360' index.html
           grep -q 'v037-public-spend.css?b=0370' index.html
           grep -q 'v037-public-spend.js?b=0370' index.html
@@ -52,6 +53,7 @@ jobs:
           grep -q 'SECTOR_SIGNAL_NOT_INDIVIDUAL_NONCOMPLIANCE' build.json
           grep -q 'MATRIX_FILTERS_DRIVE_UAF_SII_SANCTIONS_OSFL_PRESS_SECTOR_CROSSES' build.json
           grep -q 'EXPLICIT_LABEL_ALIASES_ONLY_NO_FUZZY_MATCHING' build.json
+          grep -q 'GLOBAL_LEXICAL_STATE_NOT_WINDOW_STATE' build.json
           grep -q 'v034-sanctions-v12-core.js?b=0343' index.html
           grep -q 'v0344-public-entities.module.js?b=0343' v0343-final.module.js
           test -f v036-radar-integrado-real.js
@@ -59,6 +61,7 @@ jobs:
           test -f v036-radar-integrado-hardening.js
           test -f v036-radar-integrado-hardening.css
           test -f v036-radar-integrado-crosswalk.js
+          test -f v036-radar-integrado-runtime-fix.js
           test -f v036-final.module.js
           test -f v037-public-spend.js
           test -f v037-public-spend.css
@@ -76,6 +79,7 @@ jobs:
           node --check v036-radar-integrado-real.js
           node --check v036-radar-integrado-hardening.js
           node --check v036-radar-integrado-crosswalk.js
+          node --check v036-radar-integrado-runtime-fix.js
           node --check v036-final.module.js
           node --check v035-radar-command-center.js
           node --check v035-radar-command-center-patch.js
@@ -146,6 +150,9 @@ jobs:
           grep -q 'aml_v024_uaf_cross_sector' v036-radar-integrado-hardening.js
           grep -q 'EXPLICIT_SECTOR_ALIASES_ONLY' v036-radar-integrado-crosswalk.js
           grep -q "publicSpendBridge:'V037_NATIVE_ROUTE'" v036-radar-integrado-crosswalk.js
+          grep -q "stateBinding:'GLOBAL_LEXICAL_STATE'" v036-radar-integrado-runtime-fix.js
+          grep -q 'windowStateDependency:false' v036-radar-integrado-runtime-fix.js
+          grep -q 'crossSectorRetry:true' v036-radar-integrado-runtime-fix.js
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -171,6 +178,7 @@ jobs:
           grep -q 'v036-radar-integrado-real.js?b=0360' /tmp/aml-workbench-page.html
           grep -q 'v036-radar-integrado-hardening.js?b=0360' /tmp/aml-workbench-page.html
           grep -q 'v036-radar-integrado-crosswalk.js?b=0360' /tmp/aml-workbench-page.html
+          grep -q 'v036-radar-integrado-runtime-fix.js?b=0360' /tmp/aml-workbench-page.html
           grep -q 'v036-radar-integrado-real.css?b=0360' /tmp/aml-workbench-page.html
           grep -q 'v037-public-spend.js?b=0370' /tmp/aml-workbench-page.html
           grep -q 'v037-public-spend.css?b=0370' /tmp/aml-workbench-page.html
