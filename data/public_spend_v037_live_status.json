@@ -6,9 +6,9 @@
   "public_spend_ui": "13.1",
   "radar_integrado_graphics_fix": "0401",
   "graphics_policy": "CSP_SAFE_RUNTIME_SCALE",
-  "pages_deploy": "cancelled",
+  "pages_deploy": "success",
   "live_smoke": "success",
-  "status": "failure",
+  "status": "success",
   "required_assets": [
     "v040-theme-bootstrap.js",
     "v0401-radar-graphics-fix.js",
