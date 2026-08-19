@@ -28,8 +28,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -q 'data-aml-version="0.37.0"' index.html
-          grep -q 'data-aml-build="0370"' index.html
+          grep -q 'data-aml-version="0.38.0"' index.html
+          grep -q 'data-aml-build="0380"' index.html
           grep -q 'v036-radar-integrado-real.css?b=0360' index.html
           grep -q 'v036-radar-integrado-hardening.css?b=0360' index.html
           grep -q 'v036-radar-integrado-real.js?b=0360' index.html
@@ -40,9 +40,14 @@ jobs:
           grep -q 'v037-public-spend.css?b=0370' index.html
           grep -q 'v037-public-spend.js?b=0370' index.html
           grep -q 'v037-final.module.js?b=0370' index.html
-          grep -q '"app_version": "0.37.0"' build.json
+          grep -q 'v038-entity360.css?b=0380' index.html
+          grep -q 'v038-entity360.js?b=0380' index.html
+          grep -q 'v038-final.module.js?b=0380' index.html
+          grep -q '"app_version": "0.38.0"' build.json
+          grep -q '"build": "0380"' build.json
           grep -q 'RADAR_INTEGRADO_REAL_V036' build.json
           grep -q 'PUBLIC_SPEND_V131_NATIVE' build.json
+          grep -q 'ENTITY360_V038' build.json
           grep -q 'RADAR_PRESUPUESTO_ABIERTO_V131' build.json
           grep -q 'PARTIDA_CAPITULO' build.json
           grep -q 'PROVEEDOR_SOURCE_TRUE_AND_NOT_INTRAESTADO_AND_NOT_PUBLIC_NAME' build.json
@@ -56,6 +61,11 @@ jobs:
           grep -q 'SECTOR_COUNTS_ARE_NOT_ASSUMED_UNIQUE_ACROSS_MULTI_SECTOR_ENTITIES' build.json
           grep -q 'EXPLICIT_LABEL_ALIASES_ONLY_NO_FUZZY_MATCHING' build.json
           grep -q 'GLOBAL_LEXICAL_STATE_NOT_WINDOW_STATE' build.json
+          grep -q 'CANONICAL_ENTITY_ID_FIRST+RUT_EXACT_FOR_PUBLIC_SPEND' build.json
+          grep -q 'REGISTERED_UAF_IS_AUTHORITY+ACTECO_SCREENING_IS_NOT_LEGAL_STATUS' build.json
+          grep -q 'CONSOLIDATED_IPA_GROUPED_BY_ANALYTICAL_FAMILY+REPEATS_DO_NOT_INCREMENT' build.json
+          grep -q 'MULTI_SOURCE_CORROBORATION_DISTINCT_FROM_SINGLE_SOURCE_REPETITION' build.json
+          grep -q 'DO_NOT_INFER_INDIVIDUAL_ROS_ROE' build.json
           grep -q 'v034-sanctions-v12-core.js?b=0343' index.html
           grep -q 'v0344-public-entities.module.js?b=0343' v0343-final.module.js
           test -f v036-radar-integrado-real.js
@@ -68,6 +78,9 @@ jobs:
           test -f v037-public-spend.js
           test -f v037-public-spend.css
           test -f v037-final.module.js
+          test -f v038-entity360.js
+          test -f v038-entity360.css
+          test -f v038-final.module.js
           test -f docs/public-spend-module-v037.md
           test -f v0344-public-entities.module.js
           test -f v0344-public-entities.css
@@ -76,6 +89,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node --check v038-entity360.js
+          node --check v038-final.module.js
           node --check v037-public-spend.js
           node --check v037-final.module.js
           node --check v036-radar-integrado-real.js
@@ -87,6 +102,22 @@ jobs:
           node --check v035-radar-command-center-patch.js
           node --check v0343-final.module.js
           node --check v0344-public-entities.module.js
+
+      - name: Verify Entity 360 analytical contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "v0209EntityPriority" v038-entity360.js
+          grep -q "aml_v0205_uaf_sii_reconciliation" v038-entity360.js
+          grep -q "v037LoadData" v038-entity360.js
+          grep -q "v038Rut(pkg.e?.rut)" v038-entity360.js
+          grep -q "ACTECO" v038-entity360.js
+          grep -q "No representa probabilidad de LA/FT" v038-entity360.js
+          grep -q "Ausencia de dato no equivale" v038-entity360.js
+          grep -q "La relación no transfiere riesgo" v038-entity360.js
+          grep -q "Matriz de evidencia" v038-entity360.js
+          grep -q "Qué no sabemos" v038-entity360.js
+          grep -q "cleanLegacyEntityBridge" v038-final.module.js
 
       - name: Verify Gasto Público interoperability contract
         shell: bash
@@ -114,7 +145,7 @@ jobs:
           import json, urllib.request
           base='https://raw.githubusercontent.com/smoralesm07-source/Rada_Presupuesto_Abierto/main/docs/data/'
           def load(name):
-              req=urllib.request.Request(base+name,headers={'User-Agent':'AML-Workbench-v037-contract-check'})
+              req=urllib.request.Request(base+name,headers={'User-Agent':'AML-Workbench-v038-contract-check'})
               with urllib.request.urlopen(req,timeout=60) as r:
                   return json.load(r)
           status=load('spend_corrected_v3_status.json')
@@ -171,7 +202,7 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Smoke test deployed v0.37
+      - name: Smoke test deployed v0.38
         shell: bash
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
@@ -179,7 +210,8 @@ jobs:
           set -euo pipefail
           test -n "$PAGE_URL"
           curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "${PAGE_URL%/}/" -o /tmp/aml-workbench-page.html
-          grep -q 'data-aml-version="0.37.0"' /tmp/aml-workbench-page.html
+          grep -q 'data-aml-version="0.38.0"' /tmp/aml-workbench-page.html
+          grep -q 'data-aml-build="0380"' /tmp/aml-workbench-page.html
           grep -q 'v036-radar-integrado-real.js?b=0360' /tmp/aml-workbench-page.html
           grep -q 'v036-radar-integrado-hardening.js?b=0360' /tmp/aml-workbench-page.html
           grep -q 'v036-radar-integrado-crosswalk.js?b=0360' /tmp/aml-workbench-page.html
@@ -188,3 +220,6 @@ jobs:
           grep -q 'v037-public-spend.js?b=0370' /tmp/aml-workbench-page.html
           grep -q 'v037-public-spend.css?b=0370' /tmp/aml-workbench-page.html
           grep -q 'v037-final.module.js?b=0370' /tmp/aml-workbench-page.html
+          grep -q 'v038-entity360.js?b=0380' /tmp/aml-workbench-page.html
+          grep -q 'v038-entity360.css?b=0380' /tmp/aml-workbench-page.html
+          grep -q 'v038-final.module.js?b=0380' /tmp/aml-workbench-page.html
