@@ -10,6 +10,32 @@
   document.documentElement.setAttribute('data-atlas-theme',theme);
   document.documentElement.style.colorScheme=theme;
 
+  /* Radar Integrado graphics integrity assets.
+   * They are same-origin external resources so the strict style-src 'self'
+   * policy remains intact. The JS loads after DOMContentLoaded, when v0.36
+   * rendering functions and the application shell already exist.
+   */
+  function ensureGraphIntegrityAssets(){
+    if(!document.querySelector('link[data-atlas-graphics-fix]')){
+      const link=document.createElement('link');
+      link.rel='stylesheet';
+      link.href='./v0401-radar-graphics-fix.css?b=0401';
+      link.dataset.atlasGraphicsFix='0401';
+      document.head.appendChild(link);
+    }
+    const loadScript=()=>{
+      if(document.querySelector('script[data-atlas-graphics-fix]')||window.__ATLAS_RADAR_GRAPHICS_FIX__)return;
+      const script=document.createElement('script');
+      script.src='./v0401-radar-graphics-fix.js?b=0401';
+      script.dataset.atlasGraphicsFix='0401';
+      script.async=false;
+      document.head.appendChild(script);
+    };
+    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadScript,{once:true});
+    else loadScript();
+  }
+  ensureGraphIntegrityAssets();
+
   /* AIE identity mark for ATLAS AML.
    * Keeps the current ATLAS version and replaces the legacy blue "A" tile.
    * The mark adapts its metallic tones to the active light/dark theme while
