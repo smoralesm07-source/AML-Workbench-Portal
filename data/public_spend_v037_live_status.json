@@ -4,9 +4,9 @@
   "entity360_ui": "0.38.0",
   "entity_entry_patch": "0391",
   "public_spend_ui": "13.1",
-  "pages_deploy": "success",
+  "pages_deploy": "cancelled",
   "live_smoke": "success",
-  "status": "success",
+  "status": "failure",
   "required_assets": [
     "v039-atlas-brand.js",
     "v039-atlas-brand.css",
