@@ -21,7 +21,9 @@ def main():
     parser.add_argument('--root',default='_site-test')
     args=parser.parse_args()
     root=Path(args.root)
-    files=sorted(root.glob('atlas-runtime-current-*.js'))+sorted(root.glob('atlas-module-current-*.js'))
+    classic=sorted(root.glob('atlas-runtime-current-*.js'))
+    modules=sorted(root.glob('atlas-module-current-*.js'))
+    files=classic+modules
     if not files:
         raise SystemExit(f'No compiled ATLAS runtime files found in {root}')
 
@@ -40,7 +42,48 @@ def main():
             print(f' - {path}: {rule} at line(s) {lines}')
         raise SystemExit(1)
 
-    print(f'ATLAS compiled runtime authority OK: {len(files)} bundle/module asset(s); atlas-release-guard.js remains the sole version authority')
+    # Reliability contract 1: a release publication must never evict an active session.
+    release_guard=root/'atlas-release-guard.js'
+    if not release_guard.is_file():
+        raise SystemExit('Missing compiled atlas-release-guard.js')
+    guard_text=release_guard.read_text(encoding='utf-8')
+    forbidden_reload=[token for token in ('location.replace(', 'location.reload(', 'location.href=') if token in guard_text]
+    if forbidden_reload:
+        raise SystemExit(f'Active-session reload authority is forbidden in atlas-release-guard.js: {forbidden_reload}')
+    if 'NO_ACTIVE_SESSION_RELOAD' not in guard_text:
+        raise SystemExit('atlas-release-guard.js is missing NO_ACTIVE_SESSION_RELOAD reliability contract')
+
+    # Reliability contract 2: the final module must own auth recovery + approved Entity 360.
+    if not modules:
+        raise SystemExit('No compiled ATLAS modules found; final reliability authority missing')
+    final_module=modules[-1]
+    final_text=final_module.read_text(encoding='utf-8')
+    required_final_markers=(
+        '__ATLAS_RUNTIME_RELIABILITY__',
+        'DOUBLE_SESSION_CHECK+SERVER_TOKEN_VERIFY',
+        'V0391_ENTRY+V038_ENTITY360',
+        '__ATLAS_ENTITY_AUTHORITY_FINAL__',
+    )
+    missing=[m for m in required_final_markers if m not in final_text]
+    if missing:
+        raise SystemExit(f'Final runtime module {final_module.name} is missing reliability authority markers: {missing}')
+
+    # Reliability contract 3: expert Entity 360 source must be present in compiled classic runtime.
+    classic_text='\n'.join(p.read_text(encoding='utf-8') for p in classic)
+    entity_markers=(
+        'ENTITY 360 · ACCESO ANALÍTICO',
+        'ENTITY360_EXPERT_CURRENT',
+        'PLANNED_LANDING_EXACT_ON_DEMAND_ONLY',
+    )
+    missing_entity=[m for m in entity_markers if m not in classic_text]
+    if missing_entity:
+        raise SystemExit(f'Compiled Entity 360 authority is incomplete: {missing_entity}')
+
+    print(
+        f'ATLAS compiled runtime authority OK: {len(files)} bundle/module asset(s); '
+        'atlas-release-guard.js remains the sole version authority; '
+        f'{final_module.name} owns final session/Entity 360 reliability authority'
+    )
 
 
 if __name__=='__main__':
