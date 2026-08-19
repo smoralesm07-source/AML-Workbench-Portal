@@ -1,8 +1,8 @@
 {
   "workbench_version": "0.37.0",
   "public_spend_ui": "13.1",
-  "pages_deploy": "failure",
-  "live_smoke": "success",
+  "pages_deploy": "success",
+  "live_smoke": "failure",
   "status": "failure",
   "required_assets": [
     "v037-public-spend.js",
