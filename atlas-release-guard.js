@@ -1,6 +1,6 @@
 'use strict';
 
-/* ATLAS AML · single active release authority.
+/* ATLAS AML · single active release authority, release-agnostic by design.
  * Reliability rule: a release mismatch is diagnostic only while the app is open.
  * ATLAS must never reload/replace an authenticated page merely because GitHub Pages
  * is publishing a newer bundle. The next normal page load picks up the new release.
