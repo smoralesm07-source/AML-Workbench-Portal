@@ -30,9 +30,9 @@ const ATLAS_NAV_META={
 
 function atlasEsc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
-/* Visible-language contract: ATLAS uses “Entidad 360” in Spanish.
- * This never mutates technical identifiers such as entity_id, table names,
- * audit schemas, data-* attributes, function names, or persisted payloads.
+/* Visible-language contract: ATLAS uses “Entidad 360” and “ID de Entidad”.
+ * Only product/UI phrases are normalized. Source evidence, names, legal text,
+ * technical identifiers (entity_id), tables and persisted payloads stay literal.
  */
 function atlasEntityTerminology(value){
   return String(value??'')
@@ -44,25 +44,20 @@ function atlasEntityTerminology(value){
     .replace(/\bentity\s+id\b/g,'ID de Entidad')
     .replace(/\bENTITY\s+360\b/g,'ENTIDAD 360')
     .replace(/\bEntity\s+360\b/g,'Entidad 360')
-    .replace(/\bentity\s+360\b/g,'Entidad 360')
-    .replace(/\bENTITIES\b/g,'ENTIDADES')
-    .replace(/\bEntities\b/g,'Entidades')
-    .replace(/\bentities\b/g,'entidades')
-    .replace(/\bENTITY\b/g,'ENTIDAD')
-    .replace(/\bEntity\b/g,'Entidad')
-    .replace(/\bentity\b/g,'entidad');
+    .replace(/\bentity\s+360\b/g,'Entidad 360');
 }
 
+function atlasHasEntityUiTerm(value){
+  return /\b(?:ENTITY|Entity|entity)\s+(?:360|ID)\b|\b(?:PUBLIC ENTITY|Public Entity|public entity)\b/.test(String(value||''));
+}
 function atlasLocalizeVisibleEntityTerms(root=document.body){
   if(!root)return;
-  const skip=new Set(['SCRIPT','STYLE','TEMPLATE','CODE','PRE','KBD','SAMP']);
+  const skip=new Set(['SCRIPT','STYLE','TEMPLATE','CODE','PRE','KBD','SAMP','BLOCKQUOTE']);
   const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{
     acceptNode(node){
       const parent=node.parentElement;
       if(!parent||skip.has(parent.tagName))return NodeFilter.FILTER_REJECT;
-      return /\b(?:ENTITY|Entity|entity|ENTITIES|Entities|entities)\b/.test(node.nodeValue||'')
-        ? NodeFilter.FILTER_ACCEPT
-        : NodeFilter.FILTER_REJECT;
+      return atlasHasEntityUiTerm(node.nodeValue)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT;
     }
   });
   const nodes=[];
@@ -75,6 +70,7 @@ function atlasLocalizeVisibleEntityTerms(root=document.body){
     for(const attr of ['aria-label','title','placeholder']){
       if(!el.hasAttribute(attr))continue;
       const current=el.getAttribute(attr)||'';
+      if(!atlasHasEntityUiTerm(current))continue;
       const next=atlasEntityTerminology(current);
       if(next!==current)el.setAttribute(attr,next);
     }
