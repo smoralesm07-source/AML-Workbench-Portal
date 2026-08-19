@@ -9,6 +9,7 @@ on:
       - 'atlas-runtime-manifest.json'
       - 'atlas-sanctions-v12-approved-*.js'
       - 'atlas-sanctions-v12-approved-*.css'
+      - 'atlas-sanctions-v12-route.js'
       - 'tools/build_atlas_site.py'
       - '.github/workflows/validate-sanctions-v12-current.yml'
   push:
@@ -19,6 +20,7 @@ on:
       - 'atlas-runtime-manifest.json'
       - 'atlas-sanctions-v12-approved-*.js'
       - 'atlas-sanctions-v12-approved-*.css'
+      - 'atlas-sanctions-v12-route.js'
       - 'tools/build_atlas_site.py'
       - '.github/workflows/validate-sanctions-v12-current.yml'
   workflow_dispatch:
@@ -51,6 +53,8 @@ jobs:
           assert release['build']==build['build']==manifest['build']
           assert build['sanctions_ui_contract']=='APPROVED_V12_ATLAS_THEME_NATIVE'
           assert build['sanctions_data_contract']=='RADAR_SANCTIONS+ENTITY_HUB_V1+WORKBENCH_IDENTITY+UAF_RECONCILIATION'
+          assert build['sanctions_route_authority']=='atlas-sanctions-v12-route.js'
+          assert build['sanctions_route_policy']=='BYPASS_V019_FROZEN_LEGACY_LOADER'
           scripts=[x['path'] for x in manifest['scripts']]
           styles=list(manifest['styles'])
           approved_js=[f'atlas-sanctions-v12-approved-{i:02d}.js' for i in range(1,7)]
@@ -60,9 +64,10 @@ jobs:
           old_js={'v034-sanctions-v12-core.js','v034-sanctions-v12-ui.js','v034-sanctions-v12-charts.js','v0341-sanctions-hardening.js'}
           assert not old_js.intersection(scripts),old_js.intersection(scripts)
           assert 'v034-sanctions-v12.css' not in styles
-          ui_pos=scripts.index('atlas-current-ui.js')
-          assert scripts[ui_pos-6:ui_pos]==approved_js,scripts[ui_pos-8:ui_pos+1]
-          for path in approved_js+approved_css:
+          route_pos=scripts.index('atlas-sanctions-v12-route.js')
+          assert scripts[route_pos-6:route_pos]==approved_js,scripts[route_pos-8:route_pos+2]
+          assert scripts[route_pos+1]=='atlas-current-ui.js',scripts[route_pos-2:route_pos+4]
+          for path in approved_js+approved_css+['atlas-sanctions-v12-route.js']:
               assert Path(path).is_file(),path
           PY
 
@@ -70,9 +75,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in atlas-sanctions-v12-approved-*.js; do node --check "$f"; done
+          cat \
+            atlas-sanctions-v12-approved-01.js \
+            atlas-sanctions-v12-approved-02.js \
+            atlas-sanctions-v12-approved-03.js \
+            atlas-sanctions-v12-approved-04.js \
+            atlas-sanctions-v12-approved-05.js \
+            atlas-sanctions-v12-approved-06.js > /tmp/atlas-sanctions-v12-approved.js
+          node --check /tmp/atlas-sanctions-v12-approved.js
+          node --check atlas-sanctions-v12-route.js
           grep -q 'AML_SANCTIONS_V12_APPROVED' atlas-sanctions-v12-approved-06.js
           grep -q 'sv12LoadSanctionsApproved' atlas-sanctions-v12-approved-06.js
+          grep -q 'legacyFrozenRouteBypassed:true' atlas-sanctions-v12-route.js
+          grep -q 'AML_SANCTIONS_V12_APPROVED' atlas-sanctions-v12-route.js
           grep -q 'RADAR_SANCTIONS+ENTITY_HUB_V1+WORKBENCH_IDENTITY+UAF_RECONCILIATION' build.json
           grep -q 'Consulta directa de entidad' atlas-sanctions-v12-approved-01.js
           grep -q 'Últimas sanciones · Top 5' atlas-sanctions-v12-approved-01.js
@@ -96,6 +111,7 @@ jobs:
             node --check "$f"
           done
           grep -R -q 'AML_SANCTIONS_V12_APPROVED' _site-sanctions/atlas-runtime-current-*.js
+          grep -R -q 'legacyFrozenRouteBypassed:true' _site-sanctions/atlas-runtime-current-*.js
           grep -R -q 'Consulta directa de entidad' _site-sanctions/atlas-runtime-current-*.js
           grep -R -q 'Últimas sanciones · Top 5' _site-sanctions/atlas-runtime-current-*.js
           grep -R -q 'Concentración regional de sanciones' _site-sanctions/atlas-runtime-current-*.js
