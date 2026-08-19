@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-08-19T03:26:24+00:00",
+  "generated_at": "2026-08-19T11:32:25+00:00",
   "workbench_version": "0.37.0",
   "public_spend_ui": "13.1",
   "javascript": "success",
-  "app_contract": "success",
-  "source_contract": "success",
-  "status": "success",
+  "app_contract": "failure",
+  "source_contract": "skipped",
+  "status": "failure",
   "identity_policy": "RUT_OR_ENTITY_ID_EXACT_ONLY",
   "marks_policy": "PRIORITIZATION_NOT_FINDINGS",
   "uaf_reference": "OPTIONAL_INDEPENDENT"
