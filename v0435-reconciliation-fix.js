@@ -1,11 +1,11 @@
 'use strict';
 
-/* ATLAS AML 0.43.5 · reconciliation hardening
+/* ATLAS AML 0.43.6 · reconciliation hardening
  * - Termination cohorts filter the governed termination_year field.
  * - Help affordances avoid nested interactive <button> markup inside KPI buttons.
  * - The selected termination cohort is visible and reset with the lens.
  */
-(function atlasReconciliation0435(){
+(function atlasReconciliation0436(){
   if(typeof V0434_STATE==='undefined')return;
   V0434_STATE.year=V0434_STATE.year||'';
 
@@ -66,7 +66,7 @@
   },true);
 
   if(window.__ATLAS_RECONCILIATION__){
-    window.__ATLAS_RECONCILIATION__.release='0.43.5';
+    window.__ATLAS_RECONCILIATION__.release='0.43.6';
     window.__ATLAS_RECONCILIATION__.yearFilter='GOVERNED_TERMINATION_YEAR';
     window.__ATLAS_RECONCILIATION__.candidatePolicy='RADAR_SII_CANDIDATE_USE_SI_ONLY';
   }
