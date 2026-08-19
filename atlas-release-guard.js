@@ -1,12 +1,13 @@
 'use strict';
 
 /* ATLAS AML · single active release authority.
- * v0.42.4 keeps ATLAS as the only visible/runtime version authority and pairs
- * that with release-pinned loading for every local JS/CSS asset.
+ * v0.42.5 keeps ATLAS as the only visible/runtime version authority, pins the
+ * complete local asset graph, and delegates final navigation presentation to
+ * atlas-current-ui.
  */
 (function atlasSingleReleaseAuthority(){
-  const RELEASE='0.42.4';
-  const BUILD='0424';
+  const RELEASE='0.42.5';
+  const BUILD='0425';
   const PRODUCT='ATLAS AML';
   const TAGLINE='Plataforma Integrada de Inteligencia y Riesgo';
   const MANIFEST='./atlas-release.json';
@@ -49,7 +50,7 @@
           if(small.getAttribute('data-runtime-label')!==label)small.setAttribute('data-runtime-label',label);
         }
       });
-      window.__ATLAS_RELEASE_GUARD_HEALTH__={status:'ready',release:RELEASE,build:BUILD,mutationPolicy:'ROOT_ATTRIBUTES_ONLY',visibleVersionPolicy:'ATLAS_RELEASE_GUARD_ONLY',assetCoherency:'ALL_LOCAL_JS_CSS_PINNED_TO_CURRENT_BUILD',checkedAt:new Date().toISOString()};
+      window.__ATLAS_RELEASE_GUARD_HEALTH__={status:'ready',release:RELEASE,build:BUILD,mutationPolicy:'ROOT_ATTRIBUTES_ONLY',visibleVersionPolicy:'ATLAS_RELEASE_GUARD_ONLY',assetCoherency:'ALL_LOCAL_JS_CSS_PINNED_TO_CURRENT_BUILD',uiAuthority:'ATLAS_CURRENT_UI_LAST_WRITER',checkedAt:new Date().toISOString()};
     }finally{applying=false;}
   }
 
