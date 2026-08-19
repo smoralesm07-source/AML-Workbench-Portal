@@ -28,7 +28,7 @@ propia interfaz es:
 > **Prioridad analítica ≠ probabilidad de delito.**
 
 Esta distinción no es un descargo de responsabilidad decorativo: está implementada
-como restricción técnica en cada capa del sistema (ver sección 8).
+como restricción técnica en cada capa del sistema (ver sección 9).
 
 ---
 
@@ -115,7 +115,60 @@ Todo el sistema, en los once repositorios, habla el mismo idioma de ocho objetos
 | **ContextSignal** | Contexto que nunca modifica un score AML |
 | **AMLScore** | Amenaza, vulnerabilidad y exposición — con confianza y cobertura **separadas** |
 
-### 4.2 La llave de identidad
+### 4.2 Cómo se relacionan las tablas
+
+El modelo materializado tiene forma de **estrella de identidad**: una tabla central de
+entidades y un anillo de tablas satélite que la describen desde ángulos distintos.
+Ninguna tabla satélite se cruza con otra directamente: todas pasan por el centro.
+
+```mermaid
+erDiagram
+    aml_entities ||--o{ aml_findings : "entity_id · 1:N"
+    aml_entities ||--o{ aml_sanctions : "entity_id · 1:N"
+    aml_entities ||--o{ aml_sii_entity_year : "entity_id · 1:N por año"
+    aml_entities ||--o{ aml_v_ipa3_marks : "entity_id · 1:N por marca"
+    aml_entities ||--|| aml_entity_tax_profile : "entity_id · 1:1"
+    aml_entities ||--|| aml_v0210_recon : "entity_id · 1:1 (vista)"
+    aml_entities ||--|| aml_uaf_entity_profile : "rut · llave secundaria"
+
+    aml_entities {
+        text entity_id PK "ENT-RUT-{RUT validado}"
+        text rut "llave natural secundaria"
+        text name
+        text entity_type
+        text region_commune
+        bool is_uaf_observed
+        bool is_sanctioned
+    }
+    aml_findings { text finding_key PK }
+    aml_sanctions { text sanction_id PK }
+    aml_sii_entity_year { int commercial_year PK }
+    aml_v_ipa3_marks { text mark_id PK }
+    aml_entity_tax_profile { text perfil_vigente }
+    aml_v0210_recon { text estado_conciliacion }
+    aml_uaf_entity_profile { text sector_names }
+```
+
+**Lectura del diagrama.** Las cuatro primeras tablas describen a una entidad *muchas
+veces* (varios hallazgos, varias sanciones, un registro por año comercial, varias
+marcas de prioridad). Las tres últimas la describen *una sola vez*. El perfil UAF se
+une por **RUT** y no por `entity_id`, porque la fuente publica RUT pero no el
+identificador canónico.
+
+### 4.3 Lo que deliberadamente NO se relaciona
+
+Dos tablas del modelo **no tienen llave de entidad, por diseño**:
+
+| Tabla | Llave real | Por qué no se une a una entidad |
+|---|---|---|
+| `aml_pattern_alerts` | `scope_type` + `scope_id` (sector o región) | Un patrón sectorial describe un fenómeno agregado. Darle llave de entidad permitiría atribuir a una empresa el comportamiento de su sector |
+| `aml_reporting_rules` | `sector_name` | Es la obligación normativa de un sector bajo la Ley 19.913, no un dato de la entidad |
+
+Esta es **la decisión de gobierno más importante del modelo**: al no existir la
+columna que permitiría el cruce, la atribución indebida no es una mala práctica
+evitable, sino una operación técnicamente imposible.
+
+### 4.4 La llave de identidad
 
 `entity_id = ENT-RUT-{RUT normalizado}`
 
@@ -129,7 +182,7 @@ Reglas duras de identidad:
 Este es el criterio más importante del modelo: **el sistema prefiere no cruzar antes
 que cruzar mal.**
 
-### 4.3 La unidad de análisis: el hallazgo
+### 4.5 La unidad de análisis: el hallazgo
 
 La pantalla no muestra registros de base de datos: muestra **hallazgos**. Cada uno
 declara obligatoriamente su tipo, alcance, ventana temporal, métricas, productores,
@@ -144,18 +197,10 @@ hecho → cálculo → evidencia → interpretación
 Un resultado analítico **sin identificadores de evidencia es inválido** por
 definición del esquema. No se puede publicar una conclusión sin su respaldo.
 
-### 4.4 Los objetos materializados en el portal
+### 4.6 Magnitudes al corte auditado (2026-08-17)
 
-Aproximadamente 25 tablas y vistas gobernadas, entre ellas: `aml_entities`
-(Entity Hub), `aml_findings`, `aml_sanctions`, `aml_sii_entity_year`,
-`aml_uaf_entity_profile`, `aml_entity_tax_profile`, `aml_reporting_rules`,
-`aml_v0210_uaf_sii_reconciliation`, `aml_v028_sanctions_with_identity` y las vistas
-agregadas `aml_v020_*` creadas específicamente para **no** enviar hechos masivos al
-navegador.
-
-**Magnitudes al corte auditado (2026-08-17):** 47.186 entidades, 18.231 hallazgos,
-974 sanciones, 95 patrones. Universo OSFL: 37.164 perfiles. Registro UAF 2025:
-9.911 sujetos obligados y 21.828 ROS en 48 sectores.
+47.186 entidades · 18.231 hallazgos · 974 sanciones · 95 patrones · 37.164 perfiles
+OSFL · 9.911 sujetos obligados UAF 2025 · 21.828 ROS 2025 en 48 sectores.
 
 ---
 
@@ -226,19 +271,25 @@ uniforme artificial:
 
 Todos admiten además ejecución manual.
 
-### 7.2 La cadena automatizada
+### 7.2 La compuerta: nada llega a producción sin pasar la validación
 
+```mermaid
+flowchart LR
+    A[Radar publica<br/>su contrato] --> B[Validación Fusion<br/>pruebas + snapshot]
+    B --> C{¿pasó todo?}
+    C -->|sí| D[Sincronización<br/>importador OIDC]
+    D --> E[Despliegue<br/>del portal]
+    E --> F[Prueba en vivo]
+    C -->|no| G[La cadena se detiene.<br/>El corte anterior<br/>sigue vigente.]
 ```
-Radar publica contrato  →  Validate Fusion (pruebas + snapshot)
-   →  AML Supabase Sync (solo si la validación fue exitosa)
-   →  Importador OIDC  →  Materialización  →  Sello de sincronización
-   →  Deploy del portal  →  Smoke test contra el sitio publicado
-```
 
-Puntos de control relevantes:
+La validación no es un informe: es una **compuerta**. Un snapshot que no pasa las
+pruebas nunca llega a la base analítica, y el corte anterior permanece disponible sin
+degradarse. Esto significa que el sistema puede quedar *desactualizado*, pero no puede
+quedar *incorrecto* por una carga fallida.
 
-- La sincronización a Supabase **solo se dispara si la validación de Fusion terminó
-  en éxito**. Un snapshot que no pasó pruebas no llega a producción.
+Puntos de control adicionales:
+
 - El importador verifica que el universo sincronizado sea coherente antes de
   continuar (por ejemplo, exige más de mil entidades).
 - Al final se escribe un **sello de sincronización** (`aml_sync_state`) con el
@@ -304,7 +355,127 @@ huérfanas · 0 duplicados entidad-año · 0 scores fuera del rango 0-100.
 
 ---
 
-## 9. Criterios metodológicos permanentes (guardrails)
+## 9. Clasificación del modelo empleado
+
+El sistema no responde a un único patrón de arquitectura, sino a **cinco patrones
+apilados**, cada uno resolviendo un problema que el anterior no puede. Nombrarlos
+permite comparar esta solución con alternativas conocidas y evaluar si la elección
+fue correcta.
+
+```mermaid
+flowchart TB
+    L1["<b>8 radares autónomos, un repositorio cada uno</b><br/>Cada dominio es dueño de su fuente y publica un contrato versionado<br/><i>Patrón: malla de dominios · data mesh federado</i>"]
+    L2["<b>Bronze → Silver → Gold dentro de cada radar</b><br/>Bruto sellado, hechos normalizados, producto publicable<br/><i>Patrón: arquitectura medallón</i>"]
+    L3["<b>Identidad canónica al centro, descriptores alrededor</b><br/>Llave de negocio estable, satélites por fuente, evidencia inmutable<br/><i>Patrón: hub y satélites de linaje, estilo Data Vault</i>"]
+    L4["<b>Vistas agregadas separadas del modelo de escritura</b><br/>El cliente consulta resúmenes, nunca hechos masivos<br/><i>Patrón: modelos de lectura · separación lectura/escritura</i>"]
+    L5["<b>Portal estático sin lógica de riesgo propia</b><br/>La autorización se resuelve en el servidor, no en el navegador<br/><i>Patrón: cliente delgado sobre seguridad de fila</i>"]
+    L1 --> L2 --> L3 --> L4 --> L5
+```
+
+Transversal a las cinco capas: **contratos declarados por esquema y verificados en
+integración continua**.
+
+La capa del hub es la que carga con la semántica AML: es donde se decide qué se cruza
+con qué.
+
+### Nombre corto de la arquitectura
+
+> **Malla federada de dominios con hub canónico de identidad, gobernada por contratos
+> y servida mediante modelos de lectura.**
+
+### Lo que este modelo deliberadamente no es
+
+| No es | Por qué se descartó |
+|---|---|
+| **Un data warehouse dimensional** (esquema estrella clásico) | Obligaría a definir "riesgo" como una medida sumable. El sistema sostiene lo contrario: las señales de distinta semántica no se suman |
+| **Un lago de datos central** | Copiar todas las fuentes a un repositorio único crea un cuello de botella de gobierno y pierde la procedencia por fuente |
+| **Una base de grafos** | Las relaciones existen como objeto canónico, pero la cobertura de identidad todavía no justifica un motor de grafo. Es una decisión de secuencia, no de rechazo |
+| **Un motor de scoring único** | Exigiría mezclar amenaza, contexto y cobertura en un solo número, que es exactamente lo que los guardrails prohíben |
+
+---
+
+## 10. Ventajas y desventajas de esta elección
+
+Toda arquitectura compra una propiedad y paga con otra. Estas son las que este diseño
+compró y las que está pagando.
+
+### Lo que se gana
+
+1. **Auditabilidad por construcción.** Toda cifra se puede rastrear hasta un snapshot
+   sellado con su hash y su URL de origen. No depende de que alguien documente bien:
+   está en la estructura.
+2. **Radio de daño acotado.** Si un radar se rompe o su fuente cambia, los demás
+   siguen funcionando y el portal declara la degradación. No hay un proceso central
+   que caiga entero.
+3. **Seguridad semántica estructural.** Al mantener el grano de cada fuente y no dar
+   llave de entidad a lo que es sectorial, muchos errores de interpretación se vuelven
+   técnicamente imposibles, no solo desaconsejados.
+4. **Reproducibilidad.** Cualquier corte pasado puede reconstruirse a partir del
+   snapshot sellado y la versión del código. Un resultado cuestionado se puede
+   reproducir.
+5. **Costo de infraestructura cercano a cero.** Sin servidores propios, sin base
+   operacional permanente, sin licencias. El costo es el tiempo de desarrollo.
+6. **El cambio metodológico es visible.** Los pesos y catálogos están declarados en
+   contratos verificados en integración continua. Nadie puede cambiar una fórmula en
+   silencio.
+7. **Evolución por partes.** Se puede incorporar una fuente nueva sin rediseñar el
+   modelo, porque el contrato de productor ya está definido.
+
+### Lo que se paga
+
+1. **Latencia estructural.** No hay tiempo real ni lo puede haber. Entre la
+   publicación oficial y la pantalla hay una cadena de etapas, y las cadencias son
+   heterogéneas: el corte nunca es simultáneo entre dominios. Los "tres relojes" hacen
+   visible el problema, no lo eliminan.
+2. **Alta complejidad operativa.** Once repositorios y cerca de cuarenta workflows.
+   Un cambio de esquema en una fuente obliga a tocar contrato, adaptador, validación y
+   documentación. El costo de coordinación crece más rápido que el número de fuentes.
+3. **Dependencia de una sola plataforma.** GitHub es simultáneamente cómputo,
+   almacenamiento, transporte y publicación. Los datos sobreviven a una caída, pero la
+   operación completa se detiene.
+4. **La identidad conservadora cuesta cobertura.** Exigir RUT exacto elimina los
+   falsos vínculos, pero pierde todo cruce donde la fuente no publica RUT. El caso
+   declarado es CGR. El sistema acepta no ver antes que ver mal — y eso son falsos
+   negativos.
+5. **Sin score único, más carga sobre el analista.** La decisión metodológicamente
+   correcta traslada al analista el trabajo de integrar semánticas distintas. Escala
+   mal si el número de indicadores sigue creciendo.
+6. **Validaciones frágiles ante refactorización.** Varios controles verifican
+   literales exactos del código fuente. Son un candado eficaz contra cambios
+   silenciosos, pero un renombre inocuo rompe la integración continua.
+7. **Cobertura desigual y visible.** Al no forzar integraciones, hay productores
+   verificados que aún no generan hallazgos. Es honesto, pero el usuario ve un sistema
+   parcialmente vacío.
+8. **Deuda técnica acumulada en la interfaz.** Más de cien capas versionadas se cargan
+   de forma secuencial. Está reconocida en la auditoría interna, con plan de
+   consolidación pendiente.
+
+### Lectura de conjunto
+
+La elección es **coherente con el propósito declarado**. Un sistema cuyo producto es
+la priorización defendible de trabajo analítico —y no la detección automática—
+necesita trazabilidad y separación semántica más que velocidad o cobertura máxima.
+Este diseño optimiza exactamente eso, y paga con latencia, complejidad operativa y
+falsos negativos.
+
+La pregunta relevante para el comité no es si la arquitectura es correcta hoy, sino
+**bajo qué condición dejaría de serlo**. Hay tres:
+
+- Si se exigiera **detección en tiempo real** o alertas operativas, la cadena por
+  lotes sería inadecuada y habría que introducir un canal de eventos.
+- Si la pregunta analítica dominante pasara a ser de **redes y varios saltos** —quién
+  se relaciona con quién a través de terceros—, el modelo relacional actual quedaría
+  corto frente a un motor de grafo.
+- Si el número de fuentes creciera de forma significativa, el **costo de coordinación
+  entre repositorios** superaría el beneficio de la autonomía, y convendría consolidar
+  la orquestación.
+
+Ninguna de las tres condiciones se cumple hoy. Las tres son plausibles a mediano plazo
+y conviene monitorearlas explícitamente.
+
+---
+
+## 11. Criterios metodológicos permanentes (guardrails)
 
 Estas reglas están escritas en el código, verificadas en CI y visibles en la
 interfaz. Son el núcleo del gobierno del sistema.
@@ -362,7 +533,7 @@ interfaz. Son el núcleo del gobierno del sistema.
 
 ---
 
-## 10. Cómo leer los indicadores
+## 12. Cómo leer los indicadores
 
 El sistema publica varios números 0-100 con **semánticas deliberadamente distintas**,
 que nunca se suman entre sí:
@@ -381,7 +552,7 @@ métricas no comparables.
 
 ---
 
-## 11. Limitaciones reconocidas
+## 13. Limitaciones reconocidas
 
 El sistema documenta sus propias brechas en lugar de ocultarlas. Las principales al
 corte actual:
@@ -401,7 +572,7 @@ corte actual:
 
 ---
 
-## 12. Síntesis para el comité
+## 14. Síntesis para el comité
 
 **Cinco criterios definen el gobierno de este sistema:**
 
