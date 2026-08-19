@@ -28,8 +28,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  ATLAS_RELEASE: '0.42.0'
-  ATLAS_BUILD: '0420'
+  ATLAS_RELEASE: '0.42.1'
+  ATLAS_BUILD: '0421'
 
 jobs:
   validate:
@@ -69,10 +69,16 @@ jobs:
           assert build['build']==os.environ['ATLAS_BUILD'],build
           assert build['release_policy']=='SINGLE_ACTIVE_RELEASE',build
           assert build['deployment_source_policy']=='ALWAYS_HEAD_OF_MAIN_NOT_TRIGGER_SHA',build
+          assert 'RELEASE_GUARD_NO_MUTATION_LOOP' in build['auth_fix'],build
           PY
           grep -q 'ATLAS AML' index.html
           grep -q 'Plataforma Integrada de Inteligencia y Riesgo' index.html
-          grep -q 'SINGLE_ACTIVE_RELEASE' atlas-release-guard.js
+          grep -q 'atlas-release-guard.js?r=0421' index.html
+          grep -q 'v0333-auth-preflight.js?r=0421' index.html
+          grep -q 'app.js?r=0421' index.html
+          grep -q 'setAttrIfChanged' atlas-release-guard.js
+          grep -q "observer.observe(root,{attributes:true" atlas-release-guard.js
+          ! grep -q "observer.observe(root,{attributes:true.*subtree:true" atlas-release-guard.js
           grep -q 'PROVEEDOR_SOURCE_TRUE_AND_NOT_INTRAESTADO_AND_NOT_PUBLIC_NAME' v037-public-spend.js
           grep -q 'aml_entities' v037-public-spend.js
           grep -q 'aml_v0205_uaf_sii_reconciliation' v037-public-spend.js
