@@ -1,103 +1,80 @@
 (function(){
   'use strict';
 
-  const RELEASE='0.42.2';
-  const BUILD='0422';
-  const AUTH_TIMEOUT=6500;
-  const ACCESS_TIMEOUT=6500;
-  const HARD_WATCHDOG=8500;
+  const RELEASE=document.documentElement.getAttribute('data-atlas-release')||'current';
+  const BUILD=document.documentElement.getAttribute('data-aml-build')||'current';
+  const HARD_WATCHDOG=18000;
+  const MAX_RECOVERY_RELOADS=2;
+  const RECOVERY_KEY='atlas-auth-stability-reloads:v0439';
 
   function now(){return new Date().toISOString();}
   function status(stage,extra={}){
     window.__ATLAS_AUTH_BOOT__={release:RELEASE,build:BUILD,stage,checkedAt:now(),...extra};
   }
-  function timeout(promise,ms,label){
-    let timer;
-    const guard=new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(`${label} excedió ${Math.round(ms/1000)} s.`)),ms);});
-    return Promise.race([Promise.resolve(promise),guard]).finally(()=>clearTimeout(timer));
+  function host(){return document.querySelector('#app');}
+  function title(){return host()?.querySelector('.auth-card h1')?.textContent?.trim()||'';}
+  function hasShell(){return !!host()?.querySelector('.shell');}
+  function hasLogin(){return !!host()?.querySelector('#login');}
+  function isPending(){return title()==='Acceso pendiente de habilitación';}
+  function isResolved(){return hasShell()||hasLogin()||isPending();}
+  function isRecoverable(){
+    const t=title();
+    return t==='Iniciando sesión segura…'||
+      t==='No fue posible abrir el Workbench'||
+      t==='No fue posible completar el inicio seguro'||
+      t==='La sesión no respondió';
   }
-  function hasResolvedUi(){
-    const host=document.querySelector('#app');
-    if(!host)return true;
-    return !!(host.querySelector('.shell')||host.querySelector('#login')||host.querySelector('#logout')||host.querySelector('.error'));
+  function setDetail(text){
+    const p=host()?.querySelector('.auth-card p');
+    if(p)p.textContent=text;
   }
-  function isStaticBoot(){
-    const title=document.querySelector('#app .auth-card h1')?.textContent?.trim()||'';
-    return title==='Iniciando sesión segura…';
+  function clearRecovery(){
+    try{sessionStorage.removeItem(RECOVERY_KEY);}catch(_error){}
   }
-  function setBootDetail(text){
-    const p=document.querySelector('#app .auth-card p');
-    if(p&&isStaticBoot()&&p.textContent!==text)p.textContent=text;
+  function recoveryCount(){
+    try{return Number(sessionStorage.getItem(RECOVERY_KEY)||0)||0;}catch(_error){return 0;}
   }
-  function diagnostic(error,stage){
-    const message=String(error?.message||error||'Error desconocido');
-    status('error',{failedStage:stage,error:message});
-    console.error('[ATLAS 0.42.2] auth bootstrap failed',stage,error);
-    if(typeof renderError==='function'){
-      renderError(`${stage}: ${message}`);
+  function setRecoveryCount(value){
+    try{sessionStorage.setItem(RECOVERY_KEY,String(value));}catch(_error){}
+  }
+  function showTerminalDiagnostic(last){
+    const root=host();
+    if(!root)return;
+    const message=String(last?.message||'La validación de acceso no respondió dentro del tiempo esperado.');
+    status('recovery-required',{error:message,reloads:recoveryCount()});
+    root.innerHTML=`<section class="auth-screen"><div class="auth-card">
+      <div class="brand-mark">ATLAS</div>
+      <div class="eyebrow">Recuperación de acceso</div>
+      <h1>El servicio de autorización está demorando más de lo esperado</h1>
+      <p>ATLAS mantuvo la sesión segura, pero la validación de acceso no logró completar el arranque. Puedes reintentar sin cerrar tu sesión Microsoft.</p>
+      <p class="error">${String(message).replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</p>
+      <button class="primary" type="button" id="atlas-auth-retry">Reintentar acceso</button>
+    </div></section>`;
+    document.querySelector('#atlas-auth-retry')?.addEventListener('click',()=>{
+      clearRecovery();
+      location.reload();
+    });
+  }
+
+  function watchdog(){
+    if(isResolved()){
+      clearRecovery();
+      status(hasShell()?'rendered':hasLogin()?'login-required':'access-pending');
       return;
     }
-    const host=document.querySelector('#app');
-    if(!host)return;
-    host.innerHTML=`<section class="auth-screen"><div class="auth-card"><div class="brand-mark">ATLAS</div><div class="eyebrow">Diagnóstico de acceso</div><h1>No fue posible completar el inicio seguro</h1><p>${stage}: ${message}</p><button class="primary" type="button" id="atlas-auth-retry">Reintentar</button></div></section>`;
-    document.querySelector('#atlas-auth-retry')?.addEventListener('click',()=>location.reload());
-  }
+    if(!isRecoverable())return;
 
-  async function rescueBoot(){
-    if(hasResolvedUi())return;
-    let stage='session';
-    try{
-      status('checking-session');
-      setBootDetail('Validando sesión Microsoft Entra y Supabase Auth…');
-      if(typeof sb==='undefined'||!sb?.auth)throw new Error('Cliente Supabase no disponible.');
-
-      const authResult=await timeout(sb.auth.getSession(),AUTH_TIMEOUT,'Validación de sesión Supabase');
-      if(authResult?.error)throw authResult.error;
-      const session=authResult?.data?.session||null;
-      if(!session){
-        status('login-required');
-        if(typeof renderLogin==='function')return renderLogin();
-        throw new Error('No existe sesión activa y no está disponible la pantalla de acceso.');
-      }
-
-      if(typeof state==='undefined')throw new Error('Estado de aplicación no disponible.');
-      state.user=session.user;
-
-      stage='allowlist/RLS';
-      status('checking-access',{userId:session.user?.id||null});
-      setBootDetail('Sesión válida. Verificando autorización y RLS…');
-      const accessResult=await timeout(
-        sb.from('aml_allowed_users').select('role,enabled').eq('user_id',state.user.id).maybeSingle(),
-        ACCESS_TIMEOUT,
-        'Validación de autorización/RLS'
-      );
-      if(accessResult?.error)throw accessResult.error;
-      if(!accessResult?.data?.enabled){
-        status('access-pending');
-        if(typeof renderPending==='function')return renderPending();
-        throw new Error('Cuenta autenticada sin habilitación vigente.');
-      }
-      state.access=accessResult.data;
-
-      stage='render';
-      status('authorized',{role:state.access?.role||'viewer'});
-      setBootDetail('Autorización confirmada. Abriendo ATLAS AML…');
-
-      /* Critical fix: audit is best-effort and MUST NOT block first paint. */
-      if(typeof auditSession==='function'){
-        Promise.resolve().then(()=>auditSession()).catch(error=>console.warn('[ATLAS] session audit deferred/failed',error));
-      }
-
-      if(typeof loadOverview!=='function')throw new Error('Vista principal no disponible.');
-      const overviewPromise=loadOverview();
-      status('rendered',{role:state.access?.role||'viewer'});
-      Promise.resolve(overviewPromise).catch(error=>{
-        console.error('[ATLAS] overview hydration failed after shell render',error);
-        if(typeof showContentError==='function')showContentError(error);
-      });
-    }catch(error){
-      diagnostic(error,stage);
+    const attempts=recoveryCount();
+    const last=window.__ATLAS_LAST_RUNTIME_ERROR__;
+    if(attempts<MAX_RECOVERY_RELOADS){
+      const next=attempts+1;
+      setRecoveryCount(next);
+      status('recovering',{reload:next,maxReloads:MAX_RECOVERY_RELOADS,lastError:last?.message||null});
+      setDetail(`El servicio está respondiendo con lentitud. Reintentando acceso seguro (${next}/${MAX_RECOVERY_RELOADS})…`);
+      window.setTimeout(()=>location.reload(),900+(next*350));
+      return;
     }
+    showTerminalDiagnostic(last);
   }
 
   window.addEventListener('error',event=>{
@@ -107,14 +84,21 @@
     window.__ATLAS_LAST_RUNTIME_ERROR__={message:String(event.reason?.message||event.reason||'unhandled rejection'),source:'promise',at:now()};
   });
 
-  status('scheduled');
-  setTimeout(()=>void rescueBoot(),0);
-  setTimeout(()=>{
-    if(!hasResolvedUi()&&isStaticBoot()){
-      const last=window.__ATLAS_LAST_RUNTIME_ERROR__;
-      diagnostic(new Error(last?.message||'El arranque no completó ninguna transición de interfaz.'),'watchdog');
-    }
-  },HARD_WATCHDOG);
+  /*
+   * v0.43.9 stability policy:
+   * - app.js remains the single authority that reads getSession + aml_allowed_users.
+   * - this guard NEVER launches a second allowlist/RLS query in parallel.
+   * - on a transient backend stall it performs bounded whole-boot retries.
+   * This removes the former v0.42.2 race where app.js and the rescue routine
+   * queried aml_allowed_users concurrently and the rescue failed after 6.5 s.
+   */
+  status('watchdog-scheduled',{watchdogMs:HARD_WATCHDOG});
+  window.setTimeout(watchdog,HARD_WATCHDOG);
 
-  window.AtlasAuthBootstrap={release:RELEASE,build:BUILD,retry:rescueBoot,status:()=>window.__ATLAS_AUTH_BOOT__};
+  window.AtlasAuthBootstrap={
+    release:RELEASE,
+    build:BUILD,
+    retry:()=>{clearRecovery();location.reload();},
+    status:()=>window.__ATLAS_AUTH_BOOT__
+  };
 })();
