@@ -4,7 +4,7 @@
   "entity360_ui": "0.38.0",
   "entity_entry_patch": "0391",
   "public_spend_ui": "13.1",
-  "pages_deploy": "failure",
+  "pages_deploy": "cancelled",
   "live_smoke": "success",
   "status": "failure",
   "required_assets": [
