@@ -1,4 +1,4 @@
-name: Deploy ATLAS AML Portal
+name: Deploy current ATLAS AML release
 
 on:
   push:
@@ -17,6 +17,10 @@ concurrency:
   group: atlas-aml-pages
   cancel-in-progress: true
 
+env:
+  ATLAS_RELEASE: '0.42.0'
+  ATLAS_BUILD: '0420'
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -24,231 +28,145 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout current main
+      - name: Checkout HEAD of main, never the triggering historical SHA
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
 
-      - name: Verify current release contract
+      - name: Synchronize again with current main
         shell: bash
         run: |
           set -euo pipefail
-          grep -q 'data-aml-version="0.39.0"' index.html
-          grep -q 'data-aml-build="0390"' index.html
-          grep -q 'ATLAS AML' index.html
-          grep -q 'Plataforma Integrada de Inteligencia y Riesgo' index.html
-          grep -q 'v039-atlas-brand.css?b=0390' index.html
-          grep -q 'v039-atlas-brand.js?b=0390' index.html
-          grep -q 'v036-radar-integrado-real.css?b=0360' index.html
-          grep -q 'v036-radar-integrado-hardening.css?b=0360' index.html
-          grep -q 'v036-radar-integrado-real.js?b=0360' index.html
-          grep -q 'v036-radar-integrado-hardening.js?b=0360' index.html
-          grep -q 'v036-radar-integrado-crosswalk.js?b=0360' index.html
-          grep -q 'v036-radar-integrado-runtime-fix.js?b=0360' index.html
-          grep -q 'v036-final.module.js?b=0360' index.html
-          grep -q 'v037-public-spend.css?b=0370' index.html
-          grep -q 'v037-public-spend.js?b=0370' index.html
-          grep -q 'v037-final.module.js?b=0370' index.html
-          grep -q 'v038-entity360.css?b=0380' index.html
-          grep -q 'v038-entity360.js?b=0380' index.html
-          grep -q 'v038-final.module.js?b=0390' index.html
-          grep -q '"app_version": "0.39.0"' build.json
-          grep -q '"build": "0390"' build.json
-          grep -q 'ATLAS_AML_V039' build.json
-          grep -q 'EVENT_DRIVEN_UNREAD_NEWS' build.json
-          grep -q 'RADAR_INTEGRADO_REAL_V036' build.json
-          grep -q 'PUBLIC_SPEND_V131_NATIVE' build.json
-          grep -q 'ENTITY360_V038' build.json
-          grep -q 'RADAR_PRESUPUESTO_ABIERTO_V131' build.json
-          grep -q 'PARTIDA_CAPITULO' build.json
-          grep -q 'PROVEEDOR_SOURCE_TRUE_AND_NOT_INTRAESTADO_AND_NOT_PUBLIC_NAME' build.json
-          grep -q 'RUT_OR_ENTITY_ID_EXACT_ONLY' build.json
-          grep -q 'PRIORITIZATION_NOT_FINDINGS' build.json
-          grep -q 'FECHA_PAGO_AND_MONTO_PAGO' build.json
-          grep -q 'VISIBILITY_NOT_RISK' build.json
-          grep -q 'SECTOR_SIGNAL_NOT_INDIVIDUAL_NONCOMPLIANCE' build.json
-          grep -q 'MATRIX_FILTERS_DRIVE_UAF_SII_SANCTIONS_OSFL_PRESS_SECTOR_CROSSES' build.json
-          grep -q 'UNIQUE_ENTITY_COUNT_VIA_HEAD_COUNT_AND_UAF_SECTOR_ARRAY_OVERLAP' build.json
-          grep -q 'SECTOR_COUNTS_ARE_NOT_ASSUMED_UNIQUE_ACROSS_MULTI_SECTOR_ENTITIES' build.json
-          grep -q 'EXPLICIT_LABEL_ALIASES_ONLY_NO_FUZZY_MATCHING' build.json
-          grep -q 'GLOBAL_LEXICAL_STATE_NOT_WINDOW_STATE' build.json
-          grep -q 'CANONICAL_ENTITY_ID_FIRST+RUT_EXACT_FOR_PUBLIC_SPEND' build.json
-          grep -q 'REGISTERED_UAF_IS_AUTHORITY+ACTECO_SCREENING_IS_NOT_LEGAL_STATUS' build.json
-          grep -q 'CONSOLIDATED_IPA_GROUPED_BY_ANALYTICAL_FAMILY+REPEATS_DO_NOT_INCREMENT' build.json
-          grep -q 'MULTI_SOURCE_CORROBORATION_DISTINCT_FROM_SINGLE_SOURCE_REPETITION' build.json
-          grep -q 'DO_NOT_INFER_INDIVIDUAL_ROS_ROE' build.json
-          grep -q 'v034-sanctions-v12-core.js?b=0343' index.html
-          grep -q 'v0344-public-entities.module.js?b=0343' v0343-final.module.js
-          test -f v039-atlas-brand.js
-          test -f v039-atlas-brand.css
-          test -f v036-radar-integrado-real.js
-          test -f v036-radar-integrado-real.css
-          test -f v036-radar-integrado-hardening.js
-          test -f v036-radar-integrado-hardening.css
-          test -f v036-radar-integrado-crosswalk.js
-          test -f v036-radar-integrado-runtime-fix.js
-          test -f v036-final.module.js
-          test -f v037-public-spend.js
-          test -f v037-public-spend.css
-          test -f v037-final.module.js
-          test -f v038-entity360.js
-          test -f v038-entity360.css
-          test -f v038-final.module.js
-          test -f docs/public-spend-module-v037.md
-          test -f v0344-public-entities.module.js
-          test -f v0344-public-entities.css
+          git fetch origin main --depth=1
+          git reset --hard origin/main
+          echo "Deploying $(git rev-parse HEAD) from current main"
 
-      - name: Validate final JavaScript layers
-        shell: bash
-        run: |
-          set -euo pipefail
-          node --check v039-atlas-brand.js
-          node --check v038-entity360.js
-          node --check v038-final.module.js
-          node --check v037-public-spend.js
-          node --check v037-final.module.js
-          node --check v036-radar-integrado-real.js
-          node --check v036-radar-integrado-hardening.js
-          node --check v036-radar-integrado-crosswalk.js
-          node --check v036-radar-integrado-runtime-fix.js
-          node --check v036-final.module.js
-          node --check v035-radar-command-center.js
-          node --check v035-radar-command-center-patch.js
-          node --check v0343-final.module.js
-          node --check v0344-public-entities.module.js
-
-      - name: Verify ATLAS visible identity contract
-        shell: bash
-        run: |
-          set -euo pipefail
-          grep -q "ATLAS_NAME='ATLAS AML'" v039-atlas-brand.js
-          grep -q "ATLAS_TAGLINE='Plataforma Integrada de Inteligencia y Riesgo'" v039-atlas-brand.js
-          grep -q "views:\['overview','entities','territory'\]" v039-atlas-brand.js
-          grep -q "views:\['uaf','sanctions','public-spend','osfl'\]" v039-atlas-brand.js
-          grep -q "views:\['questions'\]" v039-atlas-brand.js
-          grep -q 'atlas:nav-news' v039-atlas-brand.js
-          grep -q 'AtlasNavNews' v039-atlas-brand.js
-          grep -q 'atlas-nav-news' v039-atlas-brand.css
-
-      - name: Verify Entity 360 analytical contract
-        shell: bash
-        run: |
-          set -euo pipefail
-          grep -q "v0209EntityPriority" v038-entity360.js
-          grep -q "aml_v0205_uaf_sii_reconciliation" v038-entity360.js
-          grep -q "v037LoadData" v038-entity360.js
-          grep -q "v038Rut(pkg.e?.rut)" v038-entity360.js
-          grep -q "ACTECO" v038-entity360.js
-          grep -q "No representa probabilidad de LA/FT" v038-entity360.js
-          grep -q "Ausencia de dato no equivale" v038-entity360.js
-          grep -q "La relación no transfiere riesgo" v038-entity360.js
-          grep -q "Matriz de evidencia" v038-entity360.js
-          grep -q "Qué no sabemos" v038-entity360.js
-          grep -q "cleanLegacyEntityBridge" v038-final.module.js
-
-      - name: Verify Gasto Público interoperability contract
-        shell: bash
-        run: |
-          set -euo pipefail
-          grep -q 'spend_years_v1.json' v037-public-spend.js
-          grep -q 'entity_enrichment_v1.json' v037-public-spend.js
-          grep -q 'spend_corrected_v3_status.json' v037-public-spend.js
-          grep -q 'spend_v131_status.json' v037-public-spend.js
-          grep -q "aml_entities" v037-public-spend.js
-          grep -q "aml_v0205_uaf_sii_reconciliation" v037-public-spend.js
-          grep -q "aml_v028_sanctions_with_identity" v037-public-spend.js
-          grep -q 'PARTIDA_CAPITULO' v037-public-spend.js
-          grep -q 'PROVEEDOR_SOURCE_TRUE_AND_NOT_INTRAESTADO_AND_NOT_PUBLIC_NAME' v037-public-spend.js
-          grep -q 'PRIORITIZATION_NOT_FINDINGS' v037-public-spend.js
-          grep -q "uafReference:'OPTIONAL_INDEPENDENT'" v037-public-spend.js
-          grep -q 'data-v037-entity-bridge' v037-final.module.js
-          grep -q 'focusRut' v037-final.module.js
-
-      - name: Verify current Radar Presupuesto Abierto source contract
+      - name: Verify single active release manifest
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
-          import json, urllib.request
-          base='https://raw.githubusercontent.com/smoralesm07-source/Rada_Presupuesto_Abierto/main/docs/data/'
-          def load(name):
-              req=urllib.request.Request(base+name,headers={'User-Agent':'ATLAS-AML-v039-contract-check'})
-              with urllib.request.urlopen(req,timeout=60) as r:
-                  return json.load(r)
-          status=load('spend_corrected_v3_status.json')
-          ui=load('spend_v131_status.json')
-          assert status.get('validation')=='success', status
-          assert status.get('service_grain')=='PARTIDA_CAPITULO', status
-          assert status.get('provider_metrics')=='FULL_PRIVATE_RELATION_UNIVERSE', status
-          assert status.get('payment_basis')=='FECHA_PAGO_AND_MONTO_PAGO', status
-          assert status.get('provider_base_rule')=='PROVEEDOR_SOURCE_TRUE_AND_NOT_INTRAESTADO_AND_NOT_PUBLIC_NAME', status
-          assert status.get('recipient_rut_scope')=='ALL_BENEFICIARIES_AND_RECIPIENTS', status
-          assert ui.get('mark_filter_bundle')=='success', ui
-          assert ui.get('filter_mode')=='single_toggle', ui
-          assert ui.get('uaf_reference')=='optional_independent', ui
-          required={'flow','kpis','reads','service_rank','growth','dependence_influence','table'}
-          assert required.issubset(set(ui.get('synchronized_views') or [])), ui
-          print('[OK] Radar Presupuesto Abierto v13.1 + corrected v3 contract')
+          import json, os
+          m=json.load(open('atlas-release.json',encoding='utf-8'))
+          assert m['release']==os.environ['ATLAS_RELEASE'], m
+          assert m['build']==os.environ['ATLAS_BUILD'], m
+          assert m['deployment_policy']=='SINGLE_ACTIVE_RELEASE', m
+          assert m['legacy_release_policy']=='GIT_HISTORY_ONLY_NOT_ACTIVE_RUNTIME', m
+          print('[OK] single active release',m['release'],m['build'])
           PY
+          test -f atlas-release-guard.js
+          node --check atlas-release-guard.js
+          node --check v036-radar-integrado-runtime-fix.js
+          node --check v0402-reconciliation-live.js
 
-      - name: Verify Radar Integrado analytical contract
+      - name: Build clean Pages artifact from current release only
         shell: bash
         run: |
           set -euo pipefail
-          grep -q 'Situación UAF · el padrón y su asimetría' v036-radar-integrado-real.js
-          grep -q 'Análisis de reportabilidad · silencios por industria' v036-radar-integrado-real.js
-          grep -q 'Señales del sistema' v036-radar-integrado-real.js
-          grep -q 'Convergencia entre radares' v036-radar-integrado-real.js
-          grep -q 'Entrar al análisis' v036-radar-integrado-real.js
-          grep -q 'Silencio estructural' v036-radar-integrado-real.js
-          grep -q 'Convergencia es visibilidad, no riesgo' v036-radar-integrado-real.js
-          grep -q 'minRosSharePct:3' v036-radar-integrado-hardening.js
-          grep -q 'nullDeltaPreserved:true' v036-radar-integrado-hardening.js
-          grep -q 'auditInteractive:true' v036-radar-integrado-hardening.js
-          grep -q 'filteredConvergence:true' v036-radar-integrado-hardening.js
-          grep -q 'priorityQueue:true' v036-radar-integrado-hardening.js
-          grep -q 'aml_v024_uaf_cross_sector' v036-radar-integrado-hardening.js
-          grep -q 'EXPLICIT_SECTOR_ALIASES_ONLY' v036-radar-integrado-crosswalk.js
-          grep -q "publicSpendBridge:'V037_NATIVE_ROUTE'" v036-radar-integrado-crosswalk.js
-          grep -q "stateBinding:'GLOBAL_LEXICAL_STATE'" v036-radar-integrado-runtime-fix.js
-          grep -q 'windowStateDependency:false' v036-radar-integrado-runtime-fix.js
-          grep -q 'crossSectorRetry:true' v036-radar-integrado-runtime-fix.js
-          grep -q 'aml_v024_uaf_cross_entity' v036-radar-integrado-runtime-fix.js
-          grep -q "uniqueCrossCounts:'HEAD_COUNT_WITH_ARRAY_OVERLAP'" v036-radar-integrado-runtime-fix.js
-          grep -q 'sectorSumIsNotUniqueEntityCount:true' v036-radar-integrado-runtime-fix.js
+          rm -rf _site
+          mkdir _site
+          rsync -a ./ _site/ \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude '_site' \
+            --exclude 'prototypes' \
+            --exclude 'tests' \
+            --exclude 'docs' \
+            --exclude '*.md' \
+            --exclude '.pages-*' \
+            --exclude 'v035-final.module.js' \
+            --exclude 'v036-final.module.js'
+
+          python - <<'PY'
+          from pathlib import Path
+          import os,re
+          p=Path('_site/index.html')
+          s=p.read_text(encoding='utf-8')
+          rel=os.environ['ATLAS_RELEASE']; build=os.environ['ATLAS_BUILD']
+
+          # Canonical document identity.
+          s=re.sub(r'data-aml-version="[^"]+"',f'data-aml-version="{rel}"',s,count=1)
+          s=re.sub(r'data-aml-build="[^"]+"',f'data-aml-build="{build}"',s,count=1)
+          if 'data-atlas-release=' not in s:
+              s=s.replace('<html lang="es" ',f'<html lang="es" data-atlas-release="{rel}" data-atlas-release-policy="single-active" ',1)
+          s=re.sub(r'<title>.*?</title>',f'<title>ATLAS AML · v{rel}</title>',s,count=1,flags=re.S)
+
+          # Release guard is the first local runtime authority after CSP.
+          guard=f'  <script src="./atlas-release-guard.js?r={build}"></script>\n'
+          if 'atlas-release-guard.js' not in s:
+              marker='  <script src="./v040-theme-bootstrap.js?b=0400"></script>\n'
+              s=s.replace(marker,guard+marker,1)
+
+          # Never execute obsolete final runtime authorities again.
+          s='\n'.join(line for line in s.splitlines() if 'v035-final.module.js' not in line and 'v036-final.module.js' not in line)+'\n'
+
+          # Force fresh copies of every layer that has changed after the old 0.39 shell.
+          replacements={
+            './v040-theme-bootstrap.js?b=0400':f'./v040-theme-bootstrap.js?r={build}',
+            './v039-atlas-brand.css?b=0390':f'./v039-atlas-brand.css?r={build}',
+            './v040-theme-system.css?b=0400':f'./v040-theme-system.css?r={build}',
+            './v036-radar-integrado-runtime-fix.js?b=0360':f'./v036-radar-integrado-runtime-fix.js?r={build}',
+            './v0402-reconciliation-live.js?b=0402':f'./v0402-reconciliation-live.js?r={build}',
+            './v038-final.module.js?b=0390':f'./v038-final.module.js?r={build}',
+            './v039-atlas-brand.js?b=0390':f'./v039-atlas-brand.js?r={build}',
+          }
+          for old,new in replacements.items(): s=s.replace(old,new)
+
+          p.write_text(s,encoding='utf-8')
+          PY
+
+          touch _site/.nojekyll
+
+          # Production artifact must contain exactly one app entry point and current release authority.
+          test -f _site/index.html
+          test -f _site/atlas-release.json
+          test -f _site/atlas-release-guard.js
+          test ! -e _site/prototypes
+          test ! -e _site/tests
+          test ! -e _site/.github
+          test ! -e _site/v035-final.module.js
+          test ! -e _site/v036-final.module.js
+          grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" _site/index.html
+          grep -q "data-aml-build=\"${ATLAS_BUILD}\"" _site/index.html
+          grep -q "data-atlas-release=\"${ATLAS_RELEASE}\"" _site/index.html
+          grep -q "atlas-release-guard.js?r=${ATLAS_BUILD}" _site/index.html
+          ! grep -q 'v035-final.module.js' _site/index.html
+          ! grep -q 'v036-final.module.js' _site/index.html
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload current main as Pages artifact
+      - name: Upload current release artifact only
         uses: actions/upload-pages-artifact@v4
         with:
-          path: .
+          path: ./_site
 
-      - name: Deploy current main
+      - name: Deploy current main release
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Smoke test deployed ATLAS AML v0.39
+      - name: Smoke test exact deployed release
         shell: bash
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
           set -euo pipefail
           test -n "$PAGE_URL"
-          curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "${PAGE_URL%/}/" -o /tmp/atlas-aml-page.html
-          grep -q 'data-aml-version="0.39.0"' /tmp/atlas-aml-page.html
-          grep -q 'data-aml-build="0390"' /tmp/atlas-aml-page.html
-          grep -q 'ATLAS AML' /tmp/atlas-aml-page.html
-          grep -q 'Plataforma Integrada de Inteligencia y Riesgo' /tmp/atlas-aml-page.html
-          grep -q 'v039-atlas-brand.css?b=0390' /tmp/atlas-aml-page.html
-          grep -q 'v039-atlas-brand.js?b=0390' /tmp/atlas-aml-page.html
-          grep -q 'v036-radar-integrado-real.js?b=0360' /tmp/atlas-aml-page.html
-          grep -q 'v036-radar-integrado-hardening.js?b=0360' /tmp/atlas-aml-page.html
-          grep -q 'v036-radar-integrado-crosswalk.js?b=0360' /tmp/atlas-aml-page.html
-          grep -q 'v036-radar-integrado-runtime-fix.js?b=0360' /tmp/atlas-aml-page.html
-          grep -q 'v036-radar-integrado-real.css?b=0360' /tmp/atlas-aml-page.html
-          grep -q 'v037-public-spend.js?b=0370' /tmp/atlas-aml-page.html
-          grep -q 'v037-public-spend.css?b=0370' /tmp/atlas-aml-page.html
-          grep -q 'v037-final.module.js?b=0370' /tmp/atlas-aml-page.html
-          grep -q 'v038-entity360.js?b=0380' /tmp/atlas-aml-page.html
-          grep -q 'v038-entity360.css?b=0380' /tmp/atlas-aml-page.html
-          grep -q 'v038-final.module.js?b=0390' /tmp/atlas-aml-page.html
+          stamp=$(date +%s)
+          curl --fail --silent --show-error --location --retry 8 --retry-delay 2 "${PAGE_URL%/}/?atlas_release=${ATLAS_RELEASE}:${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/atlas.html
+          grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" /tmp/atlas.html
+          grep -q "data-aml-build=\"${ATLAS_BUILD}\"" /tmp/atlas.html
+          grep -q "data-atlas-release=\"${ATLAS_RELEASE}\"" /tmp/atlas.html
+          grep -q "atlas-release-guard.js?r=${ATLAS_BUILD}" /tmp/atlas.html
+          ! grep -q 'v035-final.module.js' /tmp/atlas.html
+          ! grep -q 'v036-final.module.js' /tmp/atlas.html
+          curl --fail --silent --show-error --location "${PAGE_URL%/}/atlas-release.json?_atlas=${stamp}" -o /tmp/release.json
+          python - <<'PY'
+          import json,os
+          m=json.load(open('/tmp/release.json'))
+          assert m['release']==os.environ['ATLAS_RELEASE'],m
+          assert m['build']==os.environ['ATLAS_BUILD'],m
+          assert m['deployment_policy']=='SINGLE_ACTIVE_RELEASE',m
+          print('[OK] live ATLAS release',m['release'],m['build'])
+          PY
