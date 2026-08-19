@@ -31,7 +31,9 @@ jobs:
           grep -q 'data-aml-version="0.36.0"' index.html
           grep -q 'data-aml-build="0360"' index.html
           grep -q 'v036-radar-integrado-real.css?b=0360' index.html
+          grep -q 'v036-radar-integrado-hardening.css?b=0360' index.html
           grep -q 'v036-radar-integrado-real.js?b=0360' index.html
+          grep -q 'v036-radar-integrado-hardening.js?b=0360' index.html
           grep -q 'v036-final.module.js?b=0360' index.html
           grep -q '"app_version": "0.36.0"' build.json
           grep -q 'RADAR_INTEGRADO_REAL_V036' build.json
@@ -42,6 +44,8 @@ jobs:
           grep -q 'v0344-public-entities.module.js?b=0343' v0343-final.module.js
           test -f v036-radar-integrado-real.js
           test -f v036-radar-integrado-real.css
+          test -f v036-radar-integrado-hardening.js
+          test -f v036-radar-integrado-hardening.css
           test -f v036-final.module.js
           test -f v0344-public-entities.module.js
           test -f v0344-public-entities.css
@@ -51,6 +55,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check v036-radar-integrado-real.js
+          node --check v036-radar-integrado-hardening.js
           node --check v036-final.module.js
           node --check v035-radar-command-center.js
           node --check v035-radar-command-center-patch.js
@@ -68,6 +73,9 @@ jobs:
           grep -q 'Entrar al análisis' v036-radar-integrado-real.js
           grep -q 'Silencio estructural' v036-radar-integrado-real.js
           grep -q 'Convergencia es visibilidad, no riesgo' v036-radar-integrado-real.js
+          grep -q 'minRosSharePct:3' v036-radar-integrado-hardening.js
+          grep -q 'nullDeltaPreserved:true' v036-radar-integrado-hardening.js
+          grep -q 'auditInteractive:true' v036-radar-integrado-hardening.js
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -91,5 +99,7 @@ jobs:
           curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "${PAGE_URL%/}/" -o /tmp/aml-workbench-page.html
           grep -q 'data-aml-version="0.36.0"' /tmp/aml-workbench-page.html
           grep -q 'v036-radar-integrado-real.js?b=0360' /tmp/aml-workbench-page.html
+          grep -q 'v036-radar-integrado-hardening.js?b=0360' /tmp/aml-workbench-page.html
           grep -q 'v036-radar-integrado-real.css?b=0360' /tmp/aml-workbench-page.html
+          grep -q 'v036-radar-integrado-hardening.css?b=0360' /tmp/aml-workbench-page.html
           grep -q 'v036-final.module.js?b=0360' /tmp/aml-workbench-page.html
