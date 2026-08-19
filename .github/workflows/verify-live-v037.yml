@@ -36,6 +36,8 @@ jobs:
           grep -q 'Plataforma Integrada de Inteligencia y Riesgo' /tmp/live.html
           grep -q 'v039-atlas-brand.js?b=0390' /tmp/live.html
           grep -q 'v039-atlas-brand.css?b=0390' /tmp/live.html
+          grep -q 'v0391-entity-entry.js?b=0391' /tmp/live.html
+          grep -q 'v0391-entity-entry.css?b=0391' /tmp/live.html
           grep -q 'v037-public-spend.js?b=0370' /tmp/live.html
           grep -q 'v037-public-spend.css?b=0370' /tmp/live.html
           grep -q 'v037-final.module.js?b=0370' /tmp/live.html
@@ -43,6 +45,11 @@ jobs:
           grep -q 'v038-entity360.css?b=0380' /tmp/live.html
           grep -q 'v038-final.module.js?b=0390' /tmp/live.html
           grep -q 'v036-radar-integrado-crosswalk.js?b=0360' /tmp/live.html
+          curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "${URL%/}/v0391-entity-entry.js?b=0391" -o /tmp/entity-entry.js
+          curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "${URL%/}/v0391-entity-entry.css?b=0391" -o /tmp/entity-entry.css
+          grep -q 'v0391LoadEntities' /tmp/entity-entry.js
+          grep -q 'FORCE_V038_RENDERER\|v038Render(pkg,false)' /tmp/entity-entry.js
+          grep -q 'v0391-entry-hero' /tmp/entity-entry.css
 
       - name: Publish stable live status
         if: always()
@@ -61,11 +68,12 @@ jobs:
             'workbench_version':'0.39.0',
             'product_name':'ATLAS AML',
             'entity360_ui':'0.38.0',
+            'entity_entry_patch':'0391',
             'public_spend_ui':'13.1',
             'pages_deploy':deploy,
             'live_smoke':live,
             'status':'success' if ok else 'failure',
-            'required_assets':['v039-atlas-brand.js','v039-atlas-brand.css','v038-entity360.js','v038-entity360.css','v038-final.module.js','v037-public-spend.js','v037-public-spend.css','v037-final.module.js'],
+            'required_assets':['v039-atlas-brand.js','v039-atlas-brand.css','v0391-entity-entry.js','v0391-entity-entry.css','v038-entity360.js','v038-entity360.css','v038-final.module.js','v037-public-spend.js','v037-public-spend.css','v037-final.module.js'],
             'preserved_assets':['v036-radar-integrado-crosswalk.js']
           }
           Path('data/public_spend_v037_live_status.json').write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding='utf-8')
@@ -74,7 +82,7 @@ jobs:
           git config user.email "aml-workbench-bot@users.noreply.github.com"
           git add data/public_spend_v037_live_status.json
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "ci: publica smoke live ATLAS AML v0.39"
+          git commit -m "ci: publica smoke live ATLAS AML v0.39 · Entidades 0391"
           git pull --rebase origin main
           git push origin main
 
