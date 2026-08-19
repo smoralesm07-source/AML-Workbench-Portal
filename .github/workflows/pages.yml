@@ -28,16 +28,25 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -q 'data-aml-version="0.36.0"' index.html
-          grep -q 'data-aml-build="0360"' index.html
+          grep -q 'data-aml-version="0.37.0"' index.html
+          grep -q 'data-aml-build="0370"' index.html
           grep -q 'v036-radar-integrado-real.css?b=0360' index.html
           grep -q 'v036-radar-integrado-hardening.css?b=0360' index.html
           grep -q 'v036-radar-integrado-real.js?b=0360' index.html
           grep -q 'v036-radar-integrado-hardening.js?b=0360' index.html
           grep -q 'v036-final.module.js?b=0360' index.html
-          grep -q '"app_version": "0.36.0"' build.json
+          grep -q 'v037-public-spend.css?b=0370' index.html
+          grep -q 'v037-public-spend.js?b=0370' index.html
+          grep -q 'v037-final.module.js?b=0370' index.html
+          grep -q '"app_version": "0.37.0"' build.json
           grep -q 'RADAR_INTEGRADO_REAL_V036' build.json
-          grep -q 'RADARINTEGRADOREAL_HTML_PRODUCTION_ADAPTATION' build.json
+          grep -q 'PUBLIC_SPEND_V131_NATIVE' build.json
+          grep -q 'RADAR_PRESUPUESTO_ABIERTO_V131' build.json
+          grep -q 'PARTIDA_CAPITULO' build.json
+          grep -q 'PROVEEDOR_SOURCE_TRUE_AND_NOT_INTRAESTADO_AND_NOT_PUBLIC_NAME' build.json
+          grep -q 'RUT_OR_ENTITY_ID_EXACT_ONLY' build.json
+          grep -q 'PRIORITIZATION_NOT_FINDINGS' build.json
+          grep -q 'FECHA_PAGO_AND_MONTO_PAGO' build.json
           grep -q 'VISIBILITY_NOT_RISK' build.json
           grep -q 'SECTOR_SIGNAL_NOT_INDIVIDUAL_NONCOMPLIANCE' build.json
           grep -q 'v034-sanctions-v12-core.js?b=0343' index.html
@@ -47,6 +56,10 @@ jobs:
           test -f v036-radar-integrado-hardening.js
           test -f v036-radar-integrado-hardening.css
           test -f v036-final.module.js
+          test -f v037-public-spend.js
+          test -f v037-public-spend.css
+          test -f v037-final.module.js
+          test -f docs/public-spend-module-v037.md
           test -f v0344-public-entities.module.js
           test -f v0344-public-entities.css
 
@@ -54,6 +67,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node --check v037-public-spend.js
+          node --check v037-final.module.js
           node --check v036-radar-integrado-real.js
           node --check v036-radar-integrado-hardening.js
           node --check v036-final.module.js
@@ -61,6 +76,51 @@ jobs:
           node --check v035-radar-command-center-patch.js
           node --check v0343-final.module.js
           node --check v0344-public-entities.module.js
+
+      - name: Verify Gasto Público interoperability contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'spend_years_v1.json' v037-public-spend.js
+          grep -q 'entity_enrichment_v1.json' v037-public-spend.js
+          grep -q 'spend_corrected_v3_status.json' v037-public-spend.js
+          grep -q 'spend_v131_status.json' v037-public-spend.js
+          grep -q "aml_entities" v037-public-spend.js
+          grep -q "aml_v0205_uaf_sii_reconciliation" v037-public-spend.js
+          grep -q "aml_v028_sanctions_with_identity" v037-public-spend.js
+          grep -q 'PARTIDA_CAPITULO' v037-public-spend.js
+          grep -q 'PROVEEDOR_SOURCE_TRUE_AND_NOT_INTRAESTADO_AND_NOT_PUBLIC_NAME' v037-public-spend.js
+          grep -q 'PRIORITIZATION_NOT_FINDINGS' v037-public-spend.js
+          grep -q "uafReference:'OPTIONAL_INDEPENDENT'" v037-public-spend.js
+          grep -q 'data-v037-entity-bridge' v037-final.module.js
+          grep -q 'focusRut' v037-final.module.js
+
+      - name: Verify current Radar Presupuesto Abierto source contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, urllib.request
+          base='https://raw.githubusercontent.com/smoralesm07-source/Rada_Presupuesto_Abierto/main/docs/data/'
+          def load(name):
+              req=urllib.request.Request(base+name,headers={'User-Agent':'AML-Workbench-v037-contract-check'})
+              with urllib.request.urlopen(req,timeout=60) as r:
+                  return json.load(r)
+          status=load('spend_corrected_v3_status.json')
+          ui=load('spend_v131_status.json')
+          assert status.get('validation')=='success', status
+          assert status.get('service_grain')=='PARTIDA_CAPITULO', status
+          assert status.get('provider_metrics')=='FULL_PRIVATE_RELATION_UNIVERSE', status
+          assert status.get('payment_basis')=='FECHA_PAGO_AND_MONTO_PAGO', status
+          assert status.get('provider_base_rule')=='PROVEEDOR_SOURCE_TRUE_AND_NOT_INTRAESTADO_AND_NOT_PUBLIC_NAME', status
+          assert status.get('recipient_rut_scope')=='ALL_BENEFICIARIES_AND_RECIPIENTS', status
+          assert ui.get('mark_filter_bundle')=='success', ui
+          assert ui.get('filter_mode')=='single_toggle', ui
+          assert ui.get('uaf_reference')=='optional_independent', ui
+          required={'flow','kpis','reads','service_rank','growth','dependence_influence','table'}
+          assert required.issubset(set(ui.get('synchronized_views') or [])), ui
+          print('[OK] Radar Presupuesto Abierto v13.1 + corrected v3 contract')
+          PY
 
       - name: Verify Radar Integrado analytical contract
         shell: bash
@@ -89,7 +149,7 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Smoke test deployed v0.36
+      - name: Smoke test deployed v0.37
         shell: bash
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
@@ -97,9 +157,9 @@ jobs:
           set -euo pipefail
           test -n "$PAGE_URL"
           curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "${PAGE_URL%/}/" -o /tmp/aml-workbench-page.html
-          grep -q 'data-aml-version="0.36.0"' /tmp/aml-workbench-page.html
+          grep -q 'data-aml-version="0.37.0"' /tmp/aml-workbench-page.html
           grep -q 'v036-radar-integrado-real.js?b=0360' /tmp/aml-workbench-page.html
           grep -q 'v036-radar-integrado-hardening.js?b=0360' /tmp/aml-workbench-page.html
-          grep -q 'v036-radar-integrado-real.css?b=0360' /tmp/aml-workbench-page.html
-          grep -q 'v036-radar-integrado-hardening.css?b=0360' /tmp/aml-workbench-page.html
-          grep -q 'v036-final.module.js?b=0360' /tmp/aml-workbench-page.html
+          grep -q 'v037-public-spend.js?b=0370' /tmp/aml-workbench-page.html
+          grep -q 'v037-public-spend.css?b=0370' /tmp/aml-workbench-page.html
+          grep -q 'v037-final.module.js?b=0370' /tmp/aml-workbench-page.html
