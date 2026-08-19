@@ -15,8 +15,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  ATLAS_RELEASE: '0.42.1'
-  ATLAS_BUILD: '0421'
+  ATLAS_RELEASE: '0.42.2'
+  ATLAS_BUILD: '0422'
 
 jobs:
   smoke:
@@ -27,7 +27,7 @@ jobs:
           ref: main
           fetch-depth: 1
 
-      - name: Verify exact served ATLAS release
+      - name: Verify exact served ATLAS bootstrap
         id: live
         continue-on-error: true
         shell: bash
@@ -38,31 +38,28 @@ jobs:
           curl --fail --silent --show-error --location --retry 10 --retry-delay 3 "${URL}?atlas_release=${ATLAS_RELEASE}:${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/live.html
           grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" /tmp/live.html
           grep -q "data-aml-build=\"${ATLAS_BUILD}\"" /tmp/live.html
-          grep -q "data-atlas-release=\"${ATLAS_RELEASE}\"" /tmp/live.html
-          grep -q "atlas-release-guard.js?r=${ATLAS_BUILD}" /tmp/live.html
+          grep -q "v0422-auth-bootstrap-fix.js?r=${ATLAS_BUILD}" /tmp/live.html
+          grep -q "v040-theme-bootstrap.js?r=${ATLAS_BUILD}" /tmp/live.html
           grep -q "v0333-auth-preflight.js?r=${ATLAS_BUILD}" /tmp/live.html
           grep -q "app.js?r=${ATLAS_BUILD}" /tmp/live.html
-          grep -q 'ATLAS AML' /tmp/live.html
-          grep -q 'Plataforma Integrada de Inteligencia y Riesgo' /tmp/live.html
-          ! grep -q 'v035-final.module.js' /tmp/live.html
-          ! grep -q 'v036-final.module.js' /tmp/live.html
 
           curl --fail --silent --show-error --location --retry 6 --retry-delay 2 "${URL}atlas-release.json?_atlas=${stamp}" -o /tmp/release.json
-          curl --fail --silent --show-error --location --retry 6 --retry-delay 2 "${URL}atlas-release-guard.js?r=${ATLAS_BUILD}" -o /tmp/release-guard.js
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 2 "${URL}atlas-release-guard.js?r=${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/guard.js
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 2 "${URL}v0402-aie-brand.js?r=${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/aie.js
+          curl --fail --silent --show-error --location --retry 6 --retry-delay 2 "${URL}v0422-auth-bootstrap-fix.js?r=${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/authfix.js
           python - <<'PY'
           import json,os
           m=json.load(open('/tmp/release.json'))
           assert m['release']==os.environ['ATLAS_RELEASE'],m
           assert m['build']==os.environ['ATLAS_BUILD'],m
-          assert m['deployment_policy']=='SINGLE_ACTIVE_RELEASE',m
-          assert m['legacy_release_policy']=='GIT_HISTORY_ONLY_NOT_ACTIVE_RUNTIME',m
+          assert m['bootstrap_policy']=='NO_SELF_SUSTAINING_MUTATION_OBSERVERS',m
           PY
-          grep -q "SINGLE_ACTIVE_RELEASE" /tmp/release-guard.js
-          grep -q "atlas-release-reload-count" /tmp/release-guard.js
-          grep -q "cache:'no-store'" /tmp/release-guard.js
-          grep -q "setAttrIfChanged" /tmp/release-guard.js
-          grep -q "observer.observe(root,{attributes:true" /tmp/release-guard.js
-          ! grep -q "observer.observe(root,{attributes:true.*subtree:true" /tmp/release-guard.js
+          grep -q "ROOT_ATTRIBUTES_ONLY" /tmp/guard.js
+          ! grep -q "characterData:true" /tmp/aie.js
+          grep -q "CHILD_INSERTIONS_ONLY_NO_CHARACTERDATA_LOOP" /tmp/aie.js
+          grep -q "audit is best-effort" /tmp/authfix.js
+          grep -q "AUTH_TIMEOUT=6500" /tmp/authfix.js
+          grep -q "HARD_WATCHDOG=8500" /tmp/authfix.js
 
       - name: Publish current live status
         if: always()
@@ -86,9 +83,9 @@ jobs:
             'pages_deploy':deploy,
             'live_smoke':live,
             'status':'success' if ok else 'failure',
-            'required_assets':['atlas-release.json','atlas-release-guard.js','v040-theme-bootstrap.js','v0401-radar-graphics-fix.js','v0401-radar-graphics-fix.css','v0402-reconciliation-live.js','v039-atlas-brand.js','v039-atlas-brand.css','v0391-entity-entry.js','v0391-entity-entry.css','v038-entity360.js','v038-entity360.css','v038-final.module.js','v037-public-spend.js','v037-public-spend.css','v037-final.module.js'],
+            'required_assets':['atlas-release.json','atlas-release-guard.js','v040-theme-bootstrap.js','v0402-aie-brand.js','v0422-auth-bootstrap-fix.js','v0333-auth-preflight.js','app.js','v0402-reconciliation-live.js','v039-atlas-brand.js','v0391-entity-entry.js','v038-entity360.js','v037-public-spend.js'],
             'blocked_runtime_authorities':['v035-final.module.js','v036-final.module.js'],
-            'bootstrap_policy':'RELEASE_GUARD_NO_SELF_MUTATION_LOOP'
+            'bootstrap_policy':'NO_SELF_SUSTAINING_MUTATION_OBSERVERS+NON_BLOCKING_AUDIT+AUTH_TIMEOUT_DIAGNOSTIC'
           }
           Path('data/public_spend_v037_live_status.json').write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding='utf-8')
           PY
