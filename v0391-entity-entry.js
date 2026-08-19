@@ -95,3 +95,17 @@ window.loadEntities=v0391LoadEntities;
 window.searchEntities=v0391SearchEntities;
 window.openEntity=async function(entityId){return v0391Open(entityId);};
 window.__ATLAS_ENTITY_ENTRY__={version:V0391_ENTITY_ENTRY,load:v0391LoadEntities,search:v0391SearchEntities,open:v0391Open};
+
+/* v0.41 progressive enhancement: load after all historical and module layers so
+ * the assisted search becomes the final authority without changing Entity 360 data contracts. */
+(function(){
+  function loadV041(){
+    if(document.querySelector('script[data-atlas-entity-search-v041]'))return;
+    const s=document.createElement('script');
+    s.src='./v041-entity-search-ux.js?b=0410';
+    s.dataset.atlasEntitySearchV041='1';
+    document.head.appendChild(s);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadV041,{once:true});
+  else loadV041();
+})();
