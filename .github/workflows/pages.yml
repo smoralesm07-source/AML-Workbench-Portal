@@ -34,6 +34,7 @@ jobs:
           grep -q 'v036-radar-integrado-hardening.css?b=0360' index.html
           grep -q 'v036-radar-integrado-real.js?b=0360' index.html
           grep -q 'v036-radar-integrado-hardening.js?b=0360' index.html
+          grep -q 'v036-radar-integrado-crosswalk.js?b=0360' index.html
           grep -q 'v036-final.module.js?b=0360' index.html
           grep -q 'v037-public-spend.css?b=0370' index.html
           grep -q 'v037-public-spend.js?b=0370' index.html
@@ -49,12 +50,15 @@ jobs:
           grep -q 'FECHA_PAGO_AND_MONTO_PAGO' build.json
           grep -q 'VISIBILITY_NOT_RISK' build.json
           grep -q 'SECTOR_SIGNAL_NOT_INDIVIDUAL_NONCOMPLIANCE' build.json
+          grep -q 'MATRIX_FILTERS_DRIVE_UAF_SII_SANCTIONS_OSFL_PRESS_SECTOR_CROSSES' build.json
+          grep -q 'EXPLICIT_LABEL_ALIASES_ONLY_NO_FUZZY_MATCHING' build.json
           grep -q 'v034-sanctions-v12-core.js?b=0343' index.html
           grep -q 'v0344-public-entities.module.js?b=0343' v0343-final.module.js
           test -f v036-radar-integrado-real.js
           test -f v036-radar-integrado-real.css
           test -f v036-radar-integrado-hardening.js
           test -f v036-radar-integrado-hardening.css
+          test -f v036-radar-integrado-crosswalk.js
           test -f v036-final.module.js
           test -f v037-public-spend.js
           test -f v037-public-spend.css
@@ -71,6 +75,7 @@ jobs:
           node --check v037-final.module.js
           node --check v036-radar-integrado-real.js
           node --check v036-radar-integrado-hardening.js
+          node --check v036-radar-integrado-crosswalk.js
           node --check v036-final.module.js
           node --check v035-radar-command-center.js
           node --check v035-radar-command-center-patch.js
@@ -136,6 +141,11 @@ jobs:
           grep -q 'minRosSharePct:3' v036-radar-integrado-hardening.js
           grep -q 'nullDeltaPreserved:true' v036-radar-integrado-hardening.js
           grep -q 'auditInteractive:true' v036-radar-integrado-hardening.js
+          grep -q 'filteredConvergence:true' v036-radar-integrado-hardening.js
+          grep -q 'priorityQueue:true' v036-radar-integrado-hardening.js
+          grep -q 'aml_v024_uaf_cross_sector' v036-radar-integrado-hardening.js
+          grep -q 'EXPLICIT_SECTOR_ALIASES_ONLY' v036-radar-integrado-crosswalk.js
+          grep -q "publicSpendBridge:'V037_NATIVE_ROUTE'" v036-radar-integrado-crosswalk.js
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -160,6 +170,8 @@ jobs:
           grep -q 'data-aml-version="0.37.0"' /tmp/aml-workbench-page.html
           grep -q 'v036-radar-integrado-real.js?b=0360' /tmp/aml-workbench-page.html
           grep -q 'v036-radar-integrado-hardening.js?b=0360' /tmp/aml-workbench-page.html
+          grep -q 'v036-radar-integrado-crosswalk.js?b=0360' /tmp/aml-workbench-page.html
+          grep -q 'v036-radar-integrado-real.css?b=0360' /tmp/aml-workbench-page.html
           grep -q 'v037-public-spend.js?b=0370' /tmp/aml-workbench-page.html
           grep -q 'v037-public-spend.css?b=0370' /tmp/aml-workbench-page.html
           grep -q 'v037-final.module.js?b=0370' /tmp/aml-workbench-page.html
