@@ -1,10 +1,14 @@
 {
-  "workbench_version": "0.37.0",
+  "workbench_version": "0.38.0",
+  "entity360_ui": "0.38.0",
   "public_spend_ui": "13.1",
   "pages_deploy": "success",
-  "live_smoke": "failure",
-  "status": "failure",
+  "live_smoke": "success",
+  "status": "success",
   "required_assets": [
+    "v038-entity360.js",
+    "v038-entity360.css",
+    "v038-final.module.js",
     "v037-public-spend.js",
     "v037-public-spend.css",
     "v037-final.module.js"
