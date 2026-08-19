@@ -19,7 +19,7 @@ for(const needle of [
   "data-v036-sort=\"rosPerSo\">ROS/SO",
   "data-v036-sort=\"iir\">IIR",
   "IIR = %ROS / %SO",
-  "LEGACY_ROS_PER_100_TRACEABILITY_ONLY",
+  "legacy_ros_per_100:'TRACEABILITY_ONLY'",
   "SECTOR_COMPARISON_NOT_RISK_OR_COMPLIANCE",
   "muy_bajo",
   "proporcional",
