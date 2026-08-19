@@ -1,0 +1,46 @@
+/* ATLAS current UI authority · navigation normalization */
+.v019-nav>.v019-nav-btn.atlas-nav-btn,
+.v019-nav>.v019-nav-btn[data-view="public-spend"]{
+  margin-left:0!important;
+  margin-right:0!important;
+  width:100%!important;
+  transform:none;
+}
+
+/* Historical radar modules used ::before markers as a second visual hierarchy.
+ * ATLAS owns navigation identity centrally; pseudo markers are forbidden. */
+.v019-nav>.v019-nav-btn.atlas-nav-btn::before,
+.v019-nav>.v019-nav-btn.atlas-nav-btn::after,
+.v019-nav>.v019-nav-btn[data-view="public-spend"]::before,
+.v019-nav>.v019-nav-btn[data-view="public-spend"]::after{
+  content:none!important;
+  display:none!important;
+  margin:0!important;
+  width:0!important;
+  height:0!important;
+}
+
+.v019-nav>.v019-nav-btn[data-view="public-spend"].atlas-nav-btn{
+  display:grid!important;
+  grid-template-columns:28px minmax(0,1fr) auto 13px!important;
+  align-items:center!important;
+  gap:8px!important;
+  padding:6px 9px!important;
+  min-height:42px!important;
+}
+
+.v019-nav>.v019-nav-btn[data-view="public-spend"] .atlas-nav-icon{
+  grid-column:1!important;
+}
+.v019-nav>.v019-nav-btn[data-view="public-spend"] .atlas-nav-text{
+  grid-column:2!important;
+}
+.v019-nav>.v019-nav-btn[data-view="public-spend"] .atlas-nav-news{
+  grid-column:3!important;
+}
+.v019-nav>.v019-nav-btn[data-view="public-spend"] .atlas-nav-chevron{
+  grid-column:4!important;
+}
+
+.v019-nav .v030-nav-dot,
+.v019-nav [data-legacy-nav-marker]{display:none!important;}
