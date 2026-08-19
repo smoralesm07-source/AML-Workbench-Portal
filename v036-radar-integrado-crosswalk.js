@@ -28,4 +28,21 @@ v036SectorEquivalent=function(a,b){
   ))return true;
   return false;
 };
-window.__AML_V036_SECTOR_CROSSWALK__={mode:'EXPLICIT_SECTOR_ALIASES_ONLY',fuzzy:false,aliases:V036_SECTOR_CROSS_ALIASES.length};
+
+/* Workbench v0.37 introduced a native Gasto Público route after the v0.36
+ * command center was built. Prefer that full module from Radar Integrado and
+ * suppress the older preview action without changing any other radar card. */
+document.addEventListener('click',e=>{
+  const target=e.target.closest?.('[data-v036-radar="budget"]');
+  if(!target||!window.__AML_PUBLIC_SPEND__?.load)return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  void window.navigate?.('public-spend');
+},true);
+
+window.__AML_V036_SECTOR_CROSSWALK__={
+  mode:'EXPLICIT_SECTOR_ALIASES_ONLY',
+  fuzzy:false,
+  aliases:V036_SECTOR_CROSS_ALIASES.length,
+  publicSpendBridge:'V037_NATIVE_ROUTE'
+};
