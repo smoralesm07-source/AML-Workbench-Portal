@@ -1,43 +1,17 @@
 (function(){
   'use strict';
 
+  /* First-paint theme bootstrap only. Runtime/UI assets are loaded by the
+   * canonical ATLAS manifest; this file must not inject scripts or styles. */
   const KEY='atlas-aml:theme:v1';
-  const RELEASE_BUILD='0425';
   let theme='dark';
   try{
     const saved=localStorage.getItem(KEY);
     if(saved==='light'||saved==='dark')theme=saved;
   }catch{}
-  if(document.documentElement.getAttribute('data-atlas-theme')!==theme)document.documentElement.setAttribute('data-atlas-theme',theme);
-  document.documentElement.style.colorScheme=theme;
-
-  function addStyle(href,key){
-    if(document.querySelector(`link[data-atlas-asset="${key}"]`))return;
-    const link=document.createElement('link');
-    link.rel='stylesheet';
-    link.href=href;
-    link.dataset.atlasAsset=key;
-    document.head.appendChild(link);
-  }
-  function addScript(src,key){
-    if(document.querySelector(`script[data-atlas-asset="${key}"]`))return;
-    const script=document.createElement('script');
-    script.src=src;
-    script.async=false;
-    script.dataset.atlasAsset=key;
-    document.head.appendChild(script);
-  }
-
-  addStyle(`./v0401-radar-graphics-fix.css?r=${RELEASE_BUILD}`,'radar-graphics-css');
-  addStyle(`./v0402-aie-brand.css?r=${RELEASE_BUILD}`,'aie-brand-css');
-  addStyle(`./atlas-current-ui.css?r=${RELEASE_BUILD}`,'current-ui-css');
-
-  function loadRuntimeFixes(){
-    addScript(`./v0401-radar-graphics-fix.js?r=${RELEASE_BUILD}`,'radar-graphics-js');
-    addScript(`./v0402-aie-brand.js?r=${RELEASE_BUILD}`,'aie-brand-js');
-    addScript(`./atlas-current-ui.js?r=${RELEASE_BUILD}`,'current-ui-js');
-  }
-
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadRuntimeFixes,{once:true});
-  else loadRuntimeFixes();
+  const root=document.documentElement;
+  if(root.getAttribute('data-atlas-theme')!==theme)root.setAttribute('data-atlas-theme',theme);
+  root.style.colorScheme=theme;
+  window.__ATLAS_THEME__=theme;
+  window.__ATLAS_THEME_BOOTSTRAP__={status:'ready',mode:'FIRST_PAINT_ONLY',theme};
 })();
