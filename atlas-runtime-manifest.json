@@ -1,9 +1,10 @@
 {
   "schema": "ATLAS_RUNTIME_MANIFEST_V1",
-  "release": "0.43.0",
-  "build": "0430",
-  "policy": "CANONICAL_ACTIVE_RUNTIME_ONLY",
-  "notes": "Historical files remain in Git history/repository for traceability, but production publishes and executes only assets declared here plus the canonical release/bootstrap files.",
+  "release": "0.43.1",
+  "build": "0431",
+  "policy": "CANONICAL_SOURCE_MANIFEST_FOR_COMPILED_RUNTIME",
+  "publish_mode": "COMPILED_BUNDLES_ONLY",
+  "notes": "Versioned files below are source fragments retained in Git for traceability and build composition. They are not published as individual web assets; Pages compiles them into canonical ATLAS current bundles and neutralizes historical version authority operations.",
   "styles": [
     "styles.css",
     "v016.css",
@@ -152,6 +153,7 @@
     "v037-final.module.js",
     "v038-final.module.js",
     "v039-atlas-brand.js",
-    "v0426-auth-brand.js"
+    "v0426-auth-brand.js",
+    "v040-theme-bootstrap.js"
   ]
 }
