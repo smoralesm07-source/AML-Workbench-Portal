@@ -41,8 +41,8 @@ if(typeof window.openEntity==='function'&&!window.openEntity.__v037SpendBridge){
   const wrapped=async function(entityId,...args){
     const result=await baseOpenEntity(entityId,...args);
     try{
-      if(!window.sb||!window.__AML_PUBLIC_SPEND__?.focusRut)return result;
-      const {data,error}=await window.sb.from('aml_entities').select('entity_id,rut,name').eq('entity_id',entityId).maybeSingle();
+      if(typeof sb==='undefined'||!window.__AML_PUBLIC_SPEND__?.focusRut)return result;
+      const {data,error}=await sb.from('aml_entities').select('entity_id,rut,name').eq('entity_id',entityId).maybeSingle();
       if(error||!data?.rut)return result;
       const host=document.querySelector('#content');
       if(!host||host.querySelector('[data-v037-entity-bridge]'))return result;
