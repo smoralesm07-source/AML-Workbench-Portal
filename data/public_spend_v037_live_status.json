@@ -2,9 +2,9 @@
   "workbench_version": "0.38.0",
   "entity360_ui": "0.38.0",
   "public_spend_ui": "13.1",
-  "pages_deploy": "cancelled",
+  "pages_deploy": "success",
   "live_smoke": "success",
-  "status": "failure",
+  "status": "success",
   "required_assets": [
     "v038-entity360.js",
     "v038-entity360.css",
