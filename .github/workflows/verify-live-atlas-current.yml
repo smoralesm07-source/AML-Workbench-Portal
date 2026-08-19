@@ -27,8 +27,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "ATLAS_RELEASE=$(python -c \"import json; print(json.load(open('atlas-release.json'))['release'])\")" >> "$GITHUB_ENV"
-          echo "ATLAS_BUILD=$(python -c \"import json; print(json.load(open('atlas-release.json'))['build'])\")" >> "$GITHUB_ENV"
+          python - <<'PY' >> "$GITHUB_ENV"
+          import json
+          m=json.load(open('atlas-release.json',encoding='utf-8'))
+          print(f"ATLAS_RELEASE={m['release']}")
+          print(f"ATLAS_BUILD={m['build']}")
+          PY
 
       - name: Verify exact served release and canonical runtime
         shell: bash
