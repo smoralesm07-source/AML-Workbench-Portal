@@ -1,46 +1,48 @@
 'use strict';
 
-/* AML Workbench v0.34.3 · final post-module runtime authority.
- * Runs as the last module so deferred v032 territory code cannot reclaim the app version.
- * Also pins the Sanciones route to the accepted v12 loader.
- * Public Entity Context v1 is loaded only after this runtime authority is established.
+/* Legacy v0.34.3 post-module compatibility layer.
+ * Keeps sanctions-v12 routing and Public Entity Context loading, but delegates
+ * ALL visible/runtime release identity to ATLAS current release.
  */
-const VERSION='0.34.3';
-const BUILD='0343';
+const VERSION=String(window.__ATLAS_ACTIVE_VERSION__||document.documentElement.getAttribute('data-atlas-release')||document.documentElement.getAttribute('data-aml-version')||'current');
+const BUILD=String(window.__ATLAS_RELEASE_BUILD__||document.documentElement.getAttribute('data-aml-build')||'');
 
 function applyVersion(){
-  window.__AML_ACTIVE_VERSION__=VERSION;
-  window.__AML_BUILD__=BUILD;
-  window.__AML_VERSION_SOURCE__='v0343-final.module';
-  document.title=`AML Analytical Workbench · v${VERSION}`;
-  document.documentElement.setAttribute('data-aml-version',VERSION);
-  document.documentElement.setAttribute('data-aml-build',BUILD);
+  if(window.AtlasRelease&&typeof window.AtlasRelease.apply==='function')window.AtlasRelease.apply();
+  const current=String(window.__ATLAS_ACTIVE_VERSION__||document.documentElement.getAttribute('data-atlas-release')||document.documentElement.getAttribute('data-aml-version')||VERSION);
+  const build=String(window.__ATLAS_RELEASE_BUILD__||document.documentElement.getAttribute('data-aml-build')||BUILD);
+  window.__AML_ACTIVE_VERSION__=current;
+  if(build)window.__AML_BUILD__=build;
+  window.__AML_VERSION_SOURCE__='atlas-release-guard-via-v0343-compat';
+  document.title=`ATLAS AML · v${current}`;
 
-  const operational=`Operational Radar · v${VERSION}`;
-  document.querySelectorAll('.v019-brand small').forEach((el)=>{
-    if(el.textContent!==operational)el.textContent=operational;
-    el.setAttribute('data-runtime-label',operational);
-    el.setAttribute('aria-label',operational);
-    el.dataset.activeVersion=VERSION;
+  document.querySelectorAll('.v019-brand').forEach((brand)=>{
+    const strong=brand.querySelector('strong');
+    if(strong&&strong.textContent!=='ATLAS AML')strong.textContent='ATLAS AML';
+    const small=brand.querySelector('small');
+    if(small){
+      const label=`v${current}`;
+      if(small.textContent!==label)small.textContent=label;
+      small.setAttribute('data-runtime-label',label);
+      small.setAttribute('aria-label',`Versión ${current}`);
+      small.dataset.activeVersion=current;
+    }
   });
 
   document.querySelectorAll('.topbar .eyebrow').forEach((el)=>{
-    const wanted=`AML Analytical Workbench · v${VERSION}`;
+    const wanted=`ATLAS AML · v${current}`;
     if(el.textContent!==wanted)el.textContent=wanted;
   });
 }
 
-/* Neutralize classic legacy version writers that schedule work after DOMContentLoaded. */
-for(const name of ['v0206ApplyVersion','v0206WatchVersion','v0211ApplyVersion','v0332ApplyVersion']){
+/* Redirect historical version writers to the current ATLAS authority. */
+for(const name of ['v0206ApplyVersion','v0206WatchVersion','v0211ApplyVersion','v0332ApplyVersion','v0342ApplyVersion']){
   try{if(typeof window[name]==='function')window[name]=applyVersion;}catch{}
 }
 try{
   if(window.V0206_VERSION_OBSERVER){window.V0206_VERSION_OBSERVER.disconnect();window.V0206_VERSION_OBSERVER=null;}
 }catch{}
 
-/* v032-irg-territory.js executes deferred as a module and wraps shell after classic scripts.
- * Wrap that final shell once more so the active version always wins synchronously.
- */
 if(typeof window.shell==='function'){
   const baseShell=window.shell;
   window.shell=function(...args){
@@ -50,7 +52,7 @@ if(typeof window.shell==='function'){
   };
 }
 
-/* Freeze Sanciones navigation on the v12 implementation captured after hardening. */
+/* Keep the accepted Sanciones v12 route. */
 const sanctionsV12=(window.AML_SANCTIONS_V12&&typeof window.AML_SANCTIONS_V12.reload==='function')
   ? window.AML_SANCTIONS_V12.reload
   : (typeof window.loadSanctions==='function'?window.loadSanctions:null);
@@ -59,7 +61,7 @@ if(sanctionsV12){
   window.loadSanctions=async function(...args){return sanctionsV12(...args);};
   if(window.AML_SANCTIONS_V12){
     window.AML_SANCTIONS_V12.version='12';
-    window.AML_SANCTIONS_V12.workbenchVersion=VERSION;
+    window.AML_SANCTIONS_V12.workbenchVersion=String(window.__ATLAS_ACTIVE_VERSION__||VERSION);
     window.AML_SANCTIONS_V12.reload=window.loadSanctions;
   }
 }
@@ -77,7 +79,6 @@ if(typeof window.navigate==='function'){
 window.__AML_RUNTIME_VERSION_APPLIER__=applyVersion;
 applyVersion();
 
-/* Re-assert after legacy DOMContentLoaded timers without polling forever. */
 if(document.readyState==='loading'){
   document.addEventListener('DOMContentLoaded',()=>{
     applyVersion();
@@ -89,8 +90,7 @@ if(document.readyState==='loading'){
   setTimeout(applyVersion,100);
 }
 
-/* Post-runtime context layer. It is intentionally additive: it must not replace
- * sanctions v12, auth, routing or the core data contracts. */
+/* Post-runtime context layer remains additive. */
 if(!document.querySelector('link[data-aml-public-entities]')){
   const css=document.createElement('link');
   css.rel='stylesheet';
@@ -99,5 +99,5 @@ if(!document.querySelector('link[data-aml-public-entities]')){
   document.head.appendChild(css);
 }
 import('./v0344-public-entities.module.js?b=0343').catch((error)=>{
-  console.warn('[AML] Public Entity Context module could not be loaded:',error);
+  console.warn('[ATLAS] Public Entity Context module could not be loaded:',error);
 });
