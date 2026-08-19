@@ -1,4 +1,4 @@
-name: Deploy AML Workbench Portal
+name: Deploy ATLAS AML Portal
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: aml-workbench-pages
+  group: atlas-aml-pages
   cancel-in-progress: true
 
 jobs:
@@ -28,8 +28,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -q 'data-aml-version="0.38.0"' index.html
-          grep -q 'data-aml-build="0380"' index.html
+          grep -q 'data-aml-version="0.39.0"' index.html
+          grep -q 'data-aml-build="0390"' index.html
+          grep -q 'ATLAS AML' index.html
+          grep -q 'Plataforma Integrada de Inteligencia y Riesgo' index.html
+          grep -q 'v039-atlas-brand.css?b=0390' index.html
+          grep -q 'v039-atlas-brand.js?b=0390' index.html
           grep -q 'v036-radar-integrado-real.css?b=0360' index.html
           grep -q 'v036-radar-integrado-hardening.css?b=0360' index.html
           grep -q 'v036-radar-integrado-real.js?b=0360' index.html
@@ -42,9 +46,11 @@ jobs:
           grep -q 'v037-final.module.js?b=0370' index.html
           grep -q 'v038-entity360.css?b=0380' index.html
           grep -q 'v038-entity360.js?b=0380' index.html
-          grep -q 'v038-final.module.js?b=0380' index.html
-          grep -q '"app_version": "0.38.0"' build.json
-          grep -q '"build": "0380"' build.json
+          grep -q 'v038-final.module.js?b=0390' index.html
+          grep -q '"app_version": "0.39.0"' build.json
+          grep -q '"build": "0390"' build.json
+          grep -q 'ATLAS_AML_V039' build.json
+          grep -q 'EVENT_DRIVEN_UNREAD_NEWS' build.json
           grep -q 'RADAR_INTEGRADO_REAL_V036' build.json
           grep -q 'PUBLIC_SPEND_V131_NATIVE' build.json
           grep -q 'ENTITY360_V038' build.json
@@ -68,6 +74,8 @@ jobs:
           grep -q 'DO_NOT_INFER_INDIVIDUAL_ROS_ROE' build.json
           grep -q 'v034-sanctions-v12-core.js?b=0343' index.html
           grep -q 'v0344-public-entities.module.js?b=0343' v0343-final.module.js
+          test -f v039-atlas-brand.js
+          test -f v039-atlas-brand.css
           test -f v036-radar-integrado-real.js
           test -f v036-radar-integrado-real.css
           test -f v036-radar-integrado-hardening.js
@@ -89,6 +97,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node --check v039-atlas-brand.js
           node --check v038-entity360.js
           node --check v038-final.module.js
           node --check v037-public-spend.js
@@ -102,6 +111,19 @@ jobs:
           node --check v035-radar-command-center-patch.js
           node --check v0343-final.module.js
           node --check v0344-public-entities.module.js
+
+      - name: Verify ATLAS visible identity contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "ATLAS_NAME='ATLAS AML'" v039-atlas-brand.js
+          grep -q "ATLAS_TAGLINE='Plataforma Integrada de Inteligencia y Riesgo'" v039-atlas-brand.js
+          grep -q "views:\['overview','entities','territory'\]" v039-atlas-brand.js
+          grep -q "views:\['uaf','sanctions','public-spend','osfl'\]" v039-atlas-brand.js
+          grep -q "views:\['questions'\]" v039-atlas-brand.js
+          grep -q 'atlas:nav-news' v039-atlas-brand.js
+          grep -q 'AtlasNavNews' v039-atlas-brand.js
+          grep -q 'atlas-nav-news' v039-atlas-brand.css
 
       - name: Verify Entity 360 analytical contract
         shell: bash
@@ -145,7 +167,7 @@ jobs:
           import json, urllib.request
           base='https://raw.githubusercontent.com/smoralesm07-source/Rada_Presupuesto_Abierto/main/docs/data/'
           def load(name):
-              req=urllib.request.Request(base+name,headers={'User-Agent':'AML-Workbench-v038-contract-check'})
+              req=urllib.request.Request(base+name,headers={'User-Agent':'ATLAS-AML-v039-contract-check'})
               with urllib.request.urlopen(req,timeout=60) as r:
                   return json.load(r)
           status=load('spend_corrected_v3_status.json')
@@ -202,24 +224,28 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Smoke test deployed v0.38
+      - name: Smoke test deployed ATLAS AML v0.39
         shell: bash
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
           set -euo pipefail
           test -n "$PAGE_URL"
-          curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "${PAGE_URL%/}/" -o /tmp/aml-workbench-page.html
-          grep -q 'data-aml-version="0.38.0"' /tmp/aml-workbench-page.html
-          grep -q 'data-aml-build="0380"' /tmp/aml-workbench-page.html
-          grep -q 'v036-radar-integrado-real.js?b=0360' /tmp/aml-workbench-page.html
-          grep -q 'v036-radar-integrado-hardening.js?b=0360' /tmp/aml-workbench-page.html
-          grep -q 'v036-radar-integrado-crosswalk.js?b=0360' /tmp/aml-workbench-page.html
-          grep -q 'v036-radar-integrado-runtime-fix.js?b=0360' /tmp/aml-workbench-page.html
-          grep -q 'v036-radar-integrado-real.css?b=0360' /tmp/aml-workbench-page.html
-          grep -q 'v037-public-spend.js?b=0370' /tmp/aml-workbench-page.html
-          grep -q 'v037-public-spend.css?b=0370' /tmp/aml-workbench-page.html
-          grep -q 'v037-final.module.js?b=0370' /tmp/aml-workbench-page.html
-          grep -q 'v038-entity360.js?b=0380' /tmp/aml-workbench-page.html
-          grep -q 'v038-entity360.css?b=0380' /tmp/aml-workbench-page.html
-          grep -q 'v038-final.module.js?b=0380' /tmp/aml-workbench-page.html
+          curl --fail --silent --show-error --location --retry 5 --retry-delay 2 "${PAGE_URL%/}/" -o /tmp/atlas-aml-page.html
+          grep -q 'data-aml-version="0.39.0"' /tmp/atlas-aml-page.html
+          grep -q 'data-aml-build="0390"' /tmp/atlas-aml-page.html
+          grep -q 'ATLAS AML' /tmp/atlas-aml-page.html
+          grep -q 'Plataforma Integrada de Inteligencia y Riesgo' /tmp/atlas-aml-page.html
+          grep -q 'v039-atlas-brand.css?b=0390' /tmp/atlas-aml-page.html
+          grep -q 'v039-atlas-brand.js?b=0390' /tmp/atlas-aml-page.html
+          grep -q 'v036-radar-integrado-real.js?b=0360' /tmp/atlas-aml-page.html
+          grep -q 'v036-radar-integrado-hardening.js?b=0360' /tmp/atlas-aml-page.html
+          grep -q 'v036-radar-integrado-crosswalk.js?b=0360' /tmp/atlas-aml-page.html
+          grep -q 'v036-radar-integrado-runtime-fix.js?b=0360' /tmp/atlas-aml-page.html
+          grep -q 'v036-radar-integrado-real.css?b=0360' /tmp/atlas-aml-page.html
+          grep -q 'v037-public-spend.js?b=0370' /tmp/atlas-aml-page.html
+          grep -q 'v037-public-spend.css?b=0370' /tmp/atlas-aml-page.html
+          grep -q 'v037-final.module.js?b=0370' /tmp/atlas-aml-page.html
+          grep -q 'v038-entity360.js?b=0380' /tmp/atlas-aml-page.html
+          grep -q 'v038-entity360.css?b=0380' /tmp/atlas-aml-page.html
+          grep -q 'v038-final.module.js?b=0390' /tmp/atlas-aml-page.html
