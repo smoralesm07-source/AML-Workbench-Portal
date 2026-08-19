@@ -22,6 +22,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Load current ATLAS release
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' >> "$GITHUB_ENV"
+          import json
+          m=json.load(open('atlas-release.json',encoding='utf-8'))
+          print(f"ATLAS_RELEASE={m['release']}")
+          print(f"ATLAS_BUILD={m['build']}")
+          PY
       - name: Validate JavaScript syntax
         run: |
           node --check v0434-reconciliation-command.js
@@ -34,10 +44,12 @@ jobs:
           grep -q 'aml_v0434_uaf_sii_sector_matrix' sql/atlas_v0434_uaf_sii_reconciliation_analytics.sql
           grep -q 'security_invoker = true' sql/atlas_v0434_uaf_sii_reconciliation_analytics.sql
       - name: Build canonical ATLAS candidate
+        shell: bash
         run: |
+          set -euo pipefail
           python tools/build_atlas_site.py --out _site-reconciliation
           test -f _site-reconciliation/atlas-runtime-current.css
           test -f _site-reconciliation/index.html
-          grep -q '0.43.7' _site-reconciliation/index.html
-          grep -q '0437' _site-reconciliation/index.html
+          grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" _site-reconciliation/index.html
+          grep -q "data-aml-build=\"${ATLAS_BUILD}\"" _site-reconciliation/index.html
           grep -R -q 'VIEW_SCOPED_TOKEN+FAIL_SOFT_AGGREGATES+STRUCTURED_ERRORS' _site-reconciliation/atlas-runtime-current-*.js
