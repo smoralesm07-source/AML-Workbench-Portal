@@ -1,8 +1,7 @@
 'use strict';
 
 /* ATLAS AML · Entidades entry integration patch 0391
- * Replaces the legacy entity landing/search surface and explicitly routes every
- * result to the v038 Entity 360 renderer. No synthetic metrics are introduced.
+ * Production Entity 360 landing. Identity-first, governed, fail-soft and light on DB.
  */
 const V0391_ENTITY_ENTRY='0391';
 const V0391_BASE_OPEN_ENTITY=typeof window.openEntity==='function'?window.openEntity:null;
@@ -21,26 +20,34 @@ function v0391Card(r){
 }
 function v0391BindCards(root=document){root.querySelectorAll('[data-v0391-entity]').forEach(btn=>btn.addEventListener('click',()=>v0391Open(btn.dataset.v0391Entity)));}
 
+async function v0391PlannedCount(applyFilter){
+  let q=sb.from('aml_entities').select('entity_id',{count:'planned',head:true});
+  if(applyFilter)q=applyFilter(q);
+  const {count,error}=await q;
+  if(error)throw error;
+  return Number.isFinite(Number(count))?Number(count):null;
+}
+
 async function v0391LoadLandingStats(){
   const host=document.querySelector('#v0391-summary');
   const top=document.querySelector('#v0391-featured');
   if(!host||typeof sb==='undefined')return;
   try{
-    const [entities,uaf,san,multi,topRes]=await Promise.all([
-      sb.from('aml_entities').select('*',{count:'exact',head:true}),
-      sb.from('aml_entities').select('*',{count:'exact',head:true}).eq('is_uaf_observed',true),
-      sb.from('aml_entities').select('*',{count:'exact',head:true}).eq('is_sanctioned',true),
-      sb.from('aml_entities').select('*',{count:'exact',head:true}).gte('source_count',3),
-      sb.from('aml_entities').select('entity_id,rut,name,entity_type,region,commune,source_count,is_uaf_observed,is_sanctioned').order('source_count',{ascending:false}).limit(12)
-    ]);
-    const errors=[entities,uaf,san,multi,topRes].filter(x=>x?.error).map(x=>x.error);
-    if(errors.length)throw errors[0];
-    host.innerHTML=`<div><span>Entidades Fusion</span><b>${v0391Fmt(entities.count)}</b><small>identidades canónicas visibles bajo RLS</small></div><div><span>UAF observado</span><b>${v0391Fmt(uaf.count)}</b><small>presencia materializada en Radar UAF</small></div><div><span>Con sanciones</span><b>${v0391Fmt(san.count)}</b><small>eventos administrativos resueltos por identidad</small></div><div><span>3+ fuentes</span><b>${v0391Fmt(multi.count)}</b><small>mayor cobertura, no mayor riesgo</small></div>`;
+    /* Landing metrics are orientation only, so planned counts are intentional.
+       Exact counts belong in dedicated analytical views, not in route bootstrap. */
+    const topRes=await sb.from('aml_entities').select('entity_id,rut,name,entity_type,region,commune,source_count,is_uaf_observed,is_sanctioned').order('source_count',{ascending:false}).limit(12);
+    if(topRes.error)throw topRes.error;
+    const counts=[];
+    for(const filter of [null,q=>q.eq('is_uaf_observed',true),q=>q.eq('is_sanctioned',true),q=>q.gte('source_count',3)]){
+      try{counts.push(await v0391PlannedCount(filter));}catch(_error){counts.push(null);}
+    }
+    const [entities,uaf,san,multi]=counts;
+    host.innerHTML=`<div><span>Entidades Fusion</span><b>${v0391Fmt(entities)}</b><small>estimación de cobertura visible bajo RLS</small></div><div><span>UAF observado</span><b>${v0391Fmt(uaf)}</b><small>estimación sobre presencia materializada en Radar UAF</small></div><div><span>Con sanciones</span><b>${v0391Fmt(san)}</b><small>estimación de identidades con eventos administrativos</small></div><div><span>3+ fuentes</span><b>${v0391Fmt(multi)}</b><small>cobertura estimada; no equivale a riesgo</small></div>`;
     const rows=topRes.data||[];
     top.innerHTML=rows.length?`<div class="v0391-entity-grid">${rows.map(v0391Card).join('')}</div>`:'<div class="v0391-results-state"><b>Sin entidades destacadas</b>No se recibieron filas bajo la política actual.</div>';
     v0391BindCards(top);
   }catch(e){
-    host.innerHTML='<div><span>Cobertura</span><b>—</b><small>No fue posible cargar conteos en este momento.</small></div>';
+    host.innerHTML='<div><span>Cobertura</span><b>—</b><small>Indicadores temporariamente no disponibles.</small></div>';
     if(top)top.innerHTML=`<div class="v0391-results-state"><b>No fue posible cargar accesos rápidos</b>${v0391Esc(e?.message||'Error de consulta')}</div>`;
   }
 }
@@ -94,18 +101,4 @@ searchEntities=v0391SearchEntities;
 window.loadEntities=v0391LoadEntities;
 window.searchEntities=v0391SearchEntities;
 window.openEntity=async function(entityId){return v0391Open(entityId);};
-window.__ATLAS_ENTITY_ENTRY__={version:V0391_ENTITY_ENTRY,load:v0391LoadEntities,search:v0391SearchEntities,open:v0391Open};
-
-/* v0.41 progressive enhancement: load after all historical and module layers so
- * the assisted search becomes the final authority without changing Entity 360 data contracts. */
-(function(){
-  function loadV041(){
-    if(document.querySelector('script[data-atlas-entity-search-v041]'))return;
-    const s=document.createElement('script');
-    s.src='./v041-entity-search-ux.js?b=0410';
-    s.dataset.atlasEntitySearchV041='1';
-    document.head.appendChild(s);
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadV041,{once:true});
-  else loadV041();
-})();
+window.__ATLAS_ENTITY_ENTRY__={version:V0391_ENTITY_ENTRY,load:v0391LoadEntities,search:v0391SearchEntities,open:v0391Open,authority:'ENTITY360_EXPERT_CURRENT',countPolicy:'PLANNED_LANDING_EXACT_ON_DEMAND_ONLY'};
