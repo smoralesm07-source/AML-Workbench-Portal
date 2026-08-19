@@ -126,4 +126,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          gh issue comment '${{ github.event.issue.number }}' --body "## Deploy directo Sanciones v12 · ATLAS 0.43.5\n\n- resultado: \`${{ job.status }}\`\n- Pages URL: \`${{ steps.deployment.outputs.page_url }}\`\n- route authority: \`atlas-sanctions-v12-route.js\`\n- target: \`AML_SANCTIONS_V12_APPROVED.reload\`\n- v019 frozen loader bypassed: \`yes\`\n- public bundle markers checked when result=success"
+          gh issue comment '${{ github.event.issue.number }}' --body "## Deploy directo Sanciones v12 · ATLAS 0.43.5\n\n- resultado: \`${{ job.status }}\`\n- run id: \`${{ github.run_id }}\`\n- Pages URL: \`${{ steps.deployment.outputs.page_url }}\`\n- route authority: \`atlas-sanctions-v12-route.js\`\n- target: \`AML_SANCTIONS_V12_APPROVED.reload\`\n- v019 frozen loader bypassed: \`yes\`\n- public bundle markers checked when result=success"
