@@ -1,7 +1,7 @@
 {
   "product": "ATLAS AML",
-  "release": "0.43.1",
-  "build": "0431",
+  "release": "0.43.2",
+  "build": "0432",
   "channel": "current",
   "deployment_policy": "SINGLE_ACTIVE_RELEASE",
   "source_branch": "main",
@@ -14,7 +14,7 @@
   "visible_version_policy": "ATLAS_RELEASE_GUARD_ONLY",
   "asset_coherency_policy": "COMPILED_CURRENT_BUNDLES_PINNED_TO_BUILD",
   "ui_authority_policy": "ATLAS_CURRENT_UI_LAST_WRITER",
-  "navigation_policy": "UNIFORM_LEVEL_NO_LEGACY_PSEUDO_MARKERS",
+  "navigation_policy": "UNIFORM_LEVEL_NO_LEGACY_PSEUDO_MARKERS+OBSERVER_DISCONNECTED_DURING_SETTLE",
   "future_change_policy": "BRANCH_PR_VALIDATE_CURRENT_MERGE_MAIN_AUTO_DEPLOY_LIVE_SMOKE",
   "source_fragment_policy": "VERSIONED_SOURCE_FILES_GIT_ONLY_COMPILED_BEFORE_PUBLISH"
 }
