@@ -1,0 +1,184 @@
+name: Repair canonical Sanciones v12 route
+
+on:
+  issues:
+    types: [opened]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+  issues: write
+
+concurrency:
+  group: repair-sanctions-v12-route
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    if: github.event_name == 'workflow_dispatch' || github.event.issue.title == '[fix-sanctions-v12-route] ATLAS 0.43.5'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Install current route authority in canonical manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          release_path=Path('atlas-release.json')
+          build_path=Path('build.json')
+          manifest_path=Path('atlas-runtime-manifest.json')
+
+          release=json.loads(release_path.read_text(encoding='utf-8'))
+          build=json.loads(build_path.read_text(encoding='utf-8'))
+          manifest=json.loads(manifest_path.read_text(encoding='utf-8'))
+
+          release['release']='0.43.5'
+          release['build']='0435'
+          build['app_version']='0.43.5'
+          build['build']='0435'
+          manifest['release']='0.43.5'
+          manifest['build']='0435'
+
+          scripts=manifest['scripts']
+          scripts=[x for x in scripts if x.get('path')!='atlas-sanctions-v12-route.js']
+          paths=[x['path'] for x in scripts]
+          approved='atlas-sanctions-v12-approved-06.js'
+          ui='atlas-current-ui.js'
+          assert approved in paths and ui in paths, paths[-20:]
+          assert paths.index(approved) < paths.index(ui), paths[-20:]
+          insert_at=next(i for i,x in enumerate(scripts) if x['path']==ui)
+          scripts.insert(insert_at,{
+            'path':'atlas-sanctions-v12-route.js',
+            'type':'classic',
+            'role':'sanctions-v12-route-authority'
+          })
+          manifest['scripts']=scripts
+
+          build['feature']=str(build.get('feature',''))+'+SANCTIONS_V12_ROUTE_AUTHORITY_0435'
+          build['sanctions_ui_contract']='APPROVED_V12_ATLAS_THEME_NATIVE'
+          build['sanctions_runtime_authority']='atlas-sanctions-v12-approved-01..06.js'
+          build['sanctions_route_authority']='atlas-sanctions-v12-route.js'
+          build['sanctions_route_policy']='BYPASS_V019_FROZEN_LEGACY_LOADER'
+          build['sanctions_data_contract']='RADAR_SANCTIONS+ENTITY_HUB_V1+WORKBENCH_IDENTITY+UAF_RECONCILIATION'
+
+          release_path.write_text(json.dumps(release,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          build_path.write_text(json.dumps(build,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          manifest_path.write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+
+      - name: Validate exact route order and compiled candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check atlas-sanctions-v12-route.js
+          python - <<'PY'
+          import json
+          m=json.load(open('atlas-runtime-manifest.json',encoding='utf-8'))
+          s=[x['path'] for x in m['scripts']]
+          assert m['release']=='0.43.5' and m['build']=='0435'
+          assert s.index('atlas-sanctions-v12-approved-06.js')+1==s.index('atlas-sanctions-v12-route.js'),s[-16:]
+          assert s.index('atlas-sanctions-v12-route.js')+1==s.index('atlas-current-ui.js'),s[-16:]
+          for old in ('v034-sanctions-v12-core.js','v034-sanctions-v12-ui.js','v034-sanctions-v12-charts.js','v0341-sanctions-hardening.js'):
+              assert old not in s,old
+          PY
+          python tools/build_atlas_site.py --out /tmp/atlas-0435
+          for f in /tmp/atlas-0435/atlas-runtime-current-*.js /tmp/atlas-0435/atlas-module-current-*.js; do
+            test -e "$f" || continue
+            node --check "$f"
+          done
+          grep -R -q 'legacyFrozenRouteBypassed:true' /tmp/atlas-0435/atlas-runtime-current-*.js
+          grep -R -q 'AML_SANCTIONS_V12_APPROVED.reload' /tmp/atlas-0435/atlas-runtime-current-*.js
+          grep -R -q 'Consulta directa de entidad' /tmp/atlas-0435/atlas-runtime-current-*.js
+          grep -R -q 'Últimas sanciones · Top 5' /tmp/atlas-0435/atlas-runtime-current-*.js
+          grep -R -q 'Concentración regional de sanciones' /tmp/atlas-0435/atlas-runtime-current-*.js
+
+      - name: Commit canonical release 0.43.5
+        id: commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add atlas-release.json build.json atlas-runtime-manifest.json
+          git commit -m 'fix: make approved Sanciones v12 the canonical route authority'
+          git push origin HEAD:main
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch canonical Pages deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run pages.yml --ref main
+          target='${{ steps.commit.outputs.sha }}'
+          run=''
+          for i in $(seq 1 30); do
+            run=$(gh run list --workflow pages.yml --branch main --limit 10 --json databaseId,headSha,status --jq ".[] | select(.headSha==\"${target}\") | .databaseId" | head -n1)
+            if [ -n "$run" ]; then break; fi
+            sleep 2
+          done
+          test -n "$run"
+          echo "Watching pages.yml run $run"
+          gh run watch "$run" --exit-status
+
+      - name: Verify public 0.43.5 and Sanciones v12 route
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://smoralesm07-source.github.io/AML-Workbench-Portal/'
+          stamp=$(date +%s)
+          for i in $(seq 1 24); do
+            if curl -fsSL "${base}atlas-release.json?_=${stamp}-${i}" -o /tmp/live-release.json && \
+               python - <<'PY'
+          import json
+          r=json.load(open('/tmp/live-release.json'))
+          assert r['release']=='0.43.5' and r['build']=='0435',r
+          PY
+            then break; fi
+            sleep 5
+          done
+          python - <<'PY'
+          import json
+          r=json.load(open('/tmp/live-release.json'))
+          assert r['release']=='0.43.5' and r['build']=='0435',r
+          PY
+          curl -fsSL "${base}?_=${stamp}" -o /tmp/live.html
+          python - <<'PY'
+          import re, pathlib, subprocess
+          html=pathlib.Path('/tmp/live.html').read_text(encoding='utf-8')
+          srcs=re.findall(r'<script[^>]+src="\.\/(atlas-(?:runtime|module)-current-[^?\"]+)\?r=0435"',html)
+          assert srcs,html[:500]
+          pathlib.Path('/tmp/runtime-srcs.txt').write_text('\n'.join(srcs),encoding='utf-8')
+          PY
+          : > /tmp/live-runtime.js
+          while IFS= read -r src; do
+            curl -fsSL "${base}${src}?r=0435&_=${stamp}" >> /tmp/live-runtime.js
+            printf '\n' >> /tmp/live-runtime.js
+          done < /tmp/runtime-srcs.txt
+          grep -q 'legacyFrozenRouteBypassed:true' /tmp/live-runtime.js
+          grep -q 'AML_SANCTIONS_V12_APPROVED.reload' /tmp/live-runtime.js
+          grep -q 'Consulta directa de entidad' /tmp/live-runtime.js
+          grep -q 'Últimas sanciones · Top 5' /tmp/live-runtime.js
+          grep -q 'Concentración regional de sanciones' /tmp/live-runtime.js
+          grep -q 'Materias sancionatorias' /tmp/live-runtime.js
+          grep -q 'Sanciones por supervisor' /tmp/live-runtime.js
+          grep -q 'Entidades sancionadas' /tmp/live-runtime.js
+
+      - name: Report completion
+        if: always() && github.event_name == 'issues'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          status='${{ job.status }}'
+          gh issue comment '${{ github.event.issue.number }}' --body "## Reparación Sanciones v12 · ATLAS 0.43.5\n\n- resultado: \`${status}\`\n- autoridad de ruta: \`atlas-sanctions-v12-route.js\`\n- cargador objetivo: \`AML_SANCTIONS_V12_APPROVED.reload\`\n- bypass cargador congelado v019: \`sí\`\n- despliegue canónico Pages: ejecutado y verificado por este job si resultado=success"
