@@ -18,8 +18,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  ATLAS_RELEASE: '0.42.3'
-  ATLAS_BUILD: '0423'
+  ATLAS_RELEASE: '0.42.4'
+  ATLAS_BUILD: '0424'
 
 jobs:
   deploy:
@@ -56,7 +56,9 @@ jobs:
           assert b['build']==os.environ['ATLAS_BUILD'],b
           assert m['deployment_policy']=='SINGLE_ACTIVE_RELEASE',m
           assert m['visible_version_policy']=='ATLAS_RELEASE_GUARD_ONLY_LEGACY_RUNTIME_DELEGATES',m
+          assert m['asset_coherency_policy']=='ALL_LOCAL_JS_CSS_PINNED_TO_CURRENT_BUILD',m
           assert b['visible_version_authority']=='ATLAS_RELEASE_GUARD_ONLY',b
+          assert b['asset_coherency_policy']=='ALL_LOCAL_JS_CSS_PINNED_TO_CURRENT_BUILD',b
           PY
           node --check atlas-release-guard.js
           node --check v040-theme-bootstrap.js
@@ -67,9 +69,9 @@ jobs:
           node --check v0343-final.module.js
           node --check v0333-auth-preflight.js
           node --check app.js
-          grep -q "const RELEASE='0.42.3'" atlas-release-guard.js
-          grep -q "const BUILD='0423'" atlas-release-guard.js
-          grep -q "ATLAS_RELEASE_GUARD_ONLY" atlas-release-guard.js
+          grep -q "const RELEASE='0.42.4'" atlas-release-guard.js
+          grep -q "const BUILD='0424'" atlas-release-guard.js
+          grep -q "ALL_LOCAL_JS_CSS_PINNED_TO_CURRENT_BUILD" atlas-release-guard.js
           grep -q "atlas-release-guard-via-v0342-compat" v0342-runtime.js
           grep -q "atlas-release-guard-via-v0343-compat" v0343-final.module.js
           ! grep -q "window.__AML_ACTIVE_VERSION__=V0342_RUNTIME" v0342-runtime.js
@@ -82,7 +84,7 @@ jobs:
           grep -q "audit is best-effort" v0422-auth-bootstrap-fix.js
           grep -q "AUTH_TIMEOUT=6500" v0422-auth-bootstrap-fix.js
 
-      - name: Build clean single-release Pages artifact
+      - name: Build clean coherent Pages artifact
         shell: bash
         run: |
           set -euo pipefail
@@ -103,33 +105,41 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           import os,re
-          p=Path('_site/index.html')
-          s=p.read_text(encoding='utf-8')
+
           rel=os.environ['ATLAS_RELEASE']; build=os.environ['ATLAS_BUILD']
+          index=Path('_site/index.html')
+          s=index.read_text(encoding='utf-8')
           s=re.sub(r'data-aml-version="[^"]+"',f'data-aml-version="{rel}"',s,count=1)
           s=re.sub(r'data-aml-build="[^"]+"',f'data-aml-build="{build}"',s,count=1)
           s=re.sub(r'data-atlas-release="[^"]+"',f'data-atlas-release="{rel}"',s,count=1)
           s=re.sub(r'<title>.*?</title>',f'<title>ATLAS AML · v{rel}</title>',s,count=1,flags=re.S)
           s='\n'.join(line for line in s.splitlines() if 'v035-final.module.js' not in line and 'v036-final.module.js' not in line)+'\n'
+          index.write_text(s,encoding='utf-8')
 
-          critical=[
-            'atlas-release-guard.js','v040-theme-bootstrap.js','v0333-auth-preflight.js','app.js','v0206-stability.js',
-            'v0342-runtime.js','v0343-final.module.js','v039-atlas-brand.css','v040-theme-system.css',
-            'v036-radar-integrado-runtime-fix.js','v0402-reconciliation-live.js','v038-final.module.js','v039-atlas-brand.js'
-          ]
-          for asset in critical:
-              s=re.sub(rf'(\./{re.escape(asset)})(?:\?[^"\']*)?',rf'\1?r={build}',s)
+          # One release => one coherent asset graph. Rewrite every same-origin JS/CSS
+          # reference in HTML and JavaScript, including dynamic imports created by
+          # historical compatibility modules. This removes all fixed ?b=03xx caches.
+          static_ref=re.compile(r'(\./[A-Za-z0-9_./-]+\.(?:js|css))(?:\?[^\"\'`\s<>)]+)?')
+          for path in list(Path('_site').rglob('*.html')) + list(Path('_site').rglob('*.js')):
+              text=path.read_text(encoding='utf-8')
+              text=static_ref.sub(lambda m:f'{m.group(1)}?r={build}',text)
+              path.write_text(text,encoding='utf-8')
 
+          # Ensure the auth rescue layer is present immediately after app.js.
+          s=index.read_text(encoding='utf-8')
           rescue=f'  <script src="./v0422-auth-bootstrap-fix.js?r={build}"></script>'
           if 'v0422-auth-bootstrap-fix.js' not in s:
               app_tag=re.search(r'  <script src="\./app\.js\?r='+re.escape(build)+r'"></script>',s)
               if not app_tag: raise SystemExit('app.js release tag not found')
-              pos=app_tag.end()
-              s=s[:pos]+'\n'+rescue+s[pos:]
-          else:
-              s=re.sub(r'(\./v0422-auth-bootstrap-fix\.js)(?:\?[^"\']*)?',rf'\1?r={build}',s)
+              pos=app_tag.end(); s=s[:pos]+'\n'+rescue+s[pos:]
+              index.write_text(s,encoding='utf-8')
 
-          p.write_text(s,encoding='utf-8')
+          # Contract: every local JS/CSS reference in index is pinned to this build.
+          s=index.read_text(encoding='utf-8')
+          refs=re.findall(r'(?:src|href)="(\./[^\"]+\.(?:js|css)(?:\?[^\"]*)?)"',s)
+          stale=[x for x in refs if f'?r={build}' not in x]
+          if stale: raise SystemExit('stale local assets: '+', '.join(stale[:20]))
+          if '?b=' in '\n'.join(refs): raise SystemExit('legacy ?b= cache key remains in production index')
           PY
 
           touch _site/.nojekyll
@@ -138,14 +148,13 @@ jobs:
           test ! -e _site/v036-final.module.js
           grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" _site/index.html
           grep -q "data-aml-build=\"${ATLAS_BUILD}\"" _site/index.html
-          grep -q "atlas-release-guard.js?r=${ATLAS_BUILD}" _site/index.html
-          grep -q "v040-theme-bootstrap.js?r=${ATLAS_BUILD}" _site/index.html
-          grep -q "v0333-auth-preflight.js?r=${ATLAS_BUILD}" _site/index.html
-          grep -q "app.js?r=${ATLAS_BUILD}" _site/index.html
-          grep -q "v0206-stability.js?r=${ATLAS_BUILD}" _site/index.html
           grep -q "v0342-runtime.js?r=${ATLAS_BUILD}" _site/index.html
           grep -q "v0343-final.module.js?r=${ATLAS_BUILD}" _site/index.html
-          grep -q "v0422-auth-bootstrap-fix.js?r=${ATLAS_BUILD}" _site/index.html
+          grep -q "v038-entity360.js?r=${ATLAS_BUILD}" _site/index.html
+          grep -q "v0391-entity-entry.js?r=${ATLAS_BUILD}" _site/index.html
+          grep -q "v037-public-spend.js?r=${ATLAS_BUILD}" _site/index.html
+          ! grep -q '?b=' _site/index.html
+          grep -q "v0344-public-entities.module.js?r=${ATLAS_BUILD}" _site/v0343-final.module.js
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -159,7 +168,7 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Smoke test exact deployed runtime authority
+      - name: Smoke test exact deployed asset graph
         shell: bash
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
@@ -170,18 +179,17 @@ jobs:
           curl --fail --silent --show-error --location --retry 10 --retry-delay 2 "$url" -o /tmp/atlas.html
           grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" /tmp/atlas.html
           grep -q "data-aml-build=\"${ATLAS_BUILD}\"" /tmp/atlas.html
-          grep -q "v0206-stability.js?r=${ATLAS_BUILD}" /tmp/atlas.html
           grep -q "v0342-runtime.js?r=${ATLAS_BUILD}" /tmp/atlas.html
           grep -q "v0343-final.module.js?r=${ATLAS_BUILD}" /tmp/atlas.html
-          grep -q "v0422-auth-bootstrap-fix.js?r=${ATLAS_BUILD}" /tmp/atlas.html
+          grep -q "v038-entity360.js?r=${ATLAS_BUILD}" /tmp/atlas.html
+          grep -q "v0391-entity-entry.js?r=${ATLAS_BUILD}" /tmp/atlas.html
+          grep -q "v037-public-spend.js?r=${ATLAS_BUILD}" /tmp/atlas.html
+          ! grep -q '?b=' /tmp/atlas.html
           curl --fail --silent --show-error --location "${PAGE_URL%/}/v0342-runtime.js?r=${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/v0342.js
           curl --fail --silent --show-error --location "${PAGE_URL%/}/v0343-final.module.js?r=${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/v0343.js
-          curl --fail --silent --show-error --location "${PAGE_URL%/}/v0402-aie-brand.js?r=${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/aie.js
-          curl --fail --silent --show-error --location "${PAGE_URL%/}/v0206-stability.js?r=${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/legacy.js
           grep -q "atlas-release-guard-via-v0342-compat" /tmp/v0342.js
           grep -q "atlas-release-guard-via-v0343-compat" /tmp/v0343.js
+          grep -q "v0344-public-entities.module.js?r=${ATLAS_BUILD}" /tmp/v0343.js
           ! grep -q "window.__AML_ACTIVE_VERSION__=V0342_RUNTIME" /tmp/v0342.js
           ! grep -q 'Operational Radar · v${V0342_RUNTIME}' /tmp/v0342.js
           ! grep -q "window.__AML_ACTIVE_VERSION__=VERSION" /tmp/v0343.js
-          ! grep -q "characterData:true" /tmp/aie.js
-          grep -q "ATLAS_LEGACY_VERSION_WATCHERS_DISABLED" /tmp/legacy.js
