@@ -1,12 +1,12 @@
 {
-  "workbench_version": "0.42.0",
-  "build": "0420",
+  "workbench_version": "0.42.1",
+  "build": "0421",
   "product_name": "ATLAS AML",
   "release_policy": "SINGLE_ACTIVE_RELEASE",
   "legacy_release_policy": "GIT_HISTORY_ONLY_NOT_ACTIVE_RUNTIME",
   "pages_deploy": "success",
-  "live_smoke": "failure",
-  "status": "failure",
+  "live_smoke": "success",
+  "status": "success",
   "required_assets": [
     "atlas-release.json",
     "atlas-release-guard.js",
@@ -28,5 +28,6 @@
   "blocked_runtime_authorities": [
     "v035-final.module.js",
     "v036-final.module.js"
-  ]
+  ],
+  "bootstrap_policy": "RELEASE_GUARD_NO_SELF_MUTATION_LOOP"
 }
