@@ -1,6 +1,6 @@
 {
-  "app_version": "0.42.0",
-  "build": "0420",
+  "app_version": "0.42.1",
+  "build": "0421",
   "product_name": "ATLAS AML",
   "product_tagline": "Plataforma Integrada de Inteligencia y Riesgo",
   "visible_identity": "ATLAS_AML_CURRENT",
@@ -14,7 +14,7 @@
   "theme_default": "DARK_RADAR_INTEGRADO",
   "theme_user_preference": "DARK_LIGHT_LOCALSTORAGE_PERSISTED",
   "theme_contract": "GLOBAL_TOKENS+SEMANTIC_COLORS+MODULE_OVERRIDES+USER_CONTRAST_TOGGLE",
-  "auth_fix": "SUPABASE_ON_AUTH_STATE_CHANGE_DEFERRED",
+  "auth_fix": "SUPABASE_ON_AUTH_STATE_CHANGE_DEFERRED+RELEASE_GUARD_NO_MUTATION_LOOP",
   "published_from": "main",
   "feature": "ATLAS_CURRENT+ATLAS_THEME_SYSTEM_V040+RADAR_GRAPHICS_V0401+UAF_SII_RECON_LIVE_V0402+ENTITY_SEARCH_V041+RADAR_INTEGRADO_REAL_V036+SANCTIONS_V12+PUBLIC_SPEND_V131_NATIVE+ENTITY360_V038",
   "runtime": "SINGLE_RELEASE_AUTHORITY_OVER_COMPATIBILITY_LAYERS",
