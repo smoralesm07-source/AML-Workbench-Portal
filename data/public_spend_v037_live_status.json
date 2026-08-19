@@ -1,15 +1,17 @@
 {
-  "workbench_version": "0.42.2",
-  "build": "0422",
+  "workbench_version": "0.42.3",
+  "build": "0423",
   "product_name": "ATLAS AML",
   "release_policy": "SINGLE_ACTIVE_RELEASE",
   "legacy_release_policy": "GIT_HISTORY_ONLY_NOT_ACTIVE_RUNTIME",
-  "pages_deploy": "failure",
+  "pages_deploy": "cancelled",
   "live_smoke": "success",
   "status": "failure",
   "required_assets": [
     "atlas-release.json",
     "atlas-release-guard.js",
+    "v0342-runtime.js",
+    "v0343-final.module.js",
     "v040-theme-bootstrap.js",
     "v0402-aie-brand.js",
     "v0422-auth-bootstrap-fix.js",
@@ -25,5 +27,6 @@
     "v035-final.module.js",
     "v036-final.module.js"
   ],
+  "visible_version_authority": "ATLAS_RELEASE_GUARD_ONLY",
   "bootstrap_policy": "NO_SELF_SUSTAINING_MUTATION_OBSERVERS+NON_BLOCKING_AUDIT+AUTH_TIMEOUT_DIAGNOSTIC"
 }
