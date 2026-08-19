@@ -102,6 +102,31 @@ function atlasEnhanceNav(){
   }
 }
 
+let atlasObservedNav=null;
+let atlasNavObserver=null;
+let atlasNavRefreshQueued=false;
+function atlasNavNeedsRefresh(nav){
+  return [...nav.querySelectorAll('.v019-nav-btn[data-view]')].some(b=>{
+    if(!ATLAS_NAV_META[b.dataset.view])return false;
+    return !b.classList.contains('atlas-nav-btn')||!b.querySelector('.atlas-nav-icon')||!b.querySelector('.atlas-nav-text');
+  });
+}
+function atlasBindNavObserver(){
+  const nav=document.querySelector('.v019-nav');
+  if(!nav||nav===atlasObservedNav)return;
+  atlasNavObserver?.disconnect();
+  atlasObservedNav=nav;
+  atlasNavObserver=new MutationObserver(()=>{
+    if(!atlasNavNeedsRefresh(nav)||atlasNavRefreshQueued)return;
+    atlasNavRefreshQueued=true;
+    queueMicrotask(()=>{
+      atlasNavRefreshQueued=false;
+      atlasEnhanceNav();
+    });
+  });
+  atlasNavObserver.observe(nav,{childList:true});
+}
+
 function atlasApplyBrand(){
   window.__AML_ACTIVE_VERSION__=ATLAS_VERSION;
   window.__AML_BUILD__=ATLAS_BUILD;
@@ -123,6 +148,7 @@ function atlasApplyBrand(){
   document.querySelectorAll('.auth-card .brand-mark').forEach(x=>x.textContent='ATLAS');
   document.querySelectorAll('.auth-card .eyebrow').forEach(x=>{if(/workbench/i.test(x.textContent||''))x.textContent=ATLAS_TAGLINE;});
   atlasEnhanceNav();
+  atlasBindNavObserver();
 }
 
 window.AtlasNavNews={
@@ -144,12 +170,13 @@ if(typeof window.navigate==='function'){
   window.navigate=async function(view,...args){const r=await baseNavigate(view,...args);atlasApplyBrand();return r;};
 }
 
-/* Watch only shell replacement at #app level. Observing the whole subtree would
- * also observe ATLAS' own menu reordering and create a feedback loop. */
+/* Watch shell replacement at #app level, plus dynamic insertions inside the
+ * navigation itself. The nav observer only reacts to known, non-normalized
+ * buttons, avoiding feedback loops from ATLAS' own reordering. */
 const atlasRoot=document.querySelector('#app');
 if(atlasRoot){
   const atlasObserver=new MutationObserver(()=>queueMicrotask(atlasApplyBrand));
   atlasObserver.observe(atlasRoot,{childList:true});
 }
 atlasApplyBrand();
-for(const ms of [0,120,320,700,1300])setTimeout(atlasApplyBrand,ms);
+for(const ms of [0,120,320,700,1300,2500,5000])setTimeout(atlasApplyBrand,ms);
