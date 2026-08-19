@@ -1,9 +1,9 @@
 'use strict';
 
-/* AML Workbench v0.20.6 · deployment stability
- * - Serves UAF reportability assets from the same GitHub Pages origin.
- * - Neutralizes the legacy v0.19.2 version badge timer without adding another polling loop.
- * - Exposes the active build for lightweight runtime diagnostics.
+/* AML Workbench v0.20.6 · deployment stability compatibility layer.
+ * ATLAS current release owns version/build and visible identity. This layer keeps
+ * only the same-origin UAF data loader; all historical version mutation watchers
+ * are permanently neutralized to avoid bootstrap/UI mutation loops.
  */
 const V0206='0.20.6';
 const V0206_REPORT_URL='./data/uaf_reportability_sector_2025.json?build=0206';
@@ -12,26 +12,18 @@ let V0206_VERSION_OBSERVER=null;
 const v0206BaseShell=shell;
 
 function v0206ApplyVersion(){
-  const el=document.querySelector('.v019-brand small');
-  if(!el)return null;
-  const wanted=`Operational Radar · v${V0206}`;
-  if(el.textContent!==wanted)el.textContent=wanted;
-  return el;
+  return document.querySelector('.v019-brand small')||null;
 }
-
 function v0206WatchVersion(){
-  const el=v0206ApplyVersion();
-  if(!el||V0206_VERSION_OBSERVER)return;
-  V0206_VERSION_OBSERVER=new MutationObserver(()=>{
-    const wanted=`Operational Radar · v${V0206}`;
-    if(el.textContent!==wanted)el.textContent=wanted;
-  });
-  V0206_VERSION_OBSERVER.observe(el,{childList:true,characterData:true,subtree:true});
+  if(V0206_VERSION_OBSERVER){
+    try{V0206_VERSION_OBSERVER.disconnect();}catch{}
+    V0206_VERSION_OBSERVER=null;
+  }
+  return v0206ApplyVersion();
 }
 
 shell=function(title,subtitle){
   v0206BaseShell(title,subtitle);
-  v0206WatchVersion();
 };
 
 /* Replace the remote raw.githubusercontent loader with same-origin governed snapshots. */
@@ -55,7 +47,5 @@ v0193LoadUafData=async function(force=false){
   return V0193_UAF_CACHE;
 };
 
-window.__AML_BUILD__=V0206;
 window.__AML_UAF_ASSET_SCOPE__='same-origin';
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(v0206WatchVersion,0));
-else setTimeout(v0206WatchVersion,0);
+window.__ATLAS_LEGACY_VERSION_WATCHERS_DISABLED__=true;
