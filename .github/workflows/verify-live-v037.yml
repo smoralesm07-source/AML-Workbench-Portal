@@ -1,9 +1,9 @@
-name: Verify Live Workbench v0.38
+name: Verify Live ATLAS AML v0.39
 
 on:
   workflow_run:
     workflows:
-      - 'Deploy AML Workbench Portal'
+      - 'Deploy ATLAS AML Portal'
     types: [completed]
   workflow_dispatch:
 
@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: verify-live-workbench-v038
+  group: verify-live-atlas-v039
   cancel-in-progress: true
 
 jobs:
@@ -22,7 +22,7 @@ jobs:
         with:
           ref: main
 
-      - name: Verify served v0.38 assets
+      - name: Verify served ATLAS AML v0.39 assets
         id: live
         continue-on-error: true
         shell: bash
@@ -30,14 +30,18 @@ jobs:
           set -euo pipefail
           URL='https://smoralesm07-source.github.io/AML-Workbench-Portal/'
           curl --fail --silent --show-error --location --retry 8 --retry-delay 3 "$URL" -o /tmp/live.html
-          grep -q 'data-aml-version="0.38.0"' /tmp/live.html
-          grep -q 'data-aml-build="0380"' /tmp/live.html
+          grep -q 'data-aml-version="0.39.0"' /tmp/live.html
+          grep -q 'data-aml-build="0390"' /tmp/live.html
+          grep -q 'ATLAS AML' /tmp/live.html
+          grep -q 'Plataforma Integrada de Inteligencia y Riesgo' /tmp/live.html
+          grep -q 'v039-atlas-brand.js?b=0390' /tmp/live.html
+          grep -q 'v039-atlas-brand.css?b=0390' /tmp/live.html
           grep -q 'v037-public-spend.js?b=0370' /tmp/live.html
           grep -q 'v037-public-spend.css?b=0370' /tmp/live.html
           grep -q 'v037-final.module.js?b=0370' /tmp/live.html
           grep -q 'v038-entity360.js?b=0380' /tmp/live.html
           grep -q 'v038-entity360.css?b=0380' /tmp/live.html
-          grep -q 'v038-final.module.js?b=0380' /tmp/live.html
+          grep -q 'v038-final.module.js?b=0390' /tmp/live.html
           grep -q 'v036-radar-integrado-crosswalk.js?b=0360' /tmp/live.html
 
       - name: Publish stable live status
@@ -54,13 +58,14 @@ jobs:
           deploy=os.environ.get('DEPLOY_CONCLUSION') or 'manual'
           ok=(live=='success' and deploy in ('success','manual'))
           payload={
-            'workbench_version':'0.38.0',
+            'workbench_version':'0.39.0',
+            'product_name':'ATLAS AML',
             'entity360_ui':'0.38.0',
             'public_spend_ui':'13.1',
             'pages_deploy':deploy,
             'live_smoke':live,
             'status':'success' if ok else 'failure',
-            'required_assets':['v038-entity360.js','v038-entity360.css','v038-final.module.js','v037-public-spend.js','v037-public-spend.css','v037-final.module.js'],
+            'required_assets':['v039-atlas-brand.js','v039-atlas-brand.css','v038-entity360.js','v038-entity360.css','v038-final.module.js','v037-public-spend.js','v037-public-spend.css','v037-final.module.js'],
             'preserved_assets':['v036-radar-integrado-crosswalk.js']
           }
           Path('data/public_spend_v037_live_status.json').write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding='utf-8')
@@ -69,10 +74,10 @@ jobs:
           git config user.email "aml-workbench-bot@users.noreply.github.com"
           git add data/public_spend_v037_live_status.json
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "ci: publica smoke live Workbench v0.38"
+          git commit -m "ci: publica smoke live ATLAS AML v0.39"
           git pull --rebase origin main
           git push origin main
 
-      - name: Fail if live v0.38 is not served
+      - name: Fail if live ATLAS AML v0.39 is not served
         if: steps.live.outcome != 'success' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != 'success')
         run: exit 1
