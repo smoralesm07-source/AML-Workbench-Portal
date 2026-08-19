@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: validate-reconciliation-0435-${{ github.ref }}
+  group: validate-reconciliation-current-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -38,4 +38,4 @@ jobs:
           python tools/build_atlas_site.py --out _site-reconciliation
           test -f _site-reconciliation/atlas-runtime-current.css
           test -f _site-reconciliation/index.html
-          grep -q '0435' _site-reconciliation/index.html
+          grep -q '0436' _site-reconciliation/index.html
