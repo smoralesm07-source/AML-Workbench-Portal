@@ -1,0 +1,41 @@
+name: Validate Conciliación UAF-SII · ATLAS current
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-reconciliation-current-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate JavaScript syntax
+        run: |
+          node --check v0434-reconciliation-command.js
+          node --check v0435-reconciliation-fix.js
+      - name: Validate reconciliation contract
+        run: node tests/v0435-reconciliation-contract.mjs
+      - name: Validate analytics SQL source
+        run: |
+          grep -q 'aml_v0434_uaf_sii_sector' sql/atlas_v0434_uaf_sii_reconciliation_analytics.sql
+          grep -q 'aml_v0434_uaf_sii_sector_matrix' sql/atlas_v0434_uaf_sii_reconciliation_analytics.sql
+          grep -q 'security_invoker = true' sql/atlas_v0434_uaf_sii_reconciliation_analytics.sql
+      - name: Build canonical ATLAS candidate
+        run: |
+          python tools/build_atlas_site.py --out _site-reconciliation
+          test -f _site-reconciliation/atlas-runtime-current.css
+          test -f _site-reconciliation/index.html
+          grep -q '0436' _site-reconciliation/index.html
