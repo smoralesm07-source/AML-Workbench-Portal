@@ -1,0 +1,4 @@
+/* ATLAS AML 0.43.5 · reconciliation interaction hardening */
+.v0434-timeline button.active{border-color:var(--atlas-warn)!important;background:var(--atlas-warn-soft)!important;box-shadow:inset 0 -2px 0 var(--atlas-warn)!important}
+.v0434-timeline button.active span,.v0434-timeline button.active b{color:var(--atlas-warn)!important}
+.v0434-kpis .v0434-help{position:relative;z-index:2}
