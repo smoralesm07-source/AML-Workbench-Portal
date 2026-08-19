@@ -1,0 +1,72 @@
+name: Verify Live ATLAS AML current release
+
+on:
+  workflow_run:
+    workflows:
+      - 'Deploy current ATLAS AML release'
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-live-atlas-current
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Load current release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' >> "$GITHUB_ENV"
+          import json
+          m=json.load(open('atlas-release.json',encoding='utf-8'))
+          print(f"ATLAS_RELEASE={m['release']}")
+          print(f"ATLAS_BUILD={m['build']}")
+          PY
+
+      - name: Verify exact served release and canonical runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL='https://smoralesm07-source.github.io/AML-Workbench-Portal/'
+          stamp=$(date +%s)
+          curl -fsSL --retry 10 --retry-delay 3 "${URL}?atlas_release=${ATLAS_RELEASE}:${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/live.html
+          curl -fsSL "${URL}atlas-release.json?_atlas=${stamp}" -o /tmp/release.json
+          curl -fsSL "${URL}atlas-runtime-report.json?_atlas=${stamp}" -o /tmp/runtime.json
+          curl -fsSL "${URL}atlas-current-ui.js?r=${ATLAS_BUILD}&_atlas=${stamp}" -o /tmp/current.js
+          python - <<'PY'
+          import json,os
+          r=json.load(open('/tmp/release.json'))
+          rt=json.load(open('/tmp/runtime.json'))
+          assert r['release']==os.environ['ATLAS_RELEASE'],r
+          assert r['build']==os.environ['ATLAS_BUILD'],r
+          assert r['runtime_policy']=='CANONICAL_ACTIVE_RUNTIME_ONLY',r
+          assert rt['release']==os.environ['ATLAS_RELEASE'],rt
+          assert rt['build']==os.environ['ATLAS_BUILD'],rt
+          assert rt['policy']=='CANONICAL_ACTIVE_RUNTIME_ONLY',rt
+          PY
+          grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" /tmp/live.html
+          grep -q "data-aml-build=\"${ATLAS_BUILD}\"" /tmp/live.html
+          grep -q "atlas-current-ui.js?r=${ATLAS_BUILD}" /tmp/live.html
+          grep -q 'Gasto público' /tmp/current.js
+          ! grep -q '?b=' /tmp/live.html
+          for old in v0342-runtime.js v0343-final.module.js v035-radar-command-center.js v037-final.module.js v038-final.module.js v039-atlas-brand.js; do
+            if curl -fsS "${URL}${old}?_atlas=${stamp}" -o /dev/null; then
+              echo "Historical runtime unexpectedly served: $old"
+              exit 1
+            fi
+          done
+
+      - name: Require successful deploy trigger
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != 'success'
+        run: exit 1

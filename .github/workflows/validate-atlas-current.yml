@@ -1,0 +1,140 @@
+name: Validate ATLAS AML current
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'data/public_spend_v037_status.json'
+      - 'data/public_spend_v037_live_status.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-atlas-current-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Load current release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' >> "$GITHUB_ENV"
+          import json
+          m=json.load(open('atlas-release.json',encoding='utf-8'))
+          print(f"ATLAS_RELEASE={m['release']}")
+          print(f"ATLAS_BUILD={m['build']}")
+          PY
+
+      - name: Validate canonical manifests and source template
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          release=json.load(open('atlas-release.json',encoding='utf-8'))
+          runtime=json.load(open('atlas-runtime-manifest.json',encoding='utf-8'))
+          build=json.load(open('build.json',encoding='utf-8'))
+          assert release['release']==runtime['release']==build['app_version']
+          assert release['build']==runtime['build']==build['build']
+          assert release['runtime_policy']=='CANONICAL_ACTIVE_RUNTIME_ONLY'
+          assert runtime['policy']=='CANONICAL_ACTIVE_RUNTIME_ONLY'
+          assert release['pages_artifact_policy']=='ALLOWLIST_ACTIVE_RUNTIME_ONLY'
+          assert build['future_change_policy']=='BRANCH_PR_VALIDATE_CURRENT_MERGE_MAIN_AUTO_DEPLOY_LIVE_SMOKE'
+          html=Path('index.html').read_text(encoding='utf-8')
+          assert '<!-- ATLAS_RUNTIME_STYLES -->' in html
+          assert '<!-- ATLAS_RUNTIME_SCRIPTS -->' in html
+          forbidden=set(runtime['forbidden_runtime_assets'])
+          for name in forbidden:
+              assert name not in html, f'forbidden runtime directly referenced by source index: {name}'
+          active=[*runtime['styles'],*[x['path'] for x in runtime['scripts']]]
+          missing=[x for x in active if not Path(x).is_file()]
+          assert not missing, f'active manifest files missing: {missing}'
+          PY
+
+      - name: Validate active JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' > /tmp/atlas-js.txt
+          import json
+          m=json.load(open('atlas-runtime-manifest.json'))
+          for x in m['scripts']: print(x['path'])
+          PY
+          while IFS= read -r f; do node --check "$f"; done < /tmp/atlas-js.txt
+          node --check atlas-release-guard.js
+          node --check v040-theme-bootstrap.js
+
+      - name: Build exact Pages candidate from allowlist
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/build_atlas_site.py --out _site-test
+          test -f _site-test/index.html
+          test -f _site-test/atlas-runtime-report.json
+          ! grep -q '?b=' _site-test/index.html
+
+      - name: Verify active runtime order and forbidden overlays
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,re
+          from pathlib import Path
+          m=json.load(open('atlas-runtime-manifest.json'))
+          html=Path('_site-test/index.html').read_text(encoding='utf-8')
+          build=m['build']
+          scripts=re.findall(r'<script(?: type="module")? src="\.\/([^?\"]+)\?r='+re.escape(build)+r'"',html)
+          expected=[x['path'] for x in m['scripts']]
+          assert scripts[-len(expected):]==expected,(scripts[-len(expected):],expected)
+          idx={name:html.index(f'./{name}?r={build}') for name in expected}
+          assert idx['v0333-auth-preflight.js'] < idx['app.js'] < idx['v0422-auth-bootstrap-fix.js']
+          assert idx['atlas-cgr-bridge.js'] < idx['v036-radar-integrado-real.js']
+          assert idx['atlas-current-ui.js']==max(idx.values())
+          for name in m['forbidden_runtime_assets']:
+              assert name not in html,f'forbidden runtime published: {name}'
+              assert not Path('_site-test',name).exists(),f'forbidden runtime copied: {name}'
+          assert 'v039-atlas-brand.js' not in html
+          assert 'v035-radar-command-center.js' not in html
+          assert 'v0342-runtime.js' not in html
+          assert 'v037-final.module.js' not in html
+          PY
+
+      - name: Validate current ATLAS contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'CANONICAL_ACTIVE_RUNTIME_ONLY' atlas-release-guard.js
+          grep -q 'FIRST_PAINT_ONLY' v040-theme-bootstrap.js
+          grep -q 'AtlasTheme' atlas-current-ui.js
+          grep -q 'AtlasNavNews' atlas-current-ui.js
+          grep -q 'Gasto público' atlas-current-ui.js
+          grep -q 'window.v035OpenCgr=openCgr' atlas-cgr-bridge.js
+          grep -q 'AML_SANCTIONS_V12' v034-sanctions-v12-charts.js
+          grep -q 'SESSION_AWARE' build.json
+          if test -f tests/v0341-sanctions-contract.mjs; then node tests/v0341-sanctions-contract.mjs; fi
+
+      - name: Validate governed local JSON assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          for path in ['data/uaf_reportability_sector_2025.json','data/uaf_dashboard_snapshot.json']:
+              with open(path,encoding='utf-8') as f: json.load(f)
+          PY
