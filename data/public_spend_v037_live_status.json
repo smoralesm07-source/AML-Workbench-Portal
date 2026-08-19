@@ -4,9 +4,9 @@
   "product_name": "ATLAS AML",
   "release_policy": "SINGLE_ACTIVE_RELEASE",
   "legacy_release_policy": "GIT_HISTORY_ONLY_NOT_ACTIVE_RUNTIME",
-  "pages_deploy": "cancelled",
+  "pages_deploy": "success",
   "live_smoke": "success",
-  "status": "failure",
+  "status": "success",
   "required_assets": [
     "atlas-release.json",
     "atlas-release-guard.js",
