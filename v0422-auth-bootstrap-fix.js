@@ -3,9 +3,9 @@
 
   const RELEASE=document.documentElement.getAttribute('data-atlas-release')||'current';
   const BUILD=document.documentElement.getAttribute('data-aml-build')||'current';
-  const HARD_WATCHDOG=18000;
+  const HARD_WATCHDOG=22000;
   const MAX_RECOVERY_RELOADS=2;
-  const RECOVERY_KEY='atlas-auth-stability-reloads:v0439';
+  const RECOVERY_KEY='atlas-auth-stability-reloads:v0440';
 
   function now(){return new Date().toISOString();}
   function status(stage,extra={}){
@@ -16,7 +16,6 @@
   function hasShell(){return !!host()?.querySelector('.shell');}
   function hasLogin(){return !!host()?.querySelector('#login');}
   function isPending(){return title()==='Acceso pendiente de habilitación';}
-  function isResolved(){return hasShell()||hasLogin()||isPending();}
   function isRecoverable(){
     const t=title();
     return t==='Iniciando sesión segura…'||
@@ -37,6 +36,9 @@
   function setRecoveryCount(value){
     try{sessionStorage.setItem(RECOVERY_KEY,String(value));}catch(_error){}
   }
+  function escText(value){
+    return String(value??'').replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
   function showTerminalDiagnostic(last){
     const root=host();
     if(!root)return;
@@ -46,8 +48,8 @@
       <div class="brand-mark">ATLAS</div>
       <div class="eyebrow">Recuperación de acceso</div>
       <h1>El servicio de autorización está demorando más de lo esperado</h1>
-      <p>ATLAS mantuvo la sesión segura, pero la validación de acceso no logró completar el arranque. Puedes reintentar sin cerrar tu sesión Microsoft.</p>
-      <p class="error">${String(message).replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</p>
+      <p>ATLAS mantuvo la sesión segura. La autorización o la base de datos no respondió a tiempo; puedes reintentar sin cerrar tu sesión Microsoft.</p>
+      <p class="error">${escText(message)}</p>
       <button class="primary" type="button" id="atlas-auth-retry">Reintentar acceso</button>
     </div></section>`;
     document.querySelector('#atlas-auth-retry')?.addEventListener('click',()=>{
@@ -56,25 +58,71 @@
     });
   }
 
-  function watchdog(){
-    if(isResolved()){
-      clearRecovery();
-      status(hasShell()?'rendered':hasLogin()?'login-required':'access-pending');
-      return;
-    }
-    if(!isRecoverable())return;
-
+  function boundedReload(reason){
     const attempts=recoveryCount();
     const last=window.__ATLAS_LAST_RUNTIME_ERROR__;
     if(attempts<MAX_RECOVERY_RELOADS){
       const next=attempts+1;
       setRecoveryCount(next);
-      status('recovering',{reload:next,maxReloads:MAX_RECOVERY_RELOADS,lastError:last?.message||null});
+      status('recovering',{reason,reload:next,maxReloads:MAX_RECOVERY_RELOADS,lastError:last?.message||null});
       setDetail(`El servicio está respondiendo con lentitud. Reintentando acceso seguro (${next}/${MAX_RECOVERY_RELOADS})…`);
       window.setTimeout(()=>location.reload(),900+(next*350));
       return;
     }
-    showTerminalDiagnostic(last);
+    showTerminalDiagnostic(last||{message:reason});
+  }
+
+  async function verifyPendingAccess(){
+    /* app.js historically mapped both "disabled" and transient PostgREST errors
+       to the same pending screen. Re-check only after that first request ended. */
+    if(!isPending())return false;
+    if(typeof sb==='undefined'||!sb?.from||typeof state==='undefined'||!state?.user?.id)return false;
+    status('pending-recheck',{userId:state.user.id});
+    try{
+      const {data:access,error}=await sb.from('aml_allowed_users')
+        .select('role,enabled')
+        .eq('user_id',state.user.id)
+        .maybeSingle();
+      if(error)throw error;
+      if(!access?.enabled){
+        clearRecovery();
+        status('access-pending');
+        return true;
+      }
+      state.access=access;
+      clearRecovery();
+      status('authorized-after-recheck',{role:access.role||'viewer'});
+      if(typeof auditSession==='function')Promise.resolve().then(()=>auditSession()).catch(error=>console.warn('[ATLAS] deferred session audit failed',error));
+      if(typeof loadOverview==='function'){
+        await Promise.resolve(loadOverview());
+        status('rendered',{role:access.role||'viewer',recovered:true});
+        return true;
+      }
+      throw new Error('Vista principal no disponible tras recuperar autorización.');
+    }catch(error){
+      window.__ATLAS_LAST_RUNTIME_ERROR__={message:String(error?.message||error),source:'allowlist-recheck',at:now()};
+      boundedReload('La verificación de autorización/RLS falló de forma transitoria.');
+      return true;
+    }
+  }
+
+  async function watchdog(){
+    if(hasShell()){
+      clearRecovery();
+      status('rendered');
+      return;
+    }
+    if(hasLogin()){
+      clearRecovery();
+      status('login-required');
+      return;
+    }
+    if(isPending()){
+      await verifyPendingAccess();
+      return;
+    }
+    if(!isRecoverable())return;
+    boundedReload('El arranque no completó la transición de interfaz dentro del tiempo esperado.');
   }
 
   window.addEventListener('error',event=>{
@@ -84,16 +132,10 @@
     window.__ATLAS_LAST_RUNTIME_ERROR__={message:String(event.reason?.message||event.reason||'unhandled rejection'),source:'promise',at:now()};
   });
 
-  /*
-   * v0.43.9 stability policy:
-   * - app.js remains the single authority that reads getSession + aml_allowed_users.
-   * - this guard NEVER launches a second allowlist/RLS query in parallel.
-   * - on a transient backend stall it performs bounded whole-boot retries.
-   * This removes the former v0.42.2 race where app.js and the rescue routine
-   * queried aml_allowed_users concurrently and the rescue failed after 6.5 s.
-   */
+  /* Single canonical app boot. This guard never races the initial allowlist query.
+     It acts only after the initial flow resolves to pending/error or remains stalled. */
   status('watchdog-scheduled',{watchdogMs:HARD_WATCHDOG});
-  window.setTimeout(watchdog,HARD_WATCHDOG);
+  window.setTimeout(()=>void watchdog(),HARD_WATCHDOG);
 
   window.AtlasAuthBootstrap={
     release:RELEASE,
