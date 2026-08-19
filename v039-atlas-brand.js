@@ -1,15 +1,15 @@
 'use strict';
 
 /* ATLAS AML v0.39.0 · visible identity + navigation UX layer
- * Technical identifiers remain AML-compatible on purpose.
- * This layer changes only presentation/navigation semantics and exposes
- * an event-driven unread-news API for modules that have genuine updates.
+ * Design System v0.40 adds the global dark/light preference without changing
+ * technical AML identifiers or radar data contracts.
  */
 const ATLAS_VERSION='0.39.0';
 const ATLAS_BUILD='0390';
 const ATLAS_NAME='ATLAS AML';
 const ATLAS_TAGLINE='Plataforma Integrada de Inteligencia y Riesgo';
 const ATLAS_NEWS_KEY='atlas-aml:nav-news:v1';
+const ATLAS_THEME_KEY='atlas-aml:theme:v1';
 
 const ATLAS_NAV_GROUPS=[
   {label:'Explorar',views:['overview','entities','territory']},
@@ -95,7 +95,6 @@ function atlasEnhanceNav(){
       }
     }
   }
-  // Unknown future views stay visible, aligned, and last rather than disappearing.
   for(const [view,b] of buttons){
     if(ATLAS_NAV_META[view])continue;
     b.classList.add('atlas-nav-btn');nav.appendChild(b);
@@ -127,6 +126,55 @@ function atlasBindNavObserver(){
   atlasNavObserver.observe(nav,{childList:true});
 }
 
+function atlasReadTheme(){
+  try{
+    const saved=localStorage.getItem(ATLAS_THEME_KEY);
+    if(saved==='dark'||saved==='light')return saved;
+  }catch{}
+  const current=document.documentElement.getAttribute('data-atlas-theme');
+  return current==='light'?'light':'dark';
+}
+function atlasThemeSvg(theme){
+  return theme==='dark'
+    ? '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'
+    : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.4A8.5 8.5 0 0 1 8.6 4 8.5 8.5 0 1 0 20 15.4Z"/></svg>';
+}
+function atlasEnsureThemeToggle(){
+  const host=document.querySelector('.v019-top')||document.querySelector('.topbar')||document.querySelector('.v18-appbar');
+  if(!host)return;
+  let button=host.querySelector('.atlas-theme-toggle');
+  if(!button){
+    button=document.createElement('button');
+    button.type='button';
+    button.className='atlas-theme-toggle';
+    button.dataset.atlasThemeControl='1';
+    const anchor=host.querySelector('.v019-user')||host.querySelector('#v019-logout')||host.querySelector('.status');
+    if(anchor&&anchor.parentNode===host)host.insertBefore(button,anchor);else host.appendChild(button);
+  }
+  const theme=document.documentElement.getAttribute('data-atlas-theme')==='light'?'light':'dark';
+  const target=theme==='dark'?'claro':'oscuro';
+  button.innerHTML=`<span class="atlas-theme-icon">${atlasThemeSvg(theme)}</span><span class="atlas-theme-label">${theme==='dark'?'Claro':'Oscuro'}</span>`;
+  button.title=`Cambiar a tema ${target}`;
+  button.setAttribute('aria-label',`Cambiar a tema ${target}`);
+  button.setAttribute('aria-pressed',String(theme==='light'));
+  if(!button.dataset.atlasThemeBound){
+    button.addEventListener('click',()=>atlasSetTheme(themeNow()==='dark'?'light':'dark'));
+    button.dataset.atlasThemeBound='1';
+  }
+}
+function themeNow(){return document.documentElement.getAttribute('data-atlas-theme')==='light'?'light':'dark';}
+function atlasSetTheme(value,{persist=true,emit=true}={}){
+  const next=value==='light'?'light':'dark';
+  const prev=themeNow();
+  document.documentElement.setAttribute('data-atlas-theme',next);
+  document.documentElement.style.colorScheme=next;
+  window.__ATLAS_THEME__=next;
+  if(persist){try{localStorage.setItem(ATLAS_THEME_KEY,next);}catch{}}
+  atlasEnsureThemeToggle();
+  if(emit&&prev!==next)window.dispatchEvent(new CustomEvent('atlas:themechange',{detail:{theme:next,previous:prev}}));
+  return next;
+}
+
 function atlasApplyBrand(){
   window.__AML_ACTIVE_VERSION__=ATLAS_VERSION;
   window.__AML_BUILD__=ATLAS_BUILD;
@@ -147,15 +195,17 @@ function atlasApplyBrand(){
   document.querySelectorAll('.topbar .eyebrow,.v18-pagehead .eyebrow').forEach(x=>x.textContent=`${ATLAS_NAME} · v${ATLAS_VERSION}`);
   document.querySelectorAll('.auth-card .brand-mark').forEach(x=>x.textContent='ATLAS');
   document.querySelectorAll('.auth-card .eyebrow').forEach(x=>{if(/workbench/i.test(x.textContent||''))x.textContent=ATLAS_TAGLINE;});
+  atlasSetTheme(atlasReadTheme(),{persist:false,emit:false});
   atlasEnhanceNav();
   atlasBindNavObserver();
+  atlasEnsureThemeToggle();
 }
 
-window.AtlasNavNews={
-  set:atlasSetNews,
-  clear:atlasClearNews,
-  all:atlasReadNews,
-  markSeen:atlasClearNews
+window.AtlasNavNews={set:atlasSetNews,clear:atlasClearNews,all:atlasReadNews,markSeen:atlasClearNews};
+window.AtlasTheme={
+  get:themeNow,
+  set:(theme)=>atlasSetTheme(theme),
+  toggle:()=>atlasSetTheme(themeNow()==='dark'?'light':'dark')
 };
 window.addEventListener('atlas:nav-news',e=>{
   const d=e.detail||{};if(d.view)atlasSetNews(d.view,d);
@@ -170,9 +220,6 @@ if(typeof window.navigate==='function'){
   window.navigate=async function(view,...args){const r=await baseNavigate(view,...args);atlasApplyBrand();return r;};
 }
 
-/* Watch shell replacement at #app level, plus dynamic insertions inside the
- * navigation itself. The nav observer only reacts to known, non-normalized
- * buttons, avoiding feedback loops from ATLAS' own reordering. */
 const atlasRoot=document.querySelector('#app');
 if(atlasRoot){
   const atlasObserver=new MutationObserver(()=>queueMicrotask(atlasApplyBrand));
