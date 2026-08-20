@@ -101,3 +101,32 @@
   window.AtlasAnalyticsVisuals={version:VERSION,refresh:syncPublicSpend,health:()=>window.__ATLAS_PUBLIC_SPEND_GRAPHICS__||null};
   queueSync();
 })();
+
+/* ATLAS AML 0.45.0 · canonical bootstrap for Territory CEAD analytics.
+ * The production runtime compiles manifest sources before the v032 Territory module
+ * finishes its deferred initialization. The feature asset must therefore be loaded
+ * after DOMContentLoaded, when AML_IRG_TERRITORY exists, so it can wrap render() and
+ * replace the legacy CEAD panel reliably. External self-hosted assets preserve CSP.
+ */
+(function atlasTerritoryAnalyticsCanonicalBootstrap(){
+  const CSS='./assets/atlas-territory-threat-analytics-v2.css?v=0450-2';
+  const JS='./assets/atlas-territory-threat-analytics-v2.js?v=0450-2';
+  function ensureCss(){
+    if(document.querySelector('link[data-atlas-territory-analytics="0450"]'))return;
+    const link=document.createElement('link');
+    link.rel='stylesheet';link.href=CSS;link.dataset.atlasTerritoryAnalytics='0450';
+    document.head.appendChild(link);
+  }
+  function loadAfterTerritory(){
+    ensureCss();
+    const prior=document.querySelector('script[data-atlas-territory-analytics="0450"]');
+    if(prior)prior.remove();
+    const script=document.createElement('script');
+    script.type='module';script.src=JS;script.dataset.atlasTerritoryAnalytics='0450';
+    document.body.appendChild(script);
+  }
+  ensureCss();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(loadAfterTerritory,0),{once:true});
+  else setTimeout(loadAfterTerritory,0);
+  window.ATLAS_TERRITORY_ANALYTICS_BOOTSTRAP={release:'0.45.0',build:'0450',mode:'POST_TERRITORY_MODULE'};
+})();
