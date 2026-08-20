@@ -92,8 +92,11 @@ def main():
         '__ATLAS_RUNTIME_RELIABILITY__',
         CURRENT_FINAL_AUTH_MARKER,
         'ENTITY360_REFERENCE_0445_SIX_LENSES',
+        'ENTITY360_INLINE_AUTOCOMPLETE_0447',
         '__ATLAS_ENTITY_AUTHORITY_FINAL__',
         'sixLensRendererPinned',
+        'singleWorkspacePinned',
+        'autocompletePinned',
     )
     missing=[m for m in required_final_markers if m not in final_text]
     if missing:
@@ -108,6 +111,11 @@ def main():
         "['network','04','Red de exposición']",
         "['signals','05','Señales y convergencia']",
         "['evidence','06','Evidencia y decisión']",
+        'ENTITY360_INLINE_AUTOCOMPLETE_0447',
+        'SINGLE_DARK_DOSSIER_NO_SEPARATE_SEARCH_LANDING',
+        'DEBOUNCED_AUTOCOMPLETE_RLS_NAME_RUT_ENTITY_ID_NO_FUZZY_JOIN',
+        'selectionScopesAllEntityGraphics:true',
+        'a47-entity-q',
     )
     missing_entity=[m for m in entity_markers if m not in classic_text]
     if missing_entity:
@@ -127,6 +135,7 @@ def main():
         f'ATLAS compiled runtime authority OK: {len(files)} bundle/module asset(s); '
         'atlas-release-guard.js remains the sole version authority; '
         f'{final_module.name} owns passive final session/Entity 360 authority; '
+        'Entity 360 uses the six-lens dossier with persistent RLS autocomplete and no separate white landing; '
         'reconciliation bubble matrix is removed and reversible cross-filters are active; '
         'legacy auth replay/reload runtime is absent'
     )
