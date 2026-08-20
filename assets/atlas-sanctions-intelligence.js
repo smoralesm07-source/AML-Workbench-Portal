@@ -1,52 +1,49 @@
 'use strict';
-(function sanctionsIntelligenceLayer(){
- const fmt=n=>new Intl.NumberFormat('es-CL',{maximumFractionDigits:0}).format(Number(n)||0);
- const pct=n=>`${(Number(n)||0).toLocaleString('es-CL',{maximumFractionDigits:1})}%`;
- const clamp=n=>Math.max(0,Math.min(100,Number(n)||0));
- function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
- function visible(){try{return typeof window.v034View==='function'?window.v034View():null}catch(_){return null}}
- function spark(values,w=150,h=30){const a=values.map(Number);const max=Math.max(1,...a),min=Math.min(0,...a),range=Math.max(1,max-min);const pts=a.map((v,i)=>`${(i/(Math.max(1,a.length-1)))*(w-6)+3},${h-3-((v-min)/range)*(h-7)}`).join(' ');const last=pts.split(' ').pop()?.split(',')||[w-3,h-3];return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><polyline class="spark" points="${pts}"/><circle class="sparkdot" cx="${last[0]}" cy="${last[1]}" r="2.2"/></svg>`}
- function gauge(value){const x=4+(clamp(value)/100)*92;return `<svg viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true"><line class="track" x1="4" y1="9" x2="96" y2="9"/><line class="fill" x1="4" y1="9" x2="${x}" y2="9"/></svg>`}
- function compute(D){
-   const events=D?.events||[],subjects=D?.subjects||[];
-   const years=[...new Set(events.map(e=>Number(String(e.date||'').slice(0,4))).filter(Boolean))].sort((a,b)=>a-b);
-   const yearly=years.map(y=>events.filter(e=>Number(String(e.date||'').slice(0,4))===y).length);
-   const last=yearly.at(-1)||0,prev=yearly.at(-2)||0,delta=prev?((last-prev)/prev)*100:0;
-   const bySup={};events.forEach(e=>{const k=e.regulator||'Sin supervisor';bySup[k]=(bySup[k]||0)+1});
-   const supRank=Object.entries(bySup).sort((a,b)=>b[1]-a[1]),topSup=supRank[0]||['—',0],supShare=events.length?topSup[1]/events.length*100:0;
-   const recurring=subjects.filter(s=>(s.events?.length||0)>=2).length,recShare=subjects.length?recurring/subjects.length*100:0;
-   const threePlus=subjects.filter(s=>(s.events?.length||0)>=3).length;
-   const ufEvents=events.filter(e=>Number(e.amountUF)>0),ufCoverage=events.length?ufEvents.length/events.length*100:0;
-   const uf=ufEvents.reduce((a,e)=>a+(Number(e.amountUF)||0),0);
-   const laft=events.filter(e=>e.laft).length,laftShare=events.length?laft/events.length*100:0;
-   return {events,subjects,years,yearly,last,prev,delta,topSup,supShare,recurring,recShare,threePlus,ufCoverage,uf,laft,laftShare};
- }
- function interpretation(M){
-   const trend=M.prev?`${M.delta>=0?'aumentan':'disminuyen'} ${pct(Math.abs(M.delta))} frente al período anual previo`:'no permiten calcular variación anual comparable';
-   const concentration=M.events.length?`${esc(window.V034_SUPERVISOR_LABELS?.[M.topSup[0]]||M.topSup[0])} concentra ${pct(M.supShare)} de los eventos visibles`:'sin eventos para el filtro activo';
-   const recurrence=M.subjects.length?`${pct(M.recShare)} de las entidades visibles presenta 2 o más eventos`:'sin entidades visibles';
-   return `La lectura combinada muestra que los eventos ${trend}; ${concentration}; y ${recurrence}. Estos indicadores describen intensidad, concentración y recurrencia, sin constituir por sí solos una conclusión de riesgo.`;
- }
- function card(eye,value,unit,text,graphic,klass=''){return `<article class="sv12-intel-card ${klass}"><span class="eye">${eye}</span><div class="sv12-intel-value"><b>${value}</b><em>${unit}</em></div><p>${text}</p>${graphic}</article>`}
- function render(){
-   const root=document.querySelector('.sv12');if(!root)return;
-   const D=visible();if(!D)return;const M=compute(D);
-   let host=document.getElementById('sv12-intel');
-   if(!host){host=document.createElement('section');host.id='sv12-intel';host.className='sv12-intel';const k=document.getElementById('sv12-kpis');k?.insertAdjacentElement('afterend',host);}
-   const trendText=M.prev?`${M.delta>=0?'+':''}${M.delta.toLocaleString('es-CL',{maximumFractionDigits:1})}%`:'s/comparación';
-   host.innerHTML=`<article class="sv12-intel-lead"><span class="eye">Lectura ejecutiva · filtro activo</span><h3>Patrón sancionatorio: intensidad, concentración y recurrencia</h3><p>${interpretation(M)}</p><div class="sv12-intel-chips"><span>${fmt(M.events.length)} eventos</span><span>${fmt(M.subjects.length)} entidades</span><span>${fmt(M.laft)} materia LA/FT</span><span>${fmt(M.uf)} UF publicadas</span></div></article>`+
-     card('Momentum temporal',trendText,'último año',M.years.length?`Serie visible ${M.years[0]}–${M.years.at(-1)} · ${fmt(M.last)} eventos en el último año de la selección.`:'Sin serie temporal visible.',spark(M.yearly),'')+
-     card('Concentración supervisor',pct(M.supShare),'top 1',`${esc(window.V034_SUPERVISOR_LABELS?.[M.topSup[0]]||M.topSup[0])}: ${fmt(M.topSup[1])} eventos del filtro activo.`,gauge(M.supShare),'warn')+
-     card('Recurrencia entidades',pct(M.recShare),'2+ eventos',`${fmt(M.recurring)} entidades recurrentes; ${fmt(M.threePlus)} acumulan 3 o más eventos.`,gauge(M.recShare),'violet');
-   host.title=`Cobertura de monto UF en la selección: ${pct(M.ufCoverage)} · Eventos con materia LA/FT directa: ${pct(M.laftShare)}.`;
- }
- function patch(){
-   if(window.__atlasSanctionsIntelPatched)return;window.__atlasSanctionsIntelPatched=true;
-   const original=window.v034Render;
-   if(typeof original==='function')window.v034Render=function(){const r=original.apply(this,arguments);queueMicrotask(render);return r};
-   const observer=new MutationObserver(()=>{clearTimeout(window.__sv12IntelTimer);window.__sv12IntelTimer=setTimeout(render,30)});
-   const app=document.getElementById('app')||document.body;observer.observe(app,{childList:true,subtree:true});
-   render();
- }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',patch,{once:true});else patch();
+/* ATLAS AML · current sanctions interpretation layer. Presentation-only: reads the governed v12 DOM and never mutates source data. */
+(function(){
+  let scheduled=false,lastSig='';
+  const n=(v)=>{const m=String(v||'').replace(/\./g,'').replace(',','.').match(/-?\d+(?:\.\d+)?/);return m?Number(m[0]):0};
+  const pct=(a,b)=>b>0?Math.max(0,Math.min(100,a/b*100)):0;
+  const fmtPct=(v)=>Number.isFinite(v)?`${v.toLocaleString('es-CL',{maximumFractionDigits:1})}%`:'—';
+  function textFromCard(cards,needle){const c=cards.find(x=>x.innerText.toLowerCase().includes(needle));return c?c.innerText:''}
+  function extractLeading(text){const m=String(text||'').match(/(?:^|\n)\s*([\d\.]+(?:,\d+)?)/);return m?n(m[1]):0}
+  function extractNamed(text,re){const m=String(text||'').match(re);return m?n(m[1]):0}
+  function sanitizeImpossibleCoverage(cards){
+    const first=cards[0]; if(!first)return;
+    const candidates=[...first.querySelectorAll('small,span,div,p')];
+    for(const el of candidates){const t=el.textContent||'';const m=t.match(/([\d\.]+(?:,\d+)?)%\s+del registro UAF/i);if(!m)continue;const v=n(m[1]);if(v>100){el.textContent='Comparador de cobertura UAF no disponible para este corte';el.setAttribute('title','Se ocultó un porcentaje inválido superior a 100%; la cifra de entidades sancionadas se conserva.');}}
+  }
+  function build(root){
+    const kpis=root.querySelector('.kpis'); if(!kpis)return;
+    const cards=[...kpis.querySelectorAll('.kpi')]; if(cards.length<4)return;
+    sanitizeImpossibleCoverage(cards);
+    const allText=cards.map(c=>c.innerText).join('|');
+    const so=extractLeading(textFromCard(cards,'so inscritos sancionados'));
+    const other=extractLeading(textFromCard(cards,'otras entidades sancionadas'));
+    const events=extractLeading(textFromCard(cards,'eventos sancionatorios'));
+    const amount=extractLeading(textFromCard(cards,'magnitud publicada'));
+    const potential=extractNamed(textFromCard(cards,'otras entidades sancionadas'),/(\d[\d\.]*)\s+marcadas como Potenciales SO/i);
+    const laft=extractNamed(textFromCard(cards,'eventos sancionatorios'),/(\d[\d\.]*)\s+con materia ALA\/CFT directa/i);
+    const coverage=extractNamed(textFromCard(cards,'magnitud publicada'),/disponible en\s+([\d\.,]+)%/i);
+    const stats=root.querySelector('#listStats')?.innerText||'';
+    const visible=extractNamed(stats,/(\d[\d\.]*)\s+entidades/i);
+    const recurrent=extractNamed(stats,/(\d[\d\.]*)\s+recurrentes/i);
+    const pPotential=pct(potential,other),pLaft=pct(laft,events),pRec=pct(recurrent,visible);
+    const sig=[allText,stats].join('||'); if(sig===lastSig&&root.querySelector('.sv12-intel'))return; lastSig=sig;
+    let deck=root.querySelector('.sv12-intel'); if(!deck){deck=document.createElement('section');deck.className='sv12-intel';kpis.insertAdjacentElement('afterend',deck)}
+    const dominant=[['materia ALA/CFT',pLaft],['potenciales SO',pPotential],['recurrencia',pRec]].sort((a,b)=>b[1]-a[1])[0];
+    const riskTone=pLaft>=40||pRec>=35?'alta':pLaft>=20||pRec>=20?'media':'acotada';
+    const reading=`El universo visible contiene <strong>${events.toLocaleString('es-CL')} eventos</strong> sobre <strong>${(so+other).toLocaleString('es-CL')} entidades sancionadas</strong>. La señal proporcional más intensa es <em>${dominant[0]}</em> (${fmtPct(dominant[1])}). ${potential?`Entre las otras entidades, <strong>${potential.toLocaleString('es-CL')}</strong> están marcadas como Potenciales SO (${fmtPct(pPotential)}). `:''}${laft?`Los eventos con materia ALA/CFT directa representan ${fmtPct(pLaft)} del total visible. `:''}${recurrent?`La recurrencia alcanza ${fmtPct(pRec)} de las entidades actualmente listadas. `:''}La intensidad interpretativa del corte es <strong>${riskTone}</strong> y debe leerse como priorización analítica, no como conclusión de riesgo o ilicitud.`;
+    deck.innerHTML=`<div class="sv12-intel-main"><div class="sv12-intel-head"><div><div class="sv12-intel-eyebrow">Lectura integrada · sanciones</div><h3>Señales que explican el corte actual</h3></div><span class="sv12-intel-badge">filtros activos</span></div><div class="sv12-intel-metrics">
+      <div class="sv12-intel-metric purple"><span>Materia ALA/CFT directa</span><b>${fmtPct(pLaft)}</b><small>${laft.toLocaleString('es-CL')} de ${events.toLocaleString('es-CL')} eventos</small><div class="sv12-intel-track"><i style="width:${pLaft}%"></i></div></div>
+      <div class="sv12-intel-metric teal"><span>Brecha potencial de perímetro</span><b>${fmtPct(pPotential)}</b><small>${potential.toLocaleString('es-CL')} potenciales SO</small><div class="sv12-intel-track"><i style="width:${pPotential}%"></i></div></div>
+      <div class="sv12-intel-metric"><span>Recurrencia visible</span><b>${visible?fmtPct(pRec):'—'}</b><small>${visible?`${recurrent.toLocaleString('es-CL')} de ${visible.toLocaleString('es-CL')} entidades`:'se calcula al cargar listado'}</small><div class="sv12-intel-track"><i style="width:${pRec}%"></i></div></div>
+      <div class="sv12-intel-metric warn"><span>Cobertura de monto UF</span><b>${coverage?fmtPct(coverage):'—'}</b><small>${amount?`${amount.toLocaleString('es-CL')} UF publicadas`:'monto no visible'}</small><div class="sv12-intel-track"><i style="width:${Math.min(100,coverage)}%"></i></div></div>
+    </div></div><aside class="sv12-intel-side"><div class="sv12-intel-head"><div><div class="sv12-intel-eyebrow">Interpretación ejecutiva</div><h3>Qué mirar primero</h3></div></div><div class="sv12-intel-reading">${reading}</div><div class="sv12-intel-caution"><b>Regla de lectura.</b> Sanción, recurrencia e inscripción son evidencia administrativa observable. La convergencia de señales sirve para ordenar revisión; no acredita por sí sola lavado de activos, financiamiento del terrorismo ni incumplimiento vigente.</div></aside>`;
+  }
+  function scan(){scheduled=false;document.querySelectorAll('.sv12-approved').forEach(build)}
+  function queue(){if(scheduled)return;scheduled=true;requestAnimationFrame(scan)}
+  const obs=new MutationObserver(queue);obs.observe(document.documentElement,{subtree:true,childList:true,characterData:true});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',queue,{once:true});else queue();
+  window.addEventListener('hashchange',queue);window.addEventListener('popstate',queue);
 })();
