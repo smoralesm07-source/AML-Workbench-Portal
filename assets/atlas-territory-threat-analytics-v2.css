@@ -12,7 +12,7 @@
 .atlas-cead-v2 .atlas-cead-head-copy h3{font-size:18px;margin:2px 0 5px}
 .atlas-cead-v2 .atlas-cead-formula{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px}
 .atlas-cead-v2 .atlas-cead-formula span{font-size:10px!important;letter-spacing:0!important;text-transform:none!important;padding:4px 7px;border-radius:999px;border:1px solid var(--cead-border);background:var(--cead-soft);color:var(--cead-text)!important}
-.atlas-cead-v2 .atlas-cead-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;margin:10px 0}
+.atlas-cead-v2 .atlas-cead-kpis{display:none!important}
 .atlas-cead-v2 .atlas-cead-kpi{border:1px solid var(--cead-border);background:var(--cead-soft);border-radius:10px;padding:9px 10px;min-height:67px}
 .atlas-cead-v2 .atlas-cead-kpi span{display:block;font-size:9px;color:var(--cead-muted);font-weight:800;text-transform:uppercase;letter-spacing:.045em}
 .atlas-cead-v2 .atlas-cead-kpi b{display:block;font-size:19px;line-height:1.15;margin:3px 0;color:var(--cead-text)}
@@ -45,6 +45,6 @@ html[data-atlas-theme="light"] .atlas-cead-v2{--cead-border:#d9e1e7;--cead-soft:
 html[data-atlas-theme="light"] .atlas-cead-v2 .atlas-cead-layer{background:#fff}
 html[data-atlas-theme="light"] .atlas-cead-v2 .atlas-cead-insights article{background:#f7f9fb}
 
-@media(max-width:1350px){.v032-map-grid.atlas-territory-layout-v2{grid-template-columns:minmax(0,1fr) minmax(390px,.92fr)}.atlas-cead-v2 .atlas-cead-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:1350px){.v032-map-grid.atlas-territory-layout-v2{grid-template-columns:minmax(0,1fr) minmax(390px,.92fr)}}
 @media(max-width:1180px){.v032-map-grid.atlas-territory-layout-v2{grid-template-columns:1fr}.v032-map-grid.atlas-territory-layout-v2 .v032-map-layout{grid-template-columns:minmax(280px,1fr) 210px}.atlas-cead-v2 .atlas-cead-layers{grid-template-columns:1fr}.atlas-cead-v2 .atlas-cead-insights{grid-template-columns:1fr 1fr 1fr}}
-@media(max-width:820px){.atlas-cead-v2 .atlas-cead-kpis{grid-template-columns:1fr 1fr}.atlas-cead-v2 .atlas-cead-insights{grid-template-columns:1fr}.v032-map-grid.atlas-territory-layout-v2 .v032-map-layout{grid-template-columns:1fr}.v032-map-grid.atlas-territory-layout-v2 .v032-map-ranking{max-height:420px}}
+@media(max-width:820px){.atlas-cead-v2 .atlas-cead-insights{grid-template-columns:1fr}.v032-map-grid.atlas-territory-layout-v2 .v032-map-layout{grid-template-columns:1fr}.v032-map-grid.atlas-territory-layout-v2 .v032-map-ranking{max-height:420px}}
