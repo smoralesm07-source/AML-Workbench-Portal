@@ -8,6 +8,7 @@ const ATLAS_VE2_CONFIG='./data/irg_ve_enrichment_v2.json';
 const ATLAS_VE2_ICR='https://raw.githubusercontent.com/smoralesm07-source/Radar_UAF/main/docs/data/ros_conversion_sector_2021_2025.json';
 const ATLAS_VE2_REPORT='https://raw.githubusercontent.com/smoralesm07-source/Radar_UAF/main/docs/data/reportability_sector_2025.json';
 let atlasVe2InputsPromise=null;
+let atlasVe2Applying=false;
 
 function atlasVe2Norm(v){
   return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/N[°º]/g,'N').replace(/[^A-Z0-9]+/g,' ').replace(/\s+/g,' ').trim()
@@ -140,7 +141,7 @@ function atlasVe2Decorate(){
   const comp=document.querySelector('.v032-components article:first-child small');if(comp)comp.textContent='V/E v2: 85% núcleo sectorial enriquecido + 15% materialidad económica SII. Núcleo: base estructural, ENR Chile, ICR y materialidad GAFILAT.';
   const strip=document.querySelector('.v032-source-strip');if(strip&&!strip.querySelector('.atlas-ve2-source')){
     const status=state.computed.__atlasVe2Applied.status||{};
-    strip.insertAdjacentHTML('beforeend',`<span class="atlas-ve2-source ${status.icr&&status.report?'ok':'partial'}">ICR UAF 2021–25</span><span class="atlas-ve2-source ok">ENR Chile 2023</span><span class="atlas-ve2-source ok">GAFILAT 2021</span><span class="atlas-ve2-source ok">Materialidad SII</span>`);
+    strip.insertAdjacentHTML('beforeend',`<span class="atlas-ve2-source ${status.icr&&status.report?'ok':'partial'}">ICR UAF 2021–25</span><span class="atlas-ve2-source ok">ENR Chile · act. 2023</span><span class="atlas-ve2-source ok">GAFILAT 2021</span><span class="atlas-ve2-source ok">Materialidad SII</span>`);
   }
   const panel=[...document.querySelectorAll('.v032-card')].find(x=>x.querySelector('.v032-card-head span')?.textContent?.includes('VULNERABILIDAD / EXPOSICIÓN'));
   const row=atlasVe2Selected();if(panel&&row){
@@ -176,9 +177,18 @@ function atlasVe2HandleExport(e){
 document.addEventListener('click',atlasVe2HandleExport,true);
 
 async function atlasVe2ApplyAfterTerritory(){
-  const state=window.AML_IRG_TERRITORY?.state;if(!state?.computed)return;
-  try{const inputs=await atlasVe2LoadInputs();atlasVe2ApplyComputed(state,inputs);window.AML_IRG_TERRITORY.version=ATLAS_VE2_METHOD;window.AML_IRG_TERRITORY.render();atlasVe2QueueDecorate();}
-  catch(error){console.warn('[ATLAS IRG] V/E v2 no disponible; se conserva V/E base',error);window.ATLAS_IRG_VE_V2={method:ATLAS_VE2_METHOD,status:'degraded',error:String(error?.message||error)};}
+  const state=window.AML_IRG_TERRITORY?.state;if(!state?.computed||state.computed.__atlasVe2Applied||atlasVe2Applying)return;
+  atlasVe2Applying=true;
+  try{
+    const inputs=await atlasVe2LoadInputs();
+    atlasVe2ApplyComputed(state,inputs);
+    window.AML_IRG_TERRITORY.version=ATLAS_VE2_METHOD;
+    window.AML_IRG_TERRITORY.render();
+    atlasVe2QueueDecorate();
+  }catch(error){
+    console.warn('[ATLAS IRG] V/E v2 no disponible; se conserva V/E base',error);
+    window.ATLAS_IRG_VE_V2={method:ATLAS_VE2_METHOD,status:'degraded',error:String(error?.message||error)};
+  }finally{atlasVe2Applying=false;}
 }
 
 const atlasVe2BaseTerritory=window.v019LoadTerritory;
@@ -187,7 +197,12 @@ if(typeof atlasVe2BaseTerritory==='function'){
     const preload=atlasVe2LoadInputs().catch(()=>null);const result=await atlasVe2BaseTerritory(...args);await preload;await atlasVe2ApplyAfterTerritory();return result;
   };
 }
-const atlasVe2Observer=new MutationObserver(()=>{if(window.AML_IRG_TERRITORY?.state?.computed?.__atlasVe2Applied)atlasVe2QueueDecorate();});
+const atlasVe2Observer=new MutationObserver(()=>{
+  const computed=window.AML_IRG_TERRITORY?.state?.computed;
+  if(!computed)return;
+  if(!computed.__atlasVe2Applied){void atlasVe2ApplyAfterTerritory();return;}
+  atlasVe2QueueDecorate();
+});
 atlasVe2Observer.observe(document.documentElement,{subtree:true,childList:true});
 atlasVe2LoadInputs().catch(()=>null);
-setTimeout(()=>{if(window.AML_IRG_TERRITORY?.state?.computed)atlasVe2ApplyAfterTerritory();},500);
+setTimeout(()=>{if(window.AML_IRG_TERRITORY?.state?.computed)void atlasVe2ApplyAfterTerritory();},500);
