@@ -35,6 +35,7 @@
 
   const isOfficialSector = subject => OFFICIAL_SO_SECTORS.has(norm(subject?.sector_analitico));
   const band = score => score >= 70 ? 'Crítico' : score >= 50 ? 'Alto' : score >= 30 ? 'Medio' : 'Bajo';
+  const setText = (el, value) => { if (el && el.textContent !== value) el.textContent = value; };
 
   function correctSubject(subject) {
     if (!subject || subject.inscrito_uaf || !isOfficialSector(subject)) return false;
@@ -65,23 +66,20 @@
     root.querySelectorAll('.entityRow[data-id], .recent[data-id]').forEach(row => {
       const subject = byId.get(String(row.dataset.id || ''));
       if (!subject?.so_sector_normativo || subject.inscrito_uaf) return;
-      row.querySelectorAll('.badge.so').forEach(b => { b.textContent = 'SO · sector obligado'; });
+      row.querySelectorAll('.badge.so').forEach(b => setText(b, 'SO · sector obligado'));
     });
 
-    const kpiLabels = root.querySelectorAll('.klabel');
-    kpiLabels.forEach(el => {
-      if (el.textContent.trim() === 'SO inscritos sancionados') el.textContent = 'SO sancionados';
+    root.querySelectorAll('.klabel').forEach(el => {
+      if (el.textContent.trim() === 'SO inscritos sancionados') setText(el, 'SO sancionados');
     });
-    const firstKpi = root.querySelector('.kpi');
-    if (firstKpi) {
-      const registered = (bundle.subjects || []).filter(s => s.inscrito_uaf).length;
-      const statutory = (bundle.subjects || []).filter(s => s.so_sector_normativo && !s.inscrito_uaf).length;
-      const detail = firstKpi.querySelector('.kdetail');
-      if (detail) detail.innerHTML = `<b>${registered.toLocaleString('es-CL')}</b> con inscripción UAF visible · <b>${statutory.toLocaleString('es-CL')}</b> reconocidos por sector obligado`;
+    const firstKpiDetail = root.querySelector('.kpi .kdetail');
+    if (firstKpiDetail) {
+      const value = 'Incluye inscripción UAF visible y reconocimiento por sector obligado.';
+      if (firstKpiDetail.textContent.trim() !== value) firstKpiDetail.textContent = value;
     }
 
     const stats = root.querySelector('#listStats');
-    if (stats) stats.innerHTML = stats.innerHTML.replace(/SO inscritos/g, 'SO');
+    if (stats && /SO inscritos/.test(stats.innerHTML)) stats.innerHTML = stats.innerHTML.replace(/SO inscritos/g, 'SO');
 
     const tip = root.querySelector('#tip');
     if (tip && /SO inscritos/.test(tip.innerHTML)) tip.innerHTML = tip.innerHTML.replace(/SO inscritos/g, 'SO');
@@ -91,9 +89,9 @@
       const title = drawer.querySelector('#drawerHead h2')?.textContent?.trim();
       const subject = (bundle.subjects || []).find(s => (s.uaf_razon_social || s.nombre || '').trim() === title);
       if (subject?.so_sector_normativo && !subject.inscrito_uaf) {
-        drawer.querySelectorAll('.badge.so').forEach(b => { b.textContent = 'SO · sector obligado'; });
+        drawer.querySelectorAll('.badge.so').forEach(b => setText(b, 'SO · sector obligado'));
         const status = drawer.querySelector('.statusBox p');
-        if (status) status.textContent = subject.hipotesis_detalle;
+        setText(status, subject.hipotesis_detalle);
       }
     }
   }
@@ -110,8 +108,13 @@
     relabel(root, bundle);
 
     if (root) {
-      const observer = new MutationObserver(() => relabel(root, bundle));
-      observer.observe(root, { childList: true, subtree: true, characterData: true });
+      let queued = false;
+      const observer = new MutationObserver(() => {
+        if (queued) return;
+        queued = true;
+        requestAnimationFrame(() => { queued = false; relabel(root, bundle); });
+      });
+      observer.observe(root, { childList: true, subtree: true });
       window.setTimeout(() => observer.disconnect(), 120000);
     }
     return bundle;
