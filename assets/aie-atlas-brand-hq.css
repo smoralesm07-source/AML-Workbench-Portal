@@ -1,0 +1,49 @@
+/* ATLAS AML · High-resolution AIE vector brand authority */
+.v019-brand{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  grid-template-rows:auto auto!important;
+  gap:2px!important;
+  align-items:start!important;
+  width:100%!important;
+  padding:2px 0 4px!important;
+  min-height:104px!important;
+}
+.v019-brand::before{
+  content:"";
+  grid-column:1!important;
+  grid-row:1!important;
+  display:block!important;
+  width:min(224px,100%)!important;
+  aspect-ratio:1200/520!important;
+  background:url('./aie-atlas-brand-hq.svg') left center/contain no-repeat!important;
+  filter:drop-shadow(0 5px 14px rgba(0,0,0,.22));
+}
+.v019-brand .mark,
+.v019-brand strong{
+  display:none!important;
+}
+.v019-brand small{
+  grid-column:1!important;
+  grid-row:2!important;
+  width:min(224px,100%)!important;
+  margin:0!important;
+  padding:0 4px!important;
+  text-align:center!important;
+  font-size:9.5px!important;
+  line-height:1.1!important;
+  letter-spacing:.14em!important;
+  font-weight:800!important;
+  opacity:.68!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
+  color:var(--atlas-text-muted,#90a0b3)!important;
+}
+html[data-atlas-theme="light"] .v019-brand::before{
+  filter:drop-shadow(0 4px 10px rgba(26,44,61,.08));
+}
+@media (max-width:980px){
+  .v019-brand{min-height:94px!important;}
+  .v019-brand::before,
+  .v019-brand small{width:min(205px,100%)!important;}
+}
