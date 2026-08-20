@@ -1,4 +1,4 @@
-(function atlasDataAuditV0457(){
+(function atlasDataAuditV0458(){
   'use strict';
   const PIPELINE='SOURCE_FRESHNESS';
   const TTL=5*60*1000;
@@ -40,7 +40,13 @@
   }
   function safeSources(row){return Array.isArray(row?.detail?.sources)?row.detail.sources:[];}
   function counts(sources){return sources.reduce((a,r)=>{const s=String(r.status||'').toUpperCase();if(s in a)a[s]++;return a;},{GREEN:0,YELLOW:0,RED:0});}
-  function overall(sources){return sources.some(r=>r.status==='RED')?'RED':sources.some(r=>r.status==='YELLOW')?'YELLOW':'GREEN';}
+  function overall(sources){
+    const c=counts(sources),total=sources.length;
+    if(!total)return 'RED';
+    if(c.GREEN===total)return 'GREEN';
+    const greenShare=c.GREEN/total;
+    return greenShare>=0.70?'YELLOW':'RED';
+  }
 
   function loadingHtml(message='Consultando estado de fuentes…'){
     return `<section class="v024-audit a57-data-audit">
@@ -58,7 +64,7 @@
     const ovm=statusMeta(ov);
     return `<section class="v024-audit a57-data-audit ${ovm.cls}">
       <button type="button" class="v024-audit-summary" data-v024-audit-toggle aria-expanded="false">
-        <span class="a57-title">${dot(ov)}<span><strong>Auditoría de datos</strong><small>Fuente, último dato disponible y verificación automática</small></span></span>
+        <span class="a57-title">${dot(ov)}<span><strong>Auditoría de datos</strong><small>Estado general: ${esc(ovm.label)} · fuente, último dato disponible y verificación automática</small></span></span>
         <span class="a57-summary-counts">
           <span class="a57-count">${dot('GREEN')} ${c.GREEN} al día</span>
           <span class="a57-count">${dot('YELLOW')} ${c.YELLOW} revisar</span>
@@ -76,7 +82,7 @@
             <div class="a57-cell"><span class="a57-state">${dot(row.status)}${esc(m.label)}</span><span class="a57-reason">${esc(reason)}</span></div>
           </div>`;
         }).join('')}
-        <div class="a57-legend"><span>${dot('GREEN')} Verde: fuente revisada dentro de SLA y corte vigente.</span><span>${dot('YELLOW')} Amarillo: rezago o verificación atrasada.</span><span>${dot('RED')} Rojo: sin captura válida o sin actualización dentro del máximo permitido.</span><span class="a57-generated">Monitor: ${esc(dt(generated,true))}</span></div>
+        <div class="a57-legend"><span>${dot('GREEN')} Verde: fuente revisada dentro de SLA y corte vigente.</span><span>${dot('YELLOW')} Amarillo: estado general mayoritariamente sano con brechas, o fuente con rezago/verificación atrasada.</span><span>${dot('RED')} Rojo: degradación amplia del conjunto o fuente sin captura válida dentro del máximo permitido.</span><span class="a57-generated">Monitor: ${esc(dt(generated,true))}</span></div>
       </div>
     </section>`;
   }
@@ -139,5 +145,5 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(startup,500),{once:true});else setTimeout(startup,500);
   setInterval(()=>void load(true),TTL);
   window.addEventListener('atlas:nav-refresh',scheduleDecorate);
-  window.AtlasDataAudit={refresh:()=>load(true),render:auditHtml,getState:()=>cache,pipeline:PIPELINE,version:'0457'};
+  window.AtlasDataAudit={refresh:()=>load(true),render:auditHtml,getState:()=>cache,pipeline:PIPELINE,version:'0458'};
 })();
