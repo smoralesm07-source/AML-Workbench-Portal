@@ -51,8 +51,12 @@ jobs:
           assert 'v0446-reconciliation-interactions.js' in scripts
           assert 'v0391-entity-entry.js' in scripts
           assert 'v0447-entity-workspace.js' in scripts
+          assert 'v0448-entity-route-authority.js' in scripts
+          assert 'v0449-entity-tax-docauth.js' in scripts
           assert 'v0447-entity-workspace.css' in styles
+          assert 'v0449-entity-tax-docauth.css' in styles
           assert scripts.index('v0447-entity-workspace.js') > scripts.index('v0443-auth-ui-stability.js')
+          assert scripts.index('v0449-entity-tax-docauth.js') > scripts.index('v0448-entity-route-authority.js')
           assert m['scripts'][-1]['path']=='v0442-session-stability.module.js'
           print(f"ATLAS_RELEASE={r['release']}")
           print(f"ATLAS_BUILD={r['build']}")
@@ -70,10 +74,14 @@ jobs:
           node --check v0446-reconciliation-interactions.js
           node --check v0391-entity-entry.js
           node --check v0447-entity-workspace.js
+          node --check v0448-entity-route-authority.js
+          node --check v0449-entity-tax-docauth.js
           ! grep -qE 'auth\.setSession\(|refresh_token\s*:' v0422-auth-bootstrap-fix.js
           ! grep -qE 'auth\.setSession\(|refresh_token\s*:' v0443-auth-ui-stability.js
           ! grep -qE 'auth\.setSession\(|refresh_token\s*:' v0442-session-stability.module.js
           ! grep -qE 'auth\.setSession\(|refresh_token\s*:' v0447-entity-workspace.js
+          ! grep -qE 'auth\.setSession\(|refresh_token\s*:' v0449-entity-tax-docauth.js
+          ! grep -q 'new MutationObserver' v0449-entity-tax-docauth.js
           grep -q 'SUPABASE_CLIENT_ONLY_NO_MANUAL_REPLAY' v0442-session-stability.module.js
           grep -q 'refreshTokenReplay:false' v0443-auth-ui-stability.js
           grep -q 'ENTITY360_HTML_PRODUCTION_ADAPTATION_0445' v0391-entity-entry.js
@@ -89,11 +97,18 @@ jobs:
           grep -q 'selectionScopesAllEntityGraphics:true' v0447-entity-workspace.js
           grep -q 'a47-entity-q' v0447-entity-workspace.js
           ! grep -q 'new MutationObserver' v0447-entity-workspace.js
+          grep -q 'ENTITY360_ROUTE_AUTHORITY_0448' v0448-entity-route-authority.js
+          grep -q 'ENTITY360_SII_DOCUMENT_AUTH_0449' atlas-release.json
+          grep -q 'aml_v0449_sii_latest_document_authorization' v0449-entity-tax-docauth.js
+          grep -q 'LATEST_OBSERVED_AUTHORIZATION_NOT_ABSOLUTE_LAST_TIMBRAJE' v0449-entity-tax-docauth.js
+          grep -q 'MISSING_IS_NOT_NO_TIMBRAJE' atlas-release.json
           grep -q '#v0344-entities-note{display:none' v0447-entity-workspace.css
           grep -q '.a47-search-shell' v0447-entity-workspace.css
+          grep -q '.a49-docauth' v0449-entity-tax-docauth.css
           grep -q 'sixLensRendererPinned' v0442-session-stability.module.js
           grep -q 'singleWorkspacePinned' v0442-session-stability.module.js
           grep -q 'autocompletePinned' v0442-session-stability.module.js
+          grep -q 'siiDocumentAuthorizationPinned' v0442-session-stability.module.js
           grep -q '.a45-cover' v0391-entity-entry.css
           grep -q "v0434Matrix=()=>''" v0446-reconciliation-interactions.js
           grep -q 'globalCrossFilter:true' v0446-reconciliation-interactions.js
@@ -131,10 +146,14 @@ jobs:
           grep -R -q 'globalCrossFilter:true' _site/atlas-runtime-current-*.js
           grep -R -q 'ENTITY360_HTML_PRODUCTION_ADAPTATION_0445' _site/atlas-runtime-current-*.js
           grep -R -q 'ENTITY360_INLINE_AUTOCOMPLETE_0447' _site/atlas-runtime-current-*.js
+          grep -R -q 'ENTITY360_ROUTE_AUTHORITY_0448' _site/atlas-runtime-current-*.js
+          grep -R -q 'aml_v0449_sii_latest_document_authorization' _site/atlas-runtime-current-*.js
+          grep -R -q 'LATEST_OBSERVED_AUTHORIZATION_NOT_ABSOLUTE_LAST_TIMBRAJE' _site/atlas-runtime-current-*.js _site/atlas-module-current-*.js
           grep -R -q 'selectionScopesAllEntityGraphics:true' _site/atlas-runtime-current-*.js
           grep -q '.a45-cover' _site/atlas-runtime-current.css
           grep -q '.a45-lenses' _site/atlas-runtime-current.css
           grep -q '.a47-search-shell' _site/atlas-runtime-current.css
+          grep -q '.a49-docauth' _site/atlas-runtime-current.css
           grep -q '#v0344-entities-note{display:none' _site/atlas-runtime-current.css
           ! grep -R -qE 'auth\.setSession\(|refresh_token\s*:' _site/atlas-runtime-current-*.js _site/atlas-module-current-*.js
           python - <<'PY'
