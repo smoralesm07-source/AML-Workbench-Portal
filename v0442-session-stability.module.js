@@ -18,11 +18,12 @@ function health(stage, extra = {}) {
  * Final runtime pin.
  * This module is intentionally auth-passive: it never mutates the Supabase
  * session and never replays refresh tokens. It freezes the final Entity 360
- * authority only after every classic feature layer has loaded. The analytical
- * renderer remains the approved 0.44.5 six-lens dossier, wrapped by the 0.44.7
- * single-workspace autocomplete switcher.
+ * authority only after every classic feature layer and deferred module has
+ * finished. The 0.44.8 route pin also bypasses the historical v019 closure that
+ * retained the pre-Entity360 loadEntities implementation.
  */
 let entityRenderAuthority = null;
+const navigationDelegate = typeof window.navigate === 'function' ? window.navigate : null;
 
 function installEntityAuthority() {
   const entry = window.__ATLAS_ENTITY_ENTRY__;
@@ -34,6 +35,10 @@ function installEntityAuthority() {
   const stableLoad = async (...args) => entry.load(...args);
   const stableSearch = typeof entry.search === 'function' ? ((...args) => entry.search(...args)) : null;
   const stableOpen = typeof entry.open === 'function' ? ((...args) => entry.open(...args)) : null;
+  const stableNavigate = async (view, ...args) => {
+    if (view === 'entities') return stableLoad(...args);
+    if (navigationDelegate) return navigationDelegate(view, ...args);
+  };
 
   /* At module evaluation time all classic runtime fragments have loaded. Capture
      the final renderer once so later shell navigation cannot restore a legacy
@@ -43,11 +48,13 @@ function installEntityAuthority() {
   }
 
   window.loadEntities = stableLoad;
+  window.navigate = stableNavigate;
   if (stableSearch) window.searchEntities = stableSearch;
   if (stableOpen) window.openEntity = stableOpen;
   if (entityRenderAuthority) window.v0203RenderEntity = entityRenderAuthority;
 
   try { loadEntities = stableLoad; } catch (_error) {}
+  try { navigate = stableNavigate; } catch (_error) {}
   if (stableSearch) { try { searchEntities = stableSearch; } catch (_error) {} }
   if (stableOpen) { try { openEntity = stableOpen; } catch (_error) {} }
   if (entityRenderAuthority) { try { v0203RenderEntity = entityRenderAuthority; } catch (_error) {} }
@@ -55,11 +62,13 @@ function installEntityAuthority() {
   window.__ATLAS_ENTITY_AUTHORITY_FINAL__ = {
     active:true,
     authority:entry.authority || 'ENTITY360_INLINE_AUTOCOMPLETE_0447',
-    release:entry.release || '0.44.7',
-    version:entry.version || '0447',
+    release:entry.release || '0.44.8',
+    version:entry.version || '0448',
     sixLensRendererPinned:!!entityRenderAuthority,
     singleWorkspacePinned:true,
     landingPinned:false,
+    routePinned:true,
+    legacyCapturedLoaderBypassed:true,
     searchPinned:!!stableSearch,
     autocompletePinned:String(entry.searchPolicy||'').includes('AUTOCOMPLETE'),
     openPinned:!!stableOpen,
@@ -86,9 +95,9 @@ window.__ATLAS_RUNTIME_RELIABILITY__ = {
   releaseGuard:'NO_ACTIVE_SESSION_RELOAD',
   authGuard:'PASSIVE_FINAL_MODULE',
   refreshTokenPolicy:'SUPABASE_CLIENT_ONLY_NO_MANUAL_REPLAY',
-  entityAuthority:'ENTITY360_REFERENCE_0445_SIX_LENSES+ENTITY360_INLINE_AUTOCOMPLETE_0447',
-  entityWorkspace:'SINGLE_DARK_DOSSIER+PERSISTENT_RLS_AUTOCOMPLETE',
+  entityAuthority:'ENTITY360_REFERENCE_0445_SIX_LENSES+ENTITY360_INLINE_AUTOCOMPLETE_0447+ENTITY360_ROUTE_AUTHORITY_0448',
+  entityWorkspace:'SINGLE_DARK_DOSSIER+PERSISTENT_RLS_AUTOCOMPLETE+CURRENT_ENTITIES_ROUTE',
   installedAt:iso()
 };
 
-health('installed-entity360-0447-single-workspace-authority');
+health('installed-entity360-0448-route-and-workspace-authority');
