@@ -1,0 +1,161 @@
+{
+  "schema": "IRG_VE_ENRICHMENT_V2",
+  "method_version": "IRG-LAFT-0.33.0",
+  "component": "VULNERABILITY_EXPOSURE_V2",
+  "top_level_weight": 0.45,
+  "formula": {
+    "territory_ve": {
+      "sector_core": 0.85,
+      "economic_materiality_sii": 0.15
+    },
+    "sector_core": {
+      "base_structural_vulnerability": 0.35,
+      "enr_chile_exposure": 0.25,
+      "icr_ros_convertibility": 0.20,
+      "gafilat_sector_materiality": 0.20
+    },
+    "economic_materiality_sii": {
+      "sales_band_percentile": 0.60,
+      "workers_per_active_entity_percentile": 0.40
+    }
+  },
+  "icr": {
+    "period": "2021-2025",
+    "prior_strength_ros": 100,
+    "neutral_score_without_sent_ros": 50,
+    "score_method": "PERCENTILE_OF_EMPIRICAL_BAYES_POSTERIOR_RATE",
+    "source_indications": "https://raw.githubusercontent.com/smoralesm07-source/Radar_UAF/main/docs/data/ros_conversion_sector_2021_2025.json",
+    "source_sent": "https://raw.githubusercontent.com/smoralesm07-source/Radar_UAF/main/docs/data/reportability_sector_2025.json",
+    "guardrail": "ICR is a historical aggregate conversion rate. Shrinkage toward the national rate reduces volatility in sectors with few ROS. It is not individual ROS quality, entity risk, or compliance."
+  },
+  "enr": {
+    "source": "https://www.uaf.cl/media/ArchivoEstatico/ENR_LA_5552.pdf",
+    "period": "2016-2021",
+    "published": "2024-01-09",
+    "baseline_score": 20,
+    "excluded_systemic_dimension": "Deficiencias del marco normativo nacional ALA/CFT",
+    "rationale": "The systemic legal-framework vulnerability is not used to differentiate sectors because it applies across the national system. Five ENR vulnerabilities with discriminating sector exposure are used as an ATLAS adapter, not as an official UAF sector score.",
+    "dimensions": [
+      {
+        "key": "cash",
+        "label": "Utilización de efectivo",
+        "weight": 0.27,
+        "patterns": [
+          {"contains": "CASAS DE CAMBIO", "strength": 1.0},
+          {"contains": "TRANSFERENCIA DE DINERO", "strength": 1.0},
+          {"contains": "CASINOS", "strength": 1.0},
+          {"contains": "ZONAS FRANCAS", "strength": 1.0},
+          {"contains": "VEHICULOS", "strength": 0.9},
+          {"contains": "JOYAS", "strength": 1.0},
+          {"contains": "METALES PRECIOSOS", "strength": 1.0},
+          {"contains": "REMATE", "strength": 0.9},
+          {"contains": "EQUINOS", "strength": 0.8},
+          {"contains": "GESTION INMOBILIARIA", "strength": 0.8},
+          {"contains": "CORREDORES DE PROPIEDADES", "strength": 0.8},
+          {"contains": "NOTARIOS", "strength": 0.6},
+          {"contains": "BANCOS", "strength": 0.5}
+        ]
+      },
+      {
+        "key": "financial_trade",
+        "label": "Mercado financiero y comercio internacional",
+        "weight": 0.23,
+        "patterns": [
+          {"contains": "BANCOS", "strength": 1.0},
+          {"contains": "BOLSAS", "strength": 1.0},
+          {"contains": "VALORES", "strength": 1.0},
+          {"contains": "FONDOS", "strength": 0.9},
+          {"contains": "FINANCIER", "strength": 1.0},
+          {"contains": "SEGUROS", "strength": 0.8},
+          {"contains": "PENSIONES", "strength": 0.8},
+          {"contains": "CASAS DE CAMBIO", "strength": 1.0},
+          {"contains": "MONEDA EXTRANJERA", "strength": 1.0},
+          {"contains": "TRANSFERENCIA DE DINERO", "strength": 1.0},
+          {"contains": "SECURITIZ", "strength": 0.9},
+          {"contains": "LEASING", "strength": 0.8},
+          {"contains": "COOPERATIVAS DE AHORRO", "strength": 0.9},
+          {"contains": "TARJETAS", "strength": 1.0},
+          {"contains": "FINTEC", "strength": 1.0},
+          {"contains": "DEPOSITO DE VALORES", "strength": 1.0},
+          {"contains": "MERCADOS DE FUTURO", "strength": 1.0},
+          {"contains": "AGENTES DE ADUANA", "strength": 0.6},
+          {"contains": "ZONAS FRANCAS", "strength": 0.8}
+        ]
+      },
+      {
+        "key": "new_payments",
+        "label": "Nuevos productos y servicios de pago",
+        "weight": 0.20,
+        "patterns": [
+          {"contains": "TARJETAS", "strength": 1.0},
+          {"contains": "FINTEC", "strength": 1.0},
+          {"contains": "INICIACION DE PAGOS", "strength": 1.0},
+          {"contains": "TRANSFERENCIA DE DINERO", "strength": 0.7}
+        ]
+      },
+      {
+        "key": "free_trade",
+        "label": "Zonas de libre comercio",
+        "weight": 0.18,
+        "patterns": [
+          {"contains": "ZONAS FRANCAS", "strength": 1.0}
+        ]
+      },
+      {
+        "key": "borders",
+        "label": "Extensas fronteras",
+        "weight": 0.12,
+        "patterns": [
+          {"contains": "AGENTES DE ADUANA", "strength": 1.0},
+          {"contains": "ZONAS FRANCAS", "strength": 1.0},
+          {"contains": "TRANSFERENCIA DE DINERO", "strength": 0.5},
+          {"contains": "CASAS DE CAMBIO", "strength": 0.5},
+          {"contains": "MONEDA EXTRANJERA", "strength": 0.5}
+        ]
+      }
+    ]
+  },
+  "gafilat": {
+    "source": "https://www.uaf.cl/ArchivoEstatico/InformeEvaluacionChile2021.pdf",
+    "published": "2021",
+    "rationale": "ATLAS converts the relative sector materiality ordering stated in the mutual evaluation into four transparent tiers. This is an analytical adapter, not a GAFILAT numeric score.",
+    "tiers": [
+      {
+        "score": 100,
+        "label": "Mayor peso relativo",
+        "patterns": ["BANCOS", "NOTARIOS", "CORREDORES DE PROPIEDADES", "BOLSAS DE VALORES", "CORREDORES DE BOLSAS DE VALORES", "AGENTES DE VALORES", "FONDOS DE INVERSION", "FONDOS MUTUOS", "ADMINISTRADORAS GENERALES DE FONDOS", "DEPOSITO DE VALORES", "SECURITIZ", "MERCADOS DE FUTURO"]
+      },
+      {
+        "score": 75,
+        "label": "Peso relativo siguiente",
+        "patterns": ["CASAS DE CAMBIO", "TRANSFERENCIA DE DINERO", "CASINOS"]
+      },
+      {
+        "score": 50,
+        "label": "Peso relativo intermedio",
+        "patterns": ["PENSIONES", "SEGUROS", "CONSERVADORES"]
+      },
+      {
+        "score": 25,
+        "label": "Resto de sectores",
+        "patterns": []
+      }
+    ]
+  },
+  "economic_materiality_sii": {
+    "source_views": ["aml_v022_geo_economic_region", "aml_v022_geo_economic_commune"],
+    "sales_metric": "avg_sales_band_rank",
+    "labor_metric": "workers_total / active_entity_count",
+    "normalization": "NATIONAL_PERCENTILE_WITHIN_TERRITORY_LEVEL",
+    "guardrail": "Economic scale changes exposure, not sector inherent vulnerability. It is capped to 15% of V/E to prevent large regions from dominating the model solely because of size."
+  },
+  "guardrails": [
+    "TOP_LEVEL_IRG_WEIGHTS_UNCHANGED_45_20_20_15",
+    "ENR_ADAPTER_IS_NOT_OFFICIAL_UAF_SECTOR_SCORE",
+    "ICR_IS_AGGREGATE_HISTORICAL_CONVERSION_NOT_ENTITY_RISK",
+    "GAFILAT_TIER_IS_ANALYTICAL_ADAPTER_NOT_OFFICIAL_NUMERIC_SCORE",
+    "SII_ACTIVITY_IS_NOT_UAF_LEGAL_STATUS",
+    "ECONOMIC_SCALE_IS_EXPOSURE_NOT_SUSPICION",
+    "MISSING_ENRICHMENT_INPUTS_FALL_BACK_TO_NEUTRAL_OR_BASE_WITH_SOURCE_STATUS_VISIBLE"
+  ]
+}
