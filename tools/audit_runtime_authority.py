@@ -93,10 +93,14 @@ def main():
         CURRENT_FINAL_AUTH_MARKER,
         'ENTITY360_REFERENCE_0445_SIX_LENSES',
         'ENTITY360_INLINE_AUTOCOMPLETE_0447',
+        'ENTITY360_ROUTE_AUTHORITY_0448',
+        'ENTITY360_SII_DOCUMENT_AUTH_0449',
         '__ATLAS_ENTITY_AUTHORITY_FINAL__',
         'sixLensRendererPinned',
         'singleWorkspacePinned',
         'autocompletePinned',
+        'siiDocumentAuthorizationPinned',
+        'LATEST_OBSERVED_AUTHORIZATION_NOT_ABSOLUTE_LAST_TIMBRAJE',
     )
     missing=[m for m in required_final_markers if m not in final_text]
     if missing:
@@ -119,10 +123,24 @@ def main():
         'ENTITY360_ROUTE_AUTHORITY_0448',
         'legacyCapturedLoaderBypassed:true',
         "if(view==='entities')return entityLoad(...args)",
+        'aml_v0449_sii_latest_document_authorization',
+        'LATEST_OBSERVED_AUTHORIZATION_NOT_ABSOLUTE_LAST_TIMBRAJE',
+        'Última autorización documental observada',
+        'MISSING_IS_NOT_NO_TIMBRAJE',
     )
-    missing_entity=[m for m in entity_markers if m not in classic_text]
+    # MISSING_IS_NOT_NO_TIMBRAJE is a release/build contract rather than JS text.
+    release_text=(root/'atlas-release.json').read_text(encoding='utf-8') if (root/'atlas-release.json').is_file() else ''
+    missing_entity=[m for m in entity_markers if m not in classic_text and m not in release_text]
     if missing_entity:
         raise SystemExit(f'Compiled Entity 360 authority is incomplete: {missing_entity}')
+
+    css_path=root/'atlas-runtime-current.css'
+    if not css_path.is_file():
+        raise SystemExit('Compiled current CSS missing')
+    css_text=css_path.read_text(encoding='utf-8')
+    for marker in ('.a47-search-shell','.a49-docauth'):
+        if marker not in css_text:
+            raise SystemExit(f'Compiled Entity 360 CSS missing marker: {marker}')
 
     reconciliation_markers=(
         'AtlasReconciliationFilters',
@@ -140,6 +158,7 @@ def main():
         f'{final_module.name} owns passive final session/Entity 360 authority; '
         'Entity 360 uses the six-lens dossier with persistent RLS autocomplete; '
         'the Entidades route bypasses the historical captured legacy loader; '
+        'SII document authorization is read-only and explicitly latest-observed, not absolute last timbraje; '
         'reconciliation bubble matrix is removed and reversible cross-filters are active; '
         'legacy auth replay/reload runtime is absent'
     )
