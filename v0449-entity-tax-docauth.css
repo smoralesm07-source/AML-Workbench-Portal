@@ -1,0 +1,26 @@
+/* ATLAS AML 0.44.9 · Entity 360 SII document authorization */
+.a49-docauth{margin-top:12px}
+.a49-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.a49-head h3{margin:3px 0 0}
+.a49-state{display:inline-flex;align-items:center;justify-content:center;min-height:26px;padding:5px 9px;border:1px solid var(--atlas-line);border-radius:999px;font-size:7px;font-weight:900;letter-spacing:.08em}
+.a49-state.good{border-color:#355f50;background:#15352b;color:#6ce5aa}
+.a49-state.neutral{background:var(--atlas-panel-lift);color:var(--atlas-muted)}
+.a49-state.gap{border-color:#63532d;background:#352c15;color:#f2c96d}
+.a49-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}
+.a49-kpis>div{padding:11px 12px;border:1px solid var(--atlas-line-soft);border-radius:10px;background:var(--atlas-panel-lift)}
+.a49-kpis span{display:block;color:var(--atlas-muted);font-size:7px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+.a49-kpis b{display:block;margin-top:5px;color:var(--atlas-ink);font-size:12px;line-height:1.25}
+.a49-kpis small{display:block;margin-top:4px;color:var(--atlas-muted);font-size:7.5px}
+.a49-trace{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-top:10px;padding-top:9px;border-top:1px solid var(--atlas-line-soft);color:var(--atlas-muted);font-size:7.5px}
+.a49-trace b{color:var(--atlas-ink2)}
+.a49-trace code{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--atlas-accent-hi);font-size:7px}
+.a49-empty{margin-top:12px;padding:12px;border:1px dashed var(--atlas-line);border-radius:10px;background:var(--atlas-panel-lift)}
+.a49-empty b{display:block;color:var(--atlas-ink2);font-size:9px}
+.a49-empty p{margin:5px 0 0;color:var(--atlas-muted);font-size:8px;line-height:1.5}
+.a49-timeline{display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:10px 12px;border:1px solid var(--atlas-line);border-radius:10px;background:var(--atlas-panel-lift)}
+.a49-timeline>i{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:var(--atlas-accent-hi)}
+.a49-timeline span,.a49-timeline b,.a49-timeline small{display:block}
+.a49-timeline span{color:var(--atlas-accent-hi);font-size:7px;font-weight:900;letter-spacing:.06em}
+.a49-timeline b{margin-top:2px;color:var(--atlas-ink);font-size:9px}
+.a49-timeline small{margin-top:2px;color:var(--atlas-muted);font-size:7.5px}
+@media(max-width:900px){.a49-kpis{grid-template-columns:1fr}.a49-head{align-items:center}}
