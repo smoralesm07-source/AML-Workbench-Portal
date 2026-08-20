@@ -116,6 +116,9 @@ def main():
         'DEBOUNCED_AUTOCOMPLETE_RLS_NAME_RUT_ENTITY_ID_NO_FUZZY_JOIN',
         'selectionScopesAllEntityGraphics:true',
         'a47-entity-q',
+        'ENTITY360_ROUTE_AUTHORITY_0448',
+        'legacyCapturedLoaderBypassed:true',
+        "if(view==='entities')return entityLoad(...args)",
     )
     missing_entity=[m for m in entity_markers if m not in classic_text]
     if missing_entity:
@@ -135,7 +138,8 @@ def main():
         f'ATLAS compiled runtime authority OK: {len(files)} bundle/module asset(s); '
         'atlas-release-guard.js remains the sole version authority; '
         f'{final_module.name} owns passive final session/Entity 360 authority; '
-        'Entity 360 uses the six-lens dossier with persistent RLS autocomplete and no separate white landing; '
+        'Entity 360 uses the six-lens dossier with persistent RLS autocomplete; '
+        'the Entidades route bypasses the historical captured legacy loader; '
         'reconciliation bubble matrix is removed and reversible cross-filters are active; '
         'legacy auth replay/reload runtime is absent'
     )
