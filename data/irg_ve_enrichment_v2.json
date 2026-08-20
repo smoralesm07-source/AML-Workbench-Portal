@@ -15,8 +15,9 @@
       "gafilat_sector_materiality": 0.20
     },
     "economic_materiality_sii": {
-      "sales_band_percentile": 0.60,
-      "workers_per_active_entity_percentile": 0.40
+      "sales_band_percentile": 0.50,
+      "workers_per_active_entity_percentile": 0.30,
+      "recent_activity_start_percentile": 0.20
     }
   },
   "icr": {
@@ -34,7 +35,13 @@
     "published": "2024-01-09",
     "baseline_score": 20,
     "excluded_systemic_dimension": "Deficiencias del marco normativo nacional ALA/CFT",
-    "rationale": "The systemic legal-framework vulnerability is not used to differentiate sectors because it applies across the national system. Five ENR vulnerabilities with discriminating sector exposure are used as an ATLAS adapter, not as an official UAF sector score.",
+    "territorial_proxy_dimension": {
+      "enr_vulnerability": "Asociada con la constitución de personas jurídicas",
+      "atlas_proxy": "entities_started_since_2024 / potential_total",
+      "implementation": "RECENT_ACTIVITY_START_PERCENTILE_WITHIN_TERRITORY_LEVEL",
+      "guardrail": "SII activity start is a feasible proxy for recent legal/economic formation dynamics; it is not the legal incorporation date of a person and is not treated as such."
+    },
+    "rationale": "The systemic legal-framework vulnerability is not used to differentiate sectors because it applies across the national system. Five ENR vulnerabilities with discriminating sector exposure feed the sector adapter. The ENR vulnerability associated with constitution of legal persons is represented separately through a recent SII activity-start proxy inside territorial materiality. These are ATLAS adapters, not official UAF sector scores.",
     "dimensions": [
       {
         "key": "cash",
@@ -143,11 +150,12 @@
     ]
   },
   "economic_materiality_sii": {
-    "source_views": ["aml_v022_geo_economic_region", "aml_v022_geo_economic_commune"],
+    "source_views": ["aml_v022_geo_economic_region", "aml_v022_geo_economic_commune", "aml_v022_geo_activity_region", "aml_v022_geo_activity_commune"],
     "sales_metric": "avg_sales_band_rank",
     "labor_metric": "workers_total / active_entity_count",
+    "recent_activity_start_metric": "entities_started_since_2024 / potential_total",
     "normalization": "NATIONAL_PERCENTILE_WITHIN_TERRITORY_LEVEL",
-    "guardrail": "Economic scale changes exposure, not sector inherent vulnerability. It is capped to 15% of V/E to prevent large regions from dominating the model solely because of size."
+    "guardrail": "Economic scale and recent activity-start dynamics change exposure, not sector inherent vulnerability. This layer is capped to 15% of V/E. Activity start is a proxy and not a legal incorporation date."
   },
   "guardrails": [
     "TOP_LEVEL_IRG_WEIGHTS_UNCHANGED_45_20_20_15",
@@ -155,6 +163,7 @@
     "ICR_IS_AGGREGATE_HISTORICAL_CONVERSION_NOT_ENTITY_RISK",
     "GAFILAT_TIER_IS_ANALYTICAL_ADAPTER_NOT_OFFICIAL_NUMERIC_SCORE",
     "SII_ACTIVITY_IS_NOT_UAF_LEGAL_STATUS",
+    "SII_ACTIVITY_START_IS_NOT_LEGAL_INCORPORATION_DATE",
     "ECONOMIC_SCALE_IS_EXPOSURE_NOT_SUSPICION",
     "MISSING_ENRICHMENT_INPUTS_FALL_BACK_TO_NEUTRAL_OR_BASE_WITH_SOURCE_STATUS_VISIBLE"
   ]
