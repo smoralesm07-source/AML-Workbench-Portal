@@ -130,3 +130,20 @@
   else setTimeout(loadAfterTerritory,0);
   window.ATLAS_TERRITORY_ANALYTICS_BOOTSTRAP={release:'0.45.0',build:'0450',mode:'POST_TERRITORY_MODULE'};
 })();
+
+/* ATLAS AML 0.45.0 · canonical bootstrap for Public Spend visible taxonomy.
+ * The approved mark taxonomy must govern native filters/KPIs after v037 initializes.
+ */
+(function atlasPublicSpendTaxonomyCanonicalBootstrap(){
+  const JS='./assets/atlas-public-spend-mark-taxonomy-v4.js?v=0450-4';
+  function load(){
+    const prior=document.querySelector('script[data-atlas-public-spend-taxonomy="v4"]');
+    if(prior)prior.remove();
+    const script=document.createElement('script');
+    script.src=JS;script.dataset.atlasPublicSpendTaxonomy='v4';
+    document.body.appendChild(script);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(load,0),{once:true});
+  else setTimeout(load,0);
+  window.ATLAS_PUBLIC_SPEND_TAXONOMY_BOOTSTRAP={release:'0.45.0',build:'0450',mode:'POST_V037_VISIBLE_TAXONOMY'};
+})();
