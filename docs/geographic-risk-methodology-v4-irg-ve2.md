@@ -6,11 +6,11 @@ La versión `IRG-LAFT-0.33.0` mantiene intacta la estructura superior del Índic
 
 `IRG = 45% V/E + 20% Densidad SO + 20% Brecha + 15% Amenaza`
 
-El cambio se limita al interior de **V/E (Vulnerabilidad / Exposición)**. La versión previa ponderaba principalmente el riesgo inherente sectorial por presencia potencial SII. V/E v2 agrega evidencia de exposición sectorial y materialidad económica para mejorar discriminación territorial sin convertir el índice en una medida de sospecha individual.
+El cambio se limita al interior de **V/E (Vulnerabilidad / Exposición)**. La versión previa ponderaba principalmente el riesgo inherente sectorial por presencia potencial SII. V/E v2 agrega evidencia de exposición sectorial, convertibilidad histórica y materialidad/dinamismo económico para mejorar discriminación territorial sin convertir el índice en una medida de sospecha individual.
 
 ## 2. Fórmula de V/E v2
 
-`V/E = 85% Núcleo sectorial enriquecido + 15% Materialidad económica territorial SII`
+`V/E = 85% Núcleo sectorial enriquecido + 15% Materialidad territorial SII`
 
 ### 2.1 Núcleo sectorial enriquecido · 85% de V/E
 
@@ -26,9 +26,9 @@ Conserva el catálogo sectorial anterior de 55 actividades y su riesgo inherente
 
 No se pierde trazabilidad: en el runtime se conserva tanto el valor base como el valor sectorial enriquecido.
 
-### 2.3 ENR Chile · 25% del núcleo
+### 2.3 ENR Chile · 25% del núcleo + proxy territorial
 
-Fuente: **Evaluación Nacional de Riesgos de Lavado de Activos de Chile**, actualización 2023, publicada por la UAF.
+Fuente: **Evaluación Nacional de Riesgos de Lavado de Activos de Chile**, actualización 2023, publicada por la UAF el 9 de enero de 2024.
 
 ATLAS utiliza cinco vulnerabilidades de la ENR con capacidad de discriminar exposición entre sectores:
 
@@ -40,7 +40,9 @@ ATLAS utiliza cinco vulnerabilidades de la ENR con capacidad de discriminar expo
 
 La vulnerabilidad sistémica asociada a deficiencias del marco normativo nacional ALA/CFT no se usa para diferenciar sectores, porque opera a nivel país.
 
-La ENR no publica un score numérico oficial para cada uno de los 55 sectores UAF. Por tanto, ATLAS aplica un **adaptador sectorial explícito y auditable** mediante reglas de exposición por nombre/familia de sector. Este puntaje no debe presentarse como una calificación oficial de la UAF.
+La ENR también identifica una vulnerabilidad **asociada con la constitución de personas jurídicas**. ATLAS la representa en la capa territorial mediante el percentil de `entities_started_since_2024 / potential_total` dentro de las actividades SII homologadas. Es un proxy operativo de dinamismo reciente porque está disponible y es actualizable territorialmente; **inicio de actividades SII no equivale a fecha legal de constitución de una persona jurídica**.
+
+La ENR no publica un score numérico oficial para cada uno de los 55 sectores UAF. Por tanto, ATLAS aplica adaptadores explícitos y auditables. Estos puntajes no deben presentarse como calificaciones oficiales de la UAF.
 
 ### 2.4 ICR · Índice de Convertibilidad de ROS · 20% del núcleo
 
@@ -73,20 +75,21 @@ La evaluación identifica diferencias de peso relativo entre sectores. ATLAS las
 
 Es un **adaptador ATLAS de materialidad relativa**, no un score numérico oficial de GAFILAT.
 
-## 3. Materialidad económica territorial SII · 15% de V/E
+## 3. Materialidad territorial SII · 15% de V/E
 
-La segunda capa evita que dos territorios con igual cantidad de entidades potenciales sean tratados como equivalentes cuando su escala económica es muy distinta.
+La segunda capa evita que dos territorios con una composición sectorial parecida sean tratados como equivalentes cuando difieren en escala y dinamismo económico.
 
-`Materialidad SII = 60% percentil tramo medio de ventas + 40% percentil trabajadores por entidad activa`
+`Materialidad SII = 50% pctl tramo medio de ventas + 30% pctl trabajadores por entidad activa + 20% pctl inicios de actividad 2024+ en universo potencial`
 
 Variables:
 
 - `avg_sales_band_rank`;
-- `workers_total / active_entity_count`.
+- `workers_total / active_entity_count`;
+- `entities_started_since_2024 / potential_total` para actividades homologadas a sectores UAF.
 
 La normalización se realiza como percentil nacional separadamente para regiones y comunas.
 
-El componente se limita a 15% de V/E para impedir que el tamaño económico general de una región domine el riesgo geográfico por sí solo.
+El componente se limita a 15% de V/E para impedir que el tamaño o dinamismo económico general de una región domine el riesgo geográfico por sí solo. El tercer indicador es un proxy de formación/dinamismo reciente y no una fecha jurídica de constitución.
 
 ## 4. Agregación territorial
 
@@ -95,7 +98,7 @@ Por territorio:
 1. se identifican presencias activas SII en actividades homologadas a sectores UAF mediante reglas `VALIDATED_RULE` con confianza mínima 0,85;
 2. cada presencia se pondera por el núcleo sectorial enriquecido;
 3. se calcula el promedio ponderado del núcleo sectorial;
-4. se incorpora la materialidad económica SII del territorio;
+4. se incorpora la materialidad territorial SII del territorio;
 5. el V/E resultante reemplaza únicamente el componente de 45% de la fórmula original;
 6. Densidad SO, Brecha y Amenaza CEAD conservan su metodología vigente.
 
@@ -106,7 +109,7 @@ Por territorio:
 - UAF · Informe Estadístico 2025, ROS sectoriales y ROS con indicios: `https://www.uaf.cl/media/documentos/Informe_Estadistico_2025.pdf`
 - Radar UAF · `reportability_sector_2025.json`
 - Radar UAF · `ros_conversion_sector_2021_2025.json`
-- Radar SII / Supabase · `aml_v022_geo_economic_region` y `aml_v022_geo_economic_commune`.
+- Radar SII / Supabase · `aml_v022_geo_economic_region`, `aml_v022_geo_economic_commune`, `aml_v022_geo_activity_region` y `aml_v022_geo_activity_commune`.
 
 ## 6. Qué se mantiene fuera de V/E
 
@@ -120,10 +123,11 @@ Para evitar doble conteo y circularidad no se incorporan dentro de V/E:
 
 ## 7. Lectura correcta
 
-V/E v2 busca responder mejor dos preguntas:
+V/E v2 busca responder mejor tres preguntas:
 
 1. **¿Qué tan vulnerables/materiales son los sectores presentes en el territorio?**
 2. **¿Qué escala económica tiene esa exposición?**
+3. **¿Está creciendo recientemente el universo potencial en actividades sensibles?**
 
 No responde si una empresa concreta lava activos ni si un territorio es responsable de actividad criminal.
 
@@ -135,6 +139,7 @@ No responde si una empresa concreta lava activos ni si un territorio es responsa
 - `ICR_IS_AGGREGATE_HISTORICAL_CONVERSION_NOT_ENTITY_RISK`
 - `ECONOMIC_SCALE_IS_EXPOSURE_NOT_SUSPICION`
 - `SII_ACTIVITY_IS_NOT_UAF_LEGAL_STATUS`
+- `SII_ACTIVITY_START_IS_NOT_LEGAL_INCORPORATION_DATE`
 - `TERRITORIAL_RISK_IS_NOT_ENTITY_RISK`
 
 ## 9. Trazabilidad y exportación
@@ -143,9 +148,10 @@ La interfaz muestra en la ficha V/E:
 
 - V/E final;
 - núcleo sectorial;
-- materialidad económica SII;
+- materialidad territorial SII;
 - percentil de ventas;
 - percentil de trabajadores por entidad;
+- percentil de inicios de actividad 2024+ en universo potencial;
 - para los sectores principales: Base, ENR, ICR y GAFILAT.
 
 La exportación CSV/JSON de Territorio se intercepta en V/E v2 y publica la versión metodológica `IRG-LAFT-0.33.0` junto con los componentes internos disponibles.
