@@ -64,7 +64,7 @@ for(const needle of [
   "aml_v0449_sii_latest_document_authorization",
   "LATEST_OBSERVED_AUTHORIZATION_NOT_ABSOLUTE_LAST_TIMBRAJE",
   "Última autorización documental observada",
-  "SPECIFIC_DOCUMENT_VERIFICATION",
+  "observation_kind",
   "AtlasSiiDocumentAuthorization"
 ]) assert.ok(docauth.includes(needle),`missing 0449 SII document authorization contract: ${needle}`);
 
@@ -93,6 +93,7 @@ assert.match(build.entity360_search_ux,/AUTOCOMPLETE_0447/);
 assert.match(build.entity360_workspace_policy,/ENTITIES_ROUTE_ALWAYS_CALLS_CURRENT_ENTRY_LOAD/);
 assert.match(build.entity360_document_authorization_policy,/LATEST_OBSERVED_AUTHORIZATION_NOT_ABSOLUTE_LAST_TIMBRAJE/);
 assert.match(release.entity_search_policy,/ENTITY360_ROUTE_AUTHORITY_0448/);
+assert.match(release.entity360_document_authorization_policy,/SPECIFIC_DOCUMENT_VERIFICATION/);
 assert.match(release.entity360_document_authorization_policy,/MISSING_IS_NOT_NO_TIMBRAJE/);
 
 console.log(`ATLAS Entity 360 workspace + route + SII document authorization contract OK under release ${release.release}/${release.build}`);
