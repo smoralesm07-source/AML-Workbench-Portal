@@ -17,8 +17,10 @@ function health(stage, extra = {}) {
 /*
  * Final runtime pin.
  * This module is intentionally auth-passive: it never mutates the Supabase
- * session and never replays refresh tokens. It only freezes the Entity 360
- * authority that is present after every classic feature layer has finished.
+ * session and never replays refresh tokens. It freezes the final Entity 360
+ * authority only after every classic feature layer has loaded. The analytical
+ * renderer remains the approved 0.44.5 six-lens dossier, wrapped by the 0.44.7
+ * single-workspace autocomplete switcher.
  */
 let entityRenderAuthority = null;
 
@@ -33,9 +35,9 @@ function installEntityAuthority() {
   const stableSearch = typeof entry.search === 'function' ? ((...args) => entry.search(...args)) : null;
   const stableOpen = typeof entry.open === 'function' ? ((...args) => entry.open(...args)) : null;
 
-  /* At module evaluation time all classic runtime fragments have loaded, so the
-     current v0203 renderer is the 0.44.5 six-lens authority installed by v0391.
-     Capture it once and re-pin it after shell mutations/navigation. */
+  /* At module evaluation time all classic runtime fragments have loaded. Capture
+     the final renderer once so later shell navigation cannot restore a legacy
+     white landing/detail renderer. */
   if (!entityRenderAuthority && typeof window.v0203RenderEntity === 'function') {
     entityRenderAuthority = window.v0203RenderEntity;
   }
@@ -52,12 +54,14 @@ function installEntityAuthority() {
 
   window.__ATLAS_ENTITY_AUTHORITY_FINAL__ = {
     active:true,
-    authority:entry.authority || 'ENTITY360_REFERENCE_0445',
-    release:entry.release || '0.44.5',
-    version:entry.version || '0445',
+    authority:entry.authority || 'ENTITY360_INLINE_AUTOCOMPLETE_0447',
+    release:entry.release || '0.44.7',
+    version:entry.version || '0447',
     sixLensRendererPinned:!!entityRenderAuthority,
-    landingPinned:true,
+    singleWorkspacePinned:true,
+    landingPinned:false,
     searchPinned:!!stableSearch,
+    autocompletePinned:String(entry.searchPolicy||'').includes('AUTOCOMPLETE'),
     openPinned:!!stableOpen,
     installedAt:iso()
   };
@@ -82,8 +86,9 @@ window.__ATLAS_RUNTIME_RELIABILITY__ = {
   releaseGuard:'NO_ACTIVE_SESSION_RELOAD',
   authGuard:'PASSIVE_FINAL_MODULE',
   refreshTokenPolicy:'SUPABASE_CLIENT_ONLY_NO_MANUAL_REPLAY',
-  entityAuthority:'ENTITY360_REFERENCE_0445_SIX_LENSES',
+  entityAuthority:'ENTITY360_REFERENCE_0445_SIX_LENSES+ENTITY360_INLINE_AUTOCOMPLETE_0447',
+  entityWorkspace:'SINGLE_DARK_DOSSIER+PERSISTENT_RLS_AUTOCOMPLETE',
   installedAt:iso()
 };
 
-health('installed-entity360-0445-authority-only');
+health('installed-entity360-0447-single-workspace-authority');
