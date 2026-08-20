@@ -19,8 +19,9 @@ function health(stage, extra = {}) {
  * This module is intentionally auth-passive: it never mutates the Supabase
  * session and never replays refresh tokens. It freezes the final Entity 360
  * authority only after every classic feature layer and deferred module has
- * finished. The 0.44.8 route pin also bypasses the historical v019 closure that
- * retained the pre-Entity360 loadEntities implementation.
+ * finished. The 0.44.8 route pin bypasses the historical v019 closure, while
+ * 0.44.9 keeps the governed SII document-authorization renderer in the final
+ * Entity 360 chain.
  */
 let entityRenderAuthority = null;
 const navigationDelegate = typeof window.navigate === 'function' ? window.navigate : null;
@@ -42,7 +43,7 @@ function installEntityAuthority() {
 
   /* At module evaluation time all classic runtime fragments have loaded. Capture
      the final renderer once so later shell navigation cannot restore a legacy
-     white landing/detail renderer. */
+     white landing/detail renderer or remove the 0.44.9 tax context decorator. */
   if (!entityRenderAuthority && typeof window.v0203RenderEntity === 'function') {
     entityRenderAuthority = window.v0203RenderEntity;
   }
@@ -62,8 +63,8 @@ function installEntityAuthority() {
   window.__ATLAS_ENTITY_AUTHORITY_FINAL__ = {
     active:true,
     authority:entry.authority || 'ENTITY360_INLINE_AUTOCOMPLETE_0447',
-    release:entry.release || '0.44.8',
-    version:entry.version || '0448',
+    release:entry.release || '0.44.9',
+    version:entry.version || '0449',
     sixLensRendererPinned:!!entityRenderAuthority,
     singleWorkspacePinned:true,
     landingPinned:false,
@@ -71,6 +72,8 @@ function installEntityAuthority() {
     legacyCapturedLoaderBypassed:true,
     searchPinned:!!stableSearch,
     autocompletePinned:String(entry.searchPolicy||'').includes('AUTOCOMPLETE'),
+    siiDocumentAuthorizationPinned:typeof window.AtlasSiiDocumentAuthorization==='object',
+    documentAuthorizationSemantic:'LATEST_OBSERVED_AUTHORIZATION_NOT_ABSOLUTE_LAST_TIMBRAJE',
     openPinned:!!stableOpen,
     installedAt:iso()
   };
@@ -95,9 +98,9 @@ window.__ATLAS_RUNTIME_RELIABILITY__ = {
   releaseGuard:'NO_ACTIVE_SESSION_RELOAD',
   authGuard:'PASSIVE_FINAL_MODULE',
   refreshTokenPolicy:'SUPABASE_CLIENT_ONLY_NO_MANUAL_REPLAY',
-  entityAuthority:'ENTITY360_REFERENCE_0445_SIX_LENSES+ENTITY360_INLINE_AUTOCOMPLETE_0447+ENTITY360_ROUTE_AUTHORITY_0448',
-  entityWorkspace:'SINGLE_DARK_DOSSIER+PERSISTENT_RLS_AUTOCOMPLETE+CURRENT_ENTITIES_ROUTE',
+  entityAuthority:'ENTITY360_REFERENCE_0445_SIX_LENSES+ENTITY360_INLINE_AUTOCOMPLETE_0447+ENTITY360_ROUTE_AUTHORITY_0448+ENTITY360_SII_DOCUMENT_AUTH_0449',
+  entityWorkspace:'SINGLE_DARK_DOSSIER+PERSISTENT_RLS_AUTOCOMPLETE+CURRENT_ENTITIES_ROUTE+SII_DOCUMENT_AUTHORIZATION_CONTEXT',
   installedAt:iso()
 };
 
-health('installed-entity360-0448-route-and-workspace-authority');
+health('installed-entity360-0449-document-authorization-authority');
