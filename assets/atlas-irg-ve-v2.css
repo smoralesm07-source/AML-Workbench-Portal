@@ -1,0 +1,13 @@
+/* ATLAS AML · IRG V/E v2 */
+.atlas-ve2-breakdown{display:grid;grid-template-columns:1.1fr repeat(4,minmax(0,.8fr));gap:8px;margin:0 0 12px;padding:10px;background:#0b1826;border:1px solid #213a52;border-radius:10px}
+.atlas-ve2-breakdown>div{min-width:0;padding:8px 10px;background:#102033;border:1px solid #1b334a;border-radius:8px}
+.atlas-ve2-breakdown span{display:block;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:#6f879e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.atlas-ve2-breakdown b{display:block;margin-top:4px;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:15px;color:#dce8f3;font-variant-numeric:tabular-nums}
+.atlas-ve2-breakdown>div:first-child{border-color:#28577c;background:linear-gradient(180deg,#11283d,#0f2132)}
+.atlas-ve2-breakdown>div:first-child b{color:#61b6ff;font-size:18px}
+.atlas-ve2-sector-mix{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-top:8px;padding-top:7px;border-top:1px solid #1d3348}
+.atlas-ve2-sector-mix span{padding:4px 5px;border-radius:5px;background:#0e1d2c;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:7.5px;color:#71879c;text-align:center;white-space:nowrap}
+.atlas-ve2-sector-mix b{color:#bdd0df;font-size:8.5px}
+.v032-source-strip .atlas-ve2-source{border-style:solid}
+@media(max-width:1180px){.atlas-ve2-breakdown{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){.atlas-ve2-breakdown{grid-template-columns:repeat(2,minmax(0,1fr))}.atlas-ve2-sector-mix{grid-template-columns:repeat(2,minmax(0,1fr))}}
