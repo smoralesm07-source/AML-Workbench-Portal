@@ -30,6 +30,8 @@ jobs:
           grep -q "SOURCE_FRESHNESS" assets/atlas-data-audit.js
           grep -q "aml_sync_state" assets/atlas-data-audit.js
           grep -q "SIN ACTUALIZACIÓN" assets/atlas-data-audit.js
+          grep -q "greenShare>=0.70" assets/atlas-data-audit.js
+          grep -q "version:'0458'" assets/atlas-data-audit.js
       - name: Build canonical Atlas candidate
         shell: bash
         run: |
@@ -39,4 +41,5 @@ jobs:
           test -s _site-data-audit/assets/atlas-data-audit.css
           grep -q 'atlas-data-audit.js' _site-data-audit/index.html
           grep -q 'atlas-data-audit.css' _site-data-audit/index.html
+          grep -q 'atlas-data-audit.js?v=0458-1' _site-data-audit/index.html
           node --check _site-data-audit/assets/atlas-data-audit.js
