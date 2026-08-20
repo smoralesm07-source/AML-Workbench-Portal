@@ -1,14 +1,14 @@
 'use strict';
 /* ATLAS AML · IRG refinement.
- * Keeps the numeric IRG unchanged and improves interpretation by:
+ * Improves interpretation by:
  *  - forcing the formula to one line with help for every term;
  *  - coloring the regional map by comparative quintile so national dispersion is visible;
- *  - explicitly documenting that official cash-use evidence is macrozone-level, not regional.
+ *  - documenting the evolved V/E v2 internal methodology while top-level IRG weights remain unchanged.
  */
 (function(){
   const HELP={
     irg:{title:'IRG · Índice de Riesgo Geográfico LA/FT',body:'Score territorial compuesto. Mantiene la estructura 45% V/E + 20% Densidad SO + 20% Brecha + 15% Amenaza.',note:'No es probabilidad de delito ni atribución de riesgo a una entidad específica.'},
-    ve:{title:'V/E · Vulnerabilidad / Exposición',body:'Riesgo inherente de los sectores económicos sensibles a LA/FT, ponderado por la presencia potencial SII derivada de homologaciones UAF↔SII validadas.',note:'El componente vale 45% del IRG. El uso de efectivo puede ser un intensificador útil, pero el Banco Central publica evidencia representativa por macrozona y no un stock de efectivo por región; por eso ATLAS no inventa una asignación regional.'},
+    ve:{title:'V/E · Vulnerabilidad / Exposición v2',body:'El 45% del IRG se calcula ahora con dos capas: 85% núcleo sectorial y 15% materialidad económica territorial SII. El núcleo sectorial combina 35% vulnerabilidad estructural base, 25% exposición a vulnerabilidades de la ENR de Chile, 20% ICR histórico de ROS y 20% materialidad sectorial derivada de la evaluación GAFILAT.',note:'ICR usa 2021–2025 y se suaviza hacia la tasa nacional para evitar que sectores con pocos ROS dominen el score. La materialidad SII usa percentiles de tramo de ventas y trabajadores por entidad. ENR/GAFILAT son adaptadores ATLAS explícitos, no scores oficiales sectoriales.'},
     density:{title:'Densidad SO · Sujetos Obligados',body:'Percentil nacional de sujetos obligados UAF observados por cada 1.000 entidades activas SII de la región.',note:'Mide concentración relativa, no incumplimiento. Peso: 20%.'},
     gap:{title:'Brecha potencial de cobertura',body:'Diferencia entre el universo potencial SII en actividades homologadas y los sujetos obligados UAF observados/localizados.',note:'Es una señal de screening y requiere validación documental. Peso: 20%.'},
     threat:{title:'Amenaza territorial',body:'Componente CEAD construido con 70% de intensidad relativa y 30% de tendencia positiva de delitos pertinentes al marco LA/FT.',note:'Aporta contexto delictual territorial; por sí solo no acredita LA/FT. Peso: 15%.'}
