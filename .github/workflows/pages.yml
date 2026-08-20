@@ -47,6 +47,7 @@ jobs:
           assert 'v0443-auth-ui-stability.js' in scripts
           assert 'v0442-session-stability.module.js' in scripts
           assert 'v0444-backend-stability.js' in scripts
+          assert 'v0446-reconciliation-interactions.js' in scripts
           assert 'v0391-entity-entry.js' in scripts
           assert m['scripts'][-1]['path']=='v0442-session-stability.module.js'
           print(f"ATLAS_RELEASE={r['release']}")
@@ -54,7 +55,7 @@ jobs:
           PY
           echo "Deploying $(git rev-parse HEAD) · ${ATLAS_RELEASE:-release-loaded-next-step}"
 
-      - name: Validate token, session and Entity 360 authority
+      - name: Validate token, session and current UI authorities
         shell: bash
         run: |
           set -euo pipefail
@@ -62,6 +63,7 @@ jobs:
           node --check v0443-auth-ui-stability.js
           node --check v0442-session-stability.module.js
           node --check v0444-backend-stability.js
+          node --check v0446-reconciliation-interactions.js
           node --check v0391-entity-entry.js
           ! grep -qE 'auth\.setSession\(|refresh_token\s*:' v0422-auth-bootstrap-fix.js
           ! grep -qE 'auth\.setSession\(|refresh_token\s*:' v0443-auth-ui-stability.js
@@ -77,6 +79,10 @@ jobs:
           grep -q "\['evidence','06','Evidencia y decisión'\]" v0391-entity-entry.js
           grep -q 'sixLensRendererPinned' v0442-session-stability.module.js
           grep -q '.a45-cover' v0391-entity-entry.css
+          grep -q "v0434Matrix=()=>''" v0446-reconciliation-interactions.js
+          grep -q 'globalCrossFilter:true' v0446-reconciliation-interactions.js
+          grep -q 'Filtros interactivos' v0446-reconciliation-interactions.js
+          ! grep -q 'new MutationObserver' v0446-reconciliation-interactions.js
 
       - name: Compile current ATLAS runtime
         shell: bash
@@ -104,6 +110,9 @@ jobs:
           done
           python tools/audit_runtime_authority.py --root _site
           grep -R -q 'aml_v0444_uaf_sii_summary' _site/atlas-runtime-current-*.js
+          grep -R -q 'AtlasReconciliationFilters' _site/atlas-runtime-current-*.js
+          grep -R -q "v0434Matrix=()=>''" _site/atlas-runtime-current-*.js
+          grep -R -q 'globalCrossFilter:true' _site/atlas-runtime-current-*.js
           grep -R -q 'ENTITY360_HTML_PRODUCTION_ADAPTATION_0445' _site/atlas-runtime-current-*.js
           grep -q '.a45-cover' _site/atlas-runtime-current.css
           grep -q '.a45-lenses' _site/atlas-runtime-current.css
