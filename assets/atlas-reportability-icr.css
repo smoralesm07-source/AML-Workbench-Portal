@@ -1,0 +1,11 @@
+/* ATLAS AML · matriz sectorial: alineación + columna ICR */
+.v036-matrix{min-width:1145px!important}
+.v036-mxhead,.v036-mxrow{grid-template-columns:minmax(220px,2.35fr) 64px 68px 76px 88px 78px 78px 116px 172px 22px!important}
+.v036-mxhead>*{text-align:center!important;justify-self:stretch}
+.v036-mxhead button{display:flex!important;align-items:center;justify-content:center!important;gap:5px;text-align:center!important}
+.v036-mxn,.v036-delta{text-align:center!important;justify-self:stretch}
+.v036-mxrow>.v036-spark{justify-self:stretch}
+.v036-mxrow>.v036-marks{justify-content:center}
+.v036-mxrow>.v036-chev{text-align:center}
+.atlas-icr{font-variant-numeric:tabular-nums}
+@media(max-width:1100px){.v036-matrix{min-width:1100px!important}.v036-mxhead,.v036-mxrow{grid-template-columns:minmax(210px,2.1fr) 62px 66px 74px 84px 76px 76px 108px 160px 20px!important}}
