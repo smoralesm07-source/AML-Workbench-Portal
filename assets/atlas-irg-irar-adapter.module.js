@@ -63,7 +63,7 @@ function rebuildTerritory(rows,computed,config){
     }
     if(Array.isArray(r.meta?.coverage?.rows))for(const s of r.meta.coverage.rows){const c=computed.catalog.byId.get(Number(s.sector_id));patchSectorRow(s,c);}
     const p=r.parts;
-    r.irg=['vulnerability','density','gap','threat'].every(k=>finite(p[k]))?.45*Number(p.vulnerability)+.20*Number(p.density)+.20*Number(p.gap)+.15*Number(p.threat):null;
+    r.irg=['vulnerability','density','gap','threat'].every(k=>finite(p[k])) ? .45*Number(p.vulnerability)+.20*Number(p.density)+.20*Number(p.gap)+.15*Number(p.threat) : null;
     r.method=ATLAS_IRG_IRAR_METHOD;
   }
 }
