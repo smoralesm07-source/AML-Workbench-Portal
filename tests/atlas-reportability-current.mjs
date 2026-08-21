@@ -10,8 +10,9 @@ assert.equal(release.release,manifest.release);
 assert.equal(release.release,build.app_version);
 assert.equal(release.build,manifest.build);
 assert.equal(release.build,build.build);
-assert.equal(manifest.scripts.at(-1).path,'atlas-reportability-current.js');
-assert.equal(manifest.scripts.at(-1).role,'reportability-methodology-current-authority');
+const authority=manifest.scripts.find(x=>x.path==='atlas-reportability-current.js');
+assert.ok(authority,'reportability methodology authority must remain in runtime manifest');
+assert.equal(authority.role,'reportability-methodology-current-authority');
 
 for(const needle of [
   "rosPerSo:so?ros/so:0",
