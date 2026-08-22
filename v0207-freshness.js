@@ -4,6 +4,7 @@
  * - UAF assets: Radar_UAF Pages first, local governed fallback.
  * - Source cut / radar retrieval / Workbench synchronization are separate clocks.
  * - aml_sync_state is the authoritative Workbench sync clock after the first successful automated cycle.
+ * - During database recovery, a bounded circuit breaker prevents repeated Supabase reads.
  */
 const V0207='0.20.8';
 const V0207_UAF_REPORT_REMOTE='/Radar_UAF/data/reportability_sector_2025.json';
@@ -11,7 +12,11 @@ const V0207_UAF_DASH_REMOTE='/Radar_UAF/data/dashboard.json';
 const V0207_UAF_REPORT_LOCAL='./data/uaf_reportability_sector_2025.json';
 const V0207_UAF_DASH_LOCAL='./data/uaf_dashboard_snapshot.json';
 const V0207_SII_MANIFEST='/Radar_SII/data/snapshot_manifest.json';
+const V0207_DB_BACKOFF=5*60*1000;
 let V0207_FRESHNESS_CACHE=null;
+let V0207_FRESHNESS_INFLIGHT=null;
+let V0207_FRESHNESS_FAILED_AT=0;
+let V0207_FRESHNESS_LAST_ERROR='';
 
 const v0207BaseShell=shell;
 const v0207BaseOverview=v019LoadOverview;
@@ -74,42 +79,80 @@ function v0207Status(sourceTime,materializedTime){
   if(!Number.isFinite(s)||!Number.isFinite(m))return {label:'Corte informado',cls:'info'};
   return s>m+5*60*1000?{label:'Fuente más nueva que Workbench',cls:'pending'}:{label:'Sincronizado',cls:'ok'};
 }
+function v0207RecoveryState(error=''){
+  const elapsed=V0207_FRESHNESS_FAILED_AT?Math.max(0,Date.now()-V0207_FRESHNESS_FAILED_AT):0;
+  const retryAfter=Math.max(0,V0207_DB_BACKOFF-elapsed);
+  const message=String(error||V0207_FRESHNESS_LAST_ERROR||'Supabase temporalmente no disponible');
+  window.__ATLAS_FRESHNESS_RECOVERY__={
+    active:true,failedAt:V0207_FRESHNESS_FAILED_AT||null,lastError:message,
+    backoffMs:V0207_DB_BACKOFF,retryAfterMs:retryAfter,checkedAt:new Date().toISOString()
+  };
+  if(V0207_FRESHNESS_CACHE){
+    return {...V0207_FRESHNESS_CACHE,__stale:true,__unavailable:true,__error:message,__retryAfterMs:retryAfter};
+  }
+  const waiting={label:'Backend en recuperación',cls:'info'};
+  return {
+    uafCut:null,uafRadarGenerated:null,uafScope:'RECOVERY_BACKOFF',
+    siiRetrieved:null,siiLatestYear:null,fusionMaterialized:null,siiMaterialized:null,
+    explicitSync:false,syncStatus:'RECOVERY_BACKOFF',snapshotId:null,fusionRunId:null,siiSourceRunId:null,
+    uafStatus:waiting,siiStatus:waiting,__unavailable:true,__error:message,__retryAfterMs:retryAfter
+  };
+}
 
 async function v0207LoadFreshness(force=false){
   if(V0207_FRESHNESS_CACHE&&!force)return V0207_FRESHNESS_CACHE;
-  const [uaf,siiManifest,syncRes,fallbackFusionRes,fallbackSiiRes]=await Promise.all([
-    v0193LoadUafData(force),
-    v0207FetchJson(V0207_SII_MANIFEST).catch(()=>({data:[],url:null})),
-    sb.from('aml_sync_state').select('*').eq('pipeline','AML_MAIN').maybeSingle(),
-    sb.from(V0205_VIEW).select('entity_updated_at').not('entity_updated_at','is',null).order('entity_updated_at',{ascending:false}).limit(1),
-    sb.from(V0205_VIEW).select('sii_updated_at,sii_latest_commercial_year').not('sii_updated_at','is',null).order('sii_updated_at',{ascending:false}).limit(1)
-  ]);
-  if(syncRes.error)throw syncRes.error;if(fallbackFusionRes.error)throw fallbackFusionRes.error;if(fallbackSiiRes.error)throw fallbackSiiRes.error;
-  const sync=syncRes.data||null,manifestRows=v019Array(siiManifest.data),siiRetrieved=v0207MaxIso(manifestRows,'downloaded_at');
-  const fusionMaterialized=sync?.fusion_synced_at||fallbackFusionRes.data?.[0]?.entity_updated_at||null;
-  const siiMaterialized=sync?.sii_synced_at||fallbackSiiRes.data?.[0]?.sii_updated_at||null;
-  const dash=uaf.dashboard||{},k=dash.kpis||{},uafRadarGenerated=dash.generated_at||null,uafCut=k.registered_total_as_of||k.registered_private_as_of||null;
-  V0207_FRESHNESS_CACHE={
-    uafCut,uafRadarGenerated,uafScope:uaf.dashboard_scope||uaf.asset_scope,
-    siiRetrieved,siiLatestYear:fallbackSiiRes.data?.[0]?.sii_latest_commercial_year||null,
-    fusionMaterialized,siiMaterialized,
-    explicitSync:!!sync,syncStatus:sync?.status||null,snapshotId:sync?.snapshot_id||null,fusionRunId:sync?.fusion_run_id||null,siiSourceRunId:sync?.sii_source_run_id||null,
-    uafStatus:v0207Status(uafRadarGenerated,fusionMaterialized),siiStatus:v0207Status(siiRetrieved,siiMaterialized)
-  };
-  return V0207_FRESHNESS_CACHE;
+  if(V0207_FRESHNESS_FAILED_AT&&(Date.now()-V0207_FRESHNESS_FAILED_AT)<V0207_DB_BACKOFF){
+    return v0207RecoveryState();
+  }
+  if(V0207_FRESHNESS_INFLIGHT)return V0207_FRESHNESS_INFLIGHT;
+  V0207_FRESHNESS_INFLIGHT=(async()=>{
+    try{
+      const [uaf,siiManifest,syncRes,fallbackFusionRes,fallbackSiiRes]=await Promise.all([
+        v0193LoadUafData(force),
+        v0207FetchJson(V0207_SII_MANIFEST).catch(()=>({data:[],url:null})),
+        sb.from('aml_sync_state').select('*').eq('pipeline','AML_MAIN').maybeSingle(),
+        sb.from(V0205_VIEW).select('entity_updated_at').not('entity_updated_at','is',null).order('entity_updated_at',{ascending:false}).limit(1),
+        sb.from(V0205_VIEW).select('sii_updated_at,sii_latest_commercial_year').not('sii_updated_at','is',null).order('sii_updated_at',{ascending:false}).limit(1)
+      ]);
+      if(syncRes.error)throw syncRes.error;if(fallbackFusionRes.error)throw fallbackFusionRes.error;if(fallbackSiiRes.error)throw fallbackSiiRes.error;
+      const sync=syncRes.data||null,manifestRows=v019Array(siiManifest.data),siiRetrieved=v0207MaxIso(manifestRows,'downloaded_at');
+      const fusionMaterialized=sync?.fusion_synced_at||fallbackFusionRes.data?.[0]?.entity_updated_at||null;
+      const siiMaterialized=sync?.sii_synced_at||fallbackSiiRes.data?.[0]?.sii_updated_at||null;
+      const dash=uaf.dashboard||{},k=dash.kpis||{},uafRadarGenerated=dash.generated_at||null,uafCut=k.registered_total_as_of||k.registered_private_as_of||null;
+      V0207_FRESHNESS_CACHE={
+        uafCut,uafRadarGenerated,uafScope:uaf.dashboard_scope||uaf.asset_scope,
+        siiRetrieved,siiLatestYear:fallbackSiiRes.data?.[0]?.sii_latest_commercial_year||null,
+        fusionMaterialized,siiMaterialized,
+        explicitSync:!!sync,syncStatus:sync?.status||null,snapshotId:sync?.snapshot_id||null,fusionRunId:sync?.fusion_run_id||null,siiSourceRunId:sync?.sii_source_run_id||null,
+        uafStatus:v0207Status(uafRadarGenerated,fusionMaterialized),siiStatus:v0207Status(siiRetrieved,siiMaterialized)
+      };
+      V0207_FRESHNESS_FAILED_AT=0;V0207_FRESHNESS_LAST_ERROR='';
+      window.__ATLAS_FRESHNESS_RECOVERY__={active:false,backoffMs:V0207_DB_BACKOFF,checkedAt:new Date().toISOString()};
+      return V0207_FRESHNESS_CACHE;
+    }catch(error){
+      V0207_FRESHNESS_FAILED_AT=Date.now();
+      V0207_FRESHNESS_LAST_ERROR=String(error?.message||error||'Supabase temporalmente no disponible');
+      return v0207RecoveryState(V0207_FRESHNESS_LAST_ERROR);
+    }finally{
+      V0207_FRESHNESS_INFLIGHT=null;
+    }
+  })();
+  return V0207_FRESHNESS_INFLIGHT;
 }
 
 function v0207FreshnessHtml(f,compact=false){
-  const overall=(f.uafStatus.cls==='pending'||f.siiStatus.cls==='pending')?'pending':'ok';
-  const syncSub=f.explicitSync?`Run Fusion ${f.fusionRunId||'—'}${f.snapshotId?` · ${v019Truncate(f.snapshotId,24)}`:''}`:'Fallback temporal hasta primer ciclo automatizado';
+  const recovery=!!f.__unavailable;
+  const overall=recovery?'pending':((f.uafStatus.cls==='pending'||f.siiStatus.cls==='pending')?'pending':'ok');
+  const syncSub=recovery?'Sin nuevas consultas hasta terminar la ventana de backoff':(f.explicitSync?`Run Fusion ${f.fusionRunId||'—'}${f.snapshotId?` · ${v019Truncate(f.snapshotId,24)}`:''}`:'Fallback temporal hasta primer ciclo automatizado');
+  const title=recovery?'Backend en recuperación; se preserva la última lectura disponible':(overall==='ok'?'Fuentes y conciliación sincronizadas':'Hay una fuente más nueva que la materialización');
   return `<section class="v0207-freshness ${compact?'compact':''}">
-    <div class="v0207-fresh-head"><div><span>VIGENCIA DE LOS DATOS</span><h3>${overall==='ok'?'Fuentes y conciliación sincronizadas':'Hay una fuente más nueva que la materialización'}</h3></div><span class="v0207-fresh-state ${overall}">${overall==='ok'?'Actualizado':'Actualizando'}</span></div>
+    <div class="v0207-fresh-head"><div><span>VIGENCIA DE LOS DATOS</span><h3>${esc(title)}</h3></div><span class="v0207-fresh-state ${overall}">${recovery?'En pausa':(overall==='ok'?'Actualizado':'Actualizando')}</span></div>
     <div class="v0207-fresh-grid">
       <div><div><span>UAF</span><em class="${esc(f.uafStatus.cls)}">${esc(f.uafStatus.label)}</em></div><b>Corte oficial ${esc(v0207CutDate(f.uafCut))}</b><small>Radar consultado ${esc(v0207Date(f.uafRadarGenerated,true))}</small></div>
       <div><div><span>SII</span><em class="${esc(f.siiStatus.cls)}">${esc(f.siiStatus.label)}</em></div><b>Radar descargado ${esc(v0207Date(f.siiRetrieved,true))}</b><small>Historia empresarial hasta ${esc(String(f.siiLatestYear||'—'))}${f.siiSourceRunId?` · bundle ${esc(f.siiSourceRunId)}`:''}</small></div>
-      <div><div><span>Conciliación</span><em class="info">${f.explicitSync?'Sello explícito':'Fallback'}</em></div><b>Fusion ${esc(v0207Date(f.fusionMaterialized,true))}</b><small>Perfil SII ${esc(v0207Date(f.siiMaterialized,true))} · ${esc(syncSub)}</small></div>
+      <div><div><span>Conciliación</span><em class="info">${recovery?'Circuit breaker':(f.explicitSync?'Sello explícito':'Fallback')}</em></div><b>Fusion ${esc(v0207Date(f.fusionMaterialized,true))}</b><small>Perfil SII ${esc(v0207Date(f.siiMaterialized,true))} · ${esc(syncSub)}</small></div>
     </div>
-    <p>La fecha de corte oficial puede ser anterior al barrido del radar. Si una fuente aparece más nueva, la conciliación se mantiene identificada como pendiente hasta que el snapshot validado y el enriquecimiento SII terminen de materializarse en Supabase.</p>
+    <p>${recovery?'ATLAS suspendió temporalmente nuevas lecturas de vigencia para no añadir presión mientras PostgreSQL se recupera.':'La fecha de corte oficial puede ser anterior al barrido del radar. Si una fuente aparece más nueva, la conciliación se mantiene identificada como pendiente hasta que el snapshot validado y el enriquecimiento SII terminen de materializarse en Supabase.'}</p>
   </section>`;
 }
 
