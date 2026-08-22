@@ -14,6 +14,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://ldmtlwzqaqmegedktlxr.supabase.co wss://ldmtlwzqaqmegedktlxr.supabase.co https://raw.githubusercontent.com; style-src 'self'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'" />
   <script src="./atlas-release-guard.js?r=0449"></script>
   <script src="./atlas-theme-bootstrap.js?r=0449"></script>
+  <script src="./assets/atlas-backend-recovery-guard.js?v=20260822-1913-pre"></script>
   <title>ATLAS AML · v0.44.9</title>
 <!-- ATLAS_RUNTIME_STYLES -->
   <link rel="stylesheet" href="./assets/atlas-ui-cleanup.css?v=0449-1" />
@@ -38,12 +39,13 @@
       <div class="auth-card">
         <div class="brand-mark">ATLAS</div>
         <div class="eyebrow">Plataforma Integrada de Inteligencia y Riesgo</div>
-        <h1>Iniciando sesión segura…</h1>
-        <p>Validando Microsoft Entra, Supabase Auth y autorización RLS.</p>
+        <h1>Backend en recuperación</h1>
+        <p>ATLAS ha aislado temporalmente las conexiones a Supabase para permitir que PostgreSQL complete su recuperación sin carga del navegador.</p>
       </div>
     </section>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0" crossorigin="anonymous"></script>
+  <script src="./assets/atlas-backend-recovery-guard.js?v=20260822-1913-post"></script>
 <!-- ATLAS_RUNTIME_SCRIPTS -->
   <script src="./assets/atlas-territory-threat-cead-v1.js?v=0450-1"></script>
   <script src="./assets/atlas-sanctions-intelligence.js?v=0450-1"></script>
