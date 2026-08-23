@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 const read = path => fs.readFileSync(path, 'utf8');
 const js = read('assets/atlas-pep-discovery.js');
+const bridge = read('assets/atlas-pep-runtime-state-bridge.js');
 const css = read('assets/atlas-pep-discovery.css');
 const html = read('index.html');
 const release = JSON.parse(read('atlas-release.json'));
@@ -17,8 +18,15 @@ assert.equal(runtime.release, '0.50.0');
 assert.equal(runtime.build, '0500');
 
 assert.match(html, /atlas-pep-discovery\.css\?v=0500-1/);
+assert.match(html, /atlas-pep-runtime-state-bridge\.js\?v=0500-1/);
 assert.match(html, /atlas-pep-discovery\.js\?v=0500-1/);
+assert.ok(html.indexOf('atlas-pep-runtime-state-bridge.js') < html.indexOf('atlas-pep-discovery.js'));
 assert.match(html, /data-atlas-release="0\.50\.0"/);
+
+assert.match(bridge, /typeof state === 'undefined'/);
+assert.match(bridge, /Object\.defineProperty\(window, 'state'/);
+assert.doesNotMatch(bridge, /MutationObserver/);
+assert.doesNotMatch(bridge, /localStorage/);
 
 assert.match(js, /const VIEW='pep-discovery'/);
 assert.match(js, /aml_pep_discovery_snapshot/);
