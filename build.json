@@ -1,6 +1,6 @@
 {
-  "app_version": "0.45.0",
-  "build": "0450",
+  "app_version": "0.46.0",
+  "build": "0460",
   "product_name": "ATLAS AML",
   "product_tagline": "Plataforma Integrada de Inteligencia y Riesgo",
   "visible_identity": "ATLAS_AML_CURRENT",
