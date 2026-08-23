@@ -1,6 +1,6 @@
 {
-  "app_version": "0.49.0",
-  "build": "0490",
+  "app_version": "0.50.0",
+  "build": "0500",
   "product_name": "ATLAS AML",
   "product_tagline": "Plataforma Integrada de Inteligencia y Riesgo",
   "visible_identity": "ATLAS_AML_CURRENT",
@@ -60,6 +60,9 @@
   "entity360_evidence_policy": "MULTI_SOURCE_CORROBORATION_DISTINCT_FROM_SINGLE_SOURCE_REPETITION+EXPLICIT_COUNTER_EVIDENCE_ONLY+GAPS_DECLARED",
   "entity360_decision_policy": "ANALYTICAL_DISPOSITION_AUDIT_ONLY+JUSTIFICATION_REQUIRED+NOT_ROS_NOT_DENUNCIA_NOT_INSTITUTIONAL_DECISION",
   "entity360_reportability_policy": "DO_NOT_INFER_INDIVIDUAL_ROS_ROE",
+  "entity360_command_layer": "0500",
+  "entity360_command_features": "EXEC_SUMMARY_BRIEF+OWNERSHIP_STRUCTURE_SIGNALS+GOVERNED_ENTITY_ID_RELATION_NAV+LOCAL_BOOKMARKS+PRINTABLE_DOSSIER+KEYBOARD_SHORTCUTS",
+  "entity360_command_integration": "HAND_PLACED_ASSET_LIKE_0460+WRAPS_V0203_RENDER_ENTITY+NO_MANIFEST_CHANGE+DECORATION_ONLY",
   "public_entity_source": "Radar_SII/config/public_entities_registry.csv",
   "public_entity_identity_policy": "RUT_OR_ENTITY_ID_EXACT_ONLY",
   "public_entity_risk_policy": "PUBLIC_STATUS_IS_CONTEXT_NOT_ADVERSE_SIGNAL",
