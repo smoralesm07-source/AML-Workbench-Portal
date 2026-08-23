@@ -1,7 +1,7 @@
 {
   "product": "ATLAS AML",
-  "release": "0.47.0",
-  "build": "0470",
+  "release": "0.48.0",
+  "build": "0480",
   "channel": "current",
   "deployment_policy": "SINGLE_ACTIVE_RELEASE",
   "source_branch": "main",
