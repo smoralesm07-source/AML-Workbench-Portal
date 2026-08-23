@@ -28,6 +28,7 @@ jobs:
           node --check assets/atlas-reportability-irar.js
           node --check assets/atlas-irg-irar-adapter.module.js
           node tests/atlas-irar-current.mjs
+          node tests/atlas-irar-ui-integration.mjs
           node -e "JSON.parse(require('fs').readFileSync('data/irar_methodology_v1.json','utf8')); console.log('IRAR methodology JSON OK')"
       - name: Validate runtime wiring
         run: |
@@ -36,6 +37,9 @@ jobs:
           grep -q 'atlas-irg-irar-adapter.module.js' index.html
           ! grep -q 'atlas-reportability-icr.js' index.html
           grep -q 'IRAR_ADJUSTED' assets/atlas-reportability-irar.js
+          grep -q 'IRAR-UI-1.1' assets/atlas-reportability-irar.js
+          grep -q 'atlas-irar-expected-zone' assets/atlas-reportability-irar.js
+          grep -q 'Credibilidad estadística IRAR' assets/atlas-reportability-irar.js
           grep -q 'IRG-LAFT-0.34.0' assets/atlas-irg-irar-adapter.module.js
       - name: Build canonical ATLAS candidate
         run: |
@@ -44,5 +48,6 @@ jobs:
           test -f _site-irar/assets/atlas-irar-current.js
           test -f _site-irar/assets/atlas-reportability-irar.js
           test -f _site-irar/assets/atlas-irg-irar-adapter.module.js
-          grep -q 'atlas-reportability-irar.js' _site-irar/index.html
+          grep -q 'atlas-reportability-irar.js?v=0468-1' _site-irar/index.html
           grep -q 'atlas-irg-irar-adapter.module.js' _site-irar/index.html
+          grep -q 'IRAR-UI-1.1' _site-irar/assets/atlas-reportability-irar.js
