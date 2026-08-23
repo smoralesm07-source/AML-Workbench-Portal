@@ -31,6 +31,21 @@ assert.doesNotMatch(bridge, /localStorage/);
 assert.match(js, /const VIEW='pep-discovery'/);
 assert.match(js, /aml_pep_discovery_snapshot/);
 assert.match(js, /ATLAS_PEP_DISCOVERY_LATEST_V1/);
+assert.match(js, /active_or_recent_confirmed/);
+assert.match(js, /downstream_target_count/);
+assert.match(js, /targets_requested/);
+assert.match(js, /targets_with_pep_bf/);
+assert.match(js, /function topCases\(p\).*\.top/);
+assert.match(js, /requested_periods/);
+assert.match(js, /downloaded_periods/);
+assert.match(js, /failed_periods/);
+assert.match(js, /IFL_SCHEMA_EXACT_NO_INVENTED_FIELDS/);
+assert.doesNotMatch(js, /top_cases/);
+assert.doesNotMatch(js, /confirmed_for_discovery/);
+assert.doesNotMatch(js, /downstream_targets/);
+assert.doesNotMatch(js, /supplier_targets/);
+assert.doesNotMatch(js, /suppliers_with_pep_bf/);
+
 assert.match(js, /SUPABASE_RLS/);
 assert.match(js, /MEMORY_ONLY/);
 assert.match(js, /PEP-03/);
@@ -51,4 +66,4 @@ assert.match(release.pep_discovery_policy, /PEP_03_04_REVIEW/);
 assert.match(release.pep_discovery_policy, /NO_NAME_ONLY_JOIN/);
 assert.match(build.pep_discovery_contract, /SUPABASE_RLS_PRIVATE_LATEST_ONLY/);
 
-console.log('ATLAS PEP discovery 0500 contract: OK');
+console.log('ATLAS PEP discovery 0500 governed IFL contract: OK');
