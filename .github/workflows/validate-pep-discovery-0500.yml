@@ -6,6 +6,7 @@ on:
     paths:
       - 'assets/atlas-pep-discovery.js'
       - 'assets/atlas-pep-discovery.css'
+      - 'assets/atlas-pep-runtime-state-bridge.js'
       - 'sql/atlas_v0500_pep_discovery_snapshot.sql'
       - 'tests/atlas-pep-discovery-0500.mjs'
       - 'index.html'
@@ -18,6 +19,7 @@ on:
     paths:
       - 'assets/atlas-pep-discovery.js'
       - 'assets/atlas-pep-discovery.css'
+      - 'assets/atlas-pep-runtime-state-bridge.js'
       - 'sql/atlas_v0500_pep_discovery_snapshot.sql'
       - 'tests/atlas-pep-discovery-0500.mjs'
       - 'index.html'
@@ -42,7 +44,9 @@ jobs:
         with:
           python-version: '3.12'
       - name: Validate extension JavaScript
-        run: node --check assets/atlas-pep-discovery.js
+        run: |
+          node --check assets/atlas-pep-runtime-state-bridge.js
+          node --check assets/atlas-pep-discovery.js
       - name: Validate product integration contract
         run: node tests/atlas-pep-discovery-0500.mjs
       - name: Validate release JSON
@@ -56,10 +60,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          test -s _site-pep/assets/atlas-pep-runtime-state-bridge.js
           test -s _site-pep/assets/atlas-pep-discovery.js
           test -s _site-pep/assets/atlas-pep-discovery.css
           grep -q 'atlas-pep-discovery.css?v=0500-1' _site-pep/index.html
+          grep -q 'atlas-pep-runtime-state-bridge.js?v=0500-1' _site-pep/index.html
           grep -q 'atlas-pep-discovery.js?v=0500-1' _site-pep/index.html
+          ! grep -q 'MutationObserver' _site-pep/assets/atlas-pep-runtime-state-bridge.js
           ! grep -q 'MutationObserver' _site-pep/assets/atlas-pep-discovery.js
+          ! grep -q 'localStorage' _site-pep/assets/atlas-pep-runtime-state-bridge.js
           ! grep -q 'localStorage' _site-pep/assets/atlas-pep-discovery.js
           grep -q 'aml_pep_discovery_snapshot' _site-pep/assets/atlas-pep-discovery.js
