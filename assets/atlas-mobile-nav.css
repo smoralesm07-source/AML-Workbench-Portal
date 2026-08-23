@@ -1,0 +1,231 @@
+/* ATLAS AML · mobile navigation authority
+ * Mobile-only bottom navigation. Desktop sidebar remains the canonical desktop control.
+ */
+.atlas-mobile-nav,
+.atlas-mobile-sheet-backdrop{display:none}
+
+@media (max-width:767.98px){
+  html,body{max-width:100%;overflow-x:hidden}
+  .v019-shell{
+    grid-template-columns:minmax(0,1fr)!important;
+    min-height:100dvh!important;
+  }
+  .v019-side{display:none!important}
+  .v019-main{
+    width:100%!important;
+    min-width:0!important;
+    padding-bottom:calc(72px + env(safe-area-inset-bottom))!important;
+  }
+  .v019-content{
+    width:100%!important;
+    max-width:100%!important;
+    padding-left:12px!important;
+    padding-right:12px!important;
+    padding-bottom:calc(96px + env(safe-area-inset-bottom))!important;
+  }
+
+  body.atlas-mobile-sheet-open{overflow:hidden}
+
+  .atlas-mobile-nav{
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    z-index:920;
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    align-items:start;
+    gap:2px;
+    min-height:64px;
+    padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+    border-top:1px solid color-mix(in srgb,var(--line,#20364c) 88%,transparent);
+    background:color-mix(in srgb,var(--side,#091522) 94%,transparent);
+    box-shadow:0 -12px 32px rgba(0,0,0,.24);
+    -webkit-backdrop-filter:blur(18px) saturate(1.15);
+    backdrop-filter:blur(18px) saturate(1.15);
+  }
+  .atlas-mobile-tab{
+    min-width:0;
+    min-height:50px;
+    margin:0;
+    padding:5px 2px 3px;
+    border:0;
+    border-radius:10px;
+    background:transparent;
+    color:var(--muted,#8ca2b7);
+    font:inherit;
+    font-size:9px;
+    font-weight:760;
+    line-height:1.1;
+    letter-spacing:.01em;
+    cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
+  }
+  .atlas-mobile-tab:active{transform:scale(.98)}
+  .atlas-mobile-tab.is-active{
+    background:color-mix(in srgb,var(--blue,#3b82f6) 16%,transparent);
+    color:var(--text,#e9f0f7);
+  }
+  .atlas-mobile-tab-icon{
+    display:grid;
+    place-items:center;
+    width:24px;
+    height:24px;
+    margin:0 auto 2px;
+  }
+  .atlas-mobile-tab-icon svg{
+    width:20px;
+    height:20px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  .atlas-mobile-tab.is-active .atlas-mobile-tab-icon{color:var(--cyan,#38bdf8)}
+  .atlas-mobile-tab-label{
+    display:block;
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .atlas-mobile-sheet-backdrop{
+    position:fixed;
+    inset:0;
+    z-index:940;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    padding:0;
+    background:rgba(2,8,16,.58);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .16s ease;
+  }
+  .atlas-mobile-sheet-backdrop.is-open{
+    opacity:1;
+    pointer-events:auto;
+  }
+  .atlas-mobile-sheet{
+    width:100%;
+    max-height:min(78dvh,680px);
+    overflow:auto;
+    overscroll-behavior:contain;
+    padding:9px 12px calc(14px + env(safe-area-inset-bottom));
+    border:1px solid var(--line,#20364c);
+    border-bottom:0;
+    border-radius:18px 18px 0 0;
+    background:var(--side,#091522);
+    box-shadow:0 -18px 50px rgba(0,0,0,.34);
+    transform:translateY(18px);
+    transition:transform .18s ease;
+  }
+  .atlas-mobile-sheet-backdrop.is-open .atlas-mobile-sheet{transform:none}
+  .atlas-mobile-sheet-handle{
+    width:38px;
+    height:4px;
+    margin:2px auto 10px;
+    border-radius:999px;
+    background:color-mix(in srgb,var(--muted,#8ca2b7) 48%,transparent);
+  }
+  .atlas-mobile-sheet-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:2px 2px 9px;
+  }
+  .atlas-mobile-sheet-head strong{
+    color:var(--text,#e9f0f7);
+    font-size:14px;
+  }
+  .atlas-mobile-sheet-close{
+    width:36px;
+    height:36px;
+    border:1px solid var(--line,#20364c);
+    border-radius:10px;
+    background:var(--panel,#0d1927);
+    color:var(--text,#e9f0f7);
+    font-size:19px;
+    line-height:1;
+    cursor:pointer;
+  }
+  .atlas-mobile-sheet-list{display:grid;gap:7px}
+  .atlas-mobile-sheet-item{
+    display:grid;
+    grid-template-columns:36px minmax(0,1fr) auto;
+    align-items:center;
+    gap:10px;
+    min-height:54px;
+    width:100%;
+    padding:8px 10px;
+    border:1px solid var(--line,#20364c);
+    border-radius:12px;
+    background:var(--panel,#0d1927);
+    color:var(--text,#e9f0f7);
+    text-align:left;
+    cursor:pointer;
+  }
+  .atlas-mobile-sheet-item.is-active{
+    border-color:color-mix(in srgb,var(--blue,#3b82f6) 68%,var(--line,#20364c));
+    background:color-mix(in srgb,var(--blue,#3b82f6) 11%,var(--panel,#0d1927));
+  }
+  .atlas-mobile-sheet-item-icon{
+    display:grid;
+    place-items:center;
+    width:34px;
+    height:34px;
+    border-radius:10px;
+    background:var(--panel2,#122337);
+    color:var(--cyan,#38bdf8);
+  }
+  .atlas-mobile-sheet-item-icon svg{
+    width:19px;
+    height:19px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  .atlas-mobile-sheet-item-copy{min-width:0}
+  .atlas-mobile-sheet-item-copy b{
+    display:block;
+    overflow:hidden;
+    color:inherit;
+    font-size:11px;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .atlas-mobile-sheet-item-copy span{
+    display:block;
+    margin-top:2px;
+    overflow:hidden;
+    color:var(--muted,#8ca2b7);
+    font-size:8.5px;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .atlas-mobile-sheet-item-chevron{color:var(--muted,#8ca2b7);font-size:18px}
+  .atlas-mobile-sheet-separator{
+    height:1px;
+    margin:10px 2px;
+    background:var(--line,#20364c);
+  }
+
+  [data-atlas-theme="light"] .atlas-mobile-nav{
+    background:rgba(248,250,252,.96);
+    box-shadow:0 -10px 28px rgba(15,23,42,.12);
+  }
+  [data-atlas-theme="light"] .atlas-mobile-sheet-backdrop{background:rgba(15,23,42,.34)}
+  [data-atlas-theme="light"] .atlas-mobile-sheet{background:#f8fafc}
+}
+
+@media (min-width:768px){
+  .atlas-mobile-nav,
+  .atlas-mobile-sheet-backdrop{display:none!important}
+  body.atlas-mobile-sheet-open{overflow:auto!important}
+}
