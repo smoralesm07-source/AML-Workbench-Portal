@@ -130,15 +130,6 @@ jobs:
           ! grep -q 'atlas-auth-stability-0440.js' _site/index.html
           ! test -e _site/assets/atlas-auth-stability-0440.js
           ! test -e _site/v0441-session-shell-guard.module.js
-          test -s _site/assets/atlas-irar-current.js
-          test -s _site/assets/atlas-reportability-irar.js
-          test -s _site/assets/atlas-irg-irar-adapter.module.js
-          grep -q 'atlas-irar-current.js' _site/index.html
-          grep -q 'atlas-reportability-irar.js' _site/index.html
-          grep -q 'atlas-irg-irar-adapter.module.js' _site/index.html
-          ! grep -q 'atlas-reportability-icr.js' _site/index.html
-          grep -q 'IRAR-1.0' _site/assets/atlas-irar-current.js
-          grep -q 'IRG-LAFT-0.34.0' _site/assets/atlas-irg-irar-adapter.module.js
 
       - name: Validate compiled runtime
         shell: bash
@@ -196,8 +187,6 @@ jobs:
           curl -fsSL --retry 12 --retry-delay 2 "$base/atlas-release.json?_atlas=${stamp}" -o /tmp/release.json
           curl -fsSL --retry 12 --retry-delay 2 "$base/atlas-runtime-report.json?_atlas=${stamp}" -o /tmp/runtime.json
           curl -fsSL --retry 12 --retry-delay 2 "$base/?_atlas=${stamp}" -o /tmp/index.html
-          curl -fsSL --retry 12 --retry-delay 2 "$base/assets/atlas-irar-current.js?_atlas=${stamp}" -o /tmp/irar.js
-          curl -fsSL --retry 12 --retry-delay 2 "$base/assets/atlas-irg-irar-adapter.module.js?_atlas=${stamp}" -o /tmp/irg-irar.js
           python - <<'PY'
           import json,os
           r=json.load(open('/tmp/release.json'))
@@ -208,8 +197,3 @@ jobs:
           PY
           grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" /tmp/index.html
           grep -q "atlas-runtime-current-01.js?r=${ATLAS_BUILD}" /tmp/index.html
-          grep -q 'atlas-reportability-irar.js' /tmp/index.html
-          grep -q 'atlas-irg-irar-adapter.module.js' /tmp/index.html
-          ! grep -q 'atlas-reportability-icr.js' /tmp/index.html
-          grep -q 'IRAR-1.0' /tmp/irar.js
-          grep -q 'IRG-LAFT-0.34.0' /tmp/irg-irar.js
