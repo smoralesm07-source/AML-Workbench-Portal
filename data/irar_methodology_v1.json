@@ -1,0 +1,84 @@
+{
+  "schema": "ATLAS_IRAR_METHODOLOGY_V1",
+  "version": "IRAR-1.0",
+  "period": "2021-2025",
+  "name": "Índice de Rendimiento Analítico de ROS",
+  "status": "CURRENT",
+  "legacy_metric": {
+    "acronym": "ICR",
+    "status": "TRACEABILITY_ONLY",
+    "reason": "La denominación convertibilidad puede sugerir una probabilidad de conversión de cohorte que los agregados públicos no permiten demostrar."
+  },
+  "sources": {
+    "sent_ros": "https://raw.githubusercontent.com/smoralesm07-source/Radar_UAF/main/docs/data/reportability_sector_2025.json",
+    "ros_with_indications": "https://raw.githubusercontent.com/smoralesm07-source/Radar_UAF/main/docs/data/ros_conversion_sector_2021_2025.json"
+  },
+  "observed": {
+    "formula": "ros_with_indications_2021_2025 / ros_sent_2021_2025",
+    "display": "TRACEABILITY_SECONDARY"
+  },
+  "adjusted": {
+    "formula": "(indications + K * peer_expected_rate) / (sent_ros + K)",
+    "prior_strength_ros": 100,
+    "peer_method": "LEAVE_ONE_OUT_FAMILY_WITH_NATIONAL_LEAVE_ONE_OUT_FALLBACK",
+    "minimum_peer_sectors": 4,
+    "minimum_peer_ros": 100,
+    "display": "PRIMARY_COMPARATIVE"
+  },
+  "confidence": {
+    "formula": "sent_ros / (sent_ros + K)",
+    "ranking_minimum_ros": 100,
+    "bands": {
+      "low": "<0.50",
+      "medium": "0.50-<0.80",
+      "high": ">=0.80"
+    }
+  },
+  "relative": {
+    "formula": "irar_adjusted / peer_expected_rate",
+    "reference": 1.0
+  },
+  "irg_score": {
+    "formula": "50 + credibility * (clamp(50 + 25*log2(irar_relative),0,100) - 50)",
+    "neutral": 50,
+    "purpose": "Reduce la influencia en IRG de extremos con poca evidencia y conserva desviaciones de sectores con volumen suficiente."
+  },
+  "profile_iir_x_irar": {
+    "x": "IIR",
+    "y": "IRAR_RELATIVE",
+    "thresholds": {
+      "iir_low": "<0.75",
+      "iir_high": ">1.50",
+      "irar_relative_low": "<0.80",
+      "irar_relative_high": ">1.25"
+    },
+    "profiles": [
+      "INTENSIVO_PRODUCTIVO",
+      "INTENSIVO_BAJO_RENDIMIENTO",
+      "SELECTIVO_PRODUCTIVO",
+      "BAJA_ACTIVACION",
+      "COMPORTAMIENTO_ESPERADO"
+    ],
+    "composite_score": "NOT_USED"
+  },
+  "peer_families": [
+    "PUBLICO",
+    "PAGOS_FX_REMESAS",
+    "INTERMEDIACION_CREDITO",
+    "MERCADO_CAPITALES",
+    "SEGUROS_PREVISION",
+    "INMOBILIARIO_LEGAL",
+    "BIENES_ALTO_VALOR",
+    "JUEGO_APUESTAS",
+    "COMERCIO_FRONTERA",
+    "OTRAS_APNFD"
+  ],
+  "guardrails": [
+    "HISTORICAL_AGGREGATE_ANALYTICAL_YIELD_PROXY_NOT_COHORT_CONVERSION_PROBABILITY",
+    "NOT_INDIVIDUAL_ROS_QUALITY",
+    "NOT_ENTITY_RISK",
+    "NOT_COMPLIANCE",
+    "LOW_VOLUME_SECTORS_REQUIRE_VISIBLE_CONFIDENCE_AND_ARE_EXCLUDED_FROM_PRIMARY_RANKING",
+    "IIR_X_IRAR_PROFILE_IS_DESCRIPTIVE_NOT_A_FINDING"
+  ]
+}
