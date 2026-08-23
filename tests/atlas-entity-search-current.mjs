@@ -11,12 +11,11 @@ const manifest=JSON.parse(fs.readFileSync('atlas-runtime-manifest.json','utf8'))
 const release=JSON.parse(fs.readFileSync('atlas-release.json','utf8'));
 const build=JSON.parse(fs.readFileSync('build.json','utf8'));
 
+// Entity 360 authorities are feature contracts, not release-number pins.
 assert.equal(release.release,manifest.release);
 assert.equal(release.release,build.app_version);
 assert.equal(release.build,manifest.build);
 assert.equal(release.build,build.build);
-assert.equal(release.release,'0.44.9');
-assert.equal(release.build,'0449');
 
 assert.ok(manifest.styles.includes('v0447-entity-workspace.css'));
 assert.ok(manifest.styles.includes('v0449-entity-tax-docauth.css'));

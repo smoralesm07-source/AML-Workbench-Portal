@@ -52,4 +52,7 @@ jobs:
           test -f _site-reconciliation/index.html
           grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" _site-reconciliation/index.html
           grep -q "data-aml-build=\"${ATLAS_BUILD}\"" _site-reconciliation/index.html
-          grep -R -q 'VIEW_SCOPED_TOKEN+FAIL_SOFT_AGGREGATES+STRUCTURED_ERRORS' _site-reconciliation/atlas-runtime-current-*.js
+          grep -R -q 'VIEW_SCOPED+LOAD_SHEDDING+NO_PARALLEL_EXACT_COUNTS+FAIL_SOFT' _site-reconciliation/atlas-runtime-current-*.js
+          grep -R -q 'parallelExactCounts:false' _site-reconciliation/atlas-runtime-current-*.js
+          grep -R -q 'pageExactCount:false' _site-reconciliation/atlas-runtime-current-*.js
+          grep -R -q 'secondaryConcurrency:1' _site-reconciliation/atlas-runtime-current-*.js
