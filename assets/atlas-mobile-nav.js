@@ -205,8 +205,7 @@
     const shell=document.querySelector('.v019-shell');
     const existing=document.querySelector('#atlas-mobile-nav');
     if(!shell){
-      existing?.remove();
-      document.querySelector('#atlas-mobile-sheet-backdrop')?.remove();
+      document.querySelector('#atlas-mobile-navigation-root')?.remove();
       document.body.classList.remove('atlas-mobile-sheet-open');
       return false;
     }
