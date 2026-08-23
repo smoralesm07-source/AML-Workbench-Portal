@@ -4,16 +4,11 @@
   const THEME_KEY='atlas-aml:theme:v1';
   const NEWS_KEY='atlas-aml:nav-news:v1';
   const GROUPS=[
-    // 0470: el trabajo pendiente va primero. Las demás vistas describen el
-    // estado del universo; ésta es la única que espera una decisión.
-    {label:'Trabajo',views:['discovery','validation']},
     {label:'Explorar',views:['overview','entities','territory']},
     {label:'Radares',views:['sanctions','public-spend','osfl']},
     {label:'Análisis',views:['questions']}
   ];
   const META={
-    discovery:{label:'Descubrimiento',icon:'radar'},
-    validation:{label:'Validación',icon:'check'},
     overview:{label:'Radar integrado',icon:'grid'},
     entities:{label:'Entidades',icon:'entity'},
     territory:{label:'Territorio',icon:'map'},
@@ -29,9 +24,7 @@
     alert:'<path d="M12 3 2.8 20h18.4L12 3Z"/><path d="M12 9v5M12 17.5h.01"/>',
     flow:'<circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7 6h10M6.5 7.6l4.3 8M17.5 7.6l-4.3 8"/>',
     network:'<circle cx="12" cy="5" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="18" r="2"/><path d="m11 6.8-5 9.4M13 6.8l5 9.4M7 18h10"/>',
-    question:'<circle cx="12" cy="12" r="9"/><path d="M9.8 9.5a2.5 2.5 0 1 1 3.3 2.4c-.8.3-1.1.8-1.1 1.6v.5M12 17.5h.01"/>',
-    check:'<path d="M9 4.5H6.5A1.5 1.5 0 0 0 5 6v13a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19V6a1.5 1.5 0 0 0-1.5-1.5H15"/><rect x="9" y="3" width="6" height="3" rx="1"/><path d="m8.8 13.2 2.2 2.2 4.4-4.4"/>',
-    radar:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/><path d="M12 12 18.4 5.6"/>'
+    question:'<circle cx="12" cy="12" r="9"/><path d="M9.8 9.5a2.5 2.5 0 1 1 3.3 2.4c-.8.3-1.1.8-1.1 1.6v.5M12 17.5h.01"/>'
   };
 
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -113,23 +106,6 @@
     button.addEventListener('click',()=>window.navigate?.('public-spend'));
     nav.appendChild(button);
   }
-  /* 0470: mismo contrato que ensurePublicSpend. El botón sólo aparece si el
-     módulo de la cola está cargado, de modo que la navegación nunca ofrece una
-     ruta que no existe. */
-  function ensureValidation(nav){
-    if(nav.querySelector('[data-view="validation"]'))return;
-    if(!window.AtlasValidationQueue&&typeof window.loadValidation!=='function')return;
-    const button=document.createElement('button');button.type='button';button.className='v019-nav-btn';button.dataset.view='validation';button.textContent='Validación';
-    button.addEventListener('click',()=>window.navigate?.('validation'));
-    nav.insertBefore(button,nav.firstChild);
-  }
-  function ensureDiscovery(nav){
-    if(nav.querySelector('[data-view="discovery"]'))return;
-    if(!window.AtlasDiscoveryQueue&&typeof window.loadDiscovery!=='function')return;
-    const button=document.createElement('button');button.type='button';button.className='v019-nav-btn';button.dataset.view='discovery';button.textContent='Descubrimiento';
-    button.addEventListener('click',()=>window.navigate?.('discovery'));
-    nav.insertBefore(button,nav.firstChild);
-  }
   function rebuildButton(button,view){
     const meta=META[view];if(!meta)return;
     button.classList.add('atlas-nav-btn');button.removeAttribute('style');button.setAttribute('aria-label',meta.label);
@@ -140,8 +116,6 @@
     const nav=document.querySelector('.v019-nav');if(!nav)return false;
     nav.querySelectorAll('[data-view="uaf"]').forEach(el=>el.remove());
     ensurePublicSpend(nav);
-    ensureValidation(nav);
-    ensureDiscovery(nav);
     const buttons=new Map([...nav.querySelectorAll('.v019-nav-btn[data-view]')].map(b=>[b.dataset.view,b]));
     for(const [view,button] of buttons){
       if(!META[view])continue;
