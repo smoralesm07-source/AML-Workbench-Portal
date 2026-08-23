@@ -26,7 +26,9 @@
     "display": "PRIMARY_COMPARATIVE"
   },
   "confidence": {
+    "display_label": "Credibilidad IRAR",
     "formula": "sent_ros / (sent_ros + K)",
+    "interpretation": "Peso de los datos propios frente al suavizamiento. No es una probabilidad ni un intervalo de confianza.",
     "ranking_minimum_ros": 100,
     "bands": {
       "low": "<0.50",
@@ -44,13 +46,17 @@
     "purpose": "Reduce la influencia en IRG de extremos con poca evidencia y conserva desviaciones de sectores con volumen suficiente."
   },
   "profile_iir_x_irar": {
-    "x": "IIR",
-    "y": "IRAR_RELATIVE",
+    "x": "IIR_2025",
+    "y": "IRAR_RELATIVE_2021_2025",
     "thresholds": {
       "iir_low": "<0.75",
       "iir_high": ">1.50",
       "irar_relative_low": "<0.80",
       "irar_relative_high": ">1.25"
+    },
+    "expected_zone": {
+      "iir": "0.75-1.50",
+      "irar_relative": "0.80-1.25"
     },
     "profiles": [
       "INTENSIVO_PRODUCTIVO",
@@ -78,7 +84,7 @@
     "NOT_INDIVIDUAL_ROS_QUALITY",
     "NOT_ENTITY_RISK",
     "NOT_COMPLIANCE",
-    "LOW_VOLUME_SECTORS_REQUIRE_VISIBLE_CONFIDENCE_AND_ARE_EXCLUDED_FROM_PRIMARY_RANKING",
+    "LOW_VOLUME_SECTORS_REQUIRE_VISIBLE_CREDIBILITY_AND_ARE_EXCLUDED_FROM_PRIMARY_RANKING",
     "IIR_X_IRAR_PROFILE_IS_DESCRIPTIVE_NOT_A_FINDING"
   ]
 }
