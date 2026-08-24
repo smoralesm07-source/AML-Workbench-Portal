@@ -1,0 +1,78 @@
+name: Mercado Público History 2023-2026
+
+on:
+  workflow_dispatch:
+    inputs:
+      year:
+        description: 'Año 2023-2026'
+        required: true
+        default: '2023'
+      month:
+        description: 'Mes 1-12'
+        required: true
+        default: '1'
+      source_url:
+        description: 'URL oficial opcional'
+        required: false
+        default: ''
+  pull_request:
+    paths:
+      - 'ops/mercado-publico/history_ingest.py'
+      - '.github/workflows/mercado-publico-history-2023-2026.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/mercado-publico/history_ingest.py'
+      - '.github/workflows/mercado-publico-history-2023-2026.yml'
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: mercado-publico-history-${{ github.event.inputs.year || '2023' }}-${{ github.event.inputs.month || '1' }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate historical loader
+        run: |
+          python -m py_compile ops/mercado-publico/history_ingest.py
+          python ops/mercado-publico/history_ingest.py --help >/dev/null
+
+  ingest:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Resolve period
+        id: period
+        env:
+          INPUT_YEAR: ${{ github.event.inputs.year }}
+          INPUT_MONTH: ${{ github.event.inputs.month }}
+          INPUT_URL: ${{ github.event.inputs.source_url }}
+        run: |
+          echo "year=${INPUT_YEAR:-2023}" >> "$GITHUB_OUTPUT"
+          echo "month=${INPUT_MONTH:-1}" >> "$GITHUB_OUTPUT"
+          echo "url=${INPUT_URL:-}" >> "$GITHUB_OUTPUT"
+      - name: Ingest official ChileCompra month
+        env:
+          YEAR: ${{ steps.period.outputs.year }}
+          MONTH: ${{ steps.period.outputs.month }}
+          SOURCE_URL: ${{ steps.period.outputs.url }}
+        run: |
+          set -euo pipefail
+          args=(--year "$YEAR" --month "$MONTH")
+          if [ -n "$SOURCE_URL" ]; then args+=(--url "$SOURCE_URL"); fi
+          python ops/mercado-publico/history_ingest.py "${args[@]}"
