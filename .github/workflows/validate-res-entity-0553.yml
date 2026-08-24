@@ -1,0 +1,55 @@
+name: Validate Entity RES 0553
+
+on:
+  pull_request:
+    paths:
+      - 'assets/atlas-entity-res-0553.js'
+      - 'assets/atlas-entity-res-explorer-0553.js'
+      - 'assets/atlas-entity-res-bootstrap-0553.js'
+      - 'assets/atlas-entity-res-0553.css'
+      - 'assets/atlas-entity-res-explorer-0553.css'
+      - 'assets/atlas-entity-uaf-highlight-0548.js'
+      - '.github/workflows/validate-res-entity-0553.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check assets/atlas-entity-res-0553.js
+          node --check assets/atlas-entity-res-explorer-0553.js
+          node --check assets/atlas-entity-res-bootstrap-0553.js
+          node --check assets/atlas-entity-uaf-highlight-0548.js
+      - name: Governance contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          entity=Path('assets/atlas-entity-res-0553.js').read_text()
+          explorer=Path('assets/atlas-entity-res-explorer-0553.js').read_text()
+          hook=Path('assets/atlas-entity-uaf-highlight-0548.js').read_text()
+          required=[
+            'aml_entity_master_v0553',
+            'aml_entity_res_timeline_v0553',
+            'aml_entity_res_relationship_v0553',
+            "identityPolicy:'RUT_EXACTO_ONLY'",
+            "relationshipPolicy:'DOCUMENTED_ONLY'",
+            'scoreMutation:false',
+          ]
+          for marker in required:
+            assert marker in entity, marker
+          assert '__ATLAS_ENTITY_RES__.load' in explorer
+          assert 'atlas-entity-res-bootstrap-0553.js' in hook
+          assert 'ownership_pct' in entity
+          assert 'requires_review' in entity
+          assert 'no infiere socios' in entity.lower()
+          assert 'scrap' not in entity.lower()
+          print('RES entity governance contract OK')
+          PY
