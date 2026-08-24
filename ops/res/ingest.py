@@ -23,7 +23,6 @@ import hashlib
 import json
 import os
 import re
-import shutil
 import tempfile
 import time
 import unicodedata
@@ -117,6 +116,8 @@ def number(value: object) -> float | None:
         text = text.replace(".", "").replace(",", ".") if text.rfind(",") > text.rfind(".") else text.replace(",", "")
     elif "," in text:
         text = text.replace(",", ".")
+    elif re.fullmatch(r"-?\d{1,3}(?:\.\d{3})+", text):
+        text = text.replace(".", "")
     text = re.sub(r"[^0-9.\-]", "", text)
     try:
         return float(text) if text else None
@@ -206,15 +207,13 @@ def select_resources(package: dict, year: str | None, all_years: bool) -> list[d
     selected = [r for r in resources if resource_year(r) == target]
     if not selected:
         raise RuntimeError(f"Official RES package has no CSV resource resolved for year {target}")
-    # A year may have superseded files. Prefer newest metadata timestamp/name.
     selected.sort(key=lambda r: str(r.get("last_modified") or r.get("created") or ""), reverse=True)
     return [selected[0]]
 
 
 def valid_source_url(url: str) -> None:
     parsed = urllib.parse.urlsplit(url)
-    host = (parsed.hostname or "").lower()
-    if parsed.scheme != "https" or host != "datos.gob.cl":
+    if parsed.scheme != "https" or (parsed.hostname or "").lower() != "datos.gob.cl":
         raise ValueError("Unexpected RES source URL; only datos.gob.cl is allowed")
 
 
@@ -289,7 +288,7 @@ def parse_csv(path: Path, snapshot_id: str, source_url: str, sha256: str) -> tup
                 min_date = constitution_date if min_date is None or constitution_date < min_date else min_date
                 max_date = constitution_date if max_date is None or constitution_date > max_date else max_date
             actuation = str(get(raw_row, "actuation_type") or "CONSTITUCIÓN").strip() or "CONSTITUCIÓN"
-            row = {
+            rows.append({
                 "rut": formatted_rut,
                 "rut_key": rut_key,
                 "source_record_id": str(get(raw_row, "source_record_id") or "").strip() or None,
@@ -306,14 +305,8 @@ def parse_csv(path: Path, snapshot_id: str, source_url: str, sha256: str) -> tup
                 "social_commune": str(get(raw_row, "social_commune") or "").strip() or None,
                 "social_region": integer(get(raw_row, "social_region")),
                 "source_snapshot_id": snapshot_id,
-                "source_payload": {
-                    "actuation_type": actuation,
-                    "source_url": source_url,
-                    "source_sha256": sha256,
-                    "collection_mode": "DATOS_GOB_CKAN",
-                },
-            }
-            rows.append(row)
+                "source_payload": {"actuation_type": actuation, "source_url": source_url, "source_sha256": sha256, "collection_mode": "DATOS_GOB_CKAN"},
+            })
     stats = {
         "rows_observed": total,
         "rows_accepted": len(rows),
@@ -338,7 +331,6 @@ def ingest_resource(resource: dict, license_title: str | None) -> dict:
     if not resource_id or not url:
         raise RuntimeError("RES resource missing id/url")
     valid_source_url(url)
-
     if ckan_hash:
         existing = api({"action": "snapshot_status", "resource_id": resource_id, "source_hash": ckan_hash})
         if existing.get("exists") and (existing.get("snapshot") or {}).get("status") == "NORMALIZED":
@@ -351,16 +343,10 @@ def ingest_resource(resource: dict, license_title: str | None) -> dict:
         source_hash = ckan_hash or sha256
         sid = snapshot_id(resource, source_hash)
         api({"action": "snapshot", "row": {
-            "snapshot_id": sid,
-            "dataset_id": DATASET_ID,
-            "resource_id": resource_id,
-            "resource_name": resource.get("name"),
-            "resource_url": url,
-            "source_hash": source_hash,
+            "snapshot_id": sid, "dataset_id": DATASET_ID, "resource_id": resource_id,
+            "resource_name": resource.get("name"), "resource_url": url, "source_hash": source_hash,
             "source_updated_at": resource.get("last_modified") or resource.get("metadata_modified") or resource.get("created"),
-            "file_bytes": size,
-            "license": license_title,
-            "status": "INGESTING",
+            "file_bytes": size, "license": license_title, "status": "INGESTING",
             "metadata": {"sha256": sha256, "ckan_hash": ckan_hash or None, "year": resource_year(resource)},
         }})
         try:
@@ -369,8 +355,7 @@ def ingest_resource(resource: dict, license_title: str | None) -> dict:
                 raise RuntimeError("RES resource produced zero accepted companies")
             for batch in batches(rows, 400):
                 api({"action": "company_batch", "rows": batch}, timeout=240)
-            cutoff = stats.get("max_constitution_date")
-            final = api({"action": "finalize", "snapshot_id": sid, "record_count": len(rows), "cutoff_date": cutoff,
+            final = api({"action": "finalize", "snapshot_id": sid, "record_count": len(rows), "cutoff_date": stats.get("max_constitution_date"),
                          "metadata": {"sha256": sha256, "ckan_hash": ckan_hash or None, "resource_year": resource_year(resource), "coverage": stats}}, timeout=240)
             out = {"ok": True, "resource_id": resource_id, "snapshot_id": sid, "sha256": sha256, "bytes": size, "stats": stats, "final": final}
             print(json.dumps(out, ensure_ascii=False))
@@ -387,6 +372,7 @@ def self_test() -> None:
     assert rut_parts("78.325.627-4") == ("78325627-4", "783256274")
     assert date_iso("24-08-2026") == "2026-08-24"
     assert integer("Región 13") == 13
+    assert number("1.000.000") == 1000000.0
     sample = "ID;RUT;Razon Social;Fecha de actuacion (1era firma);Fecha de registro (ultima firma);Fecha de aprobacion x SII;Anio;Mes;Comuna Tributaria;Region Tributaria;Codigo de sociedad;Tipo de actuacion;Capital;Comuna Social;Region Social\n1;78.325.627-4;Astraly SpA;01-01-2026;02-01-2026;03-01-2026;2026;Enero;EST CENTRAL;13;SpA;CONSTITUCION;1.000.000;SANTIAGO;13\n"
     with tempfile.TemporaryDirectory() as td:
         p = Path(td) / "sample.csv"
