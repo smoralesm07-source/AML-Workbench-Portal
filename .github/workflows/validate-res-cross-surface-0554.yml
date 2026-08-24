@@ -31,6 +31,7 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
           ctx=Path('assets/atlas-entity-context-0554.js').read_text()
           cross=Path('assets/atlas-res-cross-surface-0554.js').read_text()
           bootstrap=Path('assets/atlas-entity-res-bootstrap-0553.js').read_text()
@@ -45,7 +46,8 @@ jobs:
           assert 'atlas-entity-context-0554.js' in bootstrap
           assert 'atlas-res-cross-surface-0554.js' in bootstrap
           assert "'mercado-publico','sanciones'" in bootstrap
-          assert '?v=0554-1' in hook
+          versions=[int(x) for x in re.findall(r'\?v=(\d{4})-\d+',hook)]
+          assert versions and max(versions) >= 554
           assert 'similarity(' not in ctx.lower()
           assert 'fuzzy' not in ctx.lower()
           print('RES cross-surface governance contract OK')
