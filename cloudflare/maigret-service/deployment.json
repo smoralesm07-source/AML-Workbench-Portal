@@ -1,0 +1,10 @@
+{
+  "service": "atlas-maigret-osint",
+  "status": "failure",
+  "worker_url": "",
+  "deploy_exit_code": "1",
+  "smoke_outcome": "skipped",
+  "source_commit": "23bb04a1f93986849897ac944cf379615364ab73",
+  "run_url": "https://github.com/smoralesm07-source/AML-Workbench-Portal/actions/runs/32751896469",
+  "generated_at": "2026-08-24T16:38:31Z"
+}
