@@ -19,7 +19,7 @@
     {key:'international',title:'Exposición y screening internacional',codes:['ICIJ_OFFSHORE','UN_SANCTIONS','OFAC','EU_SANCTIONS','UK_SANCTIONS','WORLD_BANK','IDB_SANCTIONS']},
     {key:'ondemand',title:'Profundización OSINT bajo demanda',codes:['SPIDERFOOT','MAIGRET']}
   ];
-  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const db=()=>{try{return typeof sb!=='undefined'?sb:(window.sb||null);}catch(_error){return window.sb||null;}};
   const day=v=>v?String(v).slice(0,10):'—';
   const selected=()=>{try{return (typeof state!=='undefined'?state:(window.state||null))?.selectedEntity||null;}catch(_error){return null;}};
