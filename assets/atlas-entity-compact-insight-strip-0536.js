@@ -41,7 +41,8 @@
   }
   function loadedCount(){
     const text=document.querySelector('.aex')?.textContent||'';
-    return labeled(text,'CARGADAS?')??document.querySelectorAll('.aex-print:not(.sample)').length||0;
+    const labeledCount=labeled(text,'CARGADAS?');
+    return labeledCount??(document.querySelectorAll('.aex-print:not(.sample)').length||0);
   }
   function sourceStats(){
     const prints=[...document.querySelectorAll('.aex-print:not(.sample)')];
@@ -67,6 +68,10 @@
     const legend=SOURCE_META.map(([k,label])=>`<span class="${k}"><i></i>${esc(label)} <b>${stats.out[k]}</b></span>`).join('');
     return `<div class="aex-source-mini">${bars}</div><div class="aex-source-legend">${legend}</div>`;
   }
+  function snapshot(cards){
+    const prints=[...document.querySelectorAll('.aex-print:not(.sample)')].map(p=>SOURCE_META.map(([k])=>p.querySelector(`i.${k}.on`)?'1':'0').join('')).join('|');
+    return [cards.map(c=>norm(c.textContent)).join('|'),prints,loadedCount()].join('::');
+  }
   function build(cards,legacy){
     const loaded=loadedCount(),p=priorityStats(cards[0]),s=sourceStats(),t=territoryStats(cards[2],loaded);
     const totalPriority=p.marked+p.unmarked;
@@ -90,11 +95,13 @@
     const heads=TITLES.map(titleNode);if(heads.some(x=>!x)){existing?.remove();return;}
     const cards=heads.map(ownCard);if(cards.some(x=>!x))return;
     const legacy=commonAncestor(cards);if(!legacy||legacy===document.querySelector('#content')||legacy===document.querySelector('.aex'))return;
-    if(existing&&existing.dataset.legacyNodeId===legacy.dataset.aexLegacyId)return;
+    const fingerprint=snapshot(cards);
+    if(existing&&existing.dataset.fingerprint===fingerprint)return;
+    const wasExpanded=existing?.querySelector('.aex-insight-detail')?.getAttribute('aria-expanded')==='true';
     existing?.remove();
-    if(!legacy.dataset.aexLegacyId)legacy.dataset.aexLegacyId='legacy-'+Date.now();
     legacy.classList.add('aex-legacy-analytics-hidden');legacy.classList.remove('aex-legacy-analytics-expanded');
-    const strip=build(cards,legacy);strip.dataset.legacyNodeId=legacy.dataset.aexLegacyId;legacy.insertAdjacentElement('beforebegin',strip);
+    const strip=build(cards,legacy);strip.dataset.fingerprint=fingerprint;legacy.insertAdjacentElement('beforebegin',strip);
+    if(wasExpanded)strip.querySelector('.aex-insight-detail')?.click();
     window.__ATLAS_ENTITY_COMPACT_INSIGHT_0536__={active:true,release:'0.53.6',replacesLegacyAnalytics:true,dynamic:true,legacyDetailAvailable:true,updatedAt:new Date().toISOString()};
   }
   function schedule(){if(scheduled)return;scheduled=true;setTimeout(mount,80);}
