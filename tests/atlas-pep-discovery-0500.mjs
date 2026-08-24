@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 const read = path => fs.readFileSync(path, 'utf8');
 const js = read('assets/atlas-pep-discovery.js');
 const bridge = read('assets/atlas-pep-runtime-state-bridge.js');
+const availability = read('assets/atlas-pep-availability-0501.js');
 const css = read('assets/atlas-pep-discovery.css');
 const html = read('index.html');
 const release = JSON.parse(read('atlas-release.json'));
@@ -17,10 +18,13 @@ assert.equal(build.build, '0500');
 assert.equal(runtime.release, '0.50.0');
 assert.equal(runtime.build, '0500');
 
-assert.match(html, /atlas-pep-discovery\.css\?v=0500-1/);
-assert.match(html, /atlas-pep-runtime-state-bridge\.js\?v=0500-1/);
-assert.match(html, /atlas-pep-discovery\.js\?v=0500-1/);
+// 0501 is a cache-bust / fail-soft hotfix over the 0.50.0 product contract.
+assert.match(html, /atlas-pep-discovery\.css\?v=0501-1/);
+assert.match(html, /atlas-pep-runtime-state-bridge\.js\?v=0501-1/);
+assert.match(html, /atlas-pep-discovery\.js\?v=0501-1/);
+assert.match(html, /atlas-pep-availability-0501\.js\?v=0501-1/);
 assert.ok(html.indexOf('atlas-pep-runtime-state-bridge.js') < html.indexOf('atlas-pep-discovery.js'));
+assert.ok(html.indexOf('atlas-pep-discovery.js') < html.indexOf('atlas-pep-availability-0501.js'));
 assert.match(html, /data-atlas-release="0\.50\.0"/);
 
 assert.match(bridge, /typeof state === 'undefined'/);
@@ -56,6 +60,11 @@ assert.doesNotMatch(js, /localStorage/);
 assert.doesNotMatch(js, /\.\/data\/pep_discovery_latest\.json/);
 assert.doesNotMatch(js, /service[_-]?role/i);
 
+assert.match(availability, /status:'EMPTY'/);
+assert.match(availability, /AtlasPepDiscovery\?\.open/);
+assert.doesNotMatch(availability, /MutationObserver/);
+assert.doesNotMatch(availability, /localStorage/);
+
 assert.match(css, /\.atlas-pep\{/);
 assert.match(css, /@media\(max-width:760px\)/);
 assert.match(css, /prefers-reduced-motion/);
@@ -64,6 +73,7 @@ assert.match(release.pep_discovery_policy, /PEP_NOT_ADVERSE/);
 assert.match(release.pep_discovery_policy, /PEP_01_02_05_CONTEXT_ONLY/);
 assert.match(release.pep_discovery_policy, /PEP_03_04_REVIEW/);
 assert.match(release.pep_discovery_policy, /NO_NAME_ONLY_JOIN/);
+assert.match(release.pep_discovery_policy, /EMPTY_SNAPSHOT_IS_OPERATIONAL_STATE_NOT_ZERO_RESULTS/);
 assert.match(build.pep_discovery_contract, /SUPABASE_RLS_PRIVATE_LATEST_ONLY/);
 
-console.log('ATLAS PEP discovery 0500 governed IFL contract: OK');
+console.log('ATLAS PEP discovery 0500 governed IFL contract + 0501 availability hotfix: OK');
