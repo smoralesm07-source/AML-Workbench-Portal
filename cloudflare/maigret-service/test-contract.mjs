@@ -17,9 +17,15 @@ assert.match(docker,/soxoj\/maigret\.git@a187f616de096d13a26cededc6bb62281107003
 assert.match(cfg,/"class_name":\s*"Sandbox"/);
 assert.match(cfg,/"max_instances":\s*2/);
 assert.match(runtime,/BLOCKED_TAGS/);
+assert.match(runtime,/build_intelligence/);
+assert.match(runtime,/"attributes": attributes/);
+assert.match(runtime,/"links": links/);
+assert.match(runtime,/"alias_candidates": alias_candidates/);
+assert.match(runtime,/"corroborated_attributes"/);
+assert.match(runtime,/evidence_strength_not_identity_probability/);
 assert.match(runtime,/"identity_assertion": False/);
 assert.match(runtime,/"score_mutation": False/);
 assert.match(runtime,/"persisted": False/);
 assert.match(runtime,/--top-sites/);
 assert.match(runtime,/--json", "simple"/);
-console.log('Cloudflare Maigret service 0526 contract OK');
+console.log('Cloudflare Maigret service 0535 intelligence contract OK');

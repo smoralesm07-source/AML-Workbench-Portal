@@ -30,7 +30,7 @@ export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
     if (req.method === 'GET' && url.pathname === '/health') {
-      return respond({ ok: true, service: 'atlas-maigret-osint', runtime: 'cloudflare-sandbox', version: '0526.1' });
+      return respond({ ok: true, service: 'atlas-maigret-osint', runtime: 'cloudflare-sandbox', version: '0535.1', intelligence_extraction: true });
     }
     if (req.method !== 'POST' || url.pathname !== '/v1/maigret') return respond({ error: 'NOT_FOUND' }, 404);
 
@@ -54,9 +54,9 @@ export default {
     const payload = {
       username,
       recursive: body?.recursive !== false,
-      top_sites: Number(body?.top_sites || 180),
+      top_sites: Number(body?.top_sites || 220),
       site_timeout: Number(body?.site_timeout || 6),
-      total_timeout: Number(body?.total_timeout || 105),
+      total_timeout: Number(body?.total_timeout || 120),
     };
 
     const sandbox = getSandbox(env.Sandbox, await userSandboxId(subject));
@@ -71,7 +71,7 @@ export default {
       const parsed = JSON.parse(stdout || '{}');
       return respond({
         ...parsed,
-        transport: { provider: 'cloudflare', sandbox: true, worker_version: '0526.1' },
+        transport: { provider: 'cloudflare', sandbox: true, worker_version: '0535.1', intelligence_extraction: true },
       }, parsed?.ok === false ? 502 : 200);
     } catch (error) {
       try { await sandbox.exec(`rm -f ${requestPath}`); } catch {}
