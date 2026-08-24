@@ -1,6 +1,6 @@
 'use strict';
 
-/* ATLAS AML 0.51.0 · build 0510 · Caracterización profunda de la entidad
+/* ATLAS AML 0.51.1 · build 0511 · Caracterización profunda de la entidad
  *
  * Problema que corrige
  * --------------------
@@ -32,12 +32,23 @@
  * - Todo bloque declara su fuente y su corte. Una entidad ausente de un corte
  *   se lee como no materializada, nunca como cero.
  *
+ * Rediseño 0511
+ * -------------
+ * Los recuentos en prosa se sustituyen por las series que ya existían: la
+ * trayectoria se dibuja desde aml_sii_entity_year (escalón de tramo y área de
+ * dotación, con los cambios declarados marcados sobre el eje), la recurrencia
+ * sancionatoria se dibuja sobre un eje temporal con sus ventanas de 36 y 60
+ * meses, la estructura se compara contra pares en rieles, y cada marca abre una
+ * cascada que muestra dónde recorta el tope individual y dónde la confianza.
+ * Los guardarraíles se concentran en "Cómo se lee esta ficha" sin perder
+ * ninguno.
+ *
  * Seguridad: sólo lectura bajo la sesión y RLS existentes. No toca Auth, Entra
  * ni refresh tokens. Sin MutationObserver. Sin almacenamiento en el navegador.
  */
 (function atlasEntityDossier0510(){
-  const RELEASE='0.51.0';
-  const BUILD='0510';
+  const RELEASE='0.51.1';
+  const BUILD='0511';
   const AUTHORITY='ENTITY360_DEEP_CHARACTERIZATION_0510';
   const BASE_RENDER=typeof window.v0203RenderEntity==='function'?window.v0203RenderEntity:null;
   if(!BASE_RENDER){
@@ -56,6 +67,7 @@
   const UAF_PROFILE_TABLE='aml_uaf_entity_profile';
   const OSFL_PROFILE_TABLE='aml_osfl_profile';
   const DISPOSITION_VIEW='aml_v0460_entity_disposition_current';
+  const YEAR_TABLE='aml_sii_entity_year';
 
   const CACHE=new Map();
   const INFLIGHT=new Map();
@@ -63,7 +75,9 @@
   let drawerBound=false;
 
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const num=v=>{const n=Number(v);return Number.isFinite(n)?n:null;};
+  /* Number(null) y Number('') devuelven 0: sin este guardia un dato ausente se
+     renderiza como cero, que es exactamente lo que la regla de la casa prohíbe. */
+  const num=v=>{if(v===null||v===undefined||v==='')return null;const n=Number(v);return Number.isFinite(n)?n:null;};
   const fmt=(v,d=0)=>{const n=num(v);return n==null?'—':n.toLocaleString('es-CL',{minimumFractionDigits:d,maximumFractionDigits:d});};
   const arr=v=>Array.isArray(v)?v:(v==null||v===''?[]:[v]);
   const soft=q=>Promise.resolve(q).then(v=>v,error=>({data:null,error}));
@@ -113,7 +127,7 @@
     const id=entity?.entity_id;
     if(!client||!id)return null;
     const rut=entity?.rut||null;
-    const [score,marks,peers,structure,trajectory,sanctionSummary,sanctionIdentity,links,uaf,osfl,disposition]=await Promise.all([
+    const [score,marks,peers,structure,trajectory,sanctionSummary,sanctionIdentity,links,uaf,osfl,disposition,series]=await Promise.all([
       soft(client.from(SCORE_SNAPSHOT).select('*').eq('entity_id',id).maybeSingle()),
       soft(client.from(MARK_SNAPSHOT).select('*').eq('entity_id',id).order('contribution',{ascending:false,nullsFirst:false}).limit(24)),
       soft(client.from(PEER_SNAPSHOT).select('*').eq('entity_id',id).order('commercial_year',{ascending:false}).limit(8)),
@@ -124,7 +138,8 @@
       soft(client.from(LINK_SNAPSHOT).select('*').or(`entidad_origen_id.eq.${id},entidad_destino_id.eq.${id}`).limit(20)),
       rut?soft(client.from(UAF_PROFILE_TABLE).select('*').eq('rut',rut).maybeSingle()):Promise.resolve({data:null}),
       soft(client.from(OSFL_PROFILE_TABLE).select('*').eq('entity_id',id).maybeSingle()),
-      soft(client.from(DISPOSITION_VIEW).select('*').eq('entity_id',id).maybeSingle())
+      soft(client.from(DISPOSITION_VIEW).select('*').eq('entity_id',id).maybeSingle()),
+      soft(client.from(YEAR_TABLE).select('commercial_year,sales_band_code,sales_band_rank,workers_numeric,workforce_ratio,sales_band_delta,region,region_changed,main_activity,main_activity_changed,entity_age_years,termination_date,current_status').eq('entity_id',id).order('commercial_year',{ascending:true}).limit(20))
     ]);
     const one=r=>r?.data||null;
     const many=r=>Array.isArray(r?.data)?r.data:[];
@@ -141,7 +156,8 @@
       uaf:one(uaf),
       osfl:one(osfl),
       disposition:one(disposition),
-      errors:[score,marks,peers,structure,trajectory,sanctionSummary,sanctionIdentity,links,uaf,osfl,disposition]
+      series:many(series),
+      errors:[score,marks,peers,structure,trajectory,sanctionSummary,sanctionIdentity,links,uaf,osfl,disposition,series]
         .map(r=>r?.error?String(r.error.message||r.error):null).filter(Boolean),
       loadedAt:Date.now()
     };
@@ -216,24 +232,34 @@
   function identityProvenance(pkg,data){
     const entity=pkg?.e||{};
     const profile=entity.profile||{};
-    const rows=[
-      ['Entity ID',entity.entity_id],
-      ['RUT',entity.rut||'no materializado'],
-      ['Método de identidad',profile.identity_method_es||profile.identity_method||'no declarado'],
-      ['Confianza de identidad',profile.identity_confidence==null?'—':fmt(profile.identity_confidence,2)],
-      ['Tipo de entidad',profile.tipo_entidad_es||entity.entity_type||'—'],
-      ['Territorio',[entity.commune,entity.region].filter(Boolean).join(' · ')||'no materializado'],
-      ['Identificador territorial',profile?.ubicacion?.territory_id||'—'],
-      ['Confianza geográfica',profile?.ubicacion?.geo_confidence==null?'—':fmt(profile.ubicacion.geo_confidence,2)],
-      ['Corte de la entidad',day(entity.updated_at)],
-      ['Snapshot',entity.snapshot_id||'—']
-    ];
+    const confidence=num(profile.identity_confidence);
+    const geo=num(profile?.ubicacion?.geo_confidence);
     const roles=arr(profile.roles_es).length?arr(profile.roles_es):arr(profile.roles);
     const sources=arr(profile.fuentes);
-    return`<dl class="aed-dl">${rows.map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v??'—')}</dd>`).join('')}</dl>
-      <div><h4 class="aed-note" style="margin-bottom:7px">Roles observados</h4>${roles.length?`<div class="aed-chips">${roles.map(r=>`<span class="aed-chip">${esc(r)}</span>`).join('')}</div>`:'<p class="aed-note">Sin roles materializados.</p>'}</div>
-      <div><h4 class="aed-note" style="margin-bottom:7px">Productores que aportan a la identidad</h4>${sources.length?`<div class="aed-chips">${sources.map(r=>`<span class="aed-chip">${esc(r)}</span>`).join('')}</div>`:'<p class="aed-note">Sin productores declarados en el perfil.</p>'}</div>
-      <p class="aed-note">La procedencia describe cómo se construyó la identidad canónica. Un método por nombre normalizado conserva su condición de candidato aunque la confianza sea alta.</p>`;
+    const gaugeRow=(label,value,detail)=>`<div class="aed-conf">
+      <div class="aed-conf-head"><span>${esc(label)}</span><b>${value==null?'—':fmt(value,2)}</b></div>
+      <em><i style="width:${value==null?0:Math.max(2,Math.min(100,value*100))}%" class="${value!=null&&value>=0.99?'full':''}"></i></em>
+      <small>${esc(detail)}</small>
+    </div>`;
+    return`<div class="aed-identity">
+      <div class="aed-identity-main">
+        <b>${esc(profile.identity_method_es||profile.identity_method||'método no declarado')}</b>
+        <span>${esc(profile.tipo_entidad_es||entity.entity_type||'tipo no resuelto')} · ${esc([entity.commune,entity.region].filter(Boolean).join(' · ')||'territorio no materializado')}</span>
+      </div>
+      ${gaugeRow('Confianza de identidad',confidence,confidence!=null&&confidence>=0.99?'resolución exacta':'resolución con margen: revisar antes de cruces sensibles')}
+      ${gaugeRow('Confianza geográfica',geo,profile?.ubicacion?.territory_id?`territorio ${profile.ubicacion.territory_id}`:'sin identificador territorial')}
+    </div>
+    ${roles.length||sources.length?`<div class="aed-chips">
+      ${roles.map(r=>`<span class="aed-chip">${esc(r)}</span>`).join('')}
+      ${sources.map(r=>`<span class="aed-chip src">${esc(String(r).replace('RADAR_','').toLowerCase())}</span>`).join('')}
+    </div>`:'<p class="aed-note">Sin roles ni productores declarados en el perfil.</p>'}
+    <div class="aed-ids">
+      <code title="Identificador canónico ATLAS">${esc(entity.entity_id||'—')}</code>
+      <code title="RUT materializado">${esc(entity.rut||'sin RUT')}</code>
+      <code title="Snapshot de origen">${esc(entity.snapshot_id||'sin snapshot')}</code>
+      <code title="Corte de la entidad">${esc(day(entity.updated_at))}</code>
+    </div>
+    <p class="aed-note">Un método por nombre normalizado conserva su condición de candidato aunque la confianza sea alta.</p>`;
   }
 
   function identityLinks(pkg,data){
@@ -254,7 +280,7 @@
           <td>${link.confianza==null?'—':fmt(link.confianza,2)}</td>
           <td><span class="aed-state ${review?'warn':'good'}">${review?'candidato · requiere revisión':'confirmado'}</span></td>
         </tr>`;}).join('')}</tbody></table></div>
-      <div class="aed-caution"><b>Un vínculo candidato no promueve identidad.</b> Los vínculos por nombre normalizado exacto quedan marcados para revisión y no habilitan por sí solos la fusión de expedientes ni el traspaso de atributos.</div>`;
+      <p class="aed-note"><b>Un vínculo candidato no promueve identidad</b> ni habilita fusionar expedientes o traspasar atributos.</p>`;
   }
 
   function peerBlock(pkg,data){
@@ -271,45 +297,116 @@
       ${percentileRail('Amplitud de giros frente a pares',structure?.activity_peer_percentile,structureLabel)}
     </div>
     ${series.length>1?`<div><h4 class="aed-note" style="margin-bottom:9px">Percentil de ventas por año comercial</h4><div class="aed-year-bars">${series.map(p=>{const v=Math.max(1,Math.round((num(p.sales_peer_percentile)||0)*100));return`<div class="aed-year-bar"><span>${esc(p.commercial_year)}</span><em><i style="width:${v}%"></i></em><b>${esc(pctText(p.sales_peer_percentile))}</b></div>`;}).join('')}</div></div>`:''}
-    <p class="aed-note">El percentil ubica a la entidad dentro de su grupo comparable del año (sector, tamaño y edad). Es posición relativa: no describe desempeño, no es anomalía y no es riesgo.</p>`;
+    <p class="aed-note">Posición dentro del grupo comparable del año: no es desempeño, no es anomalía y no es riesgo.</p>`;
+  }
+
+  /* La trayectoria dejaba de ser legible como ocho números sueltos. La serie
+     tributaria por año existe y cuenta la historia sola: tramo de ventas como
+     escalón, dotación como área, y los cambios declarados marcados sobre el eje.
+     Las dos series se escalan por separado para no sugerir una relación que el
+     dato no afirma. */
+  function trajectoryChart(series){
+    const rows=series.filter(r=>num(r.commercial_year)!=null);
+    if(rows.length<2)return'';
+    const W=680,H=214,pl=34,pr=34,pt=26,pb=38;
+    const iw=W-pl-pr,ih=H-pt-pb;
+    const years=rows.map(r=>num(r.commercial_year));
+    const minYear=Math.min(...years),maxYear=Math.max(...years);
+    const span=Math.max(1,maxYear-minYear);
+    const rankTop=Math.max(4,...rows.map(r=>num(r.sales_band_rank)||0))+2;
+    const maxWorkers=Math.max(1,...rows.map(r=>num(r.workers_numeric)||0));
+    const x=y=>pl+(y-minYear)/span*iw;
+    const yRank=v=>pt+ih-(v/rankTop)*ih;
+    const yWork=v=>pt+ih-(v/maxWorkers)*ih;
+    const step=rows.map((r,i)=>{
+      const px=x(num(r.commercial_year)),py=yRank(num(r.sales_band_rank)||0);
+      if(!i)return`M${px.toFixed(1)},${py.toFixed(1)}`;
+      const prev=yRank(num(rows[i-1].sales_band_rank)||0);
+      return`L${px.toFixed(1)},${prev.toFixed(1)} L${px.toFixed(1)},${py.toFixed(1)}`;
+    }).join(' ');
+    const workPoints=rows.map(r=>`${x(num(r.commercial_year)).toFixed(1)},${yWork(num(r.workers_numeric)||0).toFixed(1)}`);
+    const area=`M${pl},${pt+ih} L${workPoints.join(' L')} L${(pl+iw).toFixed(1)},${pt+ih} Z`;
+    const drop=rows.find(r=>num(r.workforce_ratio)!=null&&num(r.workforce_ratio)<0.6&&(num(r.sales_band_delta)||0)===0);
+    const events=rows.filter(r=>r.region_changed===true||r.main_activity_changed===true);
+    return`<div class="aed-chart"><svg viewBox="0 0 ${W} ${H}" role="img"
+      aria-label="Trayectoria observada: tramo de ventas y dotación por año comercial">
+      ${[0,.5,1].map(f=>`<line class="grid" x1="${pl}" y1="${(pt+ih*f).toFixed(1)}" x2="${W-pr}" y2="${(pt+ih*f).toFixed(1)}"/>`).join('')}
+      ${drop?`<g><rect class="flag" x="${(x(num(drop.commercial_year))-18).toFixed(1)}" y="${pt-6}" width="36" height="${ih+6}" rx="5"/><text class="axis flag-label" x="${x(num(drop.commercial_year)).toFixed(1)}" y="${pt-10}" text-anchor="middle">dotación ↓</text></g>`:''}
+      <path class="work-area" d="${area}"/>
+      <polyline class="work-line" points="${workPoints.join(' ')}"/>
+      <path class="band-step" d="${step}"/>
+      ${rows.map(r=>`<circle class="band-dot" cx="${x(num(r.commercial_year)).toFixed(1)}" cy="${yRank(num(r.sales_band_rank)||0).toFixed(1)}" r="3.4"><title>${esc(r.commercial_year)} · tramo ${esc(r.sales_band_code||r.sales_band_rank||'—')} · ${fmt(r.workers_numeric)} trabajador(es)</title></circle>`).join('')}
+      ${events.map(r=>`<g class="event"><line x1="${x(num(r.commercial_year)).toFixed(1)}" y1="${pt-8}" x2="${x(num(r.commercial_year)).toFixed(1)}" y2="${pt+ih}"/><circle cx="${x(num(r.commercial_year)).toFixed(1)}" cy="${pt-10}" r="3.2"><title>${esc(r.commercial_year)}: ${r.region_changed?'cambio de región declarado':''}${r.region_changed&&r.main_activity_changed?' · ':''}${r.main_activity_changed?'cambio de actividad principal':''}</title></circle></g>`).join('')}
+      ${rows.map(r=>`<text class="axis" x="${x(num(r.commercial_year)).toFixed(1)}" y="${H-16}" text-anchor="middle">${esc(r.commercial_year)}</text>`).join('')}
+      <text class="axis left" x="${(pl+4).toFixed(1)}" y="${(yRank(num(rows[0].sales_band_rank)||0)-9).toFixed(1)}">tramo ${esc(rows[0].sales_band_code||rows[0].sales_band_rank||'—')}</text>
+      <text class="axis right" x="${(W-pr-4).toFixed(1)}" y="${(yWork(num(rows[rows.length-1].workers_numeric)||0)-9).toFixed(1)}" text-anchor="end">${fmt(rows[rows.length-1].workers_numeric)} trab.</text>
+    </svg>
+    <div class="aed-chart-legend">
+      <span class="k-band">tramo de ventas</span>
+      <span class="k-work">dotación</span>
+      ${events.length?'<span class="k-event">cambio declarado</span>':''}
+      ${drop?'<span class="k-flag">dotación a la baja con ventas estables</span>':''}
+    </div></div>`;
   }
 
   function trajectoryBlock(pkg,data){
     const t=data?.trajectory||null;
-    if(!t)return gap('Trayectoria no materializada','No hay serie tributaria consolidada suficiente para describir trayectoria en el corte vigente.');
-    const facts=[
-      ['Años observados',fmt(t.year_count),`${esc(t.first_year??'—')} – ${esc(t.latest_year??'—')}`,false],
-      ['Saltos de tramo',fmt(t.sales_jump_years),'años con alza de tramo de ventas',num(t.sales_jump_years)>0],
-      ['Caídas de tramo',fmt(t.sales_drop_years),'años con baja de tramo de ventas',num(t.sales_drop_years)>0],
-      ['Dotación a la baja con ventas estables',fmt(t.workforce_drop_stable_sales_years),'años con esa combinación',num(t.workforce_drop_stable_sales_years)>0],
-      ['Cambios de actividad principal',fmt(t.main_activity_change_years),'años con cambio declarado',num(t.main_activity_change_years)>0],
-      ['Cambios de región',fmt(t.region_change_years),'años con cambio declarado',num(t.region_change_years)>0],
-      ['Razón mínima de dotación',t.min_workforce_ratio==null?'—':fmt(t.min_workforce_ratio,2),'dotación observada sobre la previa',false],
-      ['Antigüedad',fmt(t.latest_entity_age_years),'años desde inicio de actividades',false]
+    const series=(data?.series||[]).slice();
+    if(!t&&!series.length)return gap('Trayectoria no materializada','No hay serie tributaria consolidada para esta entidad en el corte vigente.');
+    const chart=trajectoryChart(series);
+    const first=series[0]||null,last=series[series.length-1]||null;
+    const stats=[
+      ['Años observados',t?fmt(t.year_count):fmt(series.length),first&&last?`${esc(first.commercial_year)} – ${esc(last.commercial_year)}`:'serie parcial',false],
+      ['Dotación última',last?fmt(last.workers_numeric):'—',first?`desde ${fmt(first.workers_numeric)}`:'sin base previa',
+        last&&first&&num(last.workers_numeric)!=null&&num(first.workers_numeric)!=null&&num(last.workers_numeric)<num(first.workers_numeric)*0.6],
+      ['Saltos y caídas de tramo',t?`${fmt(t.sales_jump_years)} / ${fmt(t.sales_drop_years)}`:'—','años con alza / baja',t?(num(t.sales_jump_years)>0||num(t.sales_drop_years)>0):false],
+      ['Cambios declarados',t?fmt((num(t.main_activity_change_years)||0)+(num(t.region_change_years)||0)):'—','actividad o región',t?((num(t.main_activity_change_years)||0)+(num(t.region_change_years)||0))>0:false]
     ];
-    return`<div class="aed-facts">${facts.map(([label,value,detail,hot])=>`<div class="aed-fact ${hot?'hot':''}"><b>${value}</b><span>${esc(label)}<br>${esc(detail)}</span></div>`).join('')}</div>
-      <p class="aed-note">Cada conteo describe años en que el hecho fue observable en la serie SII. Un cambio declarado es un hecho registral, no una señal AML por sí mismo.</p>`;
+    return`${chart||'<p class="aed-note">La serie no tiene períodos suficientes para dibujar trayectoria.</p>'}
+      <div class="aed-facts">${stats.map(([label,value,detail,hot])=>`<div class="aed-fact ${hot?'hot':''}"><b>${value}</b><span>${esc(label)}<br>${esc(detail)}</span></div>`).join('')}</div>
+      <p class="aed-note">Un cambio declarado es un hecho registral, no una señal AML. El tramo es un rango, no el monto exacto de ventas.</p>`;
+  }
+
+  function peerBar(label,value,percentile,detail){
+    const pct=num(percentile);
+    return`<div class="aed-peerbar">
+      <div class="aed-peerbar-head"><span>${esc(label)}</span><b>${fmt(value)}</b></div>
+      <div class="aed-rail" role="img" aria-label="${esc(label)}: ${pct==null?'sin percentil':'percentil '+Math.round(pct*100)} del grupo de pares">
+        <span class="aed-rail-track"></span>
+        ${[25,50,75].map(t=>`<span class="aed-rail-tick" style="left:${t}%"></span>`).join('')}
+        ${pct==null?'':`<span class="aed-rail-needle" style="left:${Math.max(0,Math.min(100,pct*100)).toFixed(1)}%"></span>`}
+      </div>
+      <small>${pct==null?esc(detail||'sin grupo comparable en el corte'):`${esc(pctText(pct))} del grupo · ${esc(detail||'')}`}</small>
+    </div>`;
   }
 
   function structureBlock(pkg,data){
     const s=data?.structure||null;
     if(!s)return gap('Estructura declarada no materializada','El corte estructural no tiene fila para esta entidad.');
     const signals=String(s.signal_types||'').split('|').map(x=>x.trim()).filter(Boolean);
-    const rows=[
-      ['Estado publicado',s.current_status||'—'],
-      ['Forma societaria',[s.society_type,s.society_subtype].filter(Boolean).join(' · ')||'—'],
-      ['Domicilios publicados',fmt(s.address_count)],
-      ['Domicilios vigentes',fmt(s.current_address_count)],
-      ['Giros declarados',fmt(s.activity_count)],
-      ['Vínculos de propiedad',fmt(s.ownership_edge_count)],
-      ['Socios persona jurídica',fmt(s.legal_entity_partner_count)],
-      ['Participación en otras sociedades',fmt(s.societies_as_partner_count)],
-      ['Personas naturales agregadas',s.has_natural_person_aggregate===true?'Sí':s.has_natural_person_aggregate===false?'No':'—'],
-      ['Regiones de domicilio',s.address_regions||'—']
+    const group=`${fmt(s.peer_n)} pares · ${String(s.peer_level||'').replaceAll('_',' ').toLowerCase()}`;
+    const owners=[
+      ['Vínculos de propiedad',num(s.ownership_edge_count)||0],
+      ['Socios persona jurídica',num(s.legal_entity_partner_count)||0],
+      ['Participa en sociedades',num(s.societies_as_partner_count)||0]
     ];
-    return`<dl class="aed-dl">${rows.map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
-      ${signals.length?`<div><h4 class="aed-note" style="margin-bottom:7px">Señales estructurales observadas</h4><div class="aed-chips">${signals.map(x=>`<span class="aed-chip warn">${esc(SIGNAL_LABELS[x]||x.replaceAll('_',' ').toLowerCase())}</span>`).join('')}</div></div>`:'<p class="aed-note">Sin señales estructurales materializadas en el corte.</p>'}
-      <p class="aed-note">La estructura proviene de información publicada por el SII. Amplitud no equivale a opacidad, y la ausencia de un dato no equivale a cero.</p>`;
+    const maxOwner=Math.max(1,...owners.map(o=>o[1]));
+    return`<div class="aed-peerbars">
+      ${peerBar('Domicilios publicados',s.address_count,s.address_peer_percentile,group)}
+      ${peerBar('Giros declarados',s.activity_count,s.activity_peer_percentile,group)}
+    </div>
+    <div class="aed-owners">
+      ${owners.map(([label,value])=>`<div class="aed-owner"><em><i style="width:${Math.max(4,Math.round(value/maxOwner*100))}%"></i></em><b>${fmt(value)}</b><span>${esc(label)}</span></div>`).join('')}
+    </div>
+    <div class="aed-chips">
+      <span class="aed-chip">${esc(s.current_status||'estado no declarado')}</span>
+      ${s.society_type?`<span class="aed-chip">${esc(s.society_type)}</span>`:''}
+      ${s.society_subtype?`<span class="aed-chip">${esc(s.society_subtype)}</span>`:''}
+      <span class="aed-chip">${fmt(s.current_address_count)} domicilio(s) vigente(s)</span>
+      ${s.has_natural_person_aggregate===true?'<span class="aed-chip">con personas naturales agregadas</span>':''}
+      ${signals.map(x=>`<span class="aed-chip warn">${esc(SIGNAL_LABELS[x]||x.replaceAll('_',' ').toLowerCase())}</span>`).join('')}
+    </div>
+    <p class="aed-note">Publicado por el SII y comparado con el grupo de pares del año. Amplitud no equivale a opacidad y la ausencia de un dato no equivale a cero.</p>`;
   }
 
   function uafBlock(pkg,data){
@@ -323,7 +420,7 @@
       <dt>Alcance</dt><dd>${esc(uaf.source_scope||'—')}</dd>
       <dt>Corte</dt><dd>${esc(day(uaf.updated_at))}</dd>
     </dl>
-    <p class="aed-note">El registro UAF es el dato rector del perímetro. La compatibilidad sectorial por ACTECO sirve para preselección y no acredita la calidad jurídica de sujeto obligado.</p>`;
+    <p class="aed-note">El registro es el dato rector del perímetro; la compatibilidad ACTECO sólo sirve para preselección.</p>`;
   }
 
   function osflBlock(pkg,data){
@@ -344,7 +441,7 @@
       <dt>Corte</dt><dd>${esc(day(o.updated_at))}</dd>
     </dl>
     ${flags.length?`<div class="aed-chips">${flags.map(([label,tone])=>`<span class="aed-chip ${tone}">${esc(label)}</span>`).join('')}</div>`:'<p class="aed-note">Sin marcas OSFL materializadas.</p>'}
-    <div class="aed-caution"><b>Candidata R8 no es una acusación.</b> La recomendación 8 de GAFI define un universo de organizaciones sin fines de lucro a revisar por su exposición estructural; no imputa financiamiento del terrorismo a ninguna entidad concreta.</div>`);
+    <p class="aed-note"><b>Candidata R8 no es una acusación:</b> GAFI define un universo de OSFL a revisar por exposición estructural, no imputa financiamiento del terrorismo.</p>`);
   }
 
   function ipa3Block(pkg,data){
@@ -388,49 +485,85 @@
         <div class="aed-group-rows">
           ${groupValues.map(([cls,label,val,driver])=>`<div class="aed-group-row"><span><i class="${cls}"></i>${esc(label)}</span><b>${val>0?fmt(val,1):'—'}</b><small>${driver?`marca conductora ${esc(driver)}`:'sin marca activa'}</small></div>`).join('')}
         </div>
-        <dl class="aed-dl">
-          <dt>Banda de prioridad</dt><dd>${value&&value>0?esc(bandLabel(score.priority_band_shadow)):'— · ninguna marca activa'}</dd>
-          <dt>Marca dominante</dt><dd>${esc(score.dominant_mark_id||'—')}</dd>
-          <dt>Marcas incluidas</dt><dd>${fmt(score.included_mark_count)} de ${fmt(marks.length)} evaluadas</dd>
-          <dt>Grupos independientes</dt><dd>${fmt(score.independent_group_count)}</dd>
-          <dt>Versión y corte</dt><dd>${esc(score.score_version||'—')} · calculado ${esc(day(score.score_as_of))} · snapshot ${esc(day(score.refreshed_at))}</dd>
-          <dt>Estado de producción</dt><dd>${score.production_enabled===true?'habilitado':'sombra: no habilitado para decisión automática'}</dd>
-        </dl>
+        <div class="aed-meta">
+          <span class="${value&&value>0?bandClass(score.priority_band_shadow):''}">${value&&value>0?esc(bandLabel(score.priority_band_shadow)):'sin marca activa'}</span>
+          ${score.dominant_mark_id?`<span title="Marca conductora del puntaje">conduce ${esc(score.dominant_mark_id)}</span>`:''}
+          <span title="Marcas incluidas sobre marcas evaluadas">${fmt(score.included_mark_count)}/${fmt(marks.length)} marcas</span>
+          <span title="Grupos de marca independientes entre sí">${fmt(score.independent_group_count)} grupo(s)</span>
+          <span title="Versión del modelo y corte del snapshot">${esc(score.score_version||'—')} · ${esc(day(score.refreshed_at))}</span>
+          <span class="${score.production_enabled===true?'':'shadow'}" title="${score.production_enabled===true?'Habilitado para producción':'Modelo en sombra: no habilita decisión automática'}">${score.production_enabled===true?'producción':'sombra'}</span>
+        </div>
       </div>
     </div>
     ${included.length?`<div><h4 class="aed-note" style="margin-bottom:9px">Marcas que aportan al puntaje</h4><div class="aed-marks">${markMarkup(included)}</div></div>`:'<div class="aed-empty"><b>Ninguna marca activa</b>El puntaje se muestra como "—". Ausencia de marca no equivale a prioridad baja ni a ausencia de riesgo.</div>'}
     ${excluded.length?`<div><h4 class="aed-note" style="margin-bottom:9px">Marcas evaluadas que no aportan</h4><div class="aed-marks">${markMarkup(excluded)}</div></div>`:''}
-    <div class="aed-caution"><b>Prioridad analítica, no probabilidad.</b> ${esc(score.semantics||'PRIORIDAD_ANALITICA_NO_PROBABILIDAD_LAFT')}. El puntaje ordena la cola de revisión del corte y no acredita conducta de ninguna entidad.</div>`;
+    <p class="aed-note"><b>Prioridad analítica, no probabilidad de LA/FT.</b> Ordena la cola de revisión del corte y no acredita conducta. Contrato: ${esc(score.semantics||'PRIORIDAD_ANALITICA_NO_PROBABILIDAD_LAFT')}.</p>`;
+  }
+
+  /* Los eventos sancionatorios tienen fecha: dibujarlos sobre un eje muestra
+     recurrencia y concentración de un vistazo, que es exactamente lo que las
+     ventanas de 36 y 60 meses intentan medir. */
+  function sanctionTimeline(pkg,data){
+    const events=(pkg?.sanctions||[]).map(x=>({
+      date:String(x.event_date||'').slice(0,10),
+      regulator:x.regulator||'Supervisor',
+      subject:x.subject||'Evento administrativo',
+      laft:x.laft_direct===true,
+      amount:num(x.amount_uf)
+    })).filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x.date)).sort((a,b)=>a.date.localeCompare(b.date));
+    if(!events.length)return'';
+    const now=Date.now();
+    const stamp=v=>new Date(`${v}T12:00:00`).getTime();
+    const oldest=Math.min(stamp(events[0].date),now-5*365.25*86400000);
+    const spanMs=Math.max(1,now-oldest);
+    const W=680,H=104,pl=18,pr=18,axis=64;
+    const iw=W-pl-pr;
+    const x=ms=>pl+((ms-oldest)/spanMs)*iw;
+    const win=months=>x(now-months*30.44*86400000);
+    const yearTicks=[];
+    for(let y=new Date(oldest).getFullYear();y<=new Date(now).getFullYear();y++){
+      const ms=stamp(`${y}-01-01`);
+      if(ms>=oldest)yearTicks.push([y,x(ms)]);
+    }
+    return`<div class="aed-chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Línea de tiempo de eventos sancionatorios resueltos">
+      <rect class="win60" x="${win(60).toFixed(1)}" y="24" width="${(x(now)-win(60)).toFixed(1)}" height="${(axis-24+14).toFixed(1)}" rx="5"/>
+      <rect class="win36" x="${win(36).toFixed(1)}" y="24" width="${(x(now)-win(36)).toFixed(1)}" height="${(axis-24+14).toFixed(1)}" rx="5"/>
+      <line class="axis-line" x1="${pl}" y1="${axis}" x2="${W-pr}" y2="${axis}"/>
+      ${yearTicks.map(([year,px])=>`<g><line class="tick" x1="${px.toFixed(1)}" y1="${axis-4}" x2="${px.toFixed(1)}" y2="${axis+4}"/><text class="axis" x="${px.toFixed(1)}" y="${H-12}" text-anchor="middle">${year}</text></g>`).join('')}
+      ${events.map(e=>`<circle class="event ${e.laft?'laft':''}" cx="${x(stamp(e.date)).toFixed(1)}" cy="${axis}" r="5.2"><title>${esc(e.date)} · ${esc(e.regulator)}${e.amount!=null?` · ${fmt(e.amount,1)} UF`:''} · ${esc(String(e.subject).slice(0,90))}</title></circle>`).join('')}
+      <text class="axis muted" x="${(win(36)+4).toFixed(1)}" y="18" text-anchor="start">36 meses</text>
+      <text class="axis muted" x="${(win(60)+4).toFixed(1)}" y="18" text-anchor="start">60 meses</text>
+    </svg>
+    <div class="aed-chart-legend"><span class="k-event-san">evento resuelto</span><span class="k-laft">vínculo LA/FT directo declarado</span><span class="k-window">ventanas de recurrencia</span></div></div>`;
   }
 
   function sanctionIdentityBlock(pkg,data){
     const summary=data?.sanctionSummary||null;
     const rows=data?.sanctionIdentity||[];
     if(!summary&&!rows.length)return gap('Sin eventos sancionatorios resueltos','Ningún evento del Radar Sanciones quedó resuelto contra este Entity ID en el corte vigente.');
-    const facts=summary?`<div class="aed-facts">
-      <div class="aed-fact"><b>${fmt(summary.sanction_event_count)}</b><span>eventos resueltos<br>identidad conservadora aparte</span></div>
-      <div class="aed-fact ${num(summary.sanction_count_36m)>1?'hot':''}"><b>${fmt(summary.sanction_count_36m)}</b><span>últimos 36 meses<br>recurrencia observable</span></div>
-      <div class="aed-fact"><b>${fmt(summary.regulator_count_60m)}</b><span>reguladores distintos<br>en 60 meses</span></div>
-      <div class="aed-fact ${num(summary.laft_direct_count)>0?'hot':''}"><b>${fmt(summary.laft_direct_count)}</b><span>eventos con vínculo<br>LA/FT directo declarado</span></div>
-    </div>
-    <dl class="aed-dl"><dt>Reguladores</dt><dd>${esc(arr(summary.regulators).join(' · ')||'—')}</dd>
-    <dt>Último evento</dt><dd>${esc(day(summary.latest_sanction_date))}</dd>
-    <dt>Confianza mínima de identidad</dt><dd>${summary.min_identity_confidence==null?'—':fmt(summary.min_identity_confidence,2)}</dd></dl>`:'';
+    const timeline=sanctionTimeline(pkg,data);
+    const stats=summary?`<div class="aed-inline-stats">
+      <div><b>${fmt(summary.sanction_event_count)}</b><span>eventos</span></div>
+      <div class="${num(summary.sanction_count_36m)>1?'hot':''}"><b>${fmt(summary.sanction_count_36m)}</b><span>en 36 meses</span></div>
+      <div><b>${fmt(summary.regulator_count_60m)}</b><span>reguladores</span></div>
+      <div class="${num(summary.laft_direct_count)>0?'hot':''}"><b>${fmt(summary.laft_direct_count)}</b><span>LA/FT resueltos</span></div>
+      <div><b>${summary.min_identity_confidence==null?'—':fmt(summary.min_identity_confidence,2)}</b><span>confianza mínima</span></div>
+      <div><b>${esc(arr(summary.regulators).join(' · ')||'—')}</b><span>supervisores</span></div>
+    </div>`:'';
     const table=rows.length?`<div class="aed-table"><table>
-      <thead><tr><th>Evento</th><th>Regulador</th><th>Fecha</th><th>Resolución</th><th>Método</th><th>Confianza</th><th>Candidatas</th></tr></thead>
+      <thead><tr><th>Evento</th><th>Regulador</th><th>Fecha</th><th>Resolución</th><th>Confianza</th><th>Candidatas</th></tr></thead>
       <tbody>${rows.map(r=>{
         const source=String(r.resolution_status||'').includes('SOURCE');
         return`<tr>
-          <td><code>${esc(r.sanction_id||'—')}</code><br><small>${esc(r.source_entity_name||'')}</small></td>
+          <td><code>${esc(r.sanction_id||'—')}</code></td>
           <td>${esc(r.regulator||'—')}</td>
           <td>${esc(day(r.source_event_date))}</td>
-          <td><span class="aed-state ${source?'good':'warn'}">${esc(String(r.resolution_status||'—').replaceAll('_',' ').toLowerCase())}</span></td>
-          <td>${esc(String(r.resolution_method||'—').replaceAll('_',' ').toLowerCase())}</td>
+          <td><span class="aed-state ${source?'good':'warn'}" title="${esc(String(r.resolution_method||'').replaceAll('_',' ').toLowerCase())}">${source?'por fuente':'conservadora'}</span></td>
           <td>${r.confidence==null?'—':fmt(r.confidence,2)}</td>
           <td>${fmt(r.candidate_count)}</td>
-        </tr>`;}).join('')}</tbody></table></div>`:'<p class="aed-note">El corte no trae el detalle de resolución por evento.</p>';
-    return`${facts}${table}
-    <div class="aed-caution"><b>Identidad resuelta por fuente ≠ identidad resuelta por nombre.</b> Una resolución conservadora por nombre exacto y único conserva su condición candidata; la promoción a identidad firme es una decisión del analista y queda registrada en la auditoría.</div>`;
+        </tr>`;}).join('')}</tbody></table></div>`:'';
+    return`${timeline}${stats}${table}
+    <div class="aed-caution"><b>Una sanción administrativa no acredita delito.</b> Una resolución conservadora por nombre exacto y único conserva su condición candidata; promoverla a identidad firme es una decisión del analista y queda en la auditoría.</div>`;
   }
 
   function transferBlock(pkg,data){
@@ -442,10 +575,10 @@
     </dl>`:'<p class="aed-note">Sin disposición registrada para esta entidad. El registro es de sólo anexado: una rectificación se expresa anexando una disposición posterior.</p>'}
     <div class="aed-actions">
       <button type="button" class="aed-btn primary" id="aed-export">Exportar caracterización (JSON)</button>
-      <button type="button" class="aed-btn" id="aed-method">Cómo se construyó esta ficha</button>
+      <button type="button" class="aed-btn" id="aed-method">Cómo se lee esta ficha</button>
     </div>
     <p class="aed-msg" id="aed-export-msg"></p>
-    <p class="aed-note">El paquete conserva identidad, marcas con su evidencia de cálculo, posición frente a pares, trayectoria, estructura, perímetro UAF y resolución de identidad sancionatoria, con el corte de cada bloque.</p>`;
+    <p class="aed-note">Identidad, marcas con su evidencia, pares, trayectoria, estructura, perímetro UAF y resolución sancionatoria, cada bloque con su corte.</p>`;
   }
 
   /* ------------------------------ Ficha ------------------------------ */
@@ -473,6 +606,22 @@
     document.querySelector('#aed-drawer')?.setAttribute('aria-hidden','true');
     document.querySelector('#aed-scrim')?.classList.remove('open');
   }
+  /* La fórmula en texto ya estaba; la cascada muestra dónde se pierde valor:
+     cuánto recorta el tope individual y cuánto la confianza. */
+  function waterfall(mark){
+    const raw=num(mark.raw_intensity)||0;
+    const cap=num(mark.standalone_cap);
+    const capped=cap==null?raw:Math.min(raw,cap);
+    const contribution=num(mark.contribution)||0;
+    const scale=Math.max(raw,cap||0,contribution,1);
+    const bar=(label,value,cls)=>`<div class="aed-wf-row"><span>${esc(label)}</span><em><i class="${cls}" style="width:${Math.max(2,Math.round(value/scale*100))}%"></i></em><b>${fmt(value,1)}</b></div>`;
+    return`<div class="aed-wf">
+      ${bar('Intensidad bruta',raw,'raw')}
+      ${cap==null?'':bar('Tras el tope individual',capped,'capped')}
+      ${bar('Aporte al puntaje',contribution,'final')}
+    </div>`;
+  }
+
   function markDrawer(data,markId){
     const mark=(data?.marks||[]).find(m=>m.mark_id===markId);
     if(!mark)return;
@@ -480,7 +629,7 @@
     const entries=Object.entries(evidence).filter(([,v])=>v!==null&&v!=='');
     openDrawer(`${mark.mark_id} · ${mark.mark_name||'Marca'}`,`
       <section><h4>Qué mide</h4><p class="aed-note">Dimensión ${esc(String(mark.primary_dimension||'no declarada').replaceAll('_',' ').toLowerCase())}, grupo ${esc(String(mark.score_group||'no declarado').replaceAll('_',' ').toLowerCase())}. Clase semántica ${esc(String(mark.semantic_class||'no declarada').replaceAll('_',' ').toLowerCase())}.</p></section>
-      <section><h4>Cómo se calculó</h4><div class="aed-formula">intensidad_bruta = ${esc(fmt(mark.raw_intensity,2))}
+      <section><h4>Cómo se calculó</h4>${waterfall(mark)}<div class="aed-formula">intensidad_bruta = ${esc(fmt(mark.raw_intensity,2))}
 tope_individual  = ${esc(fmt(mark.standalone_cap,2))}
 confianza        = ${esc(fmt(mark.confidence,2))}
 aporte           = min(intensidad_bruta, tope_individual) × confianza = ${esc(fmt(mark.contribution,2))}
@@ -508,8 +657,21 @@ incluida         = ${mark.included_in_score===true?'sí':'no'}</div>
         <dt>Perímetro UAF</dt><dd>${esc(UAF_PROFILE_TABLE)}</dd>
         <dt>Perfil OSFL</dt><dd>${esc(OSFL_PROFILE_TABLE)}</dd>
       </dl></section>
-      <section><h4>Reglas de lectura</h4><p class="aed-note">hecho → cálculo → evidencia → interpretación. Cada bloque declara su corte y su origen; un bloque ausente se muestra como vacío declarado y nunca se completa por analogía, promedio ni inferencia.</p></section>
-      <section><h4>Límites</h4><p class="aed-note">Prioridad analítica no es probabilidad de LA/FT. Percentil de pares no es desempeño. Un vínculo no transfiere riesgo. Una sanción administrativa no acredita delito. Ausencia de dato no es cero.</p></section>
+      <section><h4>Cómo se leen los gráficos</h4><dl class="aed-dl">
+        <dt>Anillo IPA3</dt><dd>Puntaje del corte, coloreado por banda. Vacío significa que ninguna marca se activó.</dd>
+        <dt>Firma por grupo</dt><dd>Cuánto aporta cada familia de marcas —registral, económica, sancionatoria— al puntaje.</dd>
+        <dt>Riel de pares</dt><dd>Posición de la entidad dentro de su grupo comparable; las marcas del riel son p25, p50 y p75.</dd>
+        <dt>Trayectoria</dt><dd>Escalón = tramo de ventas; área = dotación. Se escalan por separado. Los pines marcan cambios declarados de región o actividad.</dd>
+        <dt>Línea sancionatoria</dt><dd>Cada punto es un evento resuelto; las bandas son las ventanas de 36 y 60 meses con que se mide recurrencia.</dd>
+      </dl></section>
+      <section><h4>Reglas que no cambian</h4><dl class="aed-dl">
+        <dt>Regla de lectura</dt><dd>hecho → cálculo → evidencia → interpretación. Un bloque ausente se declara vacío y nunca se completa por analogía, promedio ni inferencia.</dd>
+        <dt>Prioridad ≠ probabilidad</dt><dd>IPA3 v0.4-shadow ordena revisión; no estima probabilidad de LA/FT.</dd>
+        <dt>Percentil ≠ desempeño</dt><dd>Es posición dentro del grupo comparable del año, no anomalía ni riesgo.</dd>
+        <dt>Relación ≠ transferencia</dt><dd>Un vínculo no transfiere riesgo y un candidato sigue siendo candidato.</dd>
+        <dt>Sanción ≠ delito</dt><dd>Un evento administrativo no acredita lavado de activos ni financiamiento del terrorismo.</dd>
+        <dt>Ausencia ≠ cero</dt><dd>Una entidad fuera de un corte se lee como no materializada.</dd>
+      </dl></section>
       ${data?.errors?.length?`<section><h4>Bloques no disponibles en esta carga</h4><p class="aed-note">${esc(data.errors.join(' · '))}</p></section>`:''}`);
   }
 

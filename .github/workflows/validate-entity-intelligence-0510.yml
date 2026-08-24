@@ -73,10 +73,11 @@ jobs:
           test -s _site-entity-0510/assets/atlas-entity-explorer-0510.css
           test -s _site-entity-0510/assets/atlas-entity-dossier-0510.js
           test -s _site-entity-0510/assets/atlas-entity-dossier-0510.css
-          grep -q 'atlas-entity-explorer-0510.css?v=0510-1' _site-entity-0510/index.html
-          grep -q 'atlas-entity-dossier-0510.css?v=0510-1' _site-entity-0510/index.html
-          grep -q 'atlas-entity-explorer-0510.js?v=0510-1' _site-entity-0510/index.html
-          grep -q 'atlas-entity-dossier-0510.js?v=0510-1' _site-entity-0510/index.html
+          build=$(python -c "import json;print(json.load(open('atlas-release.json'))['build'])")
+          for asset in atlas-entity-explorer-0510.css atlas-entity-dossier-0510.css \
+                       atlas-entity-explorer-0510.js atlas-entity-dossier-0510.js; do
+            grep -q "$asset?v=$build-1" _site-entity-0510/index.html
+          done
           # La extension es de lectura y no puede almacenar en el navegador.
           for file in _site-entity-0510/assets/atlas-entity-explorer-0510.js _site-entity-0510/assets/atlas-entity-dossier-0510.js; do
             ! grep -q 'new MutationObserver' "$file"
@@ -86,6 +87,7 @@ jobs:
           done
           # Las lecturas por entidad van al snapshot, nunca a la vista pesada.
           grep -q 'aml_ipa3_mark_scores_snapshot_v0_4' _site-entity-0510/assets/atlas-entity-dossier-0510.js
+          grep -q 'aml_sii_entity_year' _site-entity-0510/assets/atlas-entity-dossier-0510.js
           grep -q 'aml_entity_peer_position_snapshot' _site-entity-0510/assets/atlas-entity-dossier-0510.js
           grep -q 'aml_entity_identity_link_snapshot' _site-entity-0510/assets/atlas-entity-dossier-0510.js
           ! grep -q 'aml_v_ipa3_mark_scores_v0_4' _site-entity-0510/assets/atlas-entity-dossier-0510.js

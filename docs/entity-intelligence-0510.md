@@ -1,4 +1,4 @@
-# Entidades 0.51.0 · build 0510
+# Entidades 0.51.1 · build 0511
 
 Reconstrucción de la sección **Entidades** del portal. Ninguna otra sección
 cambia: las dos extensiones se montan al final del runtime compilado y envuelven
@@ -105,6 +105,47 @@ snapshot de overview del que depende el resto del portal.
 Se recrea con el contrato original de 0460, sin cambios semánticos: sólo
 anexado, justificación obligatoria de 20 caracteres, contexto reproducible,
 lectura para analistas habilitados y escritura sólo a nombre propio.
+
+## Rediseño 0511 · gráfico primero
+
+La primera versión resolvió el acceso al dato, pero lo explicaba con párrafos
+donde el dato ya podía hablar. El rediseño cambia la proporción.
+
+**Tres objetos gráficos, repetidos en todas las superficies.** Quien los aprende
+en la lista los lee igual en la ficha rápida y en el expediente:
+
+| Objeto | Qué muestra | De dónde sale |
+|---|---|---|
+| Huella | Un punto por productor con dato: SII, UAF, OSFL, Prensa, Sanciones | `profile.fuentes` — sólo productores que el perfil declara |
+| Firma | Composición del puntaje entre marcas registrales, económicas y sancionatorias | grupos del snapshot IPA3 |
+| Barra IPA3 | Posición en la cola de revisión, coloreada por banda | `ipa3_score` del snapshot |
+
+**El conjunto se lee con gráficos, no con tarjetas de texto:** histograma de
+banda de prioridad, matriz cobertura × condición registral y barras de
+territorio, siempre rotulados sobre las filas cargadas.
+
+**El expediente sustituye recuentos por series que ya existían:**
+
+- *Trayectoria* — se dibuja desde `aml_sii_entity_year`: escalón de tramo de
+  ventas, área de dotación, cambios declarados marcados sobre el eje y la caída
+  de dotación con ventas estables resaltada. Las dos series se escalan por
+  separado para no sugerir una relación que el dato no afirma.
+- *Recurrencia sancionatoria* — cada evento resuelto sobre un eje temporal, con
+  las ventanas de 36 y 60 meses dibujadas: la recurrencia se ve en vez de
+  contarse.
+- *Estructura* — domicilios y giros comparados contra el grupo de pares en
+  rieles con percentil, en lugar de una lista de números.
+- *Cada marca* — una cascada muestra dónde recorta el tope individual y dónde
+  recorta la confianza, antes de la fórmula en texto.
+
+**Los guardarraíles no se perdieron.** Dejaron de repetirse bajo cada tarjeta y
+se concentran completos en dos paneles: "Reglas de lectura" en el explorador y
+"Cómo se lee esta ficha" en el expediente, ambos verificados por el contrato de
+prueba.
+
+**Un defecto corregido de paso.** El ayudante numérico convertía `null` en cero
+—`Number(null) === 0`—, de modo que un dato ausente podía pintarse como cero en
+cualquier superficie de la sección. Ahora un ausente es un ausente.
 
 ## Semántica declarada
 

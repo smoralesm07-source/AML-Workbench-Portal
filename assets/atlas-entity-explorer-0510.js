@@ -1,6 +1,6 @@
 'use strict';
 
-/* ATLAS AML 0.51.0 · build 0510 · Explorador de entidades
+/* ATLAS AML 0.51.1 · build 0511 · Explorador de entidades
  *
  * Problema que corrige
  * --------------------
@@ -31,12 +31,22 @@
  * - El recuento total es una estimación del planificador; el recuento exacto
  *   que se afirma es el de filas cargadas.
  *
+ * Rediseño 0511
+ * -------------
+ * La primera versión explicaba con párrafos lo que el dato podía mostrar solo.
+ * Ahora tres objetos gráficos cargan la lectura y se repiten idénticos en la
+ * lista, en la ficha rápida y en el expediente: huella de productores, firma de
+ * marcas y barra IPA3. El conjunto se lee con un histograma de prioridad, una
+ * matriz cobertura × condición y barras de territorio. Los guardarraíles no se
+ * eliminaron: viven completos en el panel "Reglas de lectura", en vez de
+ * repetirse debajo de cada tarjeta.
+ *
  * Seguridad: sólo lectura bajo la sesión y RLS existentes. No toca Auth, Entra
  * ni refresh tokens. Sin MutationObserver. Sin almacenamiento en el navegador.
  */
 (function atlasEntityExplorer0510(){
-  const RELEASE='0.51.0';
-  const BUILD='0510';
+  const RELEASE='0.51.1';
+  const BUILD='0511';
   const AUTHORITY='ENTITY_EXPLORER_0510';
   const ENTRY=window.__ATLAS_ENTITY_ENTRY__;
   if(!ENTRY||typeof ENTRY.load!=='function'){
@@ -53,8 +63,13 @@
   const MARK_SNAPSHOT='aml_ipa3_mark_scores_snapshot_v0_4';
   const SANCTION_SUMMARY_VIEW='aml_v_ipa3_sanction_entity_summary';
   const PAGE=25;
-  const LIST_COLUMNS='entity_id,rut,name,entity_type,region,commune,source_count,is_uaf_observed,is_sanctioned,updated_at';
+  const LIST_COLUMNS='entity_id,rut,name,entity_type,region,commune,source_count,is_uaf_observed,is_sanctioned,updated_at,profile';
   const TYPES=['Persona jurídica','OSFL','Organismo público','Tipo no resuelto'];
+  /* Sólo los productores que existen a nivel de entidad en el corte. No se
+     dibuja una casilla para una fuente que el perfil nunca declara. */
+  const PRODUCERS=[['sii','RADAR_SII','Radar SII'],['uaf','RADAR_UAF','Radar UAF'],['osfl','RADAR_OSFL','Radar OSFL'],
+    ['press','RADAR_PRENSA','Radar Prensa'],['san','RADAR_SANCIONES','Radar Sanciones']];
+  const GROUP_LABEL={registry:'registral',economic:'económica',sanctions:'sancionatoria'};
   const SORTS=[
     ['coverage','Cobertura de fuentes'],
     ['name','Razón social (A–Z)'],
@@ -74,7 +89,9 @@
   let sheetEntity=null;
 
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const num=v=>{const n=Number(v);return Number.isFinite(n)?n:null;};
+  /* Number(null) y Number('') devuelven 0: sin este guardia un dato ausente se
+     renderiza como cero, que es exactamente lo que la regla de la casa prohíbe. */
+  const num=v=>{if(v===null||v===undefined||v==='')return null;const n=Number(v);return Number.isFinite(n)?n:null;};
   const fmt=(v,d=0)=>{const n=num(v);return n==null?'—':n.toLocaleString('es-CL',{minimumFractionDigits:d,maximumFractionDigits:d});};
   const arr=v=>Array.isArray(v)?v:(v==null||v===''?[]:[v]);
   const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().trim();
@@ -179,155 +196,185 @@
   function bandLabel(band){
     return({MUY_ALTA:'Muy alta',ALTA:'Alta',MEDIA:'Media',BAJA:'Baja'})[String(band||'').toUpperCase()]||'Sin marca';
   }
-  /* La regla de la casa: un IPA3 en cero significa que ninguna marca se activó.
-     Eso es ausencia de marca, no prioridad baja, y se declara como "—". */
+  /* ----------------------------- Render ----------------------------- */
+  /* ------------------------- Elementos gráficos -------------------------
+     La huella y la firma de marcas son el mismo objeto visual en la lista, en
+     la ficha rápida y en el expediente: quien aprende a leerlo una vez lo lee
+     en todas partes. Ambos se dibujan sólo con dato materializado. */
+
+  function fingerprint(row){
+    const declared=new Set(arr(row?.profile?.fuentes).map(v=>String(v).toUpperCase()));
+    const cells=PRODUCERS.map(([key,id,label])=>{
+      const on=declared.has(id);
+      return`<i class="${on?'on '+key:''}" title="${esc(label)}: ${on?'aporta hechos':'sin dato materializado'}"></i>`;
+    }).join('');
+    const known=declared.size;
+    const count=num(row?.source_count);
+    return`<span class="aex-print" role="img" aria-label="Productores con dato: ${known} de ${PRODUCERS.length}">${cells}</span>
+      <b class="aex-print-n">${count==null?'—':fmt(count)}</b>`;
+  }
+
+  function signature(id){
+    const score=scores.get(id);
+    if(score===undefined)return'<span class="aex-sig loading"></span>';
+    const value=num(score?.ipa3_score);
+    if(!score||value==null||value<=0)return'<span class="aex-sig empty" title="Ninguna marca activa en el corte"></span>';
+    const parts=[['registry',num(score.registry_group_score)||0],['economic',num(score.economic_group_score)||0],['sanctions',num(score.sanctions_group_score)||0]];
+    const total=parts.reduce((acc,x)=>acc+x[1],0)||1;
+    const label=parts.filter(x=>x[1]>0).map(x=>`${GROUP_LABEL[x[0]]} ${fmt(x[1],1)}`).join(' · ');
+    return`<span class="aex-sig" role="img" aria-label="Composición del puntaje: ${esc(label)}" title="${esc(label)}">${
+      parts.filter(x=>x[1]>0).map(x=>`<i class="${x[0]}" style="flex:${(x[1]/total).toFixed(3)}"></i>`).join('')}</span>`;
+  }
+
+  /* Un IPA3 en cero significa que ninguna marca se activó: es ausencia de
+     marca, no prioridad baja, y se declara como raya. */
   function scoreCell(id){
     const score=scores.get(id);
-    if(score===undefined)return`<b>·</b><small>consultando</small>`;
+    if(score===undefined)return'<b class="wait">·</b>';
     const value=num(score?.ipa3_score);
-    if(!score||value==null||value<=0)return`<b>—</b><small>sin marca</small>`;
-    return`<b>${fmt(value,1)}</b><small class="${bandClass(score.priority_band_shadow)}">${esc(bandLabel(score.priority_band_shadow))}</small>`;
+    if(!score||value==null||value<=0)return'<b class="none" title="Ninguna marca activa en el corte">—</b>';
+    const band=bandClass(score.priority_band_shadow);
+    const pct=Math.max(4,Math.min(100,Math.round(value)));
+    return`<b class="${band}" title="IPA3 ${fmt(value,1)} · ${esc(bandLabel(score.priority_band_shadow))} · prioridad analítica, no probabilidad">${fmt(value,1)}</b>
+      <span class="aex-gauge ${band}"><i style="width:${pct}%"></i></span>`;
   }
   function paintScores(){
     document.querySelectorAll('[data-aex-band]').forEach(node=>{node.innerHTML=scoreCell(node.dataset.aexBand);});
+    document.querySelectorAll('[data-aex-sig]').forEach(node=>{node.innerHTML=signature(node.dataset.aexSig);});
+    const panorama=document.querySelector('#aex-panorama');
+    if(panorama)panorama.innerHTML=panoramaMarkup();
   }
 
-  /* ----------------------------- Render ----------------------------- */
+  /* ----------------------------- Panorama ----------------------------- */
 
-  function universeBlock(){
-    const withData=rows.length;
-    const multi=rows.filter(r=>(num(r.source_count)||0)>=3).length;
-    const uaf=rows.filter(r=>r.is_uaf_observed===true).length;
-    const san=rows.filter(r=>r.is_sanctioned===true).length;
-    return`<div class="aex-universe">
-      <div><span>Resultados cargados</span><b>${fmt(withData)}</b><small>${planned==null?'sin estimación de total':'≈ '+fmt(planned)+' estimados por el planificador'}</small></div>
-      <div><span>Cobertura 3+ fuentes</span><b>${fmt(multi)}</b><small>alcance de observación, no riesgo</small></div>
-      <div><span>UAF observado</span><b>${fmt(uaf)}</b><small>registro materializado</small></div>
-      <div><span>Con sanciones</span><b>${fmt(san)}</b><small>eventos administrativos</small></div>
-    </div>`;
+  function bandBuckets(){
+    const buckets=[['very-high','Muy alta',0],['high','Alta',0],['medium','Media',0],['low','Baja',0],['none','Sin marca',0]];
+    let pending=0;
+    for(const row of rows){
+      const score=scores.get(row.entity_id);
+      if(score===undefined){pending++;continue;}
+      const value=num(score?.ipa3_score);
+      if(!score||value==null||value<=0){buckets[4][2]++;continue;}
+      const key=bandClass(score.priority_band_shadow)||'low';
+      const bucket=buckets.find(b=>b[0]===key);
+      if(bucket)bucket[2]++;else buckets[4][2]++;
+    }
+    return{buckets,pending};
   }
 
-  function facetsBlock(regions){
+  function priorityChart(){
+    const {buckets,pending}=bandBuckets();
+    const max=Math.max(1,...buckets.map(b=>b[2]));
+    return`<article class="aex-card">
+      <h3>Prioridad en el resultado</h3>
+      <div class="aex-hist" role="img" aria-label="Distribución de banda IPA3 sobre los resultados cargados">
+        ${buckets.map(([key,label,value])=>`<div class="aex-hist-col">
+          <b>${fmt(value)}</b>
+          <em class="${key}" style="height:${value?Math.round(6+78*value/max):3}px"></em>
+          <span>${esc(label)}</span>
+        </div>`).join('')}
+      </div>
+      <p class="aex-note">${pending?`${fmt(pending)} fila(s) aún consultando el corte. `:''}Banda IPA3 v0.4-shadow: posición en la cola de revisión, no probabilidad de LA/FT.</p>
+    </article>`;
+  }
+
+  function coverageMatrix(){
+    const covers=[['1','1 fuente',r=>(num(r.source_count)||0)<=1],['2','2 fuentes',r=>(num(r.source_count)||0)===2],
+      ['3','3 fuentes',r=>(num(r.source_count)||0)===3],['4','4 o más',r=>(num(r.source_count)||0)>=4]];
+    const conds=[['uaf','UAF',r=>r.is_uaf_observed===true&&r.is_sanctioned!==true],
+      ['san','Sanción',r=>r.is_sanctioned===true&&r.is_uaf_observed!==true],
+      ['both','Ambas',r=>r.is_uaf_observed===true&&r.is_sanctioned===true],
+      ['none','Ninguna',r=>r.is_uaf_observed!==true&&r.is_sanctioned!==true]];
+    const grid=covers.map(([,,coverTest])=>conds.map(([,,condTest])=>rows.filter(r=>coverTest(r)&&condTest(r)).length));
+    const max=Math.max(1,...grid.flat());
+    return`<article class="aex-card">
+      <h3>Cobertura × condición registral</h3>
+      <div class="aex-matrix" role="img" aria-label="Entidades por cobertura de fuentes y condición registral">
+        <span></span>${conds.map(([key,label])=>`<span class="head ${key}">${esc(label)}</span>`).join('')}
+        ${covers.map(([key,label],rowIndex)=>`<span class="side">${esc(label)}</span>${
+          grid[rowIndex].map(value=>`<i style="--i:${value?(0.14+0.86*value/max).toFixed(3):0}" class="${value?'':'zero'}">${value||''}</i>`).join('')}`).join('')}
+      </div>
+      <p class="aex-note">Más fuentes es más contexto observable, nunca más riesgo.</p>
+    </article>`;
+  }
+
+  function territoryChart(){
+    const byRegion=new Map();
+    for(const row of rows){
+      const key=row.region||'Sin territorio';
+      byRegion.set(key,(byRegion.get(key)||0)+1);
+    }
+    const entries=[...byRegion.entries()].sort((a,b)=>b[1]-a[1]).slice(0,6);
+    const max=Math.max(1,...entries.map(e=>e[1]));
+    return`<article class="aex-card">
+      <h3>Territorio</h3>
+      ${entries.length?`<div class="aex-bars">${entries.map(([label,value])=>`<div class="aex-bar">
+        <span title="${esc(label)}">${esc(label)}</span>
+        <em><i style="width:${Math.max(3,Math.round(value/max*100))}%"></i></em>
+        <b>${fmt(value)}</b>
+      </div>`).join('')}</div>`:'<p class="aex-note">El resultado no tiene territorio materializado.</p>'}
+      <p class="aex-note">Sobre ${fmt(rows.length)} fila(s) cargada(s), no sobre el universo completo.</p>
+    </article>`;
+  }
+
+  function panoramaMarkup(){
+    if(!rows.length)return'';
+    return priorityChart()+coverageMatrix()+territoryChart();
+  }
+
+  /* ------------------------------ Consulta ------------------------------ */
+
+  function commandBar(regions){
     const parsed=queryMode(ui.q);
-    return`<section class="aex-query">
-      <div class="aex-field">
+    const active=[ui.region&&'territorio',ui.type&&'tipo',ui.uaf&&'UAF',ui.sanctioned&&'sanciones',ui.minSources!=='0'&&'cobertura'].filter(Boolean);
+    return`<section class="aex-command">
+      <div class="aex-command-top">
+        <div class="aex-brand"><span class="aex-eyebrow">ENTIDADES</span><h2>Explorador</h2></div>
         <div class="aex-input">
           <i aria-hidden="true">⌕</i>
           <input id="aex-q" type="search" autocomplete="off" spellcheck="false" value="${esc(ui.q)}"
-            placeholder="Razón social, RUT (76.183.006-6) o Entity ID (ENT-RUT-…)"
-            aria-label="Buscar entidad por razón social, RUT o Entity ID" />
+            placeholder="Razón social, RUT o Entity ID" aria-label="Buscar entidad por razón social, RUT o Entity ID" />
+          <span class="aex-mode ${parsed.mode}">${esc(MODE_LABEL[parsed.mode]||'Consulta')}</span>
           <button type="button" id="aex-clear" aria-label="Limpiar término">×</button>
         </div>
         <button type="button" class="aex-btn primary" id="aex-run">Buscar</button>
       </div>
-      <div class="aex-mode">
-        <b>${esc(MODE_LABEL[parsed.mode]||'Consulta')}</b>
-        <span>${parsed.mode==='name'?'Todos los términos deben aparecer en la razón social. Insensible a tildes y mayúsculas.':parsed.mode==='rut'?'Coincidencia exacta sobre RUT canónico.':parsed.mode==='rut_partial'?'Prefijo de RUT; completa el dígito verificador para coincidencia exacta.':parsed.mode==='entity_id'?'Prefijo de identificador canónico ATLAS.':'Sin término: se listan entidades según las facetas activas.'}</span>
-      </div>
-      <div class="aex-facets">
-        <div class="aex-facet"><label for="aex-region">Territorio</label>
-          <select id="aex-region"><option value="">Todas las regiones</option>${regions.map(r=>`<option value="${esc(r.region)}" ${ui.region===r.region?'selected':''}>${esc(r.region)}${r.entity_universe!=null?` · ${fmt(r.entity_universe)}`:''}</option>`).join('')}</select>
+      <div class="aex-command-bottom">
+        <div class="aex-facets">
+          <select id="aex-region" aria-label="Territorio"><option value="">Todo el territorio</option>${regions.map(r=>`<option value="${esc(r.region)}" ${ui.region===r.region?'selected':''}>${esc(r.region)}${r.entity_universe!=null?` · ${fmt(r.entity_universe)}`:''}</option>`).join('')}</select>
+          <select id="aex-type" aria-label="Tipo de entidad"><option value="">Todo tipo</option>${TYPES.map(t=>`<option value="${esc(t)}" ${ui.type===t?'selected':''}>${esc(t)}</option>`).join('')}</select>
+          <select id="aex-min" aria-label="Cobertura mínima de fuentes">${COVERAGE_STEPS.map(([v,l])=>`<option value="${v}" ${ui.minSources===v?'selected':''}>${esc(l)}</option>`).join('')}</select>
+          <select id="aex-sort" aria-label="Ordenar resultados">${SORTS.map(([v,l])=>`<option value="${v}" ${ui.sort===v?'selected':''}>${esc(l)}</option>`).join('')}</select>
+          <button type="button" class="aex-toggle uaf ${ui.uaf?'on':''}" id="aex-uaf" aria-pressed="${ui.uaf}"><i></i>UAF</button>
+          <button type="button" class="aex-toggle san ${ui.sanctioned?'on':''}" id="aex-san" aria-pressed="${ui.sanctioned}"><i></i>Sanciones</button>
+          ${active.length?`<button type="button" class="aex-reset" id="aex-reset">Limpiar ${active.length} filtro(s)</button>`:''}
         </div>
-        <div class="aex-facet"><label for="aex-type">Tipo de entidad</label>
-          <select id="aex-type"><option value="">Todos los tipos</option>${TYPES.map(t=>`<option value="${esc(t)}" ${ui.type===t?'selected':''}>${esc(t)}</option>`).join('')}</select>
+        <div class="aex-strip">
+          <div><b>${fmt(rows.length)}</b><span>cargadas</span></div>
+          <div><b>${planned==null?'—':'≈'+fmt(planned)}</b><span>estimadas</span></div>
+          <div><b>${fmt(rows.filter(r=>(num(r.source_count)||0)>=3).length)}</b><span>3+ fuentes</span></div>
+          <div><b>${fmt(rows.filter(r=>r.is_uaf_observed===true).length)}</b><span>UAF</span></div>
+          <div><b>${fmt(rows.filter(r=>r.is_sanctioned===true).length)}</b><span>sancionadas</span></div>
+          <button type="button" class="aex-rules" id="aex-rules">Reglas de lectura</button>
         </div>
-        <div class="aex-facet"><label for="aex-min">Cobertura mínima</label>
-          <select id="aex-min">${COVERAGE_STEPS.map(([v,l])=>`<option value="${v}" ${ui.minSources===v?'selected':''}>${esc(l)}</option>`).join('')}</select>
-        </div>
-        <div class="aex-facet"><label for="aex-sort">Ordenar por</label>
-          <select id="aex-sort">${SORTS.map(([v,l])=>`<option value="${v}" ${ui.sort===v?'selected':''}>${esc(l)}</option>`).join('')}</select>
-        </div>
-      </div>
-      <div class="aex-toggles">
-        <button type="button" class="aex-toggle uaf ${ui.uaf?'on':''}" id="aex-uaf" aria-pressed="${ui.uaf}"><i></i>UAF observado</button>
-        <button type="button" class="aex-toggle san ${ui.sanctioned?'on':''}" id="aex-san" aria-pressed="${ui.sanctioned}"><i></i>Con sanciones</button>
-        <button type="button" class="aex-reset" id="aex-reset">Restablecer criterios</button>
       </div>
     </section>`;
   }
 
-  function barList(entries,total,note){
-    if(!entries.length)return`<p class="aex-note">${esc(note||'Sin distribución observable.')}</p>`;
-    const max=Math.max(1,...entries.map(e=>e[1]));
-    return`<div class="aex-bars">${entries.map(([label,value])=>`<div class="aex-bar">
-      <span title="${esc(label)}">${esc(label)}</span>
-      <em class="rail"><i style="width:${Math.max(2,Math.round(value/max*100))}%"></i></em>
-      <b>${fmt(value)}${total?` · ${Math.round(value/total*100)}%`:''}</b>
-    </div>`).join('')}</div>`;
-  }
-
-  function profileBlock(){
-    const total=rows.length;
-    const buckets=[['1 fuente',0],['2 fuentes',0],['3 fuentes',0],['4 o más',0],['Sin dato',0]];
-    for(const row of rows){
-      const value=num(row.source_count);
-      if(value==null){buckets[4][1]++;continue;}
-      if(value>=4)buckets[3][1]++;
-      else if(value===3)buckets[2][1]++;
-      else if(value===2)buckets[1][1]++;
-      else buckets[0][1]++;
-    }
-    const byRegion=new Map();
-    for(const row of rows){
-      const key=row.region||'Territorio no materializado';
-      byRegion.set(key,(byRegion.get(key)||0)+1);
-    }
-    const regionRows=[...byRegion.entries()].sort((a,b)=>b[1]-a[1]).slice(0,6);
-    const both=rows.filter(r=>r.is_uaf_observed===true&&r.is_sanctioned===true).length;
-    const onlyUaf=rows.filter(r=>r.is_uaf_observed===true&&r.is_sanctioned!==true).length;
-    const onlySan=rows.filter(r=>r.is_sanctioned===true&&r.is_uaf_observed!==true).length;
-    const neither=Math.max(0,total-both-onlyUaf-onlySan);
-    const pct=v=>total?Math.round(v/total*1000)/10:0;
-    return`<div class="aex-profile">
-      <article class="aex-card">
-        <h3>Cobertura observable</h3>
-        ${barList(buckets.filter(b=>b[1]>0),total)}
-        <p class="aex-note">Cuántas fuentes aportan hechos a cada entidad del resultado. Más fuentes es más contexto disponible, nunca más riesgo.</p>
-      </article>
-      <article class="aex-card">
-        <h3>Distribución territorial</h3>
-        ${barList(regionRows,total,'El resultado no tiene territorio materializado.')}
-        <p class="aex-note">Sobre ${fmt(total)} fila(s) cargada(s). No describe el universo completo bajo los criterios activos.</p>
-      </article>
-      <article class="aex-card">
-        <h3>Condición registral</h3>
-        <div class="aex-stack-bar" role="img" aria-label="Composición de condición registral del resultado">
-          ${both?`<i class="both" style="width:${pct(both)}%"></i>`:''}
-          ${onlyUaf?`<i class="uaf" style="width:${pct(onlyUaf)}%"></i>`:''}
-          ${onlySan?`<i class="san" style="width:${pct(onlySan)}%"></i>`:''}
-        </div>
-        <div class="aex-cond">
-          <div class="aex-cond-row"><i class="uaf"></i><span>Sólo UAF observado</span><b>${fmt(onlyUaf)}</b></div>
-          <div class="aex-cond-row"><i class="san"></i><span>Sólo con sanciones</span><b>${fmt(onlySan)}</b></div>
-          <div class="aex-cond-row"><i class="both"></i><span>Ambas condiciones</span><b>${fmt(both)}</b></div>
-          <div class="aex-cond-row"><i class="none"></i><span>Sin ninguna de las dos</span><b>${fmt(neither)}</b></div>
-        </div>
-        <p class="aex-note">Sin condición materializada no equivale a estar fuera del perímetro UAF ni a ausencia de eventos.</p>
-      </article>
-    </div>`;
-  }
+  /* ----------------------------- Resultados ----------------------------- */
 
   function rowMarkup(row){
-    const tags=[
-      row.entity_type?`<span class="aex-tag type">${esc(row.entity_type)}</span>`:'',
-      row.is_uaf_observed?'<span class="aex-tag uaf">UAF observado</span>':'',
-      row.is_sanctioned?'<span class="aex-tag san">Con sanciones</span>':''
-    ].filter(Boolean).join('');
     return`<div class="aex-row">
+      <div class="aex-print-cell">${fingerprint(row)}</div>
       <div class="aex-id">
         <b title="${esc(row.name||row.entity_id)}">${esc(row.name||row.entity_id)}</b>
-        <span>${esc(row.rut||'RUT no materializado')}</span>
-        <code>${esc(row.entity_id)}</code>
-        ${tags?`<div class="aex-tags">${tags}</div>`:''}
+        <span>${esc(row.rut||'sin RUT')}<em>·</em>${esc(row.region||'sin territorio')}${row.commune?` <em>·</em> ${esc(row.commune)}`:''}</span>
       </div>
-      <div class="aex-place">${esc(row.region||'Región no materializada')}<small>${esc(row.commune||'Comuna no materializada')}</small></div>
-      <div class="aex-metrics">
-        <div class="aex-metric"><b>${fmt(row.source_count)}</b><small>fuentes</small></div>
-        <div class="aex-metric aex-band" data-aex-band="${esc(row.entity_id)}">${scoreCell(row.entity_id)}</div>
-      </div>
+      <div class="aex-sig-cell" data-aex-sig="${esc(row.entity_id)}">${signature(row.entity_id)}</div>
+      <div class="aex-score" data-aex-band="${esc(row.entity_id)}">${scoreCell(row.entity_id)}</div>
       <div class="aex-actions">
-        <button type="button" class="aex-act" data-aex-peek="${esc(row.entity_id)}">Ficha rápida</button>
-        <button type="button" class="aex-act primary" data-aex-open="${esc(row.entity_id)}">Expediente</button>
+        <button type="button" class="aex-act" data-aex-peek="${esc(row.entity_id)}" title="Ver ficha rápida">Ficha</button>
+        <button type="button" class="aex-act primary" data-aex-open="${esc(row.entity_id)}" title="Abrir Expediente 360">Expediente</button>
       </div>
     </div>`;
   }
@@ -336,53 +383,67 @@
     let body;
     if(error)body=`<div class="aex-state error"><b>No fue posible resolver la consulta.</b>${esc(error)}</div>`;
     else if(loading&&!rows.length)body='<div class="aex-state">Resolviendo identidades bajo RLS…</div>';
-    else if(!rows.length)body='<div class="aex-state"><b>Sin coincidencias bajo los criterios activos.</b>Prueba con menos términos, un RUT completo o retira una faceta. Ausencia de coincidencia no equivale a ausencia de la entidad.</div>';
+    else if(!rows.length)body='<div class="aex-state"><b>Sin coincidencias bajo los criterios activos.</b>Prueba con menos términos, un RUT completo o retira una faceta.</div>';
     else body=rows.map(rowMarkup).join('');
-    const more=rows.length&&!exhausted&&!error?`<div class="aex-more"><button type="button" class="aex-btn" id="aex-more" ${loading?'disabled':''}>${loading?'Cargando…':`Cargar ${PAGE} resultados más`}</button></div>`:'';
+    const more=rows.length&&!exhausted&&!error?`<div class="aex-more"><button type="button" class="aex-btn" id="aex-more" ${loading?'disabled':''}>${loading?'Cargando…':`Cargar ${PAGE} más`}</button></div>`:'';
     return`<section class="aex-results">
-      <div class="aex-results-head">
-        <b>${rows.length?`${fmt(rows.length)} entidad(es) cargada(s)`:'Resultados'}</b>
-        <span>${planned==null?'RLS activo · identidad primero':`RLS activo · ≈ ${fmt(planned)} coincidencias estimadas para los criterios activos`}</span>
+      <div class="aex-legend">
+        <span class="aex-legend-item"><span class="aex-print sample">${PRODUCERS.map(([key])=>`<i class="on ${key}"></i>`).join('')}</span>huella de productores</span>
+        <span class="aex-legend-item"><span class="aex-sig sample"><i class="registry" style="flex:1"></i><i class="economic" style="flex:1"></i><i class="sanctions" style="flex:1"></i></span>registral · económica · sancionatoria</span>
+        <span class="aex-legend-item"><span class="aex-gauge sample high"><i style="width:62%"></i></span>IPA3 v0.4-shadow</span>
       </div>
       ${body}
       ${more}
     </section>`;
   }
 
-  function guardsBlock(){
-    return`<div class="aex-guards">
-      <div><b>Identidad ≠ similitud</b><span>RUT y Entity ID gobiernan los cruces sensibles; el nombre nunca promueve identidad por sí solo.</span></div>
-      <div><b>Cobertura ≠ riesgo</b><span>Que una entidad aparezca en más fuentes describe observación disponible, no gravedad.</span></div>
-      <div><b>Prioridad ≠ probabilidad</b><span>IPA3 v0.4-shadow ordena la cola de revisión; no estima probabilidad de LA/FT.</span></div>
-      <div><b>Ausencia ≠ cero</b><span>Un dato no materializado se declara como vacío y nunca se completa con cero.</span></div>
-    </div>`;
+  function rulesMarkup(){
+    return`<section class="aex-block"><h4>Cómo se lee esta pantalla</h4>
+      <dl class="aex-dl">
+        <dt>Huella</dt><dd>Un punto encendido por productor que aporta hechos a la entidad en el corte: ${PRODUCERS.map(p=>p[2]).join(', ')}. El número es la cobertura declarada.</dd>
+        <dt>Firma</dt><dd>Composición del puntaje IPA3 entre marcas registrales, económicas y sancionatorias. Sin segmento significa que ninguna marca se activó.</dd>
+        <dt>Barra IPA3</dt><dd>Posición en la cola de revisión del corte, coloreada por banda.</dd>
+      </dl></section>
+      <section class="aex-block"><h4>Reglas que no cambian</h4>
+      <dl class="aex-dl">
+        <dt>Identidad ≠ similitud</dt><dd>RUT y Entity ID gobiernan los cruces sensibles; el nombre nunca promueve identidad por sí solo.</dd>
+        <dt>Cobertura ≠ riesgo</dt><dd>Que una entidad aparezca en más fuentes describe observación disponible, no gravedad.</dd>
+        <dt>Prioridad ≠ probabilidad</dt><dd>IPA3 v0.4-shadow ordena la cola de revisión; no estima probabilidad de LA/FT.</dd>
+        <dt>Ausencia ≠ cero</dt><dd>Un dato no materializado se declara vacío y nunca se completa con cero.</dd>
+      </dl></section>
+      <section class="aex-block"><h4>Alcance del recuento</h4>
+      <p class="aex-empty">El total es una estimación del planificador de la base. El único recuento exacto que ATLAS afirma es el de filas efectivamente cargadas.</p></section>`;
   }
 
   function shellMarkup(regions,error){
     return`<div class="aex">
-      <header class="aex-head">
-        <div>
-          <span class="aex-eyebrow">ENTIDADES · EXPLORACIÓN GOBERNADA</span>
-          <h2>Encuentra primero. Caracteriza después.</h2>
-          <p>Consulta el universo de entidades materializadas por identidad, territorio, tipo, condición registral y cobertura de fuentes. Cada resultado abre una ficha rápida y, desde ella, el Expediente Analítico 360 completo.</p>
-        </div>
-        ${universeBlock()}
-      </header>
-      ${facetsBlock(regions)}
-      ${profileBlock()}
+      ${commandBar(regions)}
+      <div class="aex-panorama" id="aex-panorama">${panoramaMarkup()}</div>
       ${resultsBlock(error)}
-      ${guardsBlock()}
       <div class="aex-scrim" id="aex-scrim"></div>
-      <aside class="aex-sheet" id="aex-sheet" aria-hidden="true" aria-label="Ficha rápida de entidad">
-        <header><div><span class="aex-eyebrow">FICHA RÁPIDA</span><h3 id="aex-sheet-title">—</h3><p id="aex-sheet-sub"></p></div><button type="button" id="aex-sheet-close" aria-label="Cerrar ficha">×</button></header>
+      <aside class="aex-sheet" id="aex-sheet" aria-hidden="true" aria-label="Panel lateral de entidad">
+        <header><div><span class="aex-eyebrow" id="aex-sheet-kicker">FICHA RÁPIDA</span><h3 id="aex-sheet-title">—</h3><p id="aex-sheet-sub"></p></div><button type="button" id="aex-sheet-close" aria-label="Cerrar panel">×</button></header>
         <div class="aex-sheet-body" id="aex-sheet-body"></div>
-        <div class="aex-sheet-foot"><button type="button" class="aex-btn primary" id="aex-sheet-open">Abrir Expediente 360</button><button type="button" class="aex-btn" id="aex-sheet-dismiss">Cerrar</button></div>
+        <div class="aex-sheet-foot" id="aex-sheet-foot"><button type="button" class="aex-btn primary" id="aex-sheet-open">Abrir Expediente 360</button><button type="button" class="aex-btn" id="aex-sheet-dismiss">Cerrar</button></div>
       </aside>
     </div>`;
   }
 
   /* --------------------------- Ficha rápida --------------------------- */
 
+  function openRules(){
+    const sheet=document.querySelector('#aex-sheet'),body=document.querySelector('#aex-sheet-body');
+    if(!sheet||!body)return;
+    sheetEntity=null;
+    document.querySelector('#aex-sheet-kicker').textContent='REGLAS DE LECTURA';
+    document.querySelector('#aex-sheet-title').textContent='Cómo se lee el explorador';
+    document.querySelector('#aex-sheet-sub').textContent='Semántica de los elementos gráficos y guardarraíles vigentes';
+    body.innerHTML=rulesMarkup();
+    const foot=document.querySelector('#aex-sheet-foot');
+    if(foot)foot.dataset.mode='rules';
+    sheet.classList.add('open');sheet.setAttribute('aria-hidden','false');
+    document.querySelector('#aex-scrim')?.classList.add('open');
+  }
   function closeSheet(){
     document.querySelector('#aex-sheet')?.classList.remove('open');
     document.querySelector('#aex-sheet')?.setAttribute('aria-hidden','true');
@@ -411,6 +472,9 @@
     sheetEntity=entityId;
     const sheet=document.querySelector('#aex-sheet'),scrim=document.querySelector('#aex-scrim'),body=document.querySelector('#aex-sheet-body');
     if(!sheet||!body)return;
+    document.querySelector('#aex-sheet-kicker').textContent='FICHA RÁPIDA';
+    const foot=document.querySelector('#aex-sheet-foot');
+    if(foot)foot.dataset.mode='entity';
     document.querySelector('#aex-sheet-title').textContent=row.name||row.entity_id;
     document.querySelector('#aex-sheet-sub').textContent=`${row.rut||'RUT no materializado'} · ${row.entity_id}`;
     body.innerHTML='<p class="aex-empty">Consultando perfil gobernado…</p>';
@@ -418,15 +482,14 @@
     const client=db();
     if(!client){body.innerHTML='<p class="aex-empty">Sesión de datos no disponible.</p>';return;}
     const token=++sheetSeq;
-    const [profileRes,taxRes,markRes,sanctionRes,scoreRes]=await Promise.all([
-      soft(client.from(TABLE).select('profile,snapshot_id,updated_at').eq('entity_id',entityId).maybeSingle()),
+    const [taxRes,markRes,sanctionRes,scoreRes]=await Promise.all([
       soft(client.from(TAX_TABLE).select('commercial_year,current_status,taxpayer_type,economic_sector,main_activity,sales_band,workers_numeric,activity_start_date,address_count,activity_count,signal_types').eq('entity_id',entityId).maybeSingle()),
       soft(client.from(MARK_SNAPSHOT).select('mark_id,mark_name,primary_dimension,score_group,contribution,confidence,readiness').eq('entity_id',entityId).eq('included_in_score',true).order('contribution',{ascending:false}).limit(6)),
       soft(client.from(SANCTION_SUMMARY_VIEW).select('sanction_event_count,sanction_count_36m,regulators,laft_direct_count,latest_sanction_date,min_identity_confidence').eq('entity_id',entityId).maybeSingle()),
       soft(client.from(SCORE_SNAPSHOT).select('*').eq('entity_id',entityId).maybeSingle())
     ]);
     if(token!==sheetSeq||sheetEntity!==entityId)return;
-    const profile=profileRes?.data?.profile||{};
+    const profile=row.profile||{};
     const tax=taxRes?.data||null;
     const marks=Array.isArray(markRes?.data)?markRes.data:[];
     const sanction=sanctionRes?.data||null;
@@ -434,13 +497,14 @@
     scores.set(entityId,score);
     const value=num(score?.ipa3_score);
     const sections=[];
+    sections.push(`<div class="aex-sheet-hero"><div class="aex-print-cell">${fingerprint(row)}</div><div class="aex-sig-cell">${signature(entityId)}</div><div class="aex-score">${scoreCell(entityId)}</div></div>`);
     sections.push(sheetSection('Identidad y procedencia',`<dl class="aex-dl">
       <dt>Entity ID</dt><dd>${esc(row.entity_id)}</dd>
       <dt>RUT</dt><dd>${esc(row.rut||'no materializado')}</dd>
       <dt>Método de identidad</dt><dd>${esc(profile.identity_method_es||profile.identity_method||'no declarado')}</dd>
       <dt>Confianza de identidad</dt><dd>${profile.identity_confidence==null?'—':fmt(profile.identity_confidence,2)}</dd>
       <dt>Territorio</dt><dd>${esc(place(row))}</dd>
-      <dt>Corte</dt><dd>${esc(String(profileRes?.data?.updated_at||row.updated_at||'—').slice(0,10))}</dd>
+      <dt>Corte</dt><dd>${esc(String(row.updated_at||'—').slice(0,10))}</dd>
     </dl>`));
     sections.push(sheetSection('Roles y fuentes observadas',`${chips(arr(profile.roles_es).concat(arr(profile.fuentes)))}`));
     sections.push(sheetSection('Prioridad analítica IPA3 v0.4-shadow',
@@ -540,6 +604,7 @@
       void run(true);
     });
     document.querySelector('#aex-more')?.addEventListener('click',()=>{void run(false);});
+    document.querySelector('#aex-rules')?.addEventListener('click',openRules);
     document.querySelectorAll('[data-aex-peek]').forEach(button=>button.addEventListener('click',()=>void openSheet(button.dataset.aexPeek)));
     document.querySelectorAll('[data-aex-open]').forEach(button=>button.addEventListener('click',()=>void open(button.dataset.aexOpen)));
     document.querySelector('#aex-sheet-close')?.addEventListener('click',closeSheet);
