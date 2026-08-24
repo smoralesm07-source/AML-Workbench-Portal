@@ -29,6 +29,8 @@ jobs:
           node-version: 22
       - name: Install pinned dependencies
         run: npm install --no-audit --no-fund
+      - name: Contract guardrails
+        run: npm test
       - name: Validate Worker and container configuration
         run: npx wrangler deploy --dry-run
 
@@ -49,10 +51,18 @@ jobs:
           node-version: 22
       - name: Install pinned dependencies
         run: npm install --no-audit --no-fund
+      - name: Verify Cloudflare secrets are available
+        shell: bash
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
       - name: Deploy atlas-maigret-osint
         shell: bash
         run: |
           set -o pipefail
-          npx wrangler deploy 2>&1 | tee deploy.log
+          npx wrangler deploy --containers-rollout=immediate 2>&1 | tee deploy.log
           echo '### Cloudflare Maigret deployment' >> "$GITHUB_STEP_SUMMARY"
-          grep -E 'https://|Version ID|Uploaded|Deployed|containers' deploy.log | tail -40 >> "$GITHUB_STEP_SUMMARY" || true
+          grep -E 'https://|Version ID|Uploaded|Deployed|containers|Worker' deploy.log | tail -60 >> "$GITHUB_STEP_SUMMARY" || true
+      - name: Container status
+        shell: bash
+        run: npx wrangler containers list || true
