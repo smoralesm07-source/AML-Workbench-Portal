@@ -83,7 +83,7 @@ def token():
 def api(payload,timeout=180):
  raw=json.dumps(payload,separators=(',',':')).encode()
  for _ in range(2):
-  req=urllib.request.Request(INGEST,data=raw,headers={'Authorization':'Bearer '+token(),'Content-Type':'application/json','User-Agent':'Atlas-MP-History/1.0'},method='POST')
+  req=urllib.request.Request(INGEST,data=raw,headers={'Authorization':'Bearer '+token(),'Content-Type':'application/json','User-Agent':'Atlas-MP-History/1.1'},method='POST')
   try:
    with urllib.request.urlopen(req,timeout=timeout) as r:o=json.load(r)
    if not o.get('ok'):raise RuntimeError(o.get('error') or 'ingest rejected')
@@ -94,7 +94,7 @@ def api(payload,timeout=180):
  raise RuntimeError('OIDC authentication failed')
 
 def dl(url,dst):
- valid_url(url);req=urllib.request.Request(url,headers={'User-Agent':'Atlas-MP-History/1.0'})
+ valid_url(url);req=urllib.request.Request(url,headers={'User-Agent':'Atlas-MP-History/1.1'})
  with urllib.request.urlopen(req,timeout=600) as r,dst.open('wb') as f:shutil.copyfileobj(r,f,1024*1024)
 def digest(path):
  h=hashlib.sha256()
@@ -121,7 +121,7 @@ def main():
   with tempfile.TemporaryDirectory() as td0:
    td=Path(td0);z=td/f'{a.year}-{a.month}.zip';x=td/'x';dl(url,z);sha=digest(z);size=z.stat().st_size
    signed=api({'action':'signed_upload','year':a.year,'month':a.month,'filename':z.name});obj=signed['object_path']
-   subprocess.run(['curl','--fail','--silent','--show-error','--retry','3','-X','PUT','-H','content-type: application/zip','--data-binary','@'+str(z),signed['signed_url']],check=True)
+   subprocess.run(['curl','--fail','--silent','--show-error','--retry','3','-X','PUT','-H','x-upsert: true','-H','cache-control: max-age=3600','-H','content-type: application/zip','--data-binary','@'+str(z),signed['signed_url']],check=True)
    shutil.unpack_archive(str(z),str(x));files=sorted(x.rglob('*.csv'),key=lambda q:q.stat().st_size,reverse=True)
    if not files:raise RuntimeError('archive has no CSV')
    src=files[0];orders={};rows_read=0;raw_fields=[]
@@ -160,7 +160,10 @@ def main():
    final=api({'action':'finalize','year':a.year,'month':a.month,'object_path':obj,'source_url':url,'sha256':sha,'bytes':size,'rows_observed':rows_read,'metadata':{'orders':len(facts),'items':len(items),'coverage':cov}},timeout=240)
    print(json.dumps({'ok':True,'year':a.year,'month':a.month,'rows_read':rows_read,'orders':len(facts),'items':len(items),'raw_bytes':size,'coverage':cov,'final':final},ensure_ascii=False))
  except Exception as e:
-  try:api({'action':'fail','year':a.year,'month':a.month,'error':str(e)[:900]})
+  msg=str(e)
+  if 'storage/v1/object/upload/sign/' in msg:msg='SIGNED_STORAGE_UPLOAD_FAILED'
+  elif 'token=' in msg:msg=msg.split('token=',1)[0]+'token=[REDACTED]'
+  try:api({'action':'fail','year':a.year,'month':a.month,'error':msg[:900]})
   except:pass
   raise
 if __name__=='__main__':main()
