@@ -1,0 +1,25 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+
+const worker=fs.readFileSync(new URL('./src/index.ts',import.meta.url),'utf8');
+const docker=fs.readFileSync(new URL('./Dockerfile',import.meta.url),'utf8');
+const cfg=fs.readFileSync(new URL('./wrangler.jsonc',import.meta.url),'utf8');
+const runtime=fs.readFileSync(new URL('./runtime/run_maigret.py',import.meta.url),'utf8');
+
+assert.match(worker,/jwtVerify/);
+assert.match(worker,/MISSING_BEARER_TOKEN/);
+assert.match(worker,/\/v1\/maigret/);
+assert.match(worker,/INVALID_USERNAME/);
+assert.match(worker,/getSandbox/);
+assert.match(worker,/provider:\s*'cloudflare'/);
+assert.match(docker,/cloudflare\/sandbox:0\.12\.7-python/);
+assert.match(docker,/soxoj\/maigret\.git@a187f616de096d13a26cededc6bb622811070036/);
+assert.match(cfg,/"class_name":\s*"Sandbox"/);
+assert.match(cfg,/"max_instances":\s*2/);
+assert.match(runtime,/BLOCKED_TAGS/);
+assert.match(runtime,/"identity_assertion": False/);
+assert.match(runtime,/"score_mutation": False/);
+assert.match(runtime,/"persisted": False/);
+assert.match(runtime,/--top-sites/);
+assert.match(runtime,/--json", "simple"/);
+console.log('Cloudflare Maigret service 0526 contract OK');
