@@ -1,0 +1,14 @@
+import fs from 'node:fs';
+const js=fs.readFileSync('assets/atlas-public-spend-peers-0551.js','utf8');
+const css=fs.readFileSync('assets/atlas-public-spend-peers-0551.css','utf8');
+const html=fs.readFileSync('index.html','utf8');
+const must=(c,m)=>{if(!c)throw new Error(m)};
+must(html.includes('atlas-public-spend-peers-0551.css?v=0551-1'),'CSS peer no cargado');
+must(html.includes('atlas-public-spend-peers-0551.js?v=0551-1'),'JS peer no cargado');
+must(js.includes('Pares comparables'),'pestaña peer ausente');
+must(js.includes('mínimo 5')||js.includes('mínimo 5 pares'),'mínimo de cohorte ausente');
+must(js.includes('desviación')&&js.includes('irregularidad'),'guardrail peer ausente');
+must(js.includes('tipo institucional')&&js.includes('escala'),'criterio de pares ausente');
+must(js.includes('z_concentration')&&js.includes('z_low_diversity')&&js.includes('z_ticket'),'drivers peer incompletos');
+must(css.includes('.mpp-metrics')&&css.includes('.mpp-outlier'),'estilos peer incompletos');
+console.log('ATLAS Public Spend Peers 0551 OK');
