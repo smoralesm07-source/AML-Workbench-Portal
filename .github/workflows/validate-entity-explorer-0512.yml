@@ -22,5 +22,5 @@ jobs:
         run: |
           node --check assets/atlas-entity-explorer-0512.js
           node tests/atlas-entity-explorer-0512.mjs
-          grep -q 'atlas-entity-explorer-0512.js?v=0512-2' index.html
-          grep -q 'atlas-entity-explorer-0512.css?v=0512-2' index.html
+          grep -q 'atlas-entity-explorer-0512.js?v=0512-3' index.html
+          grep -q 'atlas-entity-explorer-0512.css?v=0512-3' index.html
