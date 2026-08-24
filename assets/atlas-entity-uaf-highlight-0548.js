@@ -142,12 +142,12 @@
   window.__ATLAS_ENTITY_CANONICAL_SELECTION_0550__={active:true,version:VERSION,route:'canonical_entity_id',installedAt:new Date().toISOString()};
 })();
 
-/* ATLAS AML 0.55.4 · carga transversal RES después de instalar las autoridades
+/* ATLAS AML 0.55.5 · carga transversal RES después de instalar las autoridades
  * de Entidades. El bootstrap sólo solicita assets same-origin permitidos por CSP. */
-(function atlasEntityResBootstrapHook0554(){
+(function atlasEntityResBootstrapHook0555(){
   if(document.getElementById('atlas-entity-res-bootstrap-0553-js'))return;
   const s=document.createElement('script');
   s.id='atlas-entity-res-bootstrap-0553-js';
-  s.src='./assets/atlas-entity-res-bootstrap-0553.js?v=0554-1';
+  s.src='./assets/atlas-entity-res-bootstrap-0553.js?v=0555-1';
   document.body.appendChild(s);
 })();
