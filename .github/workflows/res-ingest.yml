@@ -9,6 +9,11 @@ on:
         description: 'current o año calendario; use all para backfill'
         required: true
         default: 'current'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/res/**'
+      - '.github/workflows/res-ingest.yml'
   pull_request:
     paths:
       - 'ops/res/**'
