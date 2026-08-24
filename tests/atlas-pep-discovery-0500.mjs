@@ -10,18 +10,20 @@ const release = JSON.parse(read('atlas-release.json'));
 const build = JSON.parse(read('build.json'));
 const runtime = JSON.parse(read('atlas-runtime-manifest.json'));
 
-assert.equal(release.release, '0.50.0');
-assert.equal(release.build, '0500');
-assert.equal(build.app_version, '0.50.0');
-assert.equal(build.build, '0500');
-assert.equal(runtime.release, '0.50.0');
-assert.equal(runtime.build, '0500');
+// El contrato PEP es de producto, no un pin de numero de release: sigue siendo
+// exigible en cualquier release posterior. Se verifica coherencia entre los tres
+// archivos de contrato, igual que hace tests/atlas-entity-search-current.mjs.
+assert.equal(release.release, build.app_version);
+assert.equal(release.build, build.build);
+assert.equal(release.release, runtime.release);
+assert.equal(release.build, runtime.build);
+assert.match(release.release, /^\d+\.\d+\.\d+$/);
 
 assert.match(html, /atlas-pep-discovery\.css\?v=0500-1/);
 assert.match(html, /atlas-pep-runtime-state-bridge\.js\?v=0500-1/);
 assert.match(html, /atlas-pep-discovery\.js\?v=0500-1/);
 assert.ok(html.indexOf('atlas-pep-runtime-state-bridge.js') < html.indexOf('atlas-pep-discovery.js'));
-assert.match(html, /data-atlas-release="0\.50\.0"/);
+assert.match(html, new RegExp(`data-atlas-release="${release.release.replace(/\./g,'\\.')}"`));
 
 assert.match(bridge, /typeof state === 'undefined'/);
 assert.match(bridge, /Object\.defineProperty\(window, 'state'/);
