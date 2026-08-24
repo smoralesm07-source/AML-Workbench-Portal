@@ -11,9 +11,6 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <!-- 0460: script-src queda en 'self'. El cliente de Supabase pasó a alojarse
-       localmente en assets/, de modo que ya no hay origen de terceros capaz de
-       ejecutar código dentro de la sesión autenticada del analista. -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src 'self' https://ldmtlwzqaqmegedktlxr.supabase.co wss://ldmtlwzqaqmegedktlxr.supabase.co https://raw.githubusercontent.com; style-src 'self'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'" />
   <script src="./atlas-release-guard.js?r=0449"></script>
   <script src="./atlas-theme-bootstrap.js?r=0449"></script>
@@ -36,7 +33,7 @@
   <link rel="stylesheet" href="./assets/atlas-public-spend-signal-command-v2.css?v=0451-1" />
   <link rel="stylesheet" href="./assets/atlas-mobile-nav.css?v=0469-1" />
   <link rel="stylesheet" href="./assets/atlas-disposition-0460.css?v=0460-1" />
-  <link rel="stylesheet" href="./assets/atlas-pep-discovery.css?v=0500-1" />
+  <link rel="stylesheet" href="./assets/atlas-pep-discovery.css?v=0501-1" />
 </head>
 <body>
   <main id="app">
@@ -49,10 +46,6 @@
       </div>
     </section>
   </main>
-  <!-- 0460: alojado localmente. Copia exacta de dist/umd/supabase.js del paquete
-       @supabase/supabase-js@2.111.0 publicado en registry.npmjs.org, que es el
-       mismo archivo que servía el CDN. Se sirve desde el propio origen para que
-       un compromiso del CDN no pueda ejecutar código con la sesión del analista. -->
   <script src="./assets/supabase-js-2.111.0.umd.js?v=0460-1"></script>
 <!-- ATLAS_RUNTIME_SCRIPTS -->
   <script src="./assets/atlas-territory-threat-cead-v1.js?v=0450-1"></script>
@@ -73,12 +66,11 @@
   <script src="./assets/atlas-public-spend-mark-taxonomy-v3.js?v=0451-2"></script>
   <script src="./assets/atlas-territory-copy-cleanup.js?v=0466-1"></script>
   <script src="./assets/atlas-mobile-nav.js?v=0469-1"></script>
-  <!-- 0460 · etapa 1. Cargan al final, después del runtime compilado, para
-       envolver los renderizadores vigentes en lugar de competir con ellos. -->
   <script src="./assets/atlas-score-calibration-0460.js?v=0460-1"></script>
   <script src="./assets/atlas-disposition-0460.js?v=0460-1"></script>
-  <!-- 0500 · puente mínimo al state lexical y vista analítica PEP/BF. -->
-  <script src="./assets/atlas-pep-runtime-state-bridge.js?v=0500-1"></script>
-  <script src="./assets/atlas-pep-discovery.js?v=0500-1"></script>
+  <script src="./assets/atlas-pep-runtime-state-bridge.js?v=0501-1"></script>
+  <script src="./assets/atlas-pep-discovery.js?v=0501-1"></script>
+  <!-- 0501 · hace la vista operativa incluso cuando latest aún no fue materializado. -->
+  <script src="./assets/atlas-pep-availability-0501.js?v=0501-1"></script>
 </body>
 </html>

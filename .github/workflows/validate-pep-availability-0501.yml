@@ -1,0 +1,51 @@
+name: Validate ATLAS PEP availability 0501
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'assets/atlas-pep-availability-0501.js'
+      - 'tests/atlas-pep-availability-0501.mjs'
+      - 'index.html'
+      - 'atlas-release.json'
+      - '.github/workflows/validate-pep-availability-0501.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'assets/atlas-pep-availability-0501.js'
+      - 'tests/atlas-pep-availability-0501.mjs'
+      - 'index.html'
+      - 'atlas-release.json'
+      - '.github/workflows/validate-pep-availability-0501.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate JavaScript syntax
+        run: node --check assets/atlas-pep-availability-0501.js
+      - name: Validate availability contract
+        run: node tests/atlas-pep-availability-0501.mjs
+      - name: Build exact Pages candidate
+        run: python tools/build_atlas_site.py --out _site-pep-availability
+      - name: Verify deployed asset contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s _site-pep-availability/assets/atlas-pep-availability-0501.js
+          grep -q 'atlas-pep-availability-0501.js?v=0501-1' _site-pep-availability/index.html
+          grep -q 'aml_pep_discovery_snapshot' _site-pep-availability/assets/atlas-pep-availability-0501.js
+          ! grep -q 'MutationObserver' _site-pep-availability/assets/atlas-pep-availability-0501.js
+          ! grep -q 'localStorage' _site-pep-availability/assets/atlas-pep-availability-0501.js
+          ! grep -Ei 'insert\(|update\(|upsert\(|delete\(' _site-pep-availability/assets/atlas-pep-availability-0501.js
