@@ -37,10 +37,11 @@ jobs:
           grep -q 'atlas-irg-irar-adapter.module.js' index.html
           ! grep -q 'atlas-reportability-icr.js' index.html
           grep -q 'IRAR_ADJUSTED' assets/atlas-reportability-irar.js
-          grep -q 'IRAR-UI-1.2' assets/atlas-reportability-irar.js
-          grep -q 'atlas-irar-expected-zone' assets/atlas-reportability-irar.js
+          grep -q 'IRAR-UI-1.3' assets/atlas-reportability-irar.js
+          grep -q 'atlas-irar-expected-zone-svg' assets/atlas-reportability-irar.js
           grep -q 'Credibilidad estadística IRAR' assets/atlas-reportability-irar.js
-          grep -q '<span class="atlas-irar-dot' assets/atlas-reportability-irar.js
+          grep -q '<circle class="atlas-irar-dot' assets/atlas-reportability-irar.js
+          ! grep -q 'style="left:' assets/atlas-reportability-irar.js
           grep -q 'IRG-LAFT-0.34.0' assets/atlas-irg-irar-adapter.module.js
       - name: Build canonical ATLAS candidate
         run: |
@@ -49,6 +50,6 @@ jobs:
           test -f _site-irar/assets/atlas-irar-current.js
           test -f _site-irar/assets/atlas-reportability-irar.js
           test -f _site-irar/assets/atlas-irg-irar-adapter.module.js
-          grep -q 'atlas-reportability-irar.js?v=0468-3' _site-irar/index.html
+          grep -q 'atlas-reportability-irar.js?v=0468-4' _site-irar/index.html
           grep -q 'atlas-irg-irar-adapter.module.js' _site-irar/index.html
-          grep -q 'IRAR-UI-1.2' _site-irar/assets/atlas-reportability-irar.js
+          grep -q 'IRAR-UI-1.3' _site-irar/assets/atlas-reportability-irar.js
