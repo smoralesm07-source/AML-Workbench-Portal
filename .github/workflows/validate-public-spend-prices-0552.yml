@@ -1,0 +1,20 @@
+name: Validate Public Spend Prices 0552
+on:
+  pull_request:
+    paths:
+      - 'assets/atlas-public-spend-prices-0552.js'
+      - 'assets/atlas-public-spend-prices-0552.css'
+      - 'tests/atlas-public-spend-prices-0552.mjs'
+      - 'index.html'
+      - '.github/workflows/validate-public-spend-prices-0552.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node tests/atlas-public-spend-prices-0552.mjs
