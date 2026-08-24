@@ -19,7 +19,7 @@
     grid.insertAdjacentHTML('beforeend',markup(r,data));lastId=id;
   }
   function schedule(){if(scheduled)return;scheduled=true;setTimeout(()=>void mount(),120);}
-  const root=document.querySelector('#content');if(root)new MutationObserver(schedule).observe(root,{childList:true,subtree:true});
+  new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});
   document.addEventListener('click',schedule,true);schedule();
   window.__ATLAS_ENTITY_RES_INTELLIGENCE_0553__={active:true,release:'0.55.3',source:'RES',scoreMutation:false,installedAt:new Date().toISOString()};
 })();
