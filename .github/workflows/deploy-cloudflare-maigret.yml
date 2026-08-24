@@ -1,0 +1,58 @@
+name: Deploy Cloudflare Maigret
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'cloudflare/maigret-service/**'
+      - '.github/workflows/deploy-cloudflare-maigret.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'cloudflare/maigret-service/**'
+      - '.github/workflows/deploy-cloudflare-maigret.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cloudflare/maigret-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install pinned dependencies
+        run: npm install --no-audit --no-fund
+      - name: Validate Worker and container configuration
+        run: npx wrangler deploy --dry-run
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cloudflare/maigret-service
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install pinned dependencies
+        run: npm install --no-audit --no-fund
+      - name: Deploy atlas-maigret-osint
+        shell: bash
+        run: |
+          set -o pipefail
+          npx wrangler deploy 2>&1 | tee deploy.log
+          echo '### Cloudflare Maigret deployment' >> "$GITHUB_STEP_SUMMARY"
+          grep -E 'https://|Version ID|Uploaded|Deployed|containers' deploy.log | tail -40 >> "$GITHUB_STEP_SUMMARY" || true
