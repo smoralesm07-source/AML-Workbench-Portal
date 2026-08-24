@@ -55,7 +55,7 @@
   function schedule(){if(scheduled)return;scheduled=true;setTimeout(()=>{scheduled=false;void decorateRows();},100);}
   document.addEventListener('click',event=>{const peek=event.target.closest?.('[data-aex-peek]');if(peek?.dataset?.aexPeek)void decorateSheet(peek.dataset.aexPeek);schedule();},true);
   document.addEventListener('change',schedule,true);
-  const root=document.querySelector('#content');if(root)new MutationObserver(schedule).observe(root,{childList:true,subtree:true});
+  new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});
   schedule();
   window.__ATLAS_ENTITY_RES_EXPLORER_0553__={active:true,release:'0.55.3',build:'0553',source:'aml_entity_master_v0553',identityPolicy:'RUT_EXACTO_ONLY',installedAt:new Date().toISOString()};
 })();
