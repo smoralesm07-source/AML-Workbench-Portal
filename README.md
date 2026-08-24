@@ -2,7 +2,7 @@
 
 Frontend estático y autenticado del **AML Analytical Workbench**.
 
-## v0.51.0 — Entidades: exploración y caracterización profunda
+## v0.51.1 — Entidades: exploración y caracterización profunda
 
 La sección **Entidades** se reconstruyó completa (`docs/entity-intelligence-0510.md`).
 
@@ -18,6 +18,12 @@ La sección **Entidades** se reconstruyó completa (`docs/entity-intelligence-05
 - **Lecturas por snapshot:** las consultas por entidad dejan de recomputar
   ventanas sobre todo el universo (de 6 s a 4 ms en el puntaje, de 3,4 s a 1 ms
   en las marcas).
+- **Diseño gráfico primero (0511):** huella de productores, firma de marcas y
+  barra IPA3 repetidas en todas las superficies; el conjunto se lee con
+  histograma de prioridad y matriz cobertura × condición; el expediente dibuja
+  la serie tributaria por año, la recurrencia sancionatoria sobre un eje
+  temporal y la cascada de cálculo de cada marca. Los guardarraíles se
+  concentran en paneles de reglas en vez de repetirse bajo cada tarjeta.
 
 Las reglas de lectura no cambian: prioridad no es probabilidad, percentil es
 posición y no desempeño, un vínculo candidato no promueve identidad, y una

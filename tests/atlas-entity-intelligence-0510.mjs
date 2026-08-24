@@ -22,13 +22,16 @@ assert.equal(release.release, build.app_version);
 assert.equal(release.build, build.build);
 assert.equal(release.release, runtime.release);
 assert.equal(release.build, runtime.build);
-assert.equal(release.build, '0510');
+assert.equal(release.build, '0511');
 
 /* --- montaje en el runtime publicado --- */
-assert.match(html, /atlas-entity-explorer-0510\.css\?v=0510-1/);
-assert.match(html, /atlas-entity-dossier-0510\.css\?v=0510-1/);
-assert.match(html, /atlas-entity-explorer-0510\.js\?v=0510-1/);
-assert.match(html, /atlas-entity-dossier-0510\.js\?v=0510-1/);
+const cacheKey = new RegExp(`\\?v=${release.build}-1`);
+for (const asset of ['atlas-entity-explorer-0510.css', 'atlas-entity-dossier-0510.css',
+  'atlas-entity-explorer-0510.js', 'atlas-entity-dossier-0510.js']) {
+  assert.ok(html.includes(asset), `${asset} debe montarse en el runtime publicado`);
+}
+/* Los cuatro archivos comparten la clave de caché del build vigente. */
+assert.equal((html.match(new RegExp(cacheKey.source, 'g')) || []).length, 4);
 assert.ok(html.indexOf('atlas-entity-explorer-0510.js') < html.indexOf('atlas-entity-dossier-0510.js'),
   'el explorador se monta antes que el expediente');
 assert.ok(html.indexOf('atlas-pep-discovery.js') < html.indexOf('atlas-entity-explorer-0510.js'),
@@ -86,22 +89,44 @@ for (const source of ['aml_v_ipa3_structure_peer_benchmark', 'aml_v_ipa3_sii_tra
 }
 assert.match(dossier, /ATLAS_ENTITY_CHARACTERIZATION_V1/);
 assert.match(dossier, /function markDrawer/);
+/* El rediseño 0511 sustituye recuentos en prosa por series y objetos gráficos. */
+assert.match(dossier, /const YEAR_TABLE='aml_sii_entity_year'/);
+assert.match(dossier, /function trajectoryChart/);
+assert.match(dossier, /function sanctionTimeline/);
+assert.match(dossier, /function waterfall/);
+assert.match(dossier, /function peerBar/);
+assert.match(explorer, /function fingerprint/);
+assert.match(explorer, /function signature/);
+assert.match(explorer, /function priorityChart/);
+assert.match(explorer, /function coverageMatrix/);
+assert.match(explorer, /function rulesMarkup/);
+/* La huella sólo dibuja productores que el perfil declara de verdad. */
+assert.match(explorer, /const PRODUCERS=\[\['sii','RADAR_SII'/);
+assert.doesNotMatch(explorer, /RADAR_CGR|RADAR_DELICTUAL|PRESUPUESTO/);
 assert.match(dossier, /aporte           = min\(intensidad_bruta, tope_individual\) × confianza/);
 
 /* --- guardarrailes visibles, no solo declarados --- */
 assert.match(explorer, /Cobertura ≠ riesgo/);
+assert.match(explorer, /Reglas que no cambian/);
+assert.match(dossier, /Reglas que no cambian/);
+assert.match(dossier, /Sanción ≠ delito/);
+assert.match(dossier, /Percentil ≠ desempeño/);
 assert.match(explorer, /Prioridad ≠ probabilidad/);
 assert.match(explorer, /Identidad ≠ similitud/);
 assert.match(explorer, /Ausencia ≠ cero/);
-assert.match(explorer, /sin marca/);
+assert.match(explorer, /[Ss]in marca/);
 assert.match(dossier, /no es probabilidad de LA\/FT|Prioridad analítica, no probabilidad/);
 assert.match(dossier, /no describe desempeño|posición relativa|no es riesgo/);
 assert.match(dossier, /no promueve identidad/);
 assert.match(dossier, /no acredita por sí sola lavado de activos|no acredita delito|no acredita conducta/);
 assert.match(dossier, /Ausencia en el corte no equivale a puntaje cero/);
 /* Un IPA3 en cero es ausencia de marca y se muestra como raya, nunca como banda baja. */
-assert.match(explorer, /if\(!score\|\|value==null\|\|value<=0\)return`<b>—<\/b>/);
-assert.match(dossier, /ninguna marca activa/);
+assert.match(explorer, /if\(!score\|\|value==null\|\|value<=0\)return'<b class="none"/);
+/* Number(null) es 0: sin el guardia, un dato ausente se pintaría como cero. */
+for (const source of [explorer, dossier]) {
+  assert.match(source, /if\(v===null\|\|v===undefined\|\|v===''\)return null/);
+}
+assert.match(dossier, /[Nn]inguna marca activa/);
 
 /* --- estilo aislado: ninguna regla global --- */
 for (const css of [explorerCss, dossierCss]) {
