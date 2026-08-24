@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "deploy": "wrangler deploy",
+    "test": "node test-contract.mjs",
+    "deploy": "wrangler deploy --containers-rollout=immediate",
     "dry-run": "wrangler deploy --dry-run"
   },
   "dependencies": {

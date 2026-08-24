@@ -30,6 +30,8 @@ jobs:
           node-version: 22
       - name: Install pinned dependencies
         run: npm install --no-audit --no-fund
+      - name: Contract guardrails
+        run: npm test
       - name: Validate Worker and container configuration
         run: npx wrangler deploy --dry-run
 
@@ -51,16 +53,34 @@ jobs:
           node-version: 22
       - name: Install pinned dependencies
         run: npm install --no-audit --no-fund
+      - name: Verify Cloudflare secrets are available
+        shell: bash
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
       - name: Deploy atlas-maigret-osint
         id: deploy
         shell: bash
         run: |
           set +e
           set -o pipefail
-          npx wrangler deploy 2>&1 | tee deploy.log
+          npx wrangler deploy --containers-rollout=immediate 2>&1 | tee deploy.log
           code=${PIPESTATUS[0]}
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          worker_url=$(grep -Eo 'https://[A-Za-z0-9._-]+\.workers\.dev' deploy.log | tail -1 || true)
+          echo "worker_url=$worker_url" >> "$GITHUB_OUTPUT"
           exit 0
+      - name: Smoke test Worker and auth boundary
+        if: steps.deploy.outputs.exit_code == '0'
+        shell: bash
+        env:
+          WORKER_URL: ${{ steps.deploy.outputs.worker_url }}
+        run: |
+          test -n "$WORKER_URL"
+          curl --fail --silent --show-error --retry 12 --retry-delay 10 --retry-all-errors "$WORKER_URL/health" | tee health.json
+          grep -q '"ok":true' health.json
+          code=$(curl --silent --output unauth.json --write-out '%{http_code}' -X POST "$WORKER_URL/v1/maigret" -H 'content-type: application/json' --data '{"username":"atlas_test"}')
+          test "$code" = "401"
       - name: Publish deployment report
         if: always()
         shell: bash
@@ -72,13 +92,18 @@ jobs:
             echo
             echo "Commit: \`${GITHUB_SHA}\`"
             echo "Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            if [ -n "${{ steps.deploy.outputs.worker_url }}" ]; then echo "Worker: ${{ steps.deploy.outputs.worker_url }}"; fi
             echo
             echo '```text'
-            grep -E 'https://|Version ID|Uploaded|Deployed|containers|ERROR|Error|error' deploy.log | tail -80 || tail -80 deploy.log
+            grep -E 'https://|Version ID|Uploaded|Deployed|containers|Worker|ERROR|Error|error' deploy.log | tail -100 || tail -100 deploy.log
             echo '```'
           } > deployment-report.md
           cat deployment-report.md >> "$GITHUB_STEP_SUMMARY"
           gh issue comment 86 --repo "$GITHUB_REPOSITORY" --body-file deployment-report.md
+      - name: Container status
+        if: steps.deploy.outputs.exit_code == '0'
+        shell: bash
+        run: npx wrangler containers list || true
       - name: Fail if deployment failed
         if: steps.deploy.outputs.exit_code != '0'
         run: exit 1
