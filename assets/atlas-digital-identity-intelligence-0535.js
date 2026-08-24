@@ -24,10 +24,10 @@
   }
   function mount(){
     const s=state(),host=document.querySelector('[data-aex-digital-graph-host]');
-    if(!host||s.depth!=='deep')return;
-    host.querySelector('.adi-wrap')?.remove();
+    if(!host||s.depth!=='deep'||host.dataset.adiMounted==='1')return;
     const i=intel(s);
     if(!i)return;
+    host.dataset.adiMounted='1';
     const m=i.summary||{};
     const section=document.createElement('section');
     section.className='adi-wrap';
