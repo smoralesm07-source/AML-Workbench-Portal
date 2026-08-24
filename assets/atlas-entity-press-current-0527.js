@@ -1,19 +1,25 @@
 'use strict';
 
 /* ATLAS AML · Radar Prensa visible en Ficha Rápida + Entity 360
- * Esta versión reemplaza la lógica anterior de 0527 y apunta a los contenedores
- * productivos reales que usa hoy la app:
- *   - #aex-sheet / #aex-sheet-body (Ficha rápida)
- *   - .a45 (Entity 360)
+ * 0527.4 endurece la resolución de identidad para evitar falsos positivos.
+ * La prensa solo se monta cuando existe evidencia nominal fuerte y no ambigua.
  * No modifica identidad canónica, RLS, IPA3 ni persistencia.
  */
 (function atlasEntityPressCurrent0527(){
-  const VERSION='ENTITY_PRESS_CURRENT_0527.3';
+  const VERSION='ENTITY_PRESS_CURRENT_0527.4';
   const FEED='https://raw.githubusercontent.com/smoralesm07-source/Monitor/atlas-press-state/atlas_prensa.json';
   let feed=null, loading=null, lastSheet='', last360='';
+
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('es-CL').replace(/\b(s\.?a\.?|spa|ltda|eirl)\b/g,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
+  const norm=v=>String(v??'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLocaleLowerCase('es-CL')
+    .replace(/\b(s\.?a\.?|spa|ltda|eirl|limitada)\b/g,' ')
+    .replace(/[^a-z0-9]+/g,' ')
+    .replace(/\s+/g,' ').trim();
   const uniq=xs=>[...new Set((xs||[]).map(x=>String(x||'').trim()).filter(Boolean))];
+  const STOP=new Set(['de','del','la','las','el','los','y','e','en','para','por','con','sin','casa','empresa','individual','responsabilidad','resp','sociedad','servicios','comercial','comercio','inversiones','inversion','compania','cia']);
+  const tokens=v=>norm(v).split(' ').filter(t=>t.length>2&&!STOP.has(t));
 
   async function load(){
     if(feed)return feed;if(loading)return loading;
@@ -33,24 +39,57 @@
     return loading;
   }
 
-  function scoreName(entityName,target){
-    const a=norm(entityName), b=norm(target);if(!a||!b)return 0;if(a===b)return 100;if(a.includes(b)||b.includes(a))return 90;
-    const ta=new Set(a.split(' ').filter(x=>x.length>2)), tb=new Set(b.split(' ').filter(x=>x.length>2));
-    if(!ta.size||!tb.size)return 0;let inter=0;for(const t of ta)if(tb.has(t))inter++;
-    return Math.round(100*(2*inter/(ta.size+tb.size)));
+  function similarity(entityName,target){
+    const a=norm(entityName),b=norm(target);
+    if(!a||!b)return {score:0,exact:false,overlap:0,ratio:0};
+    if(a===b)return {score:100,exact:true,overlap:tokens(a).length,ratio:1};
+
+    const ta=tokens(a),tb=tokens(b),sa=new Set(ta),sb=new Set(tb);
+    if(!sa.size||!sb.size)return {score:0,exact:false,overlap:0,ratio:0};
+    let inter=0;for(const t of sa)if(sb.has(t))inter++;
+    const minSize=Math.min(sa.size,sb.size),maxSize=Math.max(sa.size,sb.size);
+    const coverage=minSize?inter/minSize:0;
+    const sizeRatio=maxSize?minSize/maxSize:0;
+    const dice=(2*inter)/(sa.size+sb.size);
+    const charRatio=Math.min(a.length,b.length)/Math.max(a.length,b.length);
+
+    // La inclusión de una cadena ya no basta por sí sola: exige casi la misma identidad.
+    if((a.includes(b)||b.includes(a)) && inter>=3 && coverage>=0.9 && sizeRatio>=0.8 && charRatio>=0.72){
+      return {score:95,exact:false,overlap:inter,ratio:coverage};
+    }
+    const score=Math.round(100*dice);
+    return {score,exact:false,overlap:inter,ratio:coverage};
   }
+
+  function candidateScore(e,name){
+    const labels=[e?.name,...(Array.isArray(e?.aliases)?e.aliases:[])].filter(Boolean);
+    let best={score:0,exact:false,overlap:0,ratio:0,label:''};
+    for(const label of labels){const s=similarity(label,name);if(s.score>best.score)best={...s,label:String(label)};}
+    return best;
+  }
+
   function findEntity(data,name){
     if(!data||!name)return null;
-    const ranked=data.entities.map(e=>({e,s:Math.max(scoreName(e.name,name),...(e.aliases||[]).map(a=>scoreName(a,name)))})).filter(x=>x.s>=68)
-      .sort((x,y)=>y.s-x.s||Number(y.e.article_count||0)-Number(x.e.article_count||0));
-    return ranked[0]?.e||null;
+    const ranked=data.entities
+      .map(e=>({e,...candidateScore(e,name)}))
+      .filter(x=>x.exact || (x.score>=88 && x.overlap>=3 && x.ratio>=0.82))
+      .sort((x,y)=>y.score-x.score||Number(y.e.article_count||0)-Number(x.e.article_count||0));
+    if(!ranked.length)return null;
+    const top=ranked[0],second=ranked[1];
+
+    // Exacto siempre es admisible. Fuzzy exige puntaje muy alto y separación clara.
+    const accepted=top.exact || (top.score>=93 && (!second || top.score-second.score>=7));
+    window.__ATLAS_PRESS_LAST_MATCH__={target:name,accepted,top:{name:top.e?.name,score:top.score,exact:top.exact,overlap:top.overlap,ratio:top.ratio,label:top.label},second:second?{name:second.e?.name,score:second.score}:null};
+    return accepted?top.e:null;
   }
+
   function itemsFor(data,e){
     return (data.mentionByEntity.get(String(e.press_entity_id))||[]).map(m=>{
       const a=data.articleById.get(String(m.article_id))||{};
       return {a,m,phenomena:uniq([...(a.phenomena||[]),...(m.phenomena||[])])};
     }).sort((x,y)=>String(y.a.date||'').localeCompare(String(x.a.date||'')));
   }
+
   function block(e,items,compact=false){
     const phenomena=uniq(items.flatMap(x=>x.phenomena)).slice(0,8);
     const usable=items.slice(0,compact?5:10);
@@ -93,5 +132,5 @@
   obs.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['aria-hidden']});
   document.addEventListener('click',()=>{setTimeout(refresh,120);setTimeout(refresh,700);},true);
   setInterval(refresh,1500);void load().then(refresh);
-  window.__ATLAS_ENTITY_PRESS_CURRENT__={active:true,version:VERSION,targets:['#aex-sheet','.a45'],feed:FEED,scoreMutation:false,identityMutation:false};
+  window.__ATLAS_ENTITY_PRESS_CURRENT__={active:true,version:VERSION,targets:['#aex-sheet','.a45'],feed:FEED,scoreMutation:false,identityMutation:false,matchPolicy:'STRICT_UNAMBIGUOUS_0527_4'};
 })();
