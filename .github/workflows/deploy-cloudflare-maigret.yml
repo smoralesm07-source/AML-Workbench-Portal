@@ -62,6 +62,28 @@ jobs:
           test -n "$api_token"
           echo "CLOUDFLARE_ACCOUNT_ID=$account_id" >> "$GITHUB_ENV"
           echo "CLOUDFLARE_API_TOKEN=$api_token" >> "$GITHUB_ENV"
+      - name: Ensure workers.dev account subdomain
+        id: workers_subdomain
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/subdomain"
+          auth=(-H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H 'Content-Type: application/json')
+          current=$(curl --silent --show-error "${auth[@]}" "$api")
+          subdomain=$(printf '%s' "$current" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const j=JSON.parse(s);process.stdout.write(j?.result?.subdomain||'')}catch{}})")
+          if [ -z "$subdomain" ]; then
+            desired="atlas-aml-$(printf '%s' "$CLOUDFLARE_ACCOUNT_ID" | cut -c1-8 | tr '[:upper:]' '[:lower:]')"
+            created=$(curl --silent --show-error --request PUT "${auth[@]}" --data "{\"subdomain\":\"$desired\"}" "$api")
+            success=$(printf '%s' "$created" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const j=JSON.parse(s);process.stdout.write(j?.success?'true':'false')}catch{process.stdout.write('false')}})")
+            if [ "$success" != "true" ]; then
+              printf '%s\n' "$created"
+              exit 1
+            fi
+            subdomain=$(printf '%s' "$created" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const j=JSON.parse(s);process.stdout.write(j?.result?.subdomain||'')})")
+          fi
+          test -n "$subdomain"
+          echo "subdomain=$subdomain" >> "$GITHUB_OUTPUT"
+          echo "Workers subdomain: ${subdomain}.workers.dev"
       - name: Deploy atlas-maigret-osint
         id: deploy
         shell: bash
@@ -72,6 +94,9 @@ jobs:
           code=${PIPESTATUS[0]}
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           worker_url=$(grep -Eo 'https://[A-Za-z0-9._-]+\.workers\.dev' deploy.log | tail -1 || true)
+          if [ -z "$worker_url" ] && [ "$code" = "0" ]; then
+            worker_url="https://atlas-maigret-osint.${{ steps.workers_subdomain.outputs.subdomain }}.workers.dev"
+          fi
           echo "worker_url=$worker_url" >> "$GITHUB_OUTPUT"
           exit 0
       - name: Smoke test Worker and auth boundary
