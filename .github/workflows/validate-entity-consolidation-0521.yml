@@ -1,0 +1,24 @@
+name: Validate Entity Consolidation 0521
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntax and contract
+        run: |
+          node --check assets/atlas-entity-consolidation-0521.js
+          node tests/atlas-entity-consolidation-0521.mjs
