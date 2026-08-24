@@ -1,0 +1,14 @@
+{
+  "service": "cloudflare-containers",
+  "http_status": 401,
+  "diagnosis": "containers_token_or_backend_authorization",
+  "success": false,
+  "error_codes": [
+    1000
+  ],
+  "messages": [
+    "{\"error\":\"Unauthorized: You do not have access to Cloudflare Containers. Deploying containers requires the Workers Paid plan. Upgrade your plan at https://dash.cloudflare.com/?to=/:account/workers/plans\"}"
+  ],
+  "checked_at": "2026-08-24T17:06:54.878Z",
+  "source_commit": "1941b0fa1cf94c8fda8a23717f903b4fe30971d8"
+}
