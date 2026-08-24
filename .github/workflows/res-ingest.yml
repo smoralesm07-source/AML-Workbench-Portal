@@ -1,0 +1,70 @@
+name: RES official data ingest
+
+on:
+  schedule:
+    - cron: '20 7 * * *'
+  workflow_dispatch:
+    inputs:
+      year:
+        description: 'current o año calendario; use all para backfill'
+        required: true
+        default: 'current'
+  pull_request:
+    paths:
+      - 'ops/res/**'
+      - '.github/workflows/res-ingest.yml'
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: atlas-res-ingest
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate RES loader
+        run: |
+          python -m py_compile ops/res/ingest.py
+          python ops/res/ingest.py --self-test
+          python ops/res/ingest.py --help >/dev/null
+
+  ingest:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Resolve requested scope
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_YEAR: ${{ github.event.inputs.year }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            requested="${INPUT_YEAR:-current}"
+          else
+            requested="current"
+          fi
+          echo "requested=$requested" >> "$GITHUB_OUTPUT"
+      - name: Ingest official RES data into Atlas
+        env:
+          REQUESTED: ${{ steps.scope.outputs.requested }}
+        run: |
+          set -euo pipefail
+          if [ "$REQUESTED" = "all" ]; then
+            python ops/res/ingest.py --all
+          else
+            python ops/res/ingest.py --year "$REQUESTED"
+          fi
