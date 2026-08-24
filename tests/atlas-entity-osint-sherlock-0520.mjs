@@ -8,7 +8,7 @@ const config=fs.readFileSync('assets/atlas-osint-config.js','utf8');
 const service=fs.readFileSync('services/atlas-osint-sherlock/app.py','utf8');
 const requirements=fs.readFileSync('services/atlas-osint-sherlock/requirements.txt','utf8');
 
-assert.match(index,/data-aml-version="0\.52\.0"/);
+assert.match(index,/data-aml-version="0\.51\.1"/);
 assert.match(index,/atlas-entity-osint-sherlock-0520\.css/);
 assert.match(index,/atlas-osint-config\.js/);
 assert.match(index,/atlas-entity-osint-sherlock-0520\.js/);
