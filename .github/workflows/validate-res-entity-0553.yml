@@ -49,7 +49,8 @@ jobs:
           ]
           for marker in required:
             assert marker in entity, marker
-          assert '__ATLAS_ENTITY_RES__.load' in explorer
+          assert '__ATLAS_ENTITY_RES__' in explorer
+          assert 'API.load' in explorer
           assert '__ATLAS_ENTITY_RES__' in intelligence
           assert 'atlas-entity-res-intelligence-0553.js' in bootstrap
           assert 'atlas-entity-res-bootstrap-0553.js' in hook
