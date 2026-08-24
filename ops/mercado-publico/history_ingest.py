@@ -5,6 +5,7 @@ from pathlib import Path
 
 HOST='transparenciachc.blob.core.windows.net'; PREFIX='/oc-da/'
 INGEST='https://ldmtlwzqaqmegedktlxr.supabase.co/functions/v1/aml-mp-history-ingest'; AUD='atlas-mp-history'
+R2_BUCKET='atlas-mercado-publico-raw'
 ALIASES={
  'order_id':('Codigo','Código','CodigoOrdenCompra','Código Orden de Compra','Codigo OC','codigooc'),
  'tender_id':('CodigoLicitacion','CódigoLicitacion','Código Licitación','Codigo Licitacion','idlicitacion'),
@@ -48,8 +49,7 @@ def num(v):
  s=str(v or '').strip().replace('\xa0','').replace(' ','')
  if not s:return None
  try:
-  if ',' in s and '.' in s:
-   s=s.replace('.','').replace(',','.') if s.rfind(',')>s.rfind('.') else s.replace(',','')
+  if ',' in s and '.' in s:s=s.replace('.','').replace(',','.') if s.rfind(',')>s.rfind('.') else s.replace(',','')
   elif ',' in s:s=s.replace(',','.')
   return float(s)
  except:return None
@@ -83,7 +83,7 @@ def token():
 def api(payload,timeout=180):
  raw=json.dumps(payload,separators=(',',':')).encode()
  for _ in range(2):
-  req=urllib.request.Request(INGEST,data=raw,headers={'Authorization':'Bearer '+token(),'Content-Type':'application/json','User-Agent':'Atlas-MP-History/1.1'},method='POST')
+  req=urllib.request.Request(INGEST,data=raw,headers={'Authorization':'Bearer '+token(),'Content-Type':'application/json','User-Agent':'Atlas-MP-History/1.2'},method='POST')
   try:
    with urllib.request.urlopen(req,timeout=timeout) as r:o=json.load(r)
    if not o.get('ok'):raise RuntimeError(o.get('error') or 'ingest rejected')
@@ -94,13 +94,18 @@ def api(payload,timeout=180):
  raise RuntimeError('OIDC authentication failed')
 
 def dl(url,dst):
- valid_url(url);req=urllib.request.Request(url,headers={'User-Agent':'Atlas-MP-History/1.1'})
+ valid_url(url);req=urllib.request.Request(url,headers={'User-Agent':'Atlas-MP-History/1.2'})
  with urllib.request.urlopen(req,timeout=600) as r,dst.open('wb') as f:shutil.copyfileobj(r,f,1024*1024)
 def digest(path):
  h=hashlib.sha256()
  with path.open('rb') as f:
   for b in iter(lambda:f.read(1024*1024),b''):h.update(b)
  return h.hexdigest()
+def upload_r2(path:Path,year:int,month:int)->str:
+ key_name=f'mercado-publico/raw/{year}/{month:02d}/{path.name}'
+ target=f'{R2_BUCKET}/{key_name}'
+ subprocess.run(['npx','wrangler@4.125.0','r2','object','put',target,f'--file={path}','--remote','--content-type=application/zip'],check=True)
+ return f'r2://{target}'
 def enc(path):
  raw=path.open('rb').read(65536)
  try:raw.decode('utf-8-sig');return 'utf-8-sig'
@@ -120,8 +125,7 @@ def main():
  try:
   with tempfile.TemporaryDirectory() as td0:
    td=Path(td0);z=td/f'{a.year}-{a.month}.zip';x=td/'x';dl(url,z);sha=digest(z);size=z.stat().st_size
-   signed=api({'action':'signed_upload','year':a.year,'month':a.month,'filename':z.name});obj=signed['object_path']
-   subprocess.run(['curl','--fail','--silent','--show-error','--retry','3','-X','PUT','-H','x-upsert: true','-H','cache-control: max-age=3600','-H','content-type: application/zip','--data-binary','@'+str(z),signed['signed_url']],check=True)
+   obj=upload_r2(z,a.year,a.month)
    shutil.unpack_archive(str(z),str(x));files=sorted(x.rglob('*.csv'),key=lambda q:q.stat().st_size,reverse=True)
    if not files:raise RuntimeError('archive has no CSV')
    src=files[0];orders={};rows_read=0;raw_fields=[]
@@ -157,12 +161,11 @@ def main():
    for b in batches(items,500):api({'action':'items_batch','year':a.year,'month':a.month,'rows':b})
    n=max(len(facts),1);ni=max(len(items),1);identified=sum(1 for o in facts if (o['buyer_rut'] or o['buyer_org_name']) and (o['supplier_rut'] or o['supplier_name']));clp=sum(1 for o in facts if o['clp_amount'] not in (None,0));prod=sum(1 for i in items if i['product_code'] or i['description']);priced=sum(1 for i in items if i['unit_price'] not in (None,0) or i['line_total'] not in (None,0))
    cov={'orders':len(facts),'items':len(items),'identity_coverage':round(identified/n,6),'clp_amount_coverage':round(clp/n,6),'product_coverage':round(prod/ni,6),'price_coverage':round(priced/ni,6),'resolved_columns':sorted(m),'raw_column_count':len(raw_fields)}
-   final=api({'action':'finalize','year':a.year,'month':a.month,'object_path':obj,'source_url':url,'sha256':sha,'bytes':size,'rows_observed':rows_read,'metadata':{'orders':len(facts),'items':len(items),'coverage':cov}},timeout=240)
-   print(json.dumps({'ok':True,'year':a.year,'month':a.month,'rows_read':rows_read,'orders':len(facts),'items':len(items),'raw_bytes':size,'coverage':cov,'final':final},ensure_ascii=False))
+   final=api({'action':'finalize','year':a.year,'month':a.month,'object_path':obj,'source_url':url,'sha256':sha,'bytes':size,'rows_observed':rows_read,'metadata':{'orders':len(facts),'items':len(items),'coverage':cov,'raw_backend':'cloudflare_r2'}},timeout=240)
+   print(json.dumps({'ok':True,'year':a.year,'month':a.month,'rows_read':rows_read,'orders':len(facts),'items':len(items),'raw_bytes':size,'coverage':cov,'raw_object':obj,'final':final},ensure_ascii=False))
  except Exception as e:
   msg=str(e)
-  if 'storage/v1/object/upload/sign/' in msg:msg='SIGNED_STORAGE_UPLOAD_FAILED'
-  elif 'token=' in msg:msg=msg.split('token=',1)[0]+'token=[REDACTED]'
+  if 'token=' in msg:msg=msg.split('token=',1)[0]+'token=[REDACTED]'
   try:api({'action':'fail','year':a.year,'month':a.month,'error':msg[:900]})
   except:pass
   raise
