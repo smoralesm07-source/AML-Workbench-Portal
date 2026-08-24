@@ -2,6 +2,27 @@
 
 Frontend estático y autenticado del **AML Analytical Workbench**.
 
+## v0.51.0 — Entidades: exploración y caracterización profunda
+
+La sección **Entidades** se reconstruyó completa (`docs/entity-intelligence-0510.md`).
+
+- **Explorador gobernado:** búsqueda por razón social multi-token e insensible a
+  tildes, RUT normalizado a forma canónica o Entity ID, con facetas de
+  territorio, tipo, condición UAF, condición sancionatoria y cobertura mínima de
+  fuentes; lectura del conjunto resultante y ficha rápida lateral por entidad.
+- **Expediente 360 enriquecido:** procedencia de identidad y vínculos candidatos,
+  posición frente a pares comparables, trayectoria observada, estructura
+  declarada, registro UAF, perfil OSFL/FATF R8, descomposición IPA3 v0.4-shadow
+  marca por marca con su evidencia de cálculo, y resolución de identidad de cada
+  evento sancionatorio.
+- **Lecturas por snapshot:** las consultas por entidad dejan de recomputar
+  ventanas sobre todo el universo (de 6 s a 4 ms en el puntaje, de 3,4 s a 1 ms
+  en las marcas).
+
+Las reglas de lectura no cambian: prioridad no es probabilidad, percentil es
+posición y no desempeño, un vínculo candidato no promueve identidad, y una
+entidad ausente de un corte se declara vacía y nunca como cero.
+
 ## v0.17 — experiencia orientada al analista
 
 La capa visible deja de exponer el lenguaje interno del motor como elemento principal. La navegación se organiza en:

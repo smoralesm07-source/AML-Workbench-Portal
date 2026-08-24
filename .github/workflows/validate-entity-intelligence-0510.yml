@@ -1,0 +1,93 @@
+name: Validate ATLAS entity intelligence 0510
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'assets/atlas-entity-explorer-0510.js'
+      - 'assets/atlas-entity-explorer-0510.css'
+      - 'assets/atlas-entity-dossier-0510.js'
+      - 'assets/atlas-entity-dossier-0510.css'
+      - 'sql/atlas_v0510_entity_intelligence.sql'
+      - 'tests/atlas-entity-intelligence-0510.mjs'
+      - 'index.html'
+      - 'atlas-release.json'
+      - 'atlas-runtime-manifest.json'
+      - 'build.json'
+      - '.github/workflows/validate-entity-intelligence-0510.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'assets/atlas-entity-explorer-0510.js'
+      - 'assets/atlas-entity-explorer-0510.css'
+      - 'assets/atlas-entity-dossier-0510.js'
+      - 'assets/atlas-entity-dossier-0510.css'
+      - 'sql/atlas_v0510_entity_intelligence.sql'
+      - 'tests/atlas-entity-intelligence-0510.mjs'
+      - 'index.html'
+      - 'atlas-release.json'
+      - 'atlas-runtime-manifest.json'
+      - 'build.json'
+      - '.github/workflows/validate-entity-intelligence-0510.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate extension JavaScript
+        run: |
+          node --check assets/atlas-entity-explorer-0510.js
+          node --check assets/atlas-entity-dossier-0510.js
+      - name: Validate section contract
+        run: node tests/atlas-entity-intelligence-0510.mjs
+      - name: Keep the rest of the current contracts green
+        run: |
+          node tests/atlas-entity-search-current.mjs
+          node tests/atlas-pep-discovery-0500.mjs
+          node tests/atlas-reportability-current.mjs
+          node tests/atlas-irar-current.mjs
+          node tests/v0435-reconciliation-contract.mjs
+      - name: Validate release JSON
+        run: |
+          python -m json.tool atlas-release.json >/dev/null
+          python -m json.tool atlas-runtime-manifest.json >/dev/null
+          python -m json.tool build.json >/dev/null
+      - name: Build exact Pages candidate
+        run: python tools/build_atlas_site.py --out _site-entity-0510
+      - name: Verify isolated extension in built artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s _site-entity-0510/assets/atlas-entity-explorer-0510.js
+          test -s _site-entity-0510/assets/atlas-entity-explorer-0510.css
+          test -s _site-entity-0510/assets/atlas-entity-dossier-0510.js
+          test -s _site-entity-0510/assets/atlas-entity-dossier-0510.css
+          grep -q 'atlas-entity-explorer-0510.css?v=0510-1' _site-entity-0510/index.html
+          grep -q 'atlas-entity-dossier-0510.css?v=0510-1' _site-entity-0510/index.html
+          grep -q 'atlas-entity-explorer-0510.js?v=0510-1' _site-entity-0510/index.html
+          grep -q 'atlas-entity-dossier-0510.js?v=0510-1' _site-entity-0510/index.html
+          # La extension es de lectura y no puede almacenar en el navegador.
+          for file in _site-entity-0510/assets/atlas-entity-explorer-0510.js _site-entity-0510/assets/atlas-entity-dossier-0510.js; do
+            ! grep -q 'new MutationObserver' "$file"
+            ! grep -q 'localStorage' "$file"
+            ! grep -q 'sessionStorage' "$file"
+            ! grep -qE '\.(insert|upsert|update)\(' "$file"
+          done
+          # Las lecturas por entidad van al snapshot, nunca a la vista pesada.
+          grep -q 'aml_ipa3_mark_scores_snapshot_v0_4' _site-entity-0510/assets/atlas-entity-dossier-0510.js
+          grep -q 'aml_entity_peer_position_snapshot' _site-entity-0510/assets/atlas-entity-dossier-0510.js
+          grep -q 'aml_entity_identity_link_snapshot' _site-entity-0510/assets/atlas-entity-dossier-0510.js
+          ! grep -q 'aml_v_ipa3_mark_scores_v0_4' _site-entity-0510/assets/atlas-entity-dossier-0510.js
+          ! grep -q 'aml_v_ipa3_entity_score_v0_4' _site-entity-0510/assets/atlas-entity-dossier-0510.js
+          ! grep -q 'aml_v_ipa3_sii_peer_benchmark' _site-entity-0510/assets/atlas-entity-dossier-0510.js
