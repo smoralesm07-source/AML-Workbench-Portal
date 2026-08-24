@@ -19,14 +19,18 @@ assert.equal(release.release, runtime.release);
 assert.equal(release.build, runtime.build);
 assert.match(release.release, /^\d+\.\d+\.\d+$/);
 
-assert.match(html, /atlas-pep-discovery\.css\?v=0500-1/);
-assert.match(html, /atlas-pep-runtime-state-bridge\.js\?v=0500-1/);
-assert.match(html, /atlas-pep-discovery\.js\?v=0500-1/);
+assert.match(html, /atlas-pep-discovery\.css\?v=0500-2/);
+assert.match(html, /atlas-pep-runtime-state-bridge\.js\?v=0500-2/);
+assert.match(html, /atlas-pep-discovery\.js\?v=0500-2/);
 assert.ok(html.indexOf('atlas-pep-runtime-state-bridge.js') < html.indexOf('atlas-pep-discovery.js'));
 assert.match(html, new RegExp(`data-atlas-release="${release.release.replace(/\./g,'\\.')}"`));
 
-assert.match(bridge, /typeof state === 'undefined'/);
+assert.match(bridge, /typeof state !== 'undefined'/);
 assert.match(bridge, /Object\.defineProperty\(window, 'state'/);
+assert.match(bridge, /typeof window\.navigate !== 'function'/);
+assert.match(bridge, /typeof navigate === 'function'/);
+assert.match(bridge, /typeof window\.shell !== 'function'/);
+assert.match(bridge, /typeof shell === 'function'/);
 assert.doesNotMatch(bridge, /MutationObserver/);
 assert.doesNotMatch(bridge, /localStorage/);
 
@@ -74,4 +78,4 @@ assert.match(release.pep_discovery_policy, /PEP_03_04_REVIEW/);
 assert.match(release.pep_discovery_policy, /NO_NAME_ONLY_JOIN/);
 assert.match(build.pep_discovery_contract, /SUPABASE_RLS_PRIVATE_LATEST_ONLY/);
 
-console.log('ATLAS PEP discovery 0500 governed IFL contract + declared interest semantics: OK');
+console.log('ATLAS PEP discovery 0500-2 governed bridge + IFL contract: OK');
