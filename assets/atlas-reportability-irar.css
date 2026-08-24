@@ -4,49 +4,27 @@
 .v036-mxhead>*{text-align:center!important;justify-self:stretch}
 .v036-mxhead button{display:flex!important;align-items:center;justify-content:center!important;gap:5px;text-align:center!important}
 .v036-mxn,.v036-delta{text-align:center!important;justify-self:stretch}
-.v036-mxrow>.v036-spark{justify-self:stretch}
-.v036-mxrow>.v036-marks{justify-content:center}
-.v036-mxrow>.v036-chev{text-align:center}
+.v036-mxrow>.v036-spark{justify-self:stretch}.v036-mxrow>.v036-marks{justify-content:center}.v036-mxrow>.v036-chev{text-align:center}
 .atlas-irar{font-variant-numeric:tabular-nums;display:flex!important;align-items:center;justify-content:center;gap:6px}
 .atlas-irar i{width:7px;height:7px;border-radius:50%;display:inline-block;background:currentColor;opacity:.72;box-shadow:0 0 0 3px color-mix(in srgb,currentColor 14%,transparent)}
-.atlas-irar.comportamiento-esperado i{opacity:.35}
-.atlas-irar.selectivo-productivo i,.atlas-irar.intensivo-productivo i{opacity:.95}
-
+.atlas-irar.comportamiento-esperado i{opacity:.35}.atlas-irar.selectivo-productivo i,.atlas-irar.intensivo-productivo i{opacity:.95}
 .atlas-irar-dossier{grid-column:1/-1;margin:4px 0 0;padding:16px 18px;border-top:1px solid var(--line,#26384b);background:color-mix(in srgb,var(--panel,#111c28) 92%,transparent)}
-.atlas-irar-dossier h4{display:flex;align-items:center;gap:6px;margin:0 0 12px}
-.atlas-irar-dossier-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.atlas-irar-dossier h4{display:flex;align-items:center;gap:6px;margin:0 0 12px}.atlas-irar-dossier-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
 .atlas-irar-dossier-grid>div{padding:10px 11px;border:1px solid var(--line,#26384b);border-radius:10px;background:var(--panel-2,#152334)}
-.atlas-irar-dossier-grid span,.atlas-irar-dossier-grid small{display:block;color:var(--muted,#8294a8)}
-.atlas-irar-dossier-grid span{font-size:10px;text-transform:uppercase;letter-spacing:.07em}
-.atlas-irar-dossier-grid b{display:block;margin:3px 0 2px;font-size:18px;color:var(--text,#e7eef5)}
-.atlas-irar-dossier-grid small{font-size:11px;line-height:1.35}
-.atlas-irar-dossier>p{margin:11px 0 0;color:var(--text-soft,#b7c4d1);font-size:12px;line-height:1.55}
-
+.atlas-irar-dossier-grid span,.atlas-irar-dossier-grid small{display:block;color:var(--muted,#8294a8)}.atlas-irar-dossier-grid span{font-size:10px;text-transform:uppercase;letter-spacing:.07em}.atlas-irar-dossier-grid b{display:block;margin:3px 0 2px;font-size:18px;color:var(--text,#e7eef5)}.atlas-irar-dossier-grid small{font-size:11px;line-height:1.35}.atlas-irar-dossier>p{margin:11px 0 0;color:var(--text-soft,#b7c4d1);font-size:12px;line-height:1.55}
 .atlas-irar-profile-map{margin:14px 0 18px;padding:16px;border:1px solid var(--line,#26384b);border-radius:14px;background:var(--panel,#101b27);box-shadow:0 10px 24px rgba(0,0,0,.12)}
-.atlas-irar-map-head{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(300px,.7fr);gap:18px;align-items:start;margin-bottom:12px}
-.atlas-irar-map-head span{font-size:10px;letter-spacing:.12em;color:var(--muted,#8294a8)}
-.atlas-irar-map-head h3{margin:3px 0 5px;font-size:18px;color:var(--text,#e7eef5)}
-.atlas-irar-map-head p{margin:0;color:var(--text-soft,#b7c4d1);font-size:12px;line-height:1.45}
-.atlas-irar-map-legend{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
-.atlas-irar-map-legend span{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid var(--line,#26384b);border-radius:999px;background:var(--panel-2,#152334);font-size:10px;letter-spacing:0;text-transform:none;color:var(--text-soft,#b7c4d1)}
-.atlas-irar-map-legend b{color:var(--text,#e7eef5)}
+.atlas-irar-map-head{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(300px,.7fr);gap:18px;align-items:start;margin-bottom:12px}.atlas-irar-map-head>div:first-child{min-width:0}
+.atlas-irar-map-head span{font-size:10px;letter-spacing:.12em;color:var(--muted,#8294a8)}.atlas-irar-map-head h3{margin:3px 0 5px;font-size:18px;color:var(--text,#e7eef5)}.atlas-irar-map-head p{margin:0;color:var(--text-soft,#b7c4d1);font-size:12px;line-height:1.45}
+.atlas-irar-map-legend{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;align-content:flex-start}.atlas-irar-map-legend span{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid var(--line,#26384b);border-radius:999px;background:var(--panel-2,#152334);font-size:10px;letter-spacing:0;text-transform:none;color:var(--text-soft,#b7c4d1)}.atlas-irar-map-legend b{color:var(--text,#e7eef5)}
+.atlas-irar-color-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.atlas-irar-color-legend-title{display:block;width:100%;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted,#8294a8)}
+.atlas-irar-color-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid var(--line,#26384b);border-radius:999px;background:var(--panel-2,#152334);font-size:10px;color:var(--text-soft,#b7c4d1)}.atlas-irar-color-chip b{font-weight:600;color:var(--text,#e7eef5)}.atlas-irar-color-chip small{font-size:10px;color:var(--muted,#8294a8)}.atlas-irar-color-swatch{width:12px;height:12px;display:block;flex:0 0 auto}
 .atlas-irar-plane{position:relative;height:330px;overflow:hidden;border:1px solid var(--line,#26384b);border-radius:12px;background:linear-gradient(90deg,color-mix(in srgb,var(--panel-2,#152334) 88%,transparent) 49.75%,transparent 49.75% 50.25%,color-mix(in srgb,var(--panel-2,#152334) 88%,transparent) 50.25%),linear-gradient(0deg,color-mix(in srgb,var(--panel-2,#152334) 88%,transparent) 49.75%,transparent 49.75% 50.25%,color-mix(in srgb,var(--panel-2,#152334) 88%,transparent) 50.25%)}
-.atlas-irar-svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;z-index:1}
-.atlas-irar-expected-zone-svg{fill:color-mix(in srgb,var(--accent,#3b98e0) 12%,transparent);stroke:color-mix(in srgb,var(--accent,#3b98e0) 58%,transparent);stroke-width:.24;vector-effect:non-scaling-stroke}
-.atlas-irar-threshold-svg{stroke:color-mix(in srgb,var(--muted,#8294a8) 58%,transparent);stroke-width:.22;stroke-dasharray:1.3 1.1;vector-effect:non-scaling-stroke}
-.atlas-irar-axis-svg{stroke:color-mix(in srgb,var(--text,#e7eef5) 30%,transparent);stroke-width:.22;vector-effect:non-scaling-stroke}
-.atlas-irar-zone-label{position:absolute;z-index:2;left:50%;top:50%;transform:translate(-50%,-50%);white-space:nowrap;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:color-mix(in srgb,var(--accent-hi,#5bb4f5) 88%,transparent);pointer-events:none}
-.atlas-irar-q{position:absolute;z-index:2;font-size:10px;color:var(--muted,#8294a8);pointer-events:none}
-.atlas-irar-q.q1{left:12px;top:10px}.atlas-irar-q.q2{right:12px;top:10px}.atlas-irar-q.q3{left:12px;bottom:10px}.atlas-irar-q.q4{right:12px;bottom:10px}
-.atlas-irar-axis-label{position:absolute;z-index:2;font-size:9px;color:color-mix(in srgb,var(--muted,#8294a8) 78%,transparent);pointer-events:none}
-.atlas-irar-axis-label.xlow{left:8px;top:calc(50% + 6px)}.atlas-irar-axis-label.xhigh{right:8px;top:calc(50% + 6px)}
-.atlas-irar-axis-label.ylow{left:calc(50% + 7px);bottom:8px}.atlas-irar-axis-label.yhigh{left:calc(50% + 7px);top:8px}
-.atlas-irar-dot{cursor:pointer;transform-box:fill-box;transform-origin:center;transition:filter .13s ease,opacity .13s ease,stroke-width .13s ease}
-.atlas-irar-dot:hover,.atlas-irar-dot:focus-visible{filter:drop-shadow(0 0 1.4px rgba(255,255,255,.55));opacity:1!important;stroke-width:.42;outline:none}
-.atlas-irar-map-foot{margin-top:9px;color:var(--text-soft,#b7c4d1);font-size:11px;line-height:1.45}
-.atlas-irar-map-foot b{color:var(--text,#e7eef5)}
-
-[data-atlas-theme="light"] .atlas-irar-profile-map,[data-atlas-theme="light"] .atlas-irar-dossier{box-shadow:0 8px 20px rgba(20,35,50,.06)}
-[data-atlas-theme="light"] .atlas-irar-expected-zone-svg{fill:color-mix(in srgb,var(--accent,#3b98e0) 8%,transparent)}
+.atlas-irar-svg{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:1}.atlas-irar-expected-zone-svg{fill:color-mix(in srgb,var(--accent,#3b98e0) 10%,transparent);stroke:color-mix(in srgb,var(--accent,#3b98e0) 55%,transparent);stroke-width:1.2}.atlas-irar-threshold-svg{stroke:color-mix(in srgb,var(--muted,#8294a8) 58%,transparent);stroke-width:1;stroke-dasharray:4 4}.atlas-irar-axis-svg{stroke:color-mix(in srgb,var(--text,#e7eef5) 26%,transparent);stroke-width:1}
+.atlas-irar-dot{cursor:pointer;pointer-events:auto;transition:filter .12s ease,opacity .12s ease,stroke-width .12s ease}.atlas-irar-dot:hover,.atlas-irar-dot:focus-visible{filter:brightness(1.12);stroke-width:1.8;outline:none}
+.atlas-irar-zone-label,.atlas-irar-q,.atlas-irar-axis-label{position:absolute;z-index:2;pointer-events:none}.atlas-irar-zone-label{left:50%;top:50%;transform:translate(-50%,-50%);padding:0 10px;font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:color-mix(in srgb,var(--accent-hi,#5bb4f5) 90%,transparent)}
+.atlas-irar-q{font-size:10px;color:var(--muted,#8294a8)}.atlas-irar-q.q1{left:12px;top:10px}.atlas-irar-q.q2{right:12px;top:10px}.atlas-irar-q.q3{left:12px;bottom:10px}.atlas-irar-q.q4{right:12px;bottom:10px}
+.atlas-irar-axis-label{font-size:9px;color:color-mix(in srgb,var(--muted,#8294a8) 78%,transparent)}.atlas-irar-axis-label.xlow{left:8px;top:calc(50% + 6px)}.atlas-irar-axis-label.xhigh{right:8px;top:calc(50% + 6px)}.atlas-irar-axis-label.ylow{left:calc(50% + 7px);bottom:8px}.atlas-irar-axis-label.yhigh{left:calc(50% + 7px);top:8px}
+.atlas-irar-map-foot{margin-top:9px;color:var(--text-soft,#b7c4d1);font-size:11px;line-height:1.45}.atlas-irar-map-foot b{color:var(--text,#e7eef5)}
+[data-atlas-theme="light"] .atlas-irar-profile-map,[data-atlas-theme="light"] .atlas-irar-dossier{box-shadow:0 8px 20px rgba(20,35,50,.06)}[data-atlas-theme="light"] .atlas-irar-expected-zone-svg{fill:color-mix(in srgb,var(--accent,#3b98e0) 8%,transparent)}
 @media(max-width:1100px){.v036-matrix{min-width:1070px!important}.v036-mxhead,.v036-mxrow{grid-template-columns:minmax(210px,2.1fr) 62px 66px 74px 78px 82px 76px 108px 160px 20px!important}.atlas-irar-map-head{grid-template-columns:1fr}.atlas-irar-map-legend{justify-content:flex-start}}
-@media(max-width:720px){.atlas-irar-profile-map{padding:12px}.atlas-irar-plane{height:280px}.atlas-irar-dossier-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:720px){.atlas-irar-profile-map{padding:12px}.atlas-irar-plane{height:280px}.atlas-irar-dossier-grid{grid-template-columns:1fr 1fr}.atlas-irar-color-legend{gap:6px}.atlas-irar-color-chip{font-size:9px}}
