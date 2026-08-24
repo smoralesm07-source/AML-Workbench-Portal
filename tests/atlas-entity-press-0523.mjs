@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 
+// Contrato de aislamiento: el bridge agrega contexto de prensa sin promover
+// identidad por nombre ni alterar score, autenticación o RLS.
 const js=fs.readFileSync('assets/atlas-entity-press-0523.js','utf8');
 const css=fs.readFileSync('assets/atlas-entity-press-0523.css','utf8');
 const html=fs.readFileSync('index.html','utf8');
