@@ -1,0 +1,25 @@
+/* ATLAS AML 0.50.0 · build 0500 · Leyenda de las bandas de score.
+ * Extraída de atlas-disposition-0460.css al retirarse la captura de
+ * desenlace: la calibración se conserva y necesita estos estilos.
+ * Usa los tokens del sistema de tema v040.
+ */
+
+/* -------------------- leyenda de calibración -------------------- */
+.a60-cal-legend{
+  display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+  margin:0 0 11px;font-size:.72rem;color:var(--atlas-muted,#7c8b9c);
+}
+.a60-cal-dot{
+  width:9px;height:9px;border-radius:2px;display:inline-block;
+  margin-right:-3px;flex:0 0 auto;
+}
+.a60-cal-dot.high{background:var(--atlas-crit,#f08379)}
+.a60-cal-dot.med{background:var(--atlas-info,#d8a13f)}
+.a60-cal-dot.low{background:var(--atlas-ok,#6fc392)}
+.a60-cal-legend em{
+  font-style:normal;flex:1 1 260px;min-width:0;opacity:.85;line-height:1.45;
+}
+
+@media (prefers-reduced-motion:reduce){
+  .a60-cal-legend,.a60-cal-dot{transition:none}
+}
