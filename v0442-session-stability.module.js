@@ -21,7 +21,8 @@ function health(stage, extra = {}) {
  * authority only after every classic feature layer and deferred module has
  * finished. The 0.44.8 route pin bypasses the historical v019 closure, while
  * 0.44.9 keeps the governed SII document-authorization renderer in the final
- * Entity 360 chain.
+ * Entity 360 chain. 0.51.1 additionally preserves the Personas y control route
+ * after the final deferred navigation pin is installed.
  */
 let entityRenderAuthority = null;
 const navigationDelegate = typeof window.navigate === 'function' ? window.navigate : null;
@@ -38,6 +39,9 @@ function installEntityAuthority() {
   const stableOpen = typeof entry.open === 'function' ? ((...args) => entry.open(...args)) : null;
   const stableNavigate = async (view, ...args) => {
     if (view === 'entities') return stableLoad(...args);
+    if (view === 'pep-discovery' && typeof window.AtlasPepDiscovery?.open === 'function') {
+      return window.AtlasPepDiscovery.open(false);
+    }
     if (navigationDelegate) return navigationDelegate(view, ...args);
   };
 
@@ -70,6 +74,7 @@ function installEntityAuthority() {
     landingPinned:false,
     routePinned:true,
     legacyCapturedLoaderBypassed:true,
+    pepDiscoveryRoutePinned:typeof window.AtlasPepDiscovery?.open === 'function',
     searchPinned:!!stableSearch,
     autocompletePinned:String(entry.searchPolicy||'').includes('AUTOCOMPLETE'),
     siiDocumentAuthorizationPinned:typeof window.AtlasSiiDocumentAuthorization==='object',
@@ -100,6 +105,7 @@ window.__ATLAS_RUNTIME_RELIABILITY__ = {
   refreshTokenPolicy:'SUPABASE_CLIENT_ONLY_NO_MANUAL_REPLAY',
   entityAuthority:'ENTITY360_REFERENCE_0445_SIX_LENSES+ENTITY360_INLINE_AUTOCOMPLETE_0447+ENTITY360_ROUTE_AUTHORITY_0448+ENTITY360_SII_DOCUMENT_AUTH_0449',
   entityWorkspace:'SINGLE_DARK_DOSSIER+PERSISTENT_RLS_AUTOCOMPLETE+CURRENT_ENTITIES_ROUTE+SII_DOCUMENT_AUTHORIZATION_CONTEXT',
+  pepDiscoveryRoute:'PRESERVED_BY_FINAL_NAVIGATION_AUTHORITY',
   installedAt:iso()
 };
 
