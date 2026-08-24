@@ -18,6 +18,7 @@ on:
   pull_request:
     paths:
       - 'ops/mercado-publico/history_ingest.py'
+      - 'ops/mercado-publico/history_ingest_resilient.py'
       - 'ops/mercado-publico/backfill-trigger.json'
       - '.github/workflows/mercado-publico-history-2023-2026.yml'
   push:
@@ -43,7 +44,7 @@ jobs:
           python-version: '3.12'
       - name: Validate historical loader and trigger
         run: |
-          python -m py_compile ops/mercado-publico/history_ingest.py
+          python -m py_compile ops/mercado-publico/history_ingest.py ops/mercado-publico/history_ingest_resilient.py
           python ops/mercado-publico/history_ingest.py --help >/dev/null
           python - <<'PY'
           import json
@@ -70,11 +71,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Verify Cloudflare credentials and R2 bucket
+      - name: Prepare optional Cloudflare R2 archive
+        continue-on-error: true
         run: |
-          set -euo pipefail
-          test -n "$CLOUDFLARE_API_TOKEN"
-          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          set -u
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            echo "::warning::Cloudflare credentials unavailable; analytical ingestion will continue without RAW archive."
+            exit 0
+          fi
           if ! npx wrangler@4.125.0 r2 bucket list | grep -Fq 'atlas-mercado-publico-raw'; then
             npx wrangler@4.125.0 r2 bucket create atlas-mercado-publico-raw
           fi
@@ -105,4 +109,4 @@ jobs:
           set -euo pipefail
           args=(--year "$YEAR" --month "$MONTH")
           if [ -n "$SOURCE_URL" ]; then args+=(--url "$SOURCE_URL"); fi
-          python ops/mercado-publico/history_ingest.py "${args[@]}"
+          python ops/mercado-publico/history_ingest_resilient.py "${args[@]}"
