@@ -1,0 +1,52 @@
+name: Validate RES Cross Surface 0554
+
+on:
+  pull_request:
+    paths:
+      - 'assets/atlas-entity-context-0554.js'
+      - 'assets/atlas-res-cross-surface-0554.js'
+      - 'assets/atlas-res-cross-surface-0554.css'
+      - 'assets/atlas-entity-res-bootstrap-0553.js'
+      - 'assets/atlas-entity-uaf-highlight-0548.js'
+      - '.github/workflows/validate-res-cross-surface-0554.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check assets/atlas-entity-context-0554.js
+          node --check assets/atlas-res-cross-surface-0554.js
+          node --check assets/atlas-entity-res-bootstrap-0553.js
+          node --check assets/atlas-entity-uaf-highlight-0548.js
+      - name: Identity and governance contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          ctx=Path('assets/atlas-entity-context-0554.js').read_text()
+          cross=Path('assets/atlas-res-cross-surface-0554.js').read_text()
+          bootstrap=Path('assets/atlas-entity-res-bootstrap-0553.js').read_text()
+          hook=Path('assets/atlas-entity-uaf-highlight-0548.js').read_text()
+          assert "identityPolicy:'RUT_VALIDO_EXACTO_ONLY'" in ctx
+          assert 'nameMatching:false' in ctx
+          assert 'scoreMutation:false' in ctx
+          assert 'validRut' in ctx and "eq('rut_key'" in ctx
+          assert "surfaces:['mercado-publico','sanciones']" in cross
+          assert 'scoreMutation:false' in cross
+          assert 'CTX.validRut' in cross
+          assert 'atlas-entity-context-0554.js' in bootstrap
+          assert 'atlas-res-cross-surface-0554.js' in bootstrap
+          assert "'mercado-publico','sanciones'" in bootstrap
+          assert '?v=0554-1' in hook
+          assert 'similarity(' not in ctx.lower()
+          assert 'fuzzy' not in ctx.lower()
+          print('RES cross-surface governance contract OK')
+          PY
