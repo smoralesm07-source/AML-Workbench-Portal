@@ -10,7 +10,7 @@
   const ENTRY=window.__ATLAS_ENTITY_ENTRY__;
   if(!ENTRY||typeof ENTRY.load!=='function'||!ENTRY.explorer)return;
 
-  const VERSION='ENTITY-EXPLORER-0512';
+  const VERSION='ENTITY-EXPLORER-0512.1';
   const BASE_LOAD=ENTRY.load;
   const PRODUCERS=[
     ['sii','Radar SII'],['uaf','Radar UAF'],['osfl','Radar OSFL'],['press','Radar Prensa'],['san','Radar Sanciones']
@@ -49,39 +49,19 @@
 
   function producerTooltipHtml(print){
     const cells=[...print.querySelectorAll(':scope > i')];
-    return `<div class="aex-source-pop-title">Fuentes de datos</div>${PRODUCERS.map(([key,label],idx)=>{
+    return `<span class="aex-source-pop-title">Fuentes de datos</span>${PRODUCERS.map(([key,label],idx)=>{
       const on=cells[idx]?.classList.contains('on');
-      return `<div class="aex-source-pop-row"><i class="${key} ${on?'on':''}"></i><span>${esc(label)}</span><b>${on?'con dato':'sin dato'}</b></div>`;
+      return `<span class="aex-source-pop-row"><i class="${key} ${on?'on':''}"></i><span>${esc(label)}</span><b>${on?'con dato':'sin dato'}</b></span>`;
     }).join('')}`;
   }
 
   function installSourcePopups(root){
-    let pop=document.querySelector('#aex-source-pop');
-    if(!pop){
-      pop=document.createElement('div');
-      pop.id='aex-source-pop';
-      pop.className='aex-source-pop';
-      pop.setAttribute('role','tooltip');
-      document.body.appendChild(pop);
-    }
     root.querySelectorAll('.aex-print:not(.sample)').forEach(print=>{
       if(print.dataset.aexSourceBound==='1')return;
       print.dataset.aexSourceBound='1';
-      const show=event=>{
-        pop.innerHTML=producerTooltipHtml(print);
-        pop.classList.add('open');
-        const rect=print.getBoundingClientRect();
-        const width=260;
-        const left=Math.max(10,Math.min(window.innerWidth-width-10,rect.left));
-        const top=Math.min(window.innerHeight-190,rect.bottom+8);
-        pop.style.left=`${left}px`;
-        pop.style.top=`${Math.max(10,top)}px`;
-      };
-      const hide=()=>pop.classList.remove('open');
-      print.addEventListener('mouseenter',show);
-      print.addEventListener('mouseleave',hide);
-      print.addEventListener('focusin',show);
-      print.addEventListener('focusout',hide);
+      print.tabIndex=0;
+      print.setAttribute('aria-label',(print.getAttribute('aria-label')||'Fuentes de datos')+'. Pase el cursor o enfoque para ver el detalle.');
+      print.insertAdjacentHTML('beforeend',`<span class="aex-source-pop-inline" role="tooltip">${producerTooltipHtml(print)}</span>`);
     });
   }
 
@@ -131,7 +111,6 @@
   }
 
   function applyQuick(kind){
-    const region=document.querySelector('#aex-region');
     const type=document.querySelector('#aex-type');
     const min=document.querySelector('#aex-min');
     const uaf=document.querySelector('#aex-uaf');
@@ -146,7 +125,6 @@
     }else if(kind==='multi'&&min){min.value='3';min.dispatchEvent(new Event('change',{bubbles:true}));}
     else if(kind==='osfl'&&type){type.value='OSFL';type.dispatchEvent(new Event('change',{bubbles:true}));}
     else if(kind==='public'&&type){type.value='Organismo público';type.dispatchEvent(new Event('change',{bubbles:true}));}
-    void region;
     scheduleEnhance(650);
   }
 
@@ -218,5 +196,5 @@
   try{loadEntities=ENTRY.load;}catch(_error){}
   window.loadEntities=ENTRY.load;
 
-  window.__ATLAS_ENTITY_EXPLORER_0512__={version:VERSION,blankInitial:true,autocomplete:true,quickLists:true,sourceLegend:true,installedAt:new Date().toISOString()};
+  window.__ATLAS_ENTITY_EXPLORER_0512__={version:VERSION,blankInitial:true,autocomplete:true,quickLists:true,sourceLegend:true,cspSafe:true,installedAt:new Date().toISOString()};
 })();
