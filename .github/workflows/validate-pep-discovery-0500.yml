@@ -7,6 +7,7 @@ on:
       - 'assets/atlas-pep-discovery.js'
       - 'assets/atlas-pep-discovery.css'
       - 'assets/atlas-pep-runtime-state-bridge.js'
+      - 'assets/atlas-pep-click-guard-0500.js'
       - 'v0442-session-stability.module.js'
       - 'sql/atlas_v0500_pep_discovery_snapshot.sql'
       - 'tests/atlas-pep-discovery-0500.mjs'
@@ -22,6 +23,7 @@ on:
       - 'assets/atlas-pep-discovery.js'
       - 'assets/atlas-pep-discovery.css'
       - 'assets/atlas-pep-runtime-state-bridge.js'
+      - 'assets/atlas-pep-click-guard-0500.js'
       - 'v0442-session-stability.module.js'
       - 'sql/atlas_v0500_pep_discovery_snapshot.sql'
       - 'tests/atlas-pep-discovery-0500.mjs'
@@ -51,6 +53,7 @@ jobs:
         run: |
           node --check assets/atlas-pep-runtime-state-bridge.js
           node --check assets/atlas-pep-discovery.js
+          node --check assets/atlas-pep-click-guard-0500.js
           node --check v0442-session-stability.module.js
       - name: Validate product integration contract
         run: |
@@ -70,11 +73,15 @@ jobs:
           test -s _site-pep/assets/atlas-pep-runtime-state-bridge.js
           test -s _site-pep/assets/atlas-pep-discovery.js
           test -s _site-pep/assets/atlas-pep-discovery.css
+          test -s _site-pep/assets/atlas-pep-click-guard-0500.js
           grep -q 'atlas-pep-discovery.css?v=0500-2' _site-pep/index.html
           grep -q 'atlas-pep-runtime-state-bridge.js?v=0500-2' _site-pep/index.html
           grep -q 'atlas-pep-discovery.js?v=0500-2' _site-pep/index.html
+          grep -q 'atlas-pep-click-guard-0500.js?v=0500-3' _site-pep/index.html
           grep -q "typeof window.navigate !== 'function'" _site-pep/assets/atlas-pep-runtime-state-bridge.js
           grep -q "typeof window.shell !== 'function'" _site-pep/assets/atlas-pep-runtime-state-bridge.js
+          grep -q 'navigationDependency:false' _site-pep/assets/atlas-pep-click-guard-0500.js
+          grep -q "document.addEventListener('click',openPep,true)" _site-pep/assets/atlas-pep-click-guard-0500.js
           grep -R -q "view === 'pep-discovery'" _site-pep/atlas-module-current-*.js
           grep -R -q 'PRESERVED_BY_FINAL_NAVIGATION_AUTHORITY' _site-pep/atlas-module-current-*.js
           ! grep -q 'MutationObserver' _site-pep/assets/atlas-pep-runtime-state-bridge.js
