@@ -4,7 +4,7 @@
   "worker_url": "https://atlas-maigret-osint.atlas-aml-7fb3d5ff.workers.dev",
   "deploy_exit_code": "0",
   "smoke_outcome": "success",
-  "source_commit": "bd3a00e0dec3334a6739634501da040e9aaa00d5",
-  "run_url": "https://github.com/smoralesm07-source/AML-Workbench-Portal/actions/runs/32753492695",
-  "generated_at": "2026-08-24T17:30:05Z"
+  "source_commit": "1da6c613468be9d98f34f3fb4ea2eb3de84061f0",
+  "run_url": "https://github.com/smoralesm07-source/AML-Workbench-Portal/actions/runs/32762295841",
+  "generated_at": "2026-08-24T18:27:30Z"
 }
