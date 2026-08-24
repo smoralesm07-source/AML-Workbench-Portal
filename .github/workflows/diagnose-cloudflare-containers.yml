@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   diagnose:
@@ -17,6 +17,7 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
+      - uses: actions/checkout@v4
       - name: Normalize credentials
         shell: bash
         run: |
@@ -27,21 +28,44 @@ jobs:
           echo "CLOUDFLARE_ACCOUNT_ID=$account_id" >> "$GITHUB_ENV"
           echo "CLOUDFLARE_API_TOKEN=$api_token" >> "$GITHUB_ENV"
       - name: Containers authorization preflight
+        id: preflight
         shell: bash
         run: |
-          set +e
           endpoint="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/containers/me"
           code=$(curl --silent --show-error --output response.json --write-out '%{http_code}' -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "$endpoint")
+          diagnosis="containers_unexpected_response"
+          if [ "$code" = "200" ]; then diagnosis="containers_ready"; fi
+          if [ "$code" = "403" ]; then diagnosis="containers_entitlement_or_paid_plan_required"; fi
+          if [ "$code" = "401" ]; then diagnosis="containers_token_or_backend_authorization"; fi
+          echo "http_status=$code" >> "$GITHUB_OUTPUT"
+          echo "diagnosis=$diagnosis" >> "$GITHUB_OUTPUT"
           echo "containers_http_status=$code" >> "$GITHUB_STEP_SUMMARY"
-          node - <<'NODE'
+          echo "diagnosis=$diagnosis" >> "$GITHUB_STEP_SUMMARY"
+          HTTP_STATUS="$code" DIAGNOSIS="$diagnosis" node - <<'NODE'
           const fs=require('fs');
           let j={};try{j=JSON.parse(fs.readFileSync('response.json','utf8'))}catch{}
-          const out={success:j.success===true,error_codes:(j.errors||[]).map(x=>x.code).filter(Boolean),messages:(j.errors||[]).map(x=>x.message).filter(Boolean).slice(0,3)};
-          console.log(JSON.stringify(out));
-          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,`\ncontainers_response=${JSON.stringify(out)}\n`);
+          const safe={
+            service:'cloudflare-containers',
+            http_status:Number(process.env.HTTP_STATUS||0),
+            diagnosis:process.env.DIAGNOSIS||'unknown',
+            success:j.success===true,
+            error_codes:(j.errors||[]).map(x=>x.code).filter(Boolean),
+            messages:(j.errors||[]).map(x=>x.message).filter(Boolean).slice(0,3),
+            checked_at:new Date().toISOString(),
+            source_commit:process.env.GITHUB_SHA
+          };
+          fs.writeFileSync('/tmp/containers-preflight.json',JSON.stringify(safe,null,2)+'\n');
+          console.log(JSON.stringify(safe));
           NODE
-          if [ "$code" = "200" ]; then exit 0; fi
-          if [ "$code" = "403" ]; then echo 'diagnosis=containers_entitlement_or_paid_plan_required' >> "$GITHUB_STEP_SUMMARY"; exit 3; fi
-          if [ "$code" = "401" ]; then echo 'diagnosis=containers_token_or_backend_authorization' >> "$GITHUB_STEP_SUMMARY"; exit 4; fi
-          echo 'diagnosis=containers_unexpected_response' >> "$GITHUB_STEP_SUMMARY"
-          exit 5
+      - name: Persist preflight result
+        shell: bash
+        run: |
+          git fetch origin main
+          git checkout -B main origin/main
+          cp /tmp/containers-preflight.json cloudflare/maigret-service/containers-preflight.json
+          git add cloudflare/maigret-service/containers-preflight.json
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore(cloudflare): record Containers preflight [skip ci]'
+          git push origin main
