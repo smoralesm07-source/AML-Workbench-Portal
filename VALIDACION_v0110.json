@@ -1,0 +1,112 @@
+{
+  "version": "0.11.0",
+  "snapshot": "FUS-66EA095C491D9F0002B9F585",
+  "tests": [
+    {
+      "test": "js_syntax:app.js",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "js_syntax:enhancements.js",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "js_syntax:desktop_refine.js",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "desktop_nav_categories",
+      "ok": true,
+      "detail": 5
+    },
+    {
+      "test": "filters_nav_no_overlap",
+      "ok": true,
+      "detail": {
+        "filters": {
+          "x": 0,
+          "y": 64,
+          "width": 1600,
+          "height": 46
+        },
+        "appsbar": {
+          "x": 0,
+          "y": 110,
+          "width": 1600,
+          "height": 46
+        }
+      }
+    },
+    {
+      "test": "flow:home",
+      "ok": true,
+      "detail": "Mesa avanzada de inteligencia AML sobre Fusion"
+    },
+    {
+      "test": "flow:fiscal",
+      "ok": true,
+      "detail": "Fiscalización UAF · screening operativo"
+    },
+    {
+      "test": "flow:reportability",
+      "ok": true,
+      "detail": "Observatorio de reportabilidad"
+    },
+    {
+      "test": "flow:network",
+      "ok": true,
+      "detail": "Redes y rutas contextuales"
+    },
+    {
+      "test": "flow:territory",
+      "ok": true,
+      "detail": "Inteligencia territorial"
+    },
+    {
+      "test": "flow:sector_macro",
+      "ok": true,
+      "detail": "Administradoras de Fondos de Inversión"
+    },
+    {
+      "test": "flow:region_macro",
+      "ok": true,
+      "detail": "Antofagasta"
+    },
+    {
+      "test": "macro_runtime:sanctions",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "macro_runtime:anomalies",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "macro_runtime:convergence",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "macro_runtime:cgr",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "macro_runtime:signals",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "browser_js_errors",
+      "ok": true,
+      "detail": []
+    }
+  ],
+  "passed": 18,
+  "total": 18,
+  "all_ok": true
+}

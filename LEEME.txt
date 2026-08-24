@@ -1,0 +1,73 @@
+AML ANALYTICAL WORKBENCH v0.12.0 · PATTERN INTELLIGENCE
+
+NOVEDADES PRINCIPALES
+- Centro de Patrones y alertas explicables.
+- Outliers entre pares por brecha, cobertura, anomalías y reportabilidad.
+- Aceleración/caída ROS con base temporal comparable.
+- Persistencia de silencio ROS agregado.
+- Concentración territorial sectorial (top-3 + HHI).
+- Recurrencia sancionatoria por identidad canónica resuelta.
+- Hubs topológicos y convergencia 3+ fuentes.
+- Matriz de percentiles por sector.
+- Radar temporal indexado ROS/ROE/Sanciones.
+- Marcas comparativas inyectadas en fichas sectoriales y regionales.
+- Alertas guardables en Bandeja de Casos.
+
+REGLA CENTRAL
+Una alerta/patrón es un disparador explicable de revisión. No es probabilidad de delito, incumplimiento o LA/FT.
+
+AML ANALYTICAL WORKBENCH v0.11.0 · DESKTOP ADVANCED
+=====================================================
+
+OBJETIVO
+Versión de escritorio refinada sobre el snapshot real de Intelligence Fusion.
+Mantiene las capacidades de v0.10 y corrige la navegación, agrega vistas macro,
+gráficos y lecturas analíticas determinísticas sin inventar datos faltantes.
+
+INICIO
+Windows: INICIAR_WINDOWS.bat
+Mac:     INICIAR_MAC.command
+
+El iniciador abre un servidor local 127.0.0.1. No publica los datos en Internet.
+
+CAMBIOS PRINCIPALES v0.11
+- Navegación desktop sin menús desplegables ni traslapes.
+- Categorías permanentes: Inicio / Supervisión / Inteligencia / Contexto / Casos.
+- Herramientas de la categoría activa siempre visibles en una sola línea.
+- Se conservan Fiscalización, Reportabilidad, Sanciones, Anomalías, Señales AML,
+  Convergencia, Redes, Territorio, CGR, Comparador, Casos y Salud de datos.
+- Mantiene botón Volver, fichas resumidas, scores clickeables, drill-down de brecha,
+  Entity 360, evidencia y carga progresiva.
+- Nueva capa macro con gráficos y explicación automática en las vistas principales.
+
+LECTURAS NUEVAS
+- Inicio: concentración sectorial de brecha + serie macro ROS.
+- Fiscalización: ICP vs tamaño de brecha + concentración del screening.
+- Sector: posición relativa, brecha/denominador, ICP vs mediana, concentración regional,
+  sanciones y reportabilidad; gráfico territorial y composición.
+- Región: participación en brecha nacional, concentración por sectores y densidad descriptiva.
+- Reportabilidad: ROS 2021-2025, composición por grupos, concentración e intensidad.
+- Sector de reportabilidad: percentil de intensidad y serie histórica.
+- Sanciones: evolución anual, supervisor e identidad resuelta/no resuelta.
+- Anomalías: composición por tipo y concentración territorial.
+- Convergencia: número de fuentes y combinaciones de productores.
+- Redes: tamaños de componentes y estructura topológica.
+- Territorio: concentración regional y comunal.
+- CGR: evolución temporal y tipo de antecedente.
+- Señales AML: distribución IPA y fuentes participantes.
+- Entity 360: cobertura investigativa y composición de ficha.
+
+GUARDRAILS
+- Brecha potencial = screening; no acredita incumplimiento.
+- No observado UAF != no inscrito jurídicamente.
+- ROS individual es confidencial; intensidad ROS != tasa de cumplimiento.
+- Sanción != LA/FT.
+- Anomalía SII != señal AML.
+- Contexto territorial != atribución.
+- Relación de grafo != propagación de riesgo.
+- Missing != cero.
+
+DATOS
+Snapshot: FUS-66EA095C491D9F0002B9F585
+Fusion:   v0.6.2
+La aplicación mantiene carga progresiva de archivos pesados.

@@ -1,0 +1,171 @@
+{
+  "version": "0.10.0",
+  "snapshot": "FUS-66EA095C491D9F0002B9F585",
+  "generated_at": "2026-08-14T19:25:56.164363+00:00",
+  "tests": [
+    {
+      "test": "boot",
+      "ok": true,
+      "detail": "Mesa avanzada de inteligencia AML sobre Fusion"
+    },
+    {
+      "test": "grouped_navigation",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "reportability_home",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "reportability_alerts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "roe_calendar",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "report_sector",
+      "ok": true,
+      "detail": "Bancos"
+    },
+    {
+      "test": "report_region_sector",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "back_navigation",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "report_alert_sheet",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "app_fiscal",
+      "ok": true,
+      "detail": "Fiscalización UAF · screening operativo"
+    },
+    {
+      "test": "app_sanctions",
+      "ok": true,
+      "detail": "Sanciones 360"
+    },
+    {
+      "test": "app_anomalies",
+      "ok": true,
+      "detail": "Anomalías contextuales SII"
+    },
+    {
+      "test": "app_signals",
+      "ok": true,
+      "detail": "Señal AML gobernada"
+    },
+    {
+      "test": "app_convergence",
+      "ok": true,
+      "detail": "Convergencia multifuente"
+    },
+    {
+      "test": "app_network",
+      "ok": true,
+      "detail": "Redes y rutas contextuales"
+    },
+    {
+      "test": "app_territory",
+      "ok": true,
+      "detail": "Inteligencia territorial"
+    },
+    {
+      "test": "app_cgr",
+      "ok": true,
+      "detail": "CGR · contexto administrativo"
+    },
+    {
+      "test": "app_compare",
+      "ok": true,
+      "detail": "Laboratorio comparativo"
+    },
+    {
+      "test": "app_cases",
+      "ok": true,
+      "detail": "Bandeja de casos analíticos"
+    },
+    {
+      "test": "sanction_summary_sheet",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "finding_summary_sheet",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "score_clickable",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "gap_individualization",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "candidate_summary_sheet",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "entity_search",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "entity_reportability_card",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "smart_query_roe",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "smart_query_sector_report",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "smart_query_no_report",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "mobile_bottom_nav",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "mobile_reportability",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "test": "mobile_more_sheet",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "passed": 32,
+  "failed": 0,
+  "page_errors": [],
+  "mobile_page_errors": []
+}

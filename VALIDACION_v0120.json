@@ -1,0 +1,102 @@
+{
+  "version": "0.12.0",
+  "snapshot_id": "FUS-66EA095C491D9F0002B9F585",
+  "pattern_alerts": 95,
+  "priority_distribution": {
+    "MUY ALTA": 13,
+    "ALTA": 42,
+    "MEDIA": 33,
+    "OBSERVAR": 7
+  },
+  "families": {
+    "REPORTABILIDAD": 13,
+    "SUPERVISIÓN": 18,
+    "TERRITORIO": 10,
+    "SANCIONES": 18,
+    "REDES": 12,
+    "CONVERGENCIA": 16,
+    "SEÑALES AML": 5,
+    "INTELIGENCIA": 1,
+    "CALIDAD": 2
+  },
+  "checks": [
+    {
+      "name": "alerts_unique",
+      "ok": true
+    },
+    {
+      "name": "snapshot_match",
+      "ok": true
+    },
+    {
+      "name": "sector_peer_55",
+      "ok": true
+    },
+    {
+      "name": "region_peers",
+      "ok": true
+    },
+    {
+      "name": "heatmap_30",
+      "ok": true
+    },
+    {
+      "name": "no_missing_titles",
+      "ok": true
+    },
+    {
+      "name": "all_actions_resolve",
+      "ok": true
+    },
+    {
+      "name": "pattern_css_link",
+      "ok": true
+    },
+    {
+      "name": "pattern_data_link",
+      "ok": true
+    },
+    {
+      "name": "pattern_js_link",
+      "ok": true
+    },
+    {
+      "name": "browser_home",
+      "ok": true
+    },
+    {
+      "name": "browser_nav_nonoverlap",
+      "ok": true
+    },
+    {
+      "name": "browser_pattern_center",
+      "ok": true
+    },
+    {
+      "name": "browser_alert_sheet",
+      "ok": true
+    },
+    {
+      "name": "browser_family_filter",
+      "ok": true
+    },
+    {
+      "name": "browser_query_router",
+      "ok": true
+    },
+    {
+      "name": "browser_sector_marks",
+      "ok": true
+    },
+    {
+      "name": "browser_region_marks",
+      "ok": true
+    },
+    {
+      "name": "browser_case_adapter",
+      "ok": true
+    }
+  ],
+  "passed": 19,
+  "failed": 0
+}
