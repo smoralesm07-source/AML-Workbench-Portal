@@ -2,7 +2,7 @@
 /* ATLAS AML 0.54.7 · contextual keywords, adaptive tags and technical coverage quality. */
 (function atlasDigitalContextQuality0547(){
   const VERSION='DIGITAL-CONTEXT-QUALITY-0547.1';
-  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
   const norm=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
   const currentRoot=()=>String(window.__ATLAS_DIGITAL_IDENTITY_0540__?.query||document.querySelector('#aex-q')?.value||'').trim();
   const words=q=>String(q||'').split(/\s+/).map(x=>x.replace(/[^\p{L}\p{N}._-]/gu,'')).filter(x=>x.length>=3).slice(0,8);
@@ -43,3 +43,8 @@
   let n=0;const timer=setInterval(()=>{if(installInvoke()||++n>40)clearInterval(timer);},100);window.addEventListener('atlas:digital-identity-result',()=>setTimeout(render,100));
   window.__ATLAS_DIGITAL_CONTEXT_QUALITY_0547__={active:true,version:VERSION,adaptiveCountry:true,adaptiveCategories:true,contextKeywords:true,technicalFailureNotNegative:true,installedAt:new Date().toISOString()};
 })();
+/* ATLAS 0.54.9 · lazy-load alias profile drilldown after resolver state exists. */
+setTimeout(()=>{
+  if(!document.querySelector('link[data-adi-alias-0549]')){const l=document.createElement('link');l.rel='stylesheet';l.href='./assets/atlas-digital-alias-profile-drilldown-0549.css?v=0549-1';l.dataset.adiAlias0549='1';document.head.appendChild(l);}
+  if(!document.querySelector('script[data-adi-alias-0549]')){const s=document.createElement('script');s.src='./assets/atlas-digital-alias-profile-drilldown-0549.js?v=0549-1';s.dataset.adiAlias0549='1';document.body.appendChild(s);}
+},0);
