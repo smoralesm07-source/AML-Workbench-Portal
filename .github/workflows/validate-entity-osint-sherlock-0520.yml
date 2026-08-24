@@ -1,0 +1,60 @@
+name: Validate ATLAS entity OSINT Sherlock 0520
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'assets/atlas-entity-osint-sherlock-0520.js'
+      - 'assets/atlas-entity-osint-sherlock-0520.css'
+      - 'assets/atlas-osint-config.js'
+      - 'services/atlas-osint-sherlock/**'
+      - 'tests/atlas-entity-osint-sherlock-0520.mjs'
+      - 'index.html'
+      - '.github/workflows/validate-entity-osint-sherlock-0520.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'assets/atlas-entity-osint-sherlock-0520.js'
+      - 'assets/atlas-entity-osint-sherlock-0520.css'
+      - 'assets/atlas-osint-config.js'
+      - 'services/atlas-osint-sherlock/**'
+      - 'tests/atlas-entity-osint-sherlock-0520.mjs'
+      - 'index.html'
+      - '.github/workflows/validate-entity-osint-sherlock-0520.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate frontend JavaScript
+        run: node --check assets/atlas-entity-osint-sherlock-0520.js
+      - name: Validate OSINT contract
+        run: node tests/atlas-entity-osint-sherlock-0520.mjs
+      - name: Validate Python syntax
+        run: python -m py_compile services/atlas-osint-sherlock/app.py
+      - name: Build exact Pages candidate
+        run: python tools/build_atlas_site.py --out _site-osint-0520
+      - name: Verify isolated frontend assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s _site-osint-0520/assets/atlas-entity-osint-sherlock-0520.js
+          test -s _site-osint-0520/assets/atlas-entity-osint-sherlock-0520.css
+          test -s _site-osint-0520/assets/atlas-osint-config.js
+          grep -q 'atlas-entity-osint-sherlock-0520.js?v=0520-1' _site-osint-0520/index.html
+          grep -q 'atlas-entity-osint-sherlock-0520.css?v=0520-1' _site-osint-0520/index.html
+          ! grep -q 'localStorage' _site-osint-0520/assets/atlas-entity-osint-sherlock-0520.js
+          ! grep -q 'sessionStorage' _site-osint-0520/assets/atlas-entity-osint-sherlock-0520.js
+          ! grep -qE '\.(insert|upsert|update)\(' _site-osint-0520/assets/atlas-entity-osint-sherlock-0520.js
+          ! grep -qiE 'service_role|secret_key|client_secret' _site-osint-0520/assets/atlas-osint-config.js
