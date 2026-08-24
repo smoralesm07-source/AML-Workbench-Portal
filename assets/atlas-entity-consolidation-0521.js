@@ -1,14 +1,13 @@
 'use strict';
 
-/* ATLAS AML 0.52.1 · Consolidación de Personas y control en Entidad 360
- * Retira la navegación heredada independiente sin eliminar datos ni relaciones.
- * La capacidad permanece en el expediente: vínculos de identidad, estructura,
- * propiedad y red de exposición.
+/* ATLAS AML · Consolidación de Personas y control en Entidad 360
+ * Retira cualquier entrada de navegación heredada "Personas y control" sin
+ * eliminar datos, relaciones ni la lectura societaria dentro del expediente.
  */
 (function atlasEntityConsolidation0521(){
-  const VERSION='ENTITY-CONSOLIDATION-0521.1';
-  const RETIRED_LABELS=new Set(['personas y control','personas & control']);
-  const RETIRED_VIEWS=new Set(['people-control','persons-control','personas-control','personas-y-control']);
+  const VERSION='ENTITY-CONSOLIDATION-0521.2';
+  const RETIRED_LABELS=new Set(['personas y control','personas & control','personas, control']);
+  const RETIRED_VIEWS=new Set(['people-control','persons-control','personas-control','personas-y-control','people_control','persons_control']);
 
   function key(value){
     return String(value||'')
@@ -16,19 +15,37 @@
       .toLowerCase().replace(/\s+/g,' ').trim();
   }
 
+  function isRetiredControl(node){
+    if(!node)return false;
+    const view=key(node.getAttribute?.('data-view')||node.dataset?.view||node.getAttribute?.('href')||'');
+    const label=key(node.getAttribute?.('aria-label')||node.querySelector?.('.atlas-nav-text')?.textContent||node.textContent||'');
+    return RETIRED_VIEWS.has(view)||RETIRED_LABELS.has(label)||[...RETIRED_VIEWS].some(v=>view.includes(v));
+  }
+
   function retireStandalonePeopleControl(){
-    const nav=document.querySelector('.v019-nav');
-    if(!nav)return 0;
+    const scopes=[...document.querySelectorAll('aside,nav,.sidebar,.v019-nav,.nav,[role="navigation"]')];
     let removed=0;
-    nav.querySelectorAll('.v019-nav-btn[data-view]').forEach(button=>{
-      const view=key(button.dataset.view);
-      const label=key(button.getAttribute('aria-label')||button.querySelector('.atlas-nav-text')?.textContent||button.textContent);
-      if(RETIRED_VIEWS.has(view)||RETIRED_LABELS.has(label)){
-        button.remove();
-        removed++;
-      }
+    scopes.forEach(scope=>{
+      scope.querySelectorAll('button,a,[role="button"],[data-view]').forEach(node=>{
+        if(isRetiredControl(node)){
+          node.remove();
+          removed++;
+        }
+      });
     });
     return removed;
+  }
+
+  function guardRetiredRoute(){
+    let current='';
+    try{current=key((typeof state!=='undefined'?state:window.state)?.view||'');}catch(_error){}
+    if(!RETIRED_VIEWS.has(current))return false;
+    try{
+      if(typeof navigate==='function'){navigate('entities');return true;}
+      const btn=document.querySelector('[data-view="entities"]');
+      if(btn){btn.click();return true;}
+    }catch(_error){}
+    return false;
   }
 
   function consolidateDossier(){
@@ -51,12 +68,14 @@
 
   function apply(){
     const removed=retireStandalonePeopleControl();
+    const redirected=guardRetiredRoute();
     const dossier=consolidateDossier();
     window.__ATLAS_ENTITY_CONSOLIDATION_0521__={
       active:true,
       version:VERSION,
       standalonePeopleControl:false,
       retiredNavEntries:removed,
+      retiredRouteRedirected:redirected,
       dossierConsolidated:dossier,
       dataDeletion:false,
       relationshipDeletion:false,
@@ -75,12 +94,13 @@
     window.v0203RenderEntity=wrapped;
   }
 
-  const navObserver=new MutationObserver(()=>queueMicrotask(apply));
+  const observer=new MutationObserver(()=>queueMicrotask(apply));
   function bind(){
     apply();
-    const nav=document.querySelector('.v019-nav');
-    if(nav)navObserver.observe(nav,{childList:true,subtree:true});
+    observer.observe(document.documentElement,{childList:true,subtree:true});
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind,{once:true});else bind();
   window.addEventListener('atlas:nav-refresh',apply);
+  window.addEventListener('hashchange',apply);
+  window.addEventListener('popstate',apply);
 })();
