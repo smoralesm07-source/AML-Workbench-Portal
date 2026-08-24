@@ -5,16 +5,18 @@ on:
     branches: [main]
     paths:
       - 'cloudflare/maigret-service/**'
+      - '!cloudflare/maigret-service/deployment.json'
       - '.github/workflows/deploy-cloudflare-maigret.yml'
   push:
     branches: [main]
     paths:
       - 'cloudflare/maigret-service/**'
+      - '!cloudflare/maigret-service/deployment.json'
       - '.github/workflows/deploy-cloudflare-maigret.yml'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   issues: write
 
 jobs:
@@ -71,7 +73,9 @@ jobs:
           echo "worker_url=$worker_url" >> "$GITHUB_OUTPUT"
           exit 0
       - name: Smoke test Worker and auth boundary
+        id: smoke
         if: steps.deploy.outputs.exit_code == '0'
+        continue-on-error: true
         shell: bash
         env:
           WORKER_URL: ${{ steps.deploy.outputs.worker_url }}
@@ -86,24 +90,58 @@ jobs:
         shell: bash
         run: |
           status="SUCCESS"
-          if [ "${{ steps.deploy.outputs.exit_code }}" != "0" ]; then status="FAILURE"; fi
+          if [ "${{ steps.deploy.outputs.exit_code }}" != "0" ] || [ "${{ steps.smoke.outcome }}" != "success" ]; then status="FAILURE"; fi
           {
             echo "## Cloudflare Maigret deployment · $status"
             echo
             echo "Commit: \`${GITHUB_SHA}\`"
             echo "Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
             if [ -n "${{ steps.deploy.outputs.worker_url }}" ]; then echo "Worker: ${{ steps.deploy.outputs.worker_url }}"; fi
+            echo "Smoke: ${{ steps.smoke.outcome }}"
             echo
             echo '```text'
             grep -E 'https://|Version ID|Uploaded|Deployed|containers|Worker|ERROR|Error|error' deploy.log | tail -100 || tail -100 deploy.log
             echo '```'
           } > deployment-report.md
           cat deployment-report.md >> "$GITHUB_STEP_SUMMARY"
-          gh issue comment 86 --repo "$GITHUB_REPOSITORY" --body-file deployment-report.md
+          gh issue comment 86 --repo "$GITHUB_REPOSITORY" --body-file deployment-report.md || true
+      - name: Persist deployment metadata in main
+        if: always()
+        shell: bash
+        env:
+          WORKER_URL: ${{ steps.deploy.outputs.worker_url }}
+          DEPLOY_EXIT: ${{ steps.deploy.outputs.exit_code }}
+          SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
+        run: |
+          status="success"
+          if [ "$DEPLOY_EXIT" != "0" ] || [ "$SMOKE_OUTCOME" != "success" ]; then status="failure"; fi
+          generated_at=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          cat > /tmp/deployment.json <<EOF
+          {
+            "service": "atlas-maigret-osint",
+            "status": "$status",
+            "worker_url": "$WORKER_URL",
+            "deploy_exit_code": "$DEPLOY_EXIT",
+            "smoke_outcome": "$SMOKE_OUTCOME",
+            "source_commit": "$GITHUB_SHA",
+            "run_url": "https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID",
+            "generated_at": "$generated_at"
+          }
+          EOF
+          cd "$GITHUB_WORKSPACE"
+          git fetch origin main
+          git checkout -B main origin/main
+          cp /tmp/deployment.json cloudflare/maigret-service/deployment.json
+          git add cloudflare/maigret-service/deployment.json
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore(cloudflare): record Maigret deployment [skip ci]'
+          git push origin main
       - name: Container status
         if: steps.deploy.outputs.exit_code == '0'
         shell: bash
         run: npx wrangler containers list || true
-      - name: Fail if deployment failed
-        if: steps.deploy.outputs.exit_code != '0'
+      - name: Fail if deployment or smoke test failed
+        if: steps.deploy.outputs.exit_code != '0' || steps.smoke.outcome != 'success'
         run: exit 1
