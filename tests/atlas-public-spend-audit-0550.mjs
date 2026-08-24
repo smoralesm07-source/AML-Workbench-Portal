@@ -1,0 +1,15 @@
+import fs from 'node:fs';
+const js=fs.readFileSync('assets/atlas-public-spend-audit-0550.js','utf8');
+const css=fs.readFileSync('assets/atlas-public-spend-audit-0550.css','utf8');
+const html=fs.readFileSync('index.html','utf8');
+const must=(c,m)=>{if(!c)throw new Error(m)};
+must(html.includes('atlas-public-spend-audit-0550.css?v=0550-1'),'CSS 0550 no cargado');
+must(html.includes('atlas-public-spend-audit-0550.js?v=0550-1'),'JS 0550 no cargado');
+must(js.includes("aml-public-spend-audit"),'Edge Function no declarada');
+must(js.includes('2023-01-01'),'alcance histórico no fijado');
+must(js.includes('Regiones')&&js.includes('Servicios públicos')&&js.includes('Proveedores')&&js.includes('Señales'),'perspectivas de auditoría incompletas');
+must(js.includes('prioridad de revisión')&&js.includes('no probabilidad de irregularidad'),'guardrail metodológico ausente');
+must(js.includes('v037Marks'),'marcas preexistentes no preservadas');
+must(js.includes('months_normalized')&&js.includes('coverage_pct'),'cobertura histórica no visible');
+must(css.includes('.mpa-signal.alta')&&css.includes('.mpa-timeline'),'estilos analíticos incompletos');
+console.log('ATLAS Public Spend Audit 0550 OK');
