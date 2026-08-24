@@ -1,0 +1,14 @@
+import fs from 'node:fs';
+const js=fs.readFileSync('assets/atlas-public-spend-prices-0552.js','utf8');
+const css=fs.readFileSync('assets/atlas-public-spend-prices-0552.css','utf8');
+const html=fs.readFileSync('index.html','utf8');
+const must=(c,m)=>{if(!c)throw new Error(m)};
+must(html.includes('atlas-public-spend-prices-0552.css?v=0552-1'),'CSS precios no cargado');
+must(html.includes('atlas-public-spend-prices-0552.js?v=0552-1'),'JS precios no cargado');
+must(js.includes('Precios y productos'),'pestaña precios ausente');
+must(js.includes('1,5×')&&js.includes('$1 MM'),'umbrales visibles ausentes');
+must(js.includes('mismo trimestre')||js.includes('Mismo trimestre'),'control temporal ausente');
+must(js.includes('mediana')&&js.includes('no acredita sobreprecio'),'guardrail metodológico ausente');
+must(js.includes('evidence_strength')&&js.includes('cohort_median_price'),'evidencia comparativa incompleta');
+must(css.includes('.mppx-row')&&css.includes('.mppx-badge.alta'),'estilos de benchmark incompletos');
+console.log('ATLAS Public Spend Prices 0552 OK');
