@@ -1,0 +1,28 @@
+name: Validar Entity Press 0523
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'assets/atlas-entity-press-0523.js'
+      - 'assets/atlas-entity-press-0523.css'
+      - 'tests/atlas-entity-press-0523.mjs'
+      - 'index.html'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Validar sintaxis JavaScript
+        run: node --check assets/atlas-entity-press-0523.js
+      - name: Validar contrato
+        run: node tests/atlas-entity-press-0523.mjs
