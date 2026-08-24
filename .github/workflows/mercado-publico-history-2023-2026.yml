@@ -18,19 +18,19 @@ on:
   pull_request:
     paths:
       - 'ops/mercado-publico/history_ingest.py'
+      - 'ops/mercado-publico/backfill-trigger.json'
       - '.github/workflows/mercado-publico-history-2023-2026.yml'
   push:
     branches: [main]
     paths:
-      - 'ops/mercado-publico/history_ingest.py'
-      - '.github/workflows/mercado-publico-history-2023-2026.yml'
+      - 'ops/mercado-publico/backfill-trigger.json'
 
 permissions:
   contents: read
   id-token: write
 
 concurrency:
-  group: mercado-publico-history-${{ github.event.inputs.year || '2023' }}-${{ github.event.inputs.month || '1' }}
+  group: mercado-publico-history-${{ github.run_id }}
   cancel-in-progress: false
 
 jobs:
@@ -41,10 +41,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Validate historical loader
+      - name: Validate historical loader and trigger
         run: |
           python -m py_compile ops/mercado-publico/history_ingest.py
           python ops/mercado-publico/history_ingest.py --help >/dev/null
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=json.loads(Path('ops/mercado-publico/backfill-trigger.json').read_text())
+          y=int(p['year']);m=int(p['month'])
+          assert 2023 <= y <= 2026 and 1 <= m <= 12
+          print('trigger',p['run_id'],y,m)
+          PY
 
   ingest:
     if: github.event_name != 'pull_request'
@@ -76,10 +84,18 @@ jobs:
           INPUT_YEAR: ${{ github.event.inputs.year }}
           INPUT_MONTH: ${{ github.event.inputs.month }}
           INPUT_URL: ${{ github.event.inputs.source_url }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          echo "year=${INPUT_YEAR:-2023}" >> "$GITHUB_OUTPUT"
-          echo "month=${INPUT_MONTH:-1}" >> "$GITHUB_OUTPUT"
-          echo "url=${INPUT_URL:-}" >> "$GITHUB_OUTPUT"
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json,os
+          from pathlib import Path
+          if os.environ.get('EVENT_NAME') == 'workflow_dispatch':
+              y=os.environ.get('INPUT_YEAR') or '2023';m=os.environ.get('INPUT_MONTH') or '1';u=os.environ.get('INPUT_URL') or ''
+          else:
+              p=json.loads(Path('ops/mercado-publico/backfill-trigger.json').read_text())
+              y=str(p['year']);m=str(p['month']);u=str(p.get('source_url') or '')
+          print('year='+y);print('month='+m);print('url='+u)
+          PY
       - name: Ingest official ChileCompra month
         env:
           YEAR: ${{ steps.period.outputs.year }}
