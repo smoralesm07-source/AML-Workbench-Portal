@@ -4,7 +4,10 @@ on:
     paths:
       - 'assets/atlas-public-spend-audit-0550.js'
       - 'assets/atlas-public-spend-audit-0550.css'
+      - 'assets/atlas-public-spend-peers-0551.js'
+      - 'assets/atlas-public-spend-peers-0551.css'
       - 'tests/atlas-public-spend-audit-0550.mjs'
+      - 'tests/atlas-public-spend-peers-0551.mjs'
       - 'index.html'
       - '.github/workflows/validate-public-spend-audit-0550.yml'
 permissions:
@@ -18,3 +21,4 @@ jobs:
         with:
           node-version: '20'
       - run: node tests/atlas-public-spend-audit-0550.mjs
+      - run: node tests/atlas-public-spend-peers-0551.mjs
