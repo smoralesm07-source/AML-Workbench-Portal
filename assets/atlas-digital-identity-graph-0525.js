@@ -1,0 +1,18 @@
+'use strict';
+/* ATLAS AML · Digital Identity Graph 0525 */
+(function atlasDigitalIdentityGraph0525(){
+  const VERSION='DIGITAL-IDENTITY-GRAPH-0525.1';
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function graphSvg(graph){
+    const nodes=Array.isArray(graph?.nodes)?graph.nodes.slice(0,34):[],edges=Array.isArray(graph?.edges)?graph.edges.slice(0,70):[];
+    if(nodes.length<2)return '<div class="adg-empty">Sin relaciones suficientes para dibujar el grafo.</div>';
+    const W=920,H=390,cx=W/2,cy=H/2,root=nodes.find(n=>n.root)||nodes[0],others=nodes.filter(n=>n!==root);
+    const pos=new Map([[root.id,{x:cx,y:cy}]]);others.forEach((n,i)=>{const ring=n.type==='derived_alias'?105:165+(i%2)*62,ang=(Math.PI*2*i/Math.max(others.length,1))-Math.PI/2;pos.set(n.id,{x:cx+Math.cos(ang)*ring,y:cy+Math.sin(ang)*ring});});
+    const lines=edges.map(e=>{const a=pos.get(e.from),b=pos.get(e.to);if(!a||!b)return'';return `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" class="${e.type==='ALIAS_DERIVADO_DE_ENLACE_PUBLICO'?'derived':''}"/>`;}).join('');
+    const circles=nodes.map(n=>{const p=pos.get(n.id);if(!p)return'';const cls=n.root?'root':n.type==='derived_alias'?'alias':'profile',r=n.root?31:n.type==='derived_alias'?22:16,label=String(n.label||'').slice(0,18);return `<g class="adg-node ${cls}" data-node-id="${esc(n.id)}"><circle cx="${p.x}" cy="${p.y}" r="${r}"/><text x="${p.x}" y="${p.y+r+15}" text-anchor="middle">${esc(label)}</text></g>`;}).join('');
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafo de identidad digital"><g class="adg-lines">${lines}</g>${circles}</svg>`;
+  }
+  function derivedMarkup(state){const list=Array.isArray(state?.derived?.verified)?state.derived.verified:[];if(!list.length)return '<div class="adg-empty">No se extrajeron aliases derivados verificables en esta pasada.</div>';return `<div class="adg-derived-list">${list.map(x=>`<button type="button" data-adg-alias="${esc(x.alias)}"><span><b>@${esc(x.alias)}</b><small>${Number(x.profile_count||0)} perfiles observados en verificación reducida</small></span><em>Explorar →</em></button>`).join('')}</div>`;}
+  function mount(){const host=document.querySelector('[data-aex-digital-graph-host]'),state=window.__ATLAS_DIGITAL_IDENTITY_0524__;if(!host||!state||state.depth!=='deep'||host.dataset.adgMounted==='1')return;host.dataset.adgMounted='1';host.innerHTML=`<section class="adg-wrap"><header><div><span>GRAFO DIGITAL</span><h4>Expansión controlada del alias</h4><p>Perfiles y aliases derivados de enlaces públicos. Las aristas representan evidencia técnica observada, no identidad confirmada.</p></div><div class="adg-legend"><span><i class="root"></i>Alias raíz</span><span><i class="alias"></i>Alias derivado</span><span><i class="profile"></i>Perfil</span></div></header><div class="adg-canvas">${graphSvg(state.graph)}</div><div class="adg-derived"><h5>Aliases candidatos derivados</h5>${derivedMarkup(state)}</div></section>`;host.querySelectorAll('[data-adg-alias]').forEach(btn=>btn.addEventListener('click',()=>{const alias=btn.dataset.adgAlias;if(alias&&typeof window.__ATLAS_RUN_DIGITAL_IDENTITY__==='function')void window.__ATLAS_RUN_DIGITAL_IDENTITY__(alias,'deep');}));window.__ATLAS_DIGITAL_GRAPH_0525__={active:true,version:VERSION,nodeCount:state.graph?.nodes?.length||0,edgeCount:state.graph?.edges?.length||0,identityAssertion:false,scoreMutation:false,renderedAt:new Date().toISOString()};}
+  window.addEventListener('atlas:digital-identity-result',()=>queueMicrotask(mount));const obs=new MutationObserver(()=>mount());obs.observe(document.documentElement,{childList:true,subtree:true});mount();
+})();
