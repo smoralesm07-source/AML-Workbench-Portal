@@ -2,7 +2,7 @@
 /* ATLAS AML · IRAR sectorial + perfil IIR × IRAR. */
 (function atlasReportabilityIrar(){
   const core=window.ATLAS_IRAR_CURRENT;
-  const UI_VERSION='IRAR-UI-1.1';
+  const UI_VERSION='IRAR-UI-1.2';
   if(!core){console.warn('[ATLAS] IRAR authority unavailable');return;}
 
   function fmt(v,d=2){return Number.isFinite(Number(v))?Number(v).toLocaleString('es-CL',{minimumFractionDigits:d,maximumFractionDigits:d}):'—';}
@@ -52,7 +52,7 @@
         row.irarPeer=m?.peer_expected_pct??null;
         row.irarRelative=m?.relative_peer??null;
         row.irarCredibility=m?.confidence_pct??0;
-        row.irarConfidence=row.irarCredibility; // compatibilidad API legacy
+        row.irarConfidence=row.irarCredibility;
         row.irarCredibilityBand=m?.confidence_band||'baja';
         row.irarConfidenceBand=row.irarCredibilityBand;
         row.irarScore=m?.score??50;
@@ -114,6 +114,10 @@
     if(n<=0)return 2;
     return Math.max(2,Math.min(98,50+25*Math.log2(n)));
   }
+  function focusRowByIndex(idx){
+    const row=document.querySelector(`.v036-mxrow[data-v036-row="${idx}"]`);
+    if(row){row.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>row.click(),250);}
+  }
   function renderProfileMap(){
     const matrix=document.querySelector('.v036-matrix');if(!matrix||!V036_STATE?.rows)return;
     let panel=document.querySelector('#atlas-irar-profile-map');
@@ -123,16 +127,21 @@
     rows.forEach(r=>{if(counts[r.reportabilityProfile?.key]!==undefined)counts[r.reportabilityProfile.key]++;});
     const dots=rows.map(r=>{
       const idx=V036_STATE.rows.indexOf(r),left=pos(r.iir),top=100-pos(r.irarRelative),sent=Number(r.total)||0;
-      const size=Math.max(8,Math.min(20,8+3*Math.log10(sent+1))),opacity=Math.max(.32,Math.min(1,(Number(r.irarCredibility)||0)/100));
+      const size=Math.max(10,Math.min(22,10+3*Math.log10(sent+1))),opacity=Math.max(.42,Math.min(1,(Number(r.irarCredibility)||0)/100));
+      const color=V036_SEG?.[r.seg]?.color||'var(--accent-hi,#5bb4f5)';
       const tip=`${r.name}|${r.reportabilityProfile?.label||'Sin perfil'}|IIR 2025 ${fmt(r.iir,2)}× · IRAR ajustado ${fmt(r.irarAdjusted,2)}% · relativo ${fmt(r.irarRelative,2)}× · credibilidad ${fmt(r.irarCredibility,0)}%`;
-      return `<button class="atlas-irar-dot ${profileClass(r.reportabilityProfile?.key)}" style="left:${left}%;top:${top}%;width:${size}px;height:${size}px;opacity:${opacity};background:${V036_SEG?.[r.seg]?.color||'currentColor'}" data-atlas-irar-row="${idx}" data-v036-tip="${esc(tip)}" aria-label="${esc(r.name)}"></button>`;
+      const style=`left:${left}%;top:${top}%;width:${size}px;height:${size}px;opacity:${opacity};background:${color}!important;background-color:${color}!important;border-color:rgba(231,238,245,.72)!important`;
+      return `<span class="atlas-irar-dot ${profileClass(r.reportabilityProfile?.key)}" style="${style}" data-atlas-irar-row="${idx}" data-v036-tip="${esc(tip)}" aria-label="${esc(r.name)}" role="button" tabindex="0"><span aria-hidden="true"></span></span>`;
     }).join('');
     const xLow=pos(.75),xHigh=pos(1.50),yLow=pos(.80),yHigh=pos(1.25);
-    const zone=`<div class="atlas-irar-expected-zone" style="left:${xLow}%;right:${100-xHigh}%;top:${100-yHigh}%;bottom:${yLow}%"><span>Zona esperada</span></div><div class="atlas-irar-threshold v" style="left:${xLow}%"></div><div class="atlas-irar-threshold v" style="left:${xHigh}%"></div><div class="atlas-irar-threshold h" style="top:${100-yHigh}%"></div><div class="atlas-irar-threshold h" style="top:${100-yLow}%"></div>`;
+    const zone=`<div class="atlas-irar-expected-zone" style="left:${xLow}%;right:${100-xHigh}%;top:${100-yHigh}%;bottom:${yLow}%;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent,#3b98e0) 32%,transparent)"><span>Zona esperada</span></div><div class="atlas-irar-threshold v" style="left:${xLow}%"></div><div class="atlas-irar-threshold v" style="left:${xHigh}%"></div><div class="atlas-irar-threshold h" style="top:${100-yHigh}%"></div><div class="atlas-irar-threshold h" style="top:${100-yLow}%"></div>`;
     panel.innerHTML=`<div class="atlas-irar-map-head"><div><span>PERFIL DE REPORTABILIDAD</span><h3>IIR 2025 × IRAR ajustado 2021–2025</h3><p>Eje X: intensidad relativa de reporte 2025. Eje Y: rendimiento analítico histórico ajustado relativo a pares. Tamaño = ROS acumulados 5 años · opacidad = credibilidad.</p></div><div class="atlas-irar-map-legend"><span>Intensivo–productivo <b>${counts.INTENSIVO_PRODUCTIVO}</b></span><span>Intensivo–bajo rendimiento <b>${counts.INTENSIVO_BAJO_RENDIMIENTO}</b></span><span>Selectivo–productivo <b>${counts.SELECTIVO_PRODUCTIVO}</b></span><span>Baja activación <b>${counts.BAJA_ACTIVACION}</b></span><span>Esperado <b>${counts.COMPORTAMIENTO_ESPERADO}</b></span></div></div><div class="atlas-irar-plane">${zone}<div class="atlas-irar-axis x"></div><div class="atlas-irar-axis y"></div><span class="atlas-irar-q q1">Selectivo–productivo</span><span class="atlas-irar-q q2">Intensivo–productivo</span><span class="atlas-irar-q q3">Baja activación</span><span class="atlas-irar-q q4">Intensivo–bajo rendimiento</span><span class="atlas-irar-axis-label xlow">IIR bajo</span><span class="atlas-irar-axis-label xhigh">IIR alto</span><span class="atlas-irar-axis-label ylow">IRAR relativo bajo</span><span class="atlas-irar-axis-label yhigh">IRAR relativo alto</span>${dots}</div><div class="atlas-irar-map-foot"><b>Zona esperada:</b> IIR entre 0,75× y 1,50× e IRAR relativo entre 0,80× y 1,25×. Los ejes finos marcan 1,0×; las líneas discontinuas marcan los umbrales de perfil. Los extremos son señales comparativas para revisión, no hallazgos ni determinaciones de cumplimiento.</div>`;
-    panel.querySelectorAll('[data-atlas-irar-row]').forEach(dot=>dot.addEventListener('click',()=>{
-      const idx=Number(dot.dataset.atlasIrarRow),row=document.querySelector(`.v036-mxrow[data-v036-row="${idx}"]`);if(row){row.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>row.click(),250);}
-    }));
+    panel.querySelectorAll('[data-atlas-irar-row]').forEach(dot=>{
+      dot.addEventListener('click',()=>focusRowByIndex(Number(dot.dataset.atlasIrarRow)));
+      dot.addEventListener('keydown',event=>{
+        if(event.key==='Enter'||event.key===' '){event.preventDefault();focusRowByIndex(Number(dot.dataset.atlasIrarRow));}
+      });
+    });
   }
 
   if(typeof v036RenderMatrix==='function'){
