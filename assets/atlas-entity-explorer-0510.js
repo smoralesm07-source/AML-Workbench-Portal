@@ -496,12 +496,15 @@
     window.__ATLAS_ENTITY360_CURRENT__={...(window.__ATLAS_ENTITY360_CURRENT__||{}),release:RELEASE,build:BUILD,authority:AUTHORITY,mode:'explorer',loadedRows:rows.length,renderedAt:new Date().toISOString()};
   }
 
+  /* Una consulta en vuelo no bloquea la siguiente: cambiar una faceta mientras
+     carga debe repintar con el criterio nuevo, no perderse. La respuesta vieja
+     se descarta por token. */
   async function run(reset=true){
-    if(loading)return;
+    const token=++seq;
     loading=true;
     if(reset){rows=[];planned=null;exhausted=false;}
     await render(null);
-    const token=++seq;
+    if(token!==seq)return;
     try{
       const result=await fetchPage(reset?0:rows.length);
       if(token!==seq)return;
