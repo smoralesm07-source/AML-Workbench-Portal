@@ -111,3 +111,33 @@
   schedule();
   window.__ATLAS_ENTITY_UAF_HIGHLIGHT__={active:true,version:VERSION,policy:'VISIBLE_SO_UAF_IN_SEARCH_SHEET_DOSSIER',getActiveEntityId:()=>activeEntityId};
 })();
+
+/* ATLAS AML 0.55.0 · canonical autocomplete selection.
+ * A suggestion already came from aml_entities and carries entity_id. Re-running
+ * the same selection as free text can lose the match on diacritics/punctuation
+ * (e.g. NUÑEZ / E.I.R.L.). Exact suggestion selection therefore opens the
+ * canonical entity directly by entity_id and never re-enters fuzzy/OSINT routing.
+ */
+(function atlasEntityCanonicalSuggestion0550(){
+  const VERSION='ENTITY-CANONICAL-SUGGESTION-0550.1';
+  document.addEventListener('click',event=>{
+    const button=event.target?.closest?.('.aex-suggest-item[data-aex-suggest-id]');
+    if(!button)return;
+    const entityId=String(button.dataset.aexSuggestId||'').trim();
+    const displayName=String(button.dataset.aexSuggestName||button.querySelector('b')?.textContent||entityId).trim();
+    const entry=window.__ATLAS_ENTITY_ENTRY__;
+    const open=entry?.explorer?.open;
+    if(!entityId||typeof open!=='function')return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const input=document.querySelector('#aex-q');
+    if(input)input.value=displayName;
+    document.querySelector('#aex-suggest')?.classList.remove('open');
+    window.__ATLAS_ENTITY_CANONICAL_SELECTION_0550__={active:true,version:VERSION,entityId,displayName,route:'canonical_entity_id',selectedAt:new Date().toISOString()};
+    void Promise.resolve(open(entityId)).catch(error=>{
+      console.error('[ATLAS] canonical entity open failed',error);
+      window.__ATLAS_ENTITY_CANONICAL_SELECTION_0550__={active:true,version:VERSION,entityId,displayName,route:'canonical_entity_id',error:String(error?.message||error),selectedAt:new Date().toISOString()};
+    });
+  },true);
+  window.__ATLAS_ENTITY_CANONICAL_SELECTION_0550__={active:true,version:VERSION,route:'canonical_entity_id',installedAt:new Date().toISOString()};
+})();
