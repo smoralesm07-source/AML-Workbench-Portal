@@ -1,0 +1,28 @@
+name: Validate Public Spend Mobile Route 0573
+
+on:
+  pull_request:
+    paths:
+      - 'assets/atlas-public-spend-mobile-route-0573.js'
+      - 'assets/atlas-mobile-nav.js'
+      - 'assets/atlas-public-spend-guided-0570.css'
+      - 'index.html'
+      - 'tests/atlas-public-spend-mobile-route-0573.mjs'
+      - '.github/workflows/validate-public-spend-mobile-route-0573.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntax
+        run: node --check assets/atlas-public-spend-mobile-route-0573.js
+      - name: Contract
+        run: node tests/atlas-public-spend-mobile-route-0573.mjs
