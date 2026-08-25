@@ -1,22 +1,23 @@
 'use strict';
-/* ATLAS AML · Gasto Público route resilience 0574
- * Self-healing route: garantiza que el módulo base v037 (JS + CSS) esté cargado
- * antes de abrir Gasto Público, tanto en desktop como móvil. No modifica datos,
- * scores ni semántica analítica.
+/* ATLAS AML · Gasto Público route resilience 0575
+ * Production-safe route authority for compiled runtime deployments.
+ * Never fetches source fragments that Pages deliberately does not publish.
+ * If the legacy v037 loader fails to leave a mounted host, reconstructs a stable
+ * .v037-spend host and restores Audit/Guided surfaces so the section cannot stay blank.
  */
 (function(){
   const VIEW='public-spend';
   const AUDIT_ID='atlas-mp-audit-0550';
   const GUIDED_ID='atlas-public-spend-guided-0570';
-  const BASE_JS='./v037-public-spend.js?v=0574-1';
-  const BASE_CSS='./v037-public-spend.css?v=0574-1';
+  const STATUS_ID='atlas-public-spend-route-status-0575';
+  const TITLE='Gasto Público';
+  const SUBTITLE='Flujos, proveedores privados y marcas explicables desde Presupuesto Abierto, conectados a identidad gobernada del Workbench.';
   let savedAudit=null;
   let savedGuided=null;
   let lastHost=null;
   let scheduled=false;
   let refreshing=false;
   let opening=false;
-  let baseLoading=null;
 
   const isMobile=()=>window.matchMedia?window.matchMedia('(max-width: 768px)').matches:window.innerWidth<=768;
   const diag=()=>window.__ATLAS_PUBLIC_SPEND_AUDIT_0550__||null;
@@ -41,60 +42,20 @@
   function publish(status,extra={}){
     window.__ATLAS_PUBLIC_SPEND_MOBILE_0573__={
       status,
-      version:'0574.0',
+      version:'0575.0',
       view:VIEW,
       mobile:isMobile(),
       loaderReady:typeof window.__AML_PUBLIC_SPEND__?.load==='function',
       hostConnected:!!document.querySelector('.v037-spend'),
+      contentConnected:!!document.querySelector('#content'),
       auditConnected:!!document.getElementById(AUDIT_ID),
       guidedConnected:!!document.getElementById(GUIDED_ID),
       preservedAudit:!!savedAudit,
       preservedGuided:!!savedGuided,
+      deploymentContract:'COMPILED_BUNDLES_ONLY_NO_SOURCE_FETCH',
       checkedAt:new Date().toISOString(),
       ...extra
     };
-  }
-
-  function ensureBaseCss(){
-    if(document.querySelector('link[data-atlas-public-spend-base="1"]')||[...document.styleSheets].some(s=>String(s.href||'').includes('v037-public-spend.css')))return;
-    const link=document.createElement('link');
-    link.rel='stylesheet';
-    link.href=BASE_CSS;
-    link.dataset.atlasPublicSpendBase='1';
-    document.head.appendChild(link);
-  }
-
-  function ensureBaseLoader(){
-    ensureBaseCss();
-    if(typeof window.__AML_PUBLIC_SPEND__?.load==='function')return Promise.resolve(window.__AML_PUBLIC_SPEND__.load);
-    if(baseLoading)return baseLoading;
-    publish('loading-base-module');
-    baseLoading=new Promise((resolve,reject)=>{
-      const existing=[...document.scripts].find(s=>String(s.src||'').includes('v037-public-spend.js'));
-      const finish=()=>{
-        const loader=window.__AML_PUBLIC_SPEND__?.load;
-        if(typeof loader==='function')resolve(loader);
-        else reject(new Error('El módulo base de Gasto Público cargó, pero no publicó su loader.'));
-      };
-      if(existing){
-        if(typeof window.__AML_PUBLIC_SPEND__?.load==='function'){finish();return;}
-        existing.addEventListener('load',finish,{once:true});
-        existing.addEventListener('error',()=>reject(new Error('No fue posible cargar v037-public-spend.js.')),{once:true});
-        setTimeout(()=>{
-          if(typeof window.__AML_PUBLIC_SPEND__?.load==='function')finish();
-          else reject(new Error('Tiempo de espera agotado cargando Gasto Público.'));
-        },7000);
-        return;
-      }
-      const script=document.createElement('script');
-      script.src=BASE_JS;
-      script.async=false;
-      script.dataset.atlasPublicSpendBase='1';
-      script.onload=finish;
-      script.onerror=()=>reject(new Error('No fue posible cargar v037-public-spend.js.'));
-      document.head.appendChild(script);
-    }).finally(()=>{baseLoading=null;});
-    return baseLoading;
   }
 
   function schedule(){
@@ -113,36 +74,81 @@
     });
   }
 
+  function ensureShell(){
+    let content=document.querySelector('#content');
+    if(content)return content;
+    if(typeof window.shell==='function'){
+      try{window.shell(TITLE,SUBTITLE);}catch(error){publish('shell-error',{error:String(error?.message||error||'UNKNOWN')});}
+    }
+    return document.querySelector('#content');
+  }
+
+  function createStableHost(reason='route-recovery'){
+    const content=ensureShell();
+    if(!content){
+      publish('content-host-missing',{reason});
+      return null;
+    }
+    let host=content.querySelector('.v037-spend');
+    if(!host){
+      content.innerHTML=`<section class="v037-spend mpa-strategic-host" data-atlas-public-spend-recovery="0575"><div id="${STATUS_ID}" class="v037-loading">Preparando Gasto Público…</div></section>`;
+      host=content.querySelector('.v037-spend');
+    }
+    if(host)host.classList.add('mpa-strategic-host');
+    publish('stable-host-ready',{reason,recovered:true});
+    return host;
+  }
+
+  function restoreSurfaces(host){
+    if(!host)return false;
+    let restored=false;
+    if(!document.getElementById(AUDIT_ID)&&savedAudit){host.prepend(savedAudit);restored=true;}
+    if(!document.getElementById(GUIDED_ID)&&savedGuided){host.prepend(savedGuided);restored=true;}
+    rememberCurrent();
+    const audit=document.getElementById(AUDIT_ID);
+    const guided=document.getElementById(GUIDED_ID);
+    if(audit&&guided)audit.style.display='none';
+    const status=document.getElementById(STATUS_ID);
+    if(status&&(guided||audit))status.remove();
+    return restored;
+  }
+
   function ensureMounted(){
     rememberCurrent();
-    const host=document.querySelector('.v037-spend');
+    let host=document.querySelector('.v037-spend');
     if(!host){
       lastHost=null;
       publish('waiting-host');
       return false;
     }
-
     const hostChanged=host!==lastHost;
     lastHost=host;
     host.classList.add('mpa-strategic-host');
-    let restored=false;
-
-    if(!document.getElementById(AUDIT_ID)&&savedAudit){
-      host.prepend(savedAudit);
-      restored=true;
-    }
-    if(!document.getElementById(GUIDED_ID)&&savedGuided){
-      host.prepend(savedGuided);
-      restored=true;
-    }
-
-    rememberCurrent();
+    const restored=restoreSurfaces(host);
     const audit=document.getElementById(AUDIT_ID);
     const guided=document.getElementById(GUIDED_ID);
-    if(audit&&guided)audit.style.display='none';
-
     if((hostChanged||restored||!audit)&&diag())refreshAudit();
-    publish(guided?'ready':audit?'audit-ready':'ready-base',{hostChanged,restored});
+    publish(guided?'ready':audit?'audit-ready':'mounting',{hostChanged,restored});
+    return true;
+  }
+
+  function recoverVisibleSurface(reason,error=null){
+    rememberCurrent();
+    const host=createStableHost(reason);
+    if(!host)return false;
+    restoreSurfaces(host);
+    const status=document.getElementById(STATUS_ID);
+    if(status){
+      status.innerHTML=error
+        ? `<b>Recuperando la vista de Gasto Público.</b><br><small>${String(error?.message||error||'El cargador principal no dejó un host utilizable.')}</small>`
+        : '<b>Preparando Gasto Público…</b><br><small>Cargando la capa analítica gobernada.</small>';
+    }
+    refreshAudit();
+    window.dispatchEvent(new CustomEvent('atlas:public-spend-mounted',{detail:{reason,version:'0575.0'}}));
+    setTimeout(schedule,40);
+    setTimeout(schedule,180);
+    setTimeout(schedule,600);
+    setTimeout(schedule,1500);
     return true;
   }
 
@@ -152,21 +158,29 @@
     rememberCurrent();
     window.AtlasMobileNav?.close?.();
     publish('opening');
+    let loaderError=null;
     try{
-      const loader=await ensureBaseLoader();
-      await loader();
-      ensureMounted();
+      const loader=window.__AML_PUBLIC_SPEND__?.load;
+      if(typeof loader==='function'){
+        try{await loader();}catch(error){loaderError=error;publish('legacy-loader-error',{error:String(error?.message||error||'UNKNOWN')});}
+      }else{
+        publish('compiled-loader-missing');
+      }
+
+      if(!document.querySelector('.v037-spend'))recoverVisibleSurface(loaderError?'loader-error-recovery':'missing-host-recovery',loaderError);
+      else{
+        ensureMounted();
+        if(loaderError)recoverVisibleSurface('loader-error-host-preserved',loaderError);
+      }
+
       setTimeout(schedule,60);
       setTimeout(schedule,260);
       setTimeout(schedule,800);
-      publish('opened',{routeAuthority:'SELF_HEALING_DIRECT_PUBLIC_SPEND_LOADER'});
-      return true;
-    }catch(error){
-      const message=String(error?.message||error||'UNKNOWN');
-      publish('route-error',{error:message});
-      const content=document.querySelector('#content');
-      if(content)content.innerHTML=`<div class="v037-error"><b>No fue posible abrir Gasto Público.</b><br>${message.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}<br><small>ATLAS intentó recuperar automáticamente el módulo base.</small></div>`;
-      throw error;
+      publish(document.querySelector('.v037-spend')?'opened':'open-incomplete',{
+        routeAuthority:'PUBLIC_SPEND_0575_COMPILED_SAFE',
+        loaderError:loaderError?String(loaderError?.message||loaderError):null
+      });
+      return !!document.querySelector('.v037-spend');
     }finally{
       opening=false;
     }
@@ -177,7 +191,10 @@
     if(!button)return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    openPublicSpend().catch(()=>{});
+    openPublicSpend().catch(error=>{
+      publish('route-error',{error:String(error?.message||error||'UNKNOWN')});
+      recoverVisibleSurface('route-error-recovery',error);
+    });
   },true);
 
   const observer=new MutationObserver(records=>{
@@ -191,11 +208,11 @@
 
   window.addEventListener('pageshow',schedule);
   window.addEventListener('atlas:nav-refresh',schedule);
+  window.addEventListener('atlas:public-spend-mounted',schedule);
   window.addEventListener('resize',schedule,{passive:true});
-  window.AtlasPublicSpendMobile0573={ensure:ensureMounted,open:openPublicSpend,loadBase:ensureBaseLoader,health:()=>window.__ATLAS_PUBLIC_SPEND_MOBILE_0573__||null};
+  window.AtlasPublicSpendMobile0573={ensure:ensureMounted,open:openPublicSpend,recover:recoverVisibleSurface,health:()=>window.__ATLAS_PUBLIC_SPEND_MOBILE_0573__||null};
   window.AtlasPublicSpendRoute0573=window.AtlasPublicSpendMobile0573;
 
-  ensureBaseCss();
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});
   else schedule();
   for(const ms of [80,260,700,1500])setTimeout(schedule,ms);
