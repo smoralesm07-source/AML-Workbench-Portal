@@ -1,0 +1,34 @@
+name: Sync Public Spend Context 0571
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '15 10 * * *'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/sync-public-spend-context-0571.yml'
+      - 'public-spend-context-trigger.json'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Materializar Presupuesto, InfoLobby y CGR
+        shell: bash
+        run: |
+          set -euo pipefail
+          OIDC_JSON="$(curl -fsSL -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=atlas-public-spend-context")"
+          OIDC_TOKEN="$(printf '%s' "$OIDC_JSON" | python -c 'import json,sys; print(json.load(sys.stdin)["value"])')"
+          RESPONSE="$(curl -fsSL -X POST \
+            -H "Authorization: Bearer ${OIDC_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -d '{}' \
+            'https://ldmtlwzqaqmegedktlxr.supabase.co/functions/v1/aml-public-spend-context-sync')"
+          printf '%s\n' "$RESPONSE"
+          printf '%s' "$RESPONSE" | python -c 'import json,sys; d=json.load(sys.stdin); assert d.get("ok") is True, d; print("Context materialized:", d.get("counts"), "total=", d.get("total"))'
