@@ -31,9 +31,9 @@ ok(authority.includes('__atlasPublicSpendAuthority0579'),'debe marcar y comproba
 ok(!authority.includes('__AML_PUBLIC_SPEND__'),'la autoridad no debe abrir el histórico directamente');
 
 const routePos=index.indexOf('atlas-public-spend-mobile-route-0573.js?v=0577-1');
-const authorityPos=index.indexOf('atlas-public-spend-route-authority-0578.js?v=0578-1');
+const authorityPos=index.indexOf('atlas-public-spend-route-authority-0578.js?v=0579-1');
 ok(routePos>=0,'index debe cargar la ruta progresiva 0577');
-ok(authorityPos>routePos,'la autoridad debe cargar después de la ruta');
+ok(authorityPos>routePos,'la autoridad 0579 debe cargar después de la ruta');
 ok(index.includes('atlas-public-spend-progressive-0577.css?v=0577-1'),'index debe cargar CSS externo CSP-safe');
 ok(css.includes('.atlas-public-spend-fast-host'),'el CSS debe cubrir el host rápido');
 ok(index.includes('data-aml-version="0.51.1"')&&index.includes('data-aml-build="0511"'),'el fix no debe alterar el release global');
