@@ -59,8 +59,11 @@
     const strong=document.querySelector('.a45-readings > div:first-child strong');
     if(!strong)return;
     const small=strong.querySelector('small');
-    strong.childNodes.forEach(n=>{if(n.nodeType===Node.TEXT_NODE)n.remove();});
-    strong.insertBefore(document.createTextNode(String(resolved)),small||null);
+    let textNode=[...strong.childNodes].find(n=>n.nodeType===Node.TEXT_NODE)||null;
+    const current=(textNode?.nodeValue||'').trim();
+    if(current===String(resolved))return;
+    if(!textNode){textNode=document.createTextNode(String(resolved));strong.insertBefore(textNode,small||null);}
+    else textNode.nodeValue=String(resolved);
   }
   function apply(row,id){
     if(!row||!id)return;
@@ -68,14 +71,18 @@
     if(!tile)return;
     const currentEntity=entityId();
     if(currentEntity!==id)return;
-    tile.classList.remove('muted');
+    if(tile.classList.contains('muted'))tile.classList.remove('muted');
+    const nextState=stateText(row);
     const status=tile.querySelector('span');
-    if(status)status.textContent=stateText(row);
+    if(status&&status.textContent!==nextState)status.textContent=nextState;
+    const nextSmall=String(row.updated_at||row.source_snapshot||'perfil OSFL materializado');
     const small=tile.querySelector('small');
-    if(small)small.textContent=row.updated_at||row.source_snapshot||'perfil OSFL materializado';
-    tile.title=detailText(row);
-    tile.dataset.osflCoverage='materialized';
-    tile.dataset.osflConfirmation=String(row.confirmation_level||'');
+    if(small&&small.textContent!==nextSmall)small.textContent=nextSmall;
+    const nextTitle=detailText(row);
+    if(tile.title!==nextTitle)tile.title=nextTitle;
+    if(tile.dataset.osflCoverage!=='materialized')tile.dataset.osflCoverage='materialized';
+    const confirmation=String(row.confirmation_level||'');
+    if(tile.dataset.osflConfirmation!==confirmation)tile.dataset.osflConfirmation=confirmation;
     updateCount();
   }
   async function reconcile(){
