@@ -21,7 +21,6 @@
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const num=v=>{const n=Number(v);return Number.isFinite(n)?n:null;};
   const fmt=v=>{const n=num(v);return n==null?'—':n.toLocaleString('es-CL',{maximumFractionDigits:1});};
-  const money=v=>{const n=num(v);return n==null?'—':'$'+n.toLocaleString('es-CL',{maximumFractionDigits:0});};
   const day=v=>v?String(v).slice(0,10):'—';
   const cut=(v,n=34)=>{const s=String(v||'—');return s.length>n?s.slice(0,n-1)+'…':s;};
   const db=()=>{try{return typeof sb!=='undefined'?sb:(window.sb||null);}catch(_e){return window.sb||null;}};
@@ -44,11 +43,16 @@
   function holder(panel,key,position='append'){
     if(!panel)return null;let el=panel.querySelector(`[data-aerl-holder="${key}"]`);if(el)return el;el=document.createElement('div');el.dataset.aerlHolder=key;el.className='aerl-holder';if(position==='prepend')panel.prepend(el);else panel.appendChild(el);return el;
   }
+  function apply(panel,key,html,signature,position='append'){
+    const el=holder(panel,key,position);if(!el)return false;const sig=String(signature||'');if(el.dataset.aerlSig===sig)return false;el.innerHTML=html;el.dataset.aerlSig=sig;return true;
+  }
   function lifecycleMarkup(d){
     const l=d.lifecycle,m=d.master;if(!m?.rut)return '';
     if(!l)return `<section class="aerl-card aerl-lifecycle"><header><div><span class="aerl-eyebrow">CICLO DE VIDA SOCIETARIO</span><h3>Sin hechos RES materializados para esta identidad</h3></div><span class="aerl-state neutral">RUT exacto disponible</span></header><p class="aerl-note">ATLAS aún no posee un hecho RES para esta entidad. Puede incorporarse una actuación oficial mediante evidencia documental, sin matching por nombre.</p><div class="aerl-actions"><button data-aerl-add>Registrar evidencia societaria</button><a href="${SEARCH_URL}" target="_blank" rel="noopener noreferrer">Buscar actuaciones en RES ↗</a></div></section>`;
     const age=l.company_age_days==null?'—':l.company_age_days<365?`${fmt(l.company_age_days)} días`:`${fmt(l.company_age_days/365.25)} años`;
-    return `<section class="aerl-card aerl-lifecycle"><header><div><span class="aerl-eyebrow">CICLO DE VIDA SOCIETARIO</span><h3>Historia registral observada</h3></div><span class="aerl-state ${l.dissolution_count?'alert':l.modification_count||l.transformation_count||l.merger_count||l.division_count?'changed':'neutral'}">${esc(String(l.observed_lifecycle_state||'').replaceAll('_',' '))}</span></header><div class="aerl-kpis"><div><small>Antigüedad</small><b>${esc(age)}</b><span>constitución ${esc(day(l.constitution_date))}</span></div><div><small>Actuaciones</small><b>${fmt(l.actuation_count)}</b><span>${fmt(l.modification_count)} modificaciones</span></div><div><small>Documentos</small><b>${fmt(l.evidence_document_count)}</b><span>${fmt(l.reviewed_document_count)} revisados</span></div><div><small>Relaciones</small><b>${fmt(l.relationship_count)}</b><span>${fmt(l.confirmed_current_relationship_count)} vigentes confirmadas</span></div></div><div class="aerl-event-strip">${[['CONSTITUCION',l.actuation_count-l.modification_count-l.transformation_count-l.merger_count-l.division_count-l.dissolution_count],['MODIFICACION',l.modification_count],['TRANSFORMACION',l.transformation_count],['FUSION',l.merger_count],['DIVISION',l.division_count],['DISOLUCION',l.dissolution_count]].filter(x=>num(x[1])>0).map(x=>`<span><i data-kind="${x[0]}"></i>${eventLabel(x[0])} <b>${fmt(x[1])}</b></span>`).join('')}</div><div class="aerl-actions"><button data-aerl-add>Registrar evidencia societaria</button><a href="${SEARCH_URL}" target="_blank" rel="noopener noreferrer">Buscar actuaciones en RES ↗</a></div><p class="aerl-note">${esc(l.coverage_note||'La ausencia de una actuación no acredita su inexistencia en RES.')}</p></section>`;
+    const events=[['CONSTITUCION',l.constitution_count],['MODIFICACION',l.modification_count],['TRANSFORMACION',l.transformation_count],['FUSION',l.merger_count],['DIVISION',l.division_count],['RECTIFICACION_SANEAMIENTO',l.rectification_count],['DISOLUCION',l.dissolution_count],['MIGRACION',l.migration_count],['PODER',l.power_count],['ACCIONISTAS',l.shareholder_event_count],['OTRO',l.other_actuation_count]].filter(x=>num(x[1])>0);
+    const changed=events.some(([k])=>k!=='CONSTITUCION');
+    return `<section class="aerl-card aerl-lifecycle"><header><div><span class="aerl-eyebrow">CICLO DE VIDA SOCIETARIO</span><h3>Historia registral observada</h3></div><span class="aerl-state ${l.dissolution_count?'alert':changed?'changed':'neutral'}">${esc(String(l.observed_lifecycle_state||'').replaceAll('_',' '))}</span></header><div class="aerl-kpis"><div><small>Antigüedad</small><b>${esc(age)}</b><span>constitución ${esc(day(l.constitution_date))}</span></div><div><small>Actuaciones</small><b>${fmt(l.actuation_count)}</b><span>${fmt(l.modification_count)} modificaciones</span></div><div><small>Documentos</small><b>${fmt(l.evidence_document_count)}</b><span>${fmt(l.reviewed_document_count)} revisados</span></div><div><small>Relaciones</small><b>${fmt(l.relationship_count)}</b><span>${fmt(l.confirmed_current_relationship_count)} vigentes confirmadas</span></div></div><div class="aerl-event-strip">${events.map(x=>`<span><i data-kind="${x[0]}"></i>${eventLabel(x[0])} <b>${fmt(x[1])}</b></span>`).join('')}</div><div class="aerl-actions"><button data-aerl-add>Registrar evidencia societaria</button><a href="${SEARCH_URL}" target="_blank" rel="noopener noreferrer">Buscar actuaciones en RES ↗</a></div><p class="aerl-note">${esc(l.coverage_note||'La ausencia de una actuación no acredita su inexistencia en RES.')}</p></section>`;
   }
   function timelineSummary(d){
     const rows=d.timeline;if(!rows.length)return '';
@@ -60,7 +64,7 @@
     const W=720,H=330,cx=360,cy=165,R=120;let lines='',nodes='';list.forEach((r,i)=>{const a=(Math.PI*2*i/list.length)-Math.PI/2,x=cx+Math.cos(a)*R,y=cy+Math.sin(a)*R;lines+=`<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"></line>`;nodes+=`<g class="aerl-node ${r.target_entity_id?'linked':''}" ${r.target_entity_id?`data-aerl-open="${esc(r.target_entity_id)}"`:''} transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"><circle r="25"></circle><text y="3" text-anchor="middle">${esc(r.target_type==='PERSON'?'PN':r.target_type==='COMPANY'?'PJ':'?')}</text><title>${esc(r.target_name)} · ${esc(relationLabel(r.relationship_type))}</title></g>`;});return `<div class="aerl-graph"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafo societario RES"><g class="aerl-links">${lines}</g><g class="aerl-center"><circle cx="${cx}" cy="${cy}" r="38"></circle><text x="${cx}" y="${cy-4}" text-anchor="middle">RES</text><text x="${cx}" y="${cy+13}" text-anchor="middle">${esc(cut(sourceName,18))}</text></g>${nodes}</svg></div>`;
   }
   function graphMarkup(d){
-    const rows=d.graph,l=d.lifecycle;if(!d.master?.rut)return '';
+    const rows=d.graph;if(!d.master?.rut)return '';
     if(!rows.length)return `<section class="aerl-card"><header><div><span class="aerl-eyebrow">PROPIEDAD Y GOBIERNO</span><h3>Grafo societario documentado</h3></div><span class="aerl-count">0</span></header><div class="aerl-empty"><b>Sin relaciones societarias documentales materializadas.</b><span>ATLAS no completa esta red por similitud de nombre ni infiere beneficiario final. El grafo aparecerá cuando exista evidencia documental trazable.</span></div></section>`;
     return `<section class="aerl-card"><header><div><span class="aerl-eyebrow">PROPIEDAD Y GOBIERNO</span><h3>Grafo societario documentado</h3></div><span class="aerl-count">${fmt(rows.length)}</span></header>${graphSvg(rows,d.master.res_legal_name||d.master.name)}<div class="aerl-rel-list">${rows.slice(0,40).map(r=>`<article><div class="aerl-rel-main"><span>${esc(relationLabel(r.relationship_type))}</span><b>${esc(r.target_name||'Entidad relacionada')}</b><small>${r.target_rut?esc(r.target_rut)+' · ':''}${r.ownership_pct!=null?fmt(r.ownership_pct)+'% · ':''}${esc(statusLabel(r.relationship_status))}</small></div><div class="aerl-rel-meta"><span>${esc(r.document_type||'Documento')}</span>${r.cve?`<code>CVE ${esc(r.cve)}</code>`:''}${r.requires_review?'<em>requiere revisión</em>':'<em class="ok">documentado</em>'}${r.target_entity_id?`<button data-aerl-open="${esc(r.target_entity_id)}">Entity 360 ↗</button>`:''}</div></article>`).join('')}</div>${rows.length>40?`<p class="aerl-note">Se muestran 40 de ${fmt(rows.length)} relaciones.</p>`:''}</section>`;
   }
@@ -70,11 +74,16 @@
   }
   function paint(d){
     const root=document.querySelector('#content .a45');if(!root||!d?.master?.entity_id)return;
-    const ch=holder(root.querySelector('[data-a45-panel="character"]'),'lifecycle','prepend');if(ch)ch.innerHTML=lifecycleMarkup(d);
-    const tl=holder(root.querySelector('[data-a45-panel="timeline"]'),'summary','prepend');if(tl)tl.innerHTML=timelineSummary(d);
-    const nw=holder(root.querySelector('[data-a45-panel="network"]'),'graph','prepend');if(nw)nw.innerHTML=graphMarkup(d);
-    const ev=holder(root.querySelector('[data-a45-panel="evidence"]'),'documents','prepend');if(ev)ev.innerHTML=evidenceMarkup(d);
-    current=d;bind(root);
+    const lifecycleSig=JSON.stringify([d.entityId,d.lifecycle?.last_actuation_date,d.lifecycle?.actuation_count,d.lifecycle?.evidence_document_count,d.lifecycle?.relationship_count,d.lifecycle?.observed_lifecycle_state]);
+    const timelineSig=JSON.stringify([d.entityId,d.timeline.map(x=>[x.actuation_id,x.evidence_status,x.document_review_status])]);
+    const graphSig=JSON.stringify([d.entityId,d.graph.map(x=>[x.relationship_id,x.relationship_status,x.requires_review,x.target_entity_id,x.ownership_pct,x.document_review_status])]);
+    const evidenceSig=JSON.stringify([d.entityId,d.evidence.map(x=>[x.document_id,x.review_status,x.extraction_status])]);
+    let changed=false;
+    changed=apply(root.querySelector('[data-a45-panel="character"]'),'lifecycle',lifecycleMarkup(d),lifecycleSig,'prepend')||changed;
+    changed=apply(root.querySelector('[data-a45-panel="timeline"]'),'summary',timelineSummary(d),timelineSig,'prepend')||changed;
+    changed=apply(root.querySelector('[data-a45-panel="network"]'),'graph',graphMarkup(d),graphSig,'prepend')||changed;
+    changed=apply(root.querySelector('[data-a45-panel="evidence"]'),'documents',evidenceMarkup(d),evidenceSig,'prepend')||changed;
+    current=d;if(changed)bind(root);
     window.__ATLAS_ENTITY_RES_LIFECYCLE_STATE__={active:true,release:RELEASE,build:BUILD,entityId:d.entityId,resAvailable:!!d.master.res_available,actuations:d.timeline.length,relationships:d.graph.length,evidenceDocuments:d.evidence.length,scoreMutation:false,identityPolicy:'ENTITY_ID_AND_RUT_EXACTO',renderedAt:new Date().toISOString()};
   }
   function bind(root){
