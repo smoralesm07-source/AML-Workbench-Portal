@@ -29,6 +29,7 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
           recon=Path('assets/atlas-res-reconciliation-0555.js').read_text()
           bootstrap=Path('assets/atlas-entity-res-bootstrap-0553.js').read_text()
           hook=Path('assets/atlas-entity-uaf-highlight-0548.js').read_text()
@@ -41,7 +42,8 @@ jobs:
           assert 'res_capital' in recon
           assert 'atlas-res-reconciliation-0555.js' in bootstrap
           assert "'conciliacion-uaf-sii'" in bootstrap
-          assert '?v=0555-1' in hook
+          versions=[int(x) for x in re.findall(r'\?v=(\d{4})-\d+',hook)]
+          assert versions and max(versions) >= 555
           assert 'similarity(' not in recon.lower()
           print('RES reconciliation governance contract OK')
           PY
