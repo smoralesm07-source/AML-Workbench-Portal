@@ -1,0 +1,53 @@
+name: RES repair historical 2018-2020
+
+on:
+  pull_request:
+    paths:
+      - 'ops/res/retry_historical.py'
+      - '.github/workflows/res-repair-2018-2020.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'ops/res/retry_historical.py'
+      - '.github/workflows/res-repair-2018-2020.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+# Same group as all RES ingestion: this repair pass starts only after any
+# historical/daily ingest already in progress has released the lock.
+concurrency:
+  group: atlas-res-ingest
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate resilient historical retry
+        run: |
+          set -euo pipefail
+          python -m py_compile ops/res/ingest.py ops/res/retry_historical.py
+          python ops/res/ingest.py --self-test
+          python ops/res/retry_historical.py --self-test
+
+  repair:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Repair failed/missing historical resources
+        run: |
+          set -euo pipefail
+          python ops/res/retry_historical.py --years 2018 2019 2020 --attempts 4
