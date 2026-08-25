@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'assets/atlas-public-spend-v2.js'
+      - 'assets/atlas-public-spend-mobile-route-0573.js'
       - 'assets/atlas-public-spend-route-authority-0578.js'
       - 'assets/atlas-public-spend-progressive-0577.css'
       - 'assets/atlas-mobile-nav.js'
@@ -15,6 +16,7 @@ on:
     branches: [main]
     paths:
       - 'assets/atlas-public-spend-v2.js'
+      - 'assets/atlas-public-spend-mobile-route-0573.js'
       - 'assets/atlas-public-spend-route-authority-0578.js'
       - 'assets/atlas-public-spend-progressive-0577.css'
       - 'assets/atlas-mobile-nav.js'
@@ -38,6 +40,7 @@ jobs:
       - name: Syntax
         run: |
           node --check assets/atlas-public-spend-v2.js
+          node --check assets/atlas-public-spend-mobile-route-0573.js
           node --check assets/atlas-public-spend-route-authority-0578.js
       - name: Native v2 contract
         run: node tests/atlas-public-spend-mobile-route-0573.mjs
@@ -56,7 +59,8 @@ jobs:
           grep -q "VERSION='GP2.1'" _site-public-spend-route/assets/atlas-public-spend-v2.js
           grep -q 'AtlasPublicSpendV2' _site-public-spend-route/assets/atlas-public-spend-v2.js
           ! grep -q '__AML_PUBLIC_SPEND__' _site-public-spend-route/assets/atlas-public-spend-v2.js
-          grep -q "const VERSION='GP2-AUTH.1'" _site-public-spend-route/assets/atlas-public-spend-route-authority-0578.js
+          grep -q "const VERSION='GP2-AUTH.2'" _site-public-spend-route/assets/atlas-public-spend-route-authority-0578.js
+          grep -q "const HOST='.atlas-public-spend-v2-host'" _site-public-spend-route/assets/atlas-public-spend-route-authority-0578.js
           grep -q '__atlasGp2Authority' _site-public-spend-route/assets/atlas-public-spend-route-authority-0578.js
           grep -q 'atlas-public-spend-v2.js?v=gp2-1' _site-public-spend-route/index.html
           grep -q 'atlas-public-spend-route-authority-0578.js?v=gp2-a1' _site-public-spend-route/index.html
