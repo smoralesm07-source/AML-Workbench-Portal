@@ -1,0 +1,17 @@
+import fs from 'node:fs';
+const js=fs.readFileSync('assets/atlas-public-spend-context-0571.js','utf8');
+const css=fs.readFileSync('assets/atlas-public-spend-context-0571.css','utf8');
+const html=fs.readFileSync('index.html','utf8');
+const wf=fs.readFileSync('.github/workflows/sync-public-spend-context-0571.yml','utf8');
+const must=(c,m)=>{if(!c)throw new Error(m)};
+must(html.includes('atlas-public-spend-context-0571.css?v=0571-1'),'CSS 0571 no cargado');
+must(html.includes('atlas-public-spend-context-0571.js?v=0571-1'),'JS 0571 no cargado');
+must(js.includes('aml_public_spend_context_snapshot_v2'),'RPC contextual no declarada');
+must(js.includes('Presupuesto Abierto')&&js.includes('InfoLobby')&&js.includes('CGR'),'fuentes contextuales incompletas');
+must(js.includes('Sin evidencia materializada')&&js.includes('no equivale a ausencia de riesgo'),'guardrail de ausencia no implementado');
+must(js.includes('lobby')&&js.includes('no acredita irregularidad'),'guardrail lobby ausente');
+must(wf.includes('id-token: write')&&wf.includes('atlas-public-spend-context'),'OIDC no configurado');
+must(!wf.includes('SUPABASE_SERVICE_ROLE')&&!wf.includes('MERCADO_PUBLICO_TICKET'),'workflow no debe depender de secretos de aplicación');
+must(css.includes('.mpc-source-card')&&css.includes('.mpc-evidence'),'estilos de evidencia incompletos');
+new Function(js);
+console.log('ATLAS Public Spend Context 0571 OK');
