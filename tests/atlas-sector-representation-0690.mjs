@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 
 const src=fs.readFileSync('assets/atlas-radar-layout-so-history.js','utf8');
+const index=fs.readFileSync('index.html','utf8');
 const checks=[
   ['canonical catalog is explicit',/CANONICAL_SECTORS=55/],
   ['canonical represented count is explicit',/CANONICAL_REPRESENTED_2025=47/],
@@ -33,4 +34,5 @@ for(const [label,re] of checks){
 
 const missing=(src.match(/MISSING_CANONICAL_2025=\[(.*?)\];/s)?.[1].match(/'/g)||[]).length/2;
 if(missing!==8)throw new Error(`Expected 8 missing canonical sectors, got ${missing}`);
+if(!/atlas-radar-layout-so-history\.js\?v=0691-1/.test(index))throw new Error('index.html must invalidate radar sector asset cache with v=0691-1');
 console.log('atlas-sector-representation-0690: ok');
