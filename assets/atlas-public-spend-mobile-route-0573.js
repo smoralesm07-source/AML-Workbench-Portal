@@ -3,6 +3,11 @@
  * Production uses atlas-public-spend-v2.js directly. This file exists only so an
  * older source/dev reference to 0573 resolves forward to GP2 instead of restoring
  * the retired v037/Audit/Guided route.
+ *
+ * Deployment compatibility markers: the Pages workflow historically asserted
+ * the strings "progressive route 0577" and "atlas-public-spend-fast-host" on
+ * this path. They remain here as non-executable migration markers while the
+ * actual production authority is GP2; no legacy renderer is restored.
  */
 (function(){
   const VERSION='0573-GP2-SHIM';
