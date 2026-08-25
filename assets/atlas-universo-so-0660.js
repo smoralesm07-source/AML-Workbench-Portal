@@ -6,17 +6,22 @@
   const db=()=>{try{return typeof sb!=='undefined'?sb:(window.sb||null);}catch(_e){return window.sb||null;}};
   const fmt=core.fmt||((v)=>Number(v||0).toLocaleString('es-CL'));
   const esc=core.esc||((v)=>String(v??''));
-  let cache=null,loading=false;
+  let cache=null,loadPromise=null,queued=false,running=false;
 
   async function load(){
-    if(cache||loading)return cache;
+    if(cache)return cache;
+    if(loadPromise)return loadPromise;
     const client=db();if(!client)return null;
-    loading=true;
-    try{
-      const {data,error}=await client.from(VIEW).select('*').order('source_id');
-      if(error)throw error;
-      cache=data||[];return cache;
-    }catch(_e){return null;}finally{loading=false;}
+    loadPromise=(async()=>{
+      try{
+        const {data,error}=await client.from(VIEW).select('*').order('source_id');
+        if(error)throw error;
+        cache=data||[];
+        return cache;
+      }catch(_e){return null;}
+      finally{loadPromise=null;}
+    })();
+    return loadPromise;
   }
 
   function card(rows){
@@ -38,15 +43,25 @@
   }
 
   async function patch(){
+    if(running)return;
     const host=document.querySelector('#so-potential');
     if(!host||host.querySelector('.uso66-multi'))return;
-    const rows=await load();if(!rows||!document.contains(host))return;
-    const first=host.querySelector('.uso65-screening')||host.firstElementChild;
-    if(first)first.insertAdjacentHTML('afterend',card(rows));else host.insertAdjacentHTML('afterbegin',card(rows));
+    running=true;
+    try{
+      const rows=await load();if(!rows||!document.contains(host)||host.querySelector('.uso66-multi'))return;
+      const first=host.querySelector('.uso65-screening')||host.firstElementChild;
+      if(first)first.insertAdjacentHTML('afterend',card(rows));else host.insertAdjacentHTML('afterbegin',card(rows));
+    }finally{running=false;}
   }
 
-  const obs=new MutationObserver(()=>{void patch();});
-  const start=()=>{const c=document.querySelector('#content')||document.body;obs.observe(c,{childList:true,subtree:true});void patch();};
+  function schedule(){
+    if(queued)return;
+    queued=true;
+    requestAnimationFrame(()=>{queued=false;void patch();});
+  }
+
+  const obs=new MutationObserver(schedule);
+  const start=()=>{const c=document.querySelector('#content')||document.body;obs.observe(c,{childList:true,subtree:true});schedule();};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-  window.__ATLAS_UNIVERSO_SO_0660__={active:true,version:'0.66.0',view:VIEW,patch};
+  window.__ATLAS_UNIVERSO_SO_0660__={active:true,version:'0.67.0',view:VIEW,patch,schedule};
 })();
