@@ -1,8 +1,9 @@
 {
   "schema": "ATLAS_IRAR_METHODOLOGY_V1",
-  "version": "IRAR-1.0",
+  "version": "IRAR-1.1",
   "period": "2021-2025",
-  "name": "Índice de Rendimiento Analítico de ROS",
+  "name": "Índice de Rendimiento Analítico de ROS ajustado por evidencia",
+  "display_acronym": "IRAR-E",
   "status": "CURRENT",
   "legacy_metric": {
     "acronym": "ICR",
@@ -14,21 +15,27 @@
     "ros_with_indications": "https://raw.githubusercontent.com/smoralesm07-source/Radar_UAF/main/docs/data/ros_conversion_sector_2021_2025.json"
   },
   "observed": {
+    "label": "IRAR observado",
     "formula": "ros_with_indications_2021_2025 / ros_sent_2021_2025",
-    "display": "TRACEABILITY_SECONDARY"
+    "display": "TRACEABILITY_SECONDARY",
+    "guardrail": "NO_CLASIFICAR_PRODUCTIVIDAD_SOLO_CON_TASA_OBSERVADA"
   },
   "adjusted": {
+    "label": "IRAR-E",
     "formula": "(indications + K * peer_expected_rate) / (sent_ros + K)",
     "prior_strength_ros": 100,
     "peer_method": "LEAVE_ONE_OUT_FAMILY_WITH_NATIONAL_LEAVE_ONE_OUT_FALLBACK",
     "minimum_peer_sectors": 4,
     "minimum_peer_ros": 100,
-    "display": "PRIMARY_COMPARATIVE"
+    "display": "PRIMARY_COMPARATIVE",
+    "interpretation": "Suaviza tasas extremas de sectores con pocos ROS hacia el rendimiento esperado de pares y converge al valor observado cuando aumenta la evidencia."
   },
   "confidence": {
-    "display_label": "Credibilidad IRAR",
+    "acronym": "ICE",
+    "display_label": "Índice de Confianza de Evidencia",
     "formula": "sent_ros / (sent_ros + K)",
     "interpretation": "Peso de los datos propios frente al suavizamiento. No es una probabilidad ni un intervalo de confianza.",
+    "productive_label_minimum": 0.50,
     "ranking_minimum_ros": 100,
     "bands": {
       "low": "<0.50",
@@ -37,6 +44,7 @@
     }
   },
   "relative": {
+    "label": "IRAR-E relativo",
     "formula": "irar_adjusted / peer_expected_rate",
     "reference": 1.0
   },
@@ -47,12 +55,14 @@
   },
   "profile_iir_x_irar": {
     "x": "IIR_2025",
-    "y": "IRAR_RELATIVE_2021_2025",
+    "y": "IRAR_E_RELATIVE_2021_2025",
+    "evidence": "ICE",
     "thresholds": {
       "iir_low": "<0.75",
       "iir_high": ">1.50",
       "irar_relative_low": "<0.80",
-      "irar_relative_high": ">1.25"
+      "irar_relative_high": ">1.25",
+      "productive_min_ice": ">=0.50"
     },
     "expected_zone": {
       "iir": "0.75-1.50",
@@ -63,8 +73,22 @@
       "INTENSIVO_BAJO_RENDIMIENTO",
       "SELECTIVO_PRODUCTIVO",
       "BAJA_ACTIVACION",
-      "COMPORTAMIENTO_ESPERADO"
+      "COMPORTAMIENTO_ESPERADO",
+      "PRODUCTIVIDAD_POR_CONFIRMAR",
+      "SENAL_PROMETEDORA"
     ],
+    "productive_evidence_gate": {
+      "rule": "Las etiquetas productivas requieren ICE >= 0.50",
+      "selective_high_y_low_ice": "SENAL_PROMETEDORA",
+      "intensive_high_y_low_ice": "PRODUCTIVIDAD_POR_CONFIRMAR"
+    },
+    "visual_encoding": {
+      "x": "IIR",
+      "y": "IRAR-E relativo",
+      "color": "segmento",
+      "point_size": "ICE",
+      "point_opacity": "ICE"
+    },
     "composite_score": "NOT_USED"
   },
   "peer_families": [
@@ -84,7 +108,8 @@
     "NOT_INDIVIDUAL_ROS_QUALITY",
     "NOT_ENTITY_RISK",
     "NOT_COMPLIANCE",
-    "LOW_VOLUME_SECTORS_REQUIRE_VISIBLE_CREDIBILITY_AND_ARE_EXCLUDED_FROM_PRIMARY_RANKING",
+    "LOW_VOLUME_SECTORS_REQUIRE_VISIBLE_ICE_AND_ARE_EXCLUDED_FROM_PRIMARY_RANKING",
+    "PRODUCTIVE_LABEL_REQUIRES_ICE_GTE_050",
     "IIR_X_IRAR_PROFILE_IS_DESCRIPTIVE_NOT_A_FINDING"
   ]
 }
