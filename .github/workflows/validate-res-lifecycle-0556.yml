@@ -1,0 +1,66 @@
+name: Validate RES Lifecycle Evidence 0556
+
+on:
+  pull_request:
+    paths:
+      - 'assets/atlas-entity-res-lifecycle-0556.js'
+      - 'assets/atlas-entity-res-lifecycle-0556.css'
+      - 'assets/atlas-entity-res-bootstrap-0553.js'
+      - 'assets/atlas-entity-uaf-highlight-0548.js'
+      - 'ops/res/lifecycle-evidence-v0556.sql'
+      - 'ops/res/aml-res-evidence/**'
+      - '.github/workflows/validate-res-lifecycle-0556.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check assets/atlas-entity-res-lifecycle-0556.js
+          node --check assets/atlas-entity-res-bootstrap-0553.js
+          node --check assets/atlas-entity-uaf-highlight-0548.js
+      - name: Lifecycle and evidence governance contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          js=Path('assets/atlas-entity-res-lifecycle-0556.js').read_text()
+          css=Path('assets/atlas-entity-res-lifecycle-0556.css').read_text()
+          boot=Path('assets/atlas-entity-res-bootstrap-0553.js').read_text()
+          hook=Path('assets/atlas-entity-uaf-highlight-0548.js').read_text()
+          sql=Path('ops/res/lifecycle-evidence-v0556.sql').read_text()
+          edge=Path('ops/res/aml-res-evidence/index.ts').read_text()
+          for view in ['aml_entity_res_lifecycle_v0556','aml_entity_res_graph_v0556','aml_entity_res_evidence_v0556','aml_entity_res_timeline_v0556']:
+              assert view in js and view in sql
+          assert "functions.invoke('aml-res-evidence'" in js
+          assert "identityPolicy:'ENTITY_ID_AND_RUT_EXACTO'" in js
+          assert "relationshipPolicy:'DOCUMENTED_ONLY'" in js
+          assert "sourcePolicy:'LINK_ONLY_NO_FETCH'" in js
+          assert 'beneficialOwnerInference:false' in js
+          assert 'scoreMutation:false' in js
+          assert 'data-aerl-add' in js and 'aerl-graph' in css
+          assert "const VERSION='0556-1'" in boot
+          assert 'atlas-entity-res-lifecycle-0556.js' in boot
+          assert 'atlas-entity-res-lifecycle-0556.css' in boot
+          assert "'res-lifecycle-evidence'" in boot
+          assert '?v=0556-1' in hook
+          assert 'security_invoker=true' in sql
+          assert 'enable row level security' in sql.lower()
+          assert 'BENEFICIARIO' not in edge
+          assert 'LINK_ONLY_NO_FETCH' in edge
+          assert 'website_scraping:false' in edge
+          assert 'ALLOWED_SOURCE_HOSTS' in edge
+          assert 'validRut' in edge and '.eq("rut_key",rutKey)' in edge
+          assert 'getUser(token)' in edge and 'aml_allowed_users' in edge
+          assert 'fetch(' not in edge
+          assert 'similarity(' not in (js+edge).lower()
+          assert 'fuzzy' not in (js+edge).lower()
+          print('RES lifecycle/evidence governance contract OK')
+          PY
