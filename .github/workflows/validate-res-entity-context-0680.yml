@@ -39,9 +39,12 @@ jobs:
               assert marker in (sql+'\n'+fix).lower(), marker
           assert "select rr.entity_id" in fix.lower()
           assert "atlas-entity-res-context-0680.js?v=0680-1" in fed
-          forbidden=['beneficial_owner_score','societary_complexity_score','capital_magnitude_ratio','short_lived_score','recent_intensity_score']
+          deferred=['RECENT_INTENSITY','SHORT_LIVED','EVENT_WINDOW_CHANGES','CAPITAL_MAGNITUDE_RATIO','TERRITORIAL_CLUSTERS','PROBABILISTIC_BENEFICIAL_OWNER','SOCIETARY_COMPLEXITY']
+          for marker in deferred:
+              assert marker in js, marker
+          forbidden_active=['beneficial_owner_score','societary_complexity_score','capital_magnitude_ratio_score','short_lived_score','recent_intensity_score','territorial_cluster_score','event_window_change_score']
           low=js.lower()+sql.lower()+fix.lower()
-          for marker in forbidden:
+          for marker in forbidden_active:
               assert marker not in low, marker
           for marker in ['Sociedades de constitución reciente con actividad intensa','Beneficiario final probabilístico','Índice de complejidad societaria']:
               assert marker in backlog, marker
