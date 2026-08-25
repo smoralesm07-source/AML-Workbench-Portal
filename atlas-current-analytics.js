@@ -147,3 +147,31 @@
   else setTimeout(load,0);
   window.ATLAS_PUBLIC_SPEND_TAXONOMY_BOOTSTRAP={release:'0.45.0',build:'0450',mode:'POST_V037_VISIBLE_TAXONOMY'};
 })();
+
+/* ATLAS AML 0.69.2 · canonical production bootstrap for sector representation.
+ * Pages publishes the compiled manifest runtime as the authority. Loading the
+ * sector coverage overlay from this manifest-owned file guarantees that the
+ * 55/47/8 coverage card is present in the actual production runtime, instead of
+ * depending only on historical <script> tags retained in index.html.
+ */
+(function atlasSectorRepresentationCanonicalBootstrap(){
+  const JS='./assets/atlas-radar-layout-so-history.js?v=0692-1';
+  const CSS='./assets/atlas-radar-layout-so-history.css?v=0692-1';
+  function ensureCss(){
+    if(document.querySelector('link[data-atlas-sector-representation="0692"]'))return;
+    const link=document.createElement('link');
+    link.rel='stylesheet';link.href=CSS;link.dataset.atlasSectorRepresentation='0692';
+    document.head.appendChild(link);
+  }
+  function load(){
+    ensureCss();
+    document.querySelectorAll('script[data-atlas-sector-representation]').forEach(n=>n.remove());
+    const script=document.createElement('script');
+    script.src=JS;script.dataset.atlasSectorRepresentation='0692';
+    document.body.appendChild(script);
+  }
+  ensureCss();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(load,0),{once:true});
+  else setTimeout(load,0);
+  window.ATLAS_SECTOR_REPRESENTATION_BOOTSTRAP={release:'0.69.2',mode:'CANONICAL_COMPILED_RUNTIME_BOOTSTRAP',catalog:55,represented:47,missing:8};
+})();
