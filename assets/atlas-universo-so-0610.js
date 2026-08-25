@@ -2,11 +2,13 @@
 (function atlasUniversoSO0610(){
   const INTEGRITY='aml_v_uaf_universe_integrity_0610';
   const REPORTING='aml_v_uaf_reporting_obligation_0610';
+  const PRESS_FEED='https://raw.githubusercontent.com/smoralesm07-source/Monitor/atlas-press-state/atlas_prensa.json';
   const core=window.__ATLAS_OBLIGATED__;
   const db=()=>{try{return typeof sb!=='undefined'?sb:(window.sb||null);}catch(_e){return window.sb||null;}};
   const esc=core?.esc||((v)=>String(v??'').replace(/[&<>\"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m])));
   const fmt=core?.fmt||((v)=>Number(v||0).toLocaleString('es-CL'));
-  let integrity=null, loadingIntegrity=false, dossierRut=null;
+  const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('es-CL').replace(/\b(s\.?a\.?|spa|ltda|eirl|limitada)\b/g,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
+  let integrity=null, loadingIntegrity=false, dossierRut=null, pressCache=null, pressLoading=null;
 
   async function getIntegrity(){
     if(integrity||loadingIntegrity)return integrity;
@@ -69,17 +71,60 @@
     </section>`;
   }
 
+  async function loadPress(){
+    if(pressCache)return pressCache;
+    if(pressLoading)return pressLoading;
+    pressLoading=fetch(`${PRESS_FEED}?_atlas=${Date.now()}`,{cache:'no-store',credentials:'omit'})
+      .then(r=>{if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json();})
+      .then(d=>{pressCache=d||{};return pressCache;})
+      .catch(()=>null)
+      .finally(()=>{pressLoading=null;});
+    return pressLoading;
+  }
+
+  function exactPressEntity(feed,name){
+    const target=norm(name); if(!target)return null;
+    const entities=Array.isArray(feed?.entities)?feed.entities:[];
+    const hits=entities.filter(e=>[e?.name,...(Array.isArray(e?.aliases)?e.aliases:[])].some(v=>norm(v)===target));
+    return hits.length===1?hits[0]:null;
+  }
+
+  function pressHtml(feed,entity){
+    if(!entity)return '';
+    const mentions=(Array.isArray(feed?.mentions)?feed.mentions:[]).filter(m=>String(m.press_entity_id||'')===String(entity.press_entity_id||''));
+    const articles=new Map((Array.isArray(feed?.articles)?feed.articles:[]).map(a=>[String(a.id),a]));
+    const rows=mentions.map(m=>({m,a:articles.get(String(m.article_id))||{}})).sort((x,y)=>String(y.a.date||'').localeCompare(String(x.a.date||''))).slice(0,6);
+    if(!rows.length)return '';
+    return `<section class="uso60-lens uso61-press">
+      <h3>Prensa y contexto abierto</h3>
+      <p>${fmt(entity.article_count||rows.length)} publicación(es) asociadas mediante coincidencia nominal exacta y no ambigua con el feed del Monitor.</p>
+      <div class="uso60-timeline">${rows.map(({m,a})=>`<div class="uso60-event"><time>${esc(String(a.date||'').slice(0,10)||'sin fecha')}</time><b>${esc(a.title||'Publicación')}</b><small>${esc(a.media||'Medio no materializado')} · ${esc(m.role||'mención')}</small>${a.url?`<a href="${esc(a.url)}" target="_blank" rel="noopener noreferrer">Ver fuente original ↗</a>`:''}</div>`).join('')}</div>
+      <details class="uso60-method"><summary>Cómo leer esta lente</summary><p>La presencia en prensa es contexto OSINT. No acredita delito, incumplimiento ni identidad por sí sola y no modifica IPF, IVO o decisiones de supervisión.</p></details>
+    </section>`;
+  }
+
   async function patchDossier(){
     const host=document.querySelector('#so-dossier');
     const rut=core?.state?.dossier?.rut;
-    if(!host||!rut||host.querySelector('.uso61-reporting'))return;
-    if(dossierRut===rut&&host.querySelector('.uso61-reporting'))return;
-    dossierRut=rut;
-    const client=db(); if(!client)return;
-    const {data,error}=await client.from(REPORTING).select('*').eq('rut',rut).maybeSingle();
-    if(error)return;
+    if(!host||!rut)return;
     const target=host.querySelector('.uso60-dossier360')||host;
-    target.insertAdjacentHTML('beforeend',reportingHtml(data||null));
+    if(!host.querySelector('.uso61-reporting')){
+      const client=db();
+      if(client){
+        const {data,error}=await client.from(REPORTING).select('*').eq('rut',rut).maybeSingle();
+        if(!error&&document.contains(host))target.insertAdjacentHTML('beforeend',reportingHtml(data||null));
+      }
+    }
+    if(!host.querySelector('.uso61-press')){
+      const name=core?.state?.dossier?.subject?.registry_name||core?.state?.dossier?.subject?.entity_name||'';
+      if(name){
+        const feed=await loadPress();
+        const entity=exactPressEntity(feed,name);
+        const html=pressHtml(feed,entity);
+        if(html&&document.contains(host))target.insertAdjacentHTML('beforeend',html);
+      }
+    }
+    dossierRut=rut;
   }
 
   async function patch(){
@@ -89,5 +134,5 @@
   const obs=new MutationObserver(()=>patch());
   const start=()=>{const c=document.querySelector('#content')||document.body;obs.observe(c,{childList:true,subtree:true});patch();};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-  window.__ATLAS_UNIVERSO_SO_0610__={version:'0.61.0',getIntegrity,patch};
+  window.__ATLAS_UNIVERSO_SO_0610__={version:'0.61.0',getIntegrity,patch,pressPolicy:'EXACT_NORMALIZED_UNAMBIGUOUS'};
 })();
