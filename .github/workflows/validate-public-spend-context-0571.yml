@@ -1,0 +1,24 @@
+name: Validate Public Spend Context 0571
+
+on:
+  pull_request:
+    paths:
+      - 'assets/atlas-public-spend-context-0571.js'
+      - 'assets/atlas-public-spend-context-0571.css'
+      - 'index.html'
+      - 'tests/atlas-public-spend-context-0571.mjs'
+      - '.github/workflows/sync-public-spend-context-0571.yml'
+      - '.github/workflows/validate-public-spend-context-0571.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tests/atlas-public-spend-context-0571.mjs
