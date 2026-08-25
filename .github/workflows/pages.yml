@@ -40,8 +40,10 @@ jobs:
           grep -q '"build": "0705"' atlas-runtime-manifest.json
           grep -q '"app_version":"0.70.5"' build.json
           grep -q '"build":"0705"' build.json
-          grep -q 'atlas-source-health-global-0694.js?v=0705-1' index.html
-          grep -q 'atlas-universo-so-workbench-0700.js?v=0705-1' index.html
+          grep -q 'atlas-source-health-global-0694.js?v=0710-1' index.html
+          grep -q 'atlas-universo-so-workbench-0700.js?v=0705-2' index.html
+          ! grep -Eq 'atlas-universo-so-(0600|0610|0620|0630|0640)' index.html
+          for f in assets/atlas-universo-so-0600.js assets/atlas-universo-so-0610.js assets/atlas-universo-so-0620.js assets/atlas-universo-so-0630.js assets/atlas-universo-so-0640.js; do test ! -e "$f"; done
           node --check atlas-release-guard.js
           node --check assets/atlas-source-health-global-0694.js
           node --check assets/atlas-universo-so-workbench-0700.js
@@ -80,8 +82,9 @@ jobs:
           test -s _site/atlas-runtime-manifest.json
           grep -q 'data-aml-version="0.70.5"' _site/index.html
           grep -q 'data-aml-build="0705"' _site/index.html
-          grep -q 'atlas-source-health-global-0694.js?v=0705-1' _site/index.html
-          grep -q 'atlas-universo-so-workbench-0700.js?v=0705-1' _site/index.html
+          grep -q 'atlas-source-health-global-0694.js?v=0710-1' _site/index.html
+          grep -q 'atlas-universo-so-workbench-0700.js?v=0705-2' _site/index.html
+          ! grep -Eq 'atlas-universo-so-(0600|0610|0620|0630|0640)' _site/index.html
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
@@ -103,11 +106,12 @@ jobs:
           curl -fsSL --retry 15 --retry-delay 2 "$base/atlas-release.json?_atlas=$stamp" -o /tmp/release.json
           grep -q 'data-aml-version="0.70.5"' /tmp/index.html
           grep -q 'data-aml-build="0705"' /tmp/index.html
-          grep -q 'atlas-universo-so-workbench-0700.js?v=0705-1' /tmp/index.html
+          grep -q 'atlas-universo-so-workbench-0700.js?v=0705-2' /tmp/index.html
+          ! grep -Eq 'atlas-universo-so-(0600|0610|0620|0630|0640)' /tmp/index.html
           python - <<'PY'
           import json
           r=json.load(open('/tmp/release.json'))
           assert r['release']=='0.70.5',r
           assert r['build']=='0705',r
           PY
-          echo 'ATLAS AML 0.70.5 is live.'
+          echo 'ATLAS AML 0.70.5 canonical runtime is live.'
