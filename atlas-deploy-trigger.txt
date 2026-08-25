@@ -1,0 +1,4 @@
+ATLAS AML canonical Pages deployment trigger
+release=0.70.5
+build=0705
+runtime=clean-universo-so
