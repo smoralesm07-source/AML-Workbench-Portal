@@ -1,4 +1,4 @@
-# Sujetos Obligados · 0.56.0 (build 0560)
+# Sujetos Obligados · build 0560
 
 ## Por qué existe esta sección
 

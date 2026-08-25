@@ -2,7 +2,7 @@
 
 Frontend estático y autenticado del **AML Analytical Workbench**.
 
-## v0.56.0 — Sujetos Obligados: caracterización y priorización fiscalizadora
+## Sujetos Obligados (build 0560) — caracterización y priorización fiscalizadora
 
 Nueva sección **Sujetos Obligados** (`docs/obligated-subjects-0560.md`). El padrón
 público de la UAF —9.782 inscritos en 49 sectores de la Ley 19.913— deja de ser
