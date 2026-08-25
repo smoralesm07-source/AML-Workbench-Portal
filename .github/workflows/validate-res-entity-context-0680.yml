@@ -6,6 +6,7 @@ on:
       - 'assets/atlas-entity-res-context-0680.js'
       - 'assets/atlas-entity-federation-0640.js'
       - 'sql/atlas_v0680_res_entity_context.sql'
+      - 'sql/atlas_v0682_fix_res_relations_discovery.sql'
       - 'docs/res-demo-experimental-backlog.md'
       - '.github/workflows/validate-res-entity-context-0680.yml'
   workflow_dispatch:
@@ -30,14 +31,16 @@ jobs:
           js=Path('assets/atlas-entity-res-context-0680.js').read_text()
           fed=Path('assets/atlas-entity-federation-0640.js').read_text()
           sql=Path('sql/atlas_v0680_res_entity_context.sql').read_text()
+          fix=Path('sql/atlas_v0682_fix_res_relations_discovery.sql').read_text()
           backlog=Path('docs/res-demo-experimental-backlog.md').read_text()
-          for marker in ["RUT_EXACTO_ONLY","DOCUMENTED_ONLY","scoreMutation:false","POTENTIAL_SO != LEGAL_BREACH","aml_entity_lifecycle_v0680","aml_entity_res_discovery_v0680"]:
-              assert marker in js or marker in sql, marker
+          for marker in ["RUT_EXACTO_ONLY","DOCUMENTED_ONLY","scoreMutation:false","SCREENING_NOT_LEGAL_BREACH","aml_entity_lifecycle_v0680","aml_entity_res_discovery_v0680"]:
+              assert marker in js or marker in sql or marker in fix, marker
           for marker in ["security_invoker=true","security invoker","set search_path=public","revoke all on function","aml_mp_order_fact"]:
-              assert marker in sql.lower(), marker
+              assert marker in (sql+'\n'+fix).lower(), marker
+          assert "select rr.entity_id" in fix.lower()
           assert "atlas-entity-res-context-0680.js?v=0680-1" in fed
           forbidden=['beneficial_owner_score','societary_complexity_score','capital_magnitude_ratio','short_lived_score','recent_intensity_score']
-          low=js.lower()+sql.lower()
+          low=js.lower()+sql.lower()+fix.lower()
           for marker in forbidden:
               assert marker not in low, marker
           for marker in ['Sociedades de constitución reciente con actividad intensa','Beneficiario final probabilístico','Índice de complejidad societaria']:
