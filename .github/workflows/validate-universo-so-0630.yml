@@ -1,0 +1,29 @@
+name: Validate Universo SO 0630
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Sintaxis
+        run: node --check assets/atlas-universo-so-0630.js
+      - name: Contrato 0630
+        run: node tests/atlas-universo-so-0630.mjs
+      - name: Publicación
+        run: |
+          python tools/build_atlas_site.py --out _site
+          test -s _site/assets/atlas-universo-so-0630.js
+          grep -q 'atlas-universo-so-0630.js?v=0630-1' _site/index.html
