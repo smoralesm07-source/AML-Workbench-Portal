@@ -76,6 +76,9 @@ jobs:
           node --check v0447-entity-workspace.js
           node --check v0448-entity-route-authority.js
           node --check v0449-entity-tax-docauth.js
+          node --check assets/atlas-operational-recovery-0704.js
+          node --check assets/atlas-universo-so-workbench-0700.js
+          node --check assets/atlas-radar-integrated-cleanup-0641.js
           ! grep -qE 'auth\.setSession\(|refresh_token\s*:' v0422-auth-bootstrap-fix.js
           ! grep -qE 'auth\.setSession\(|refresh_token\s*:' v0443-auth-ui-stability.js
           ! grep -qE 'auth\.setSession\(|refresh_token\s*:' v0442-session-stability.module.js
@@ -114,6 +117,14 @@ jobs:
           grep -q 'globalCrossFilter:true' v0446-reconciliation-interactions.js
           grep -q 'Filtros interactivos' v0446-reconciliation-interactions.js
           ! grep -q 'new MutationObserver' v0446-reconciliation-interactions.js
+          grep -q "VERSION='0.70.4'" assets/atlas-operational-recovery-0704.js
+          grep -q 'v019LoadOverview' assets/atlas-operational-recovery-0704.js
+          grep -q 'v019LoadQuestions' assets/atlas-operational-recovery-0704.js
+          grep -q 'AtlasPublicSpendV2' assets/atlas-operational-recovery-0704.js
+          grep -q 'aml_v_uaf_universe_current_v0671' assets/atlas-universo-so-workbench-0700.js
+          grep -q 'aml_v_uaf_potential_sector_current_v0671' assets/atlas-universo-so-workbench-0700.js
+          ! grep -q 'function moveAudit' assets/atlas-radar-integrated-cleanup-0641.js
+          grep -q 'AtlasGlobalSourceHealth' assets/atlas-radar-integrated-cleanup-0641.js
 
       - name: Compile current ATLAS runtime
         shell: bash
@@ -127,6 +138,10 @@ jobs:
           grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" _site/index.html
           grep -q "data-aml-build=\"${ATLAS_BUILD}\"" _site/index.html
           grep -q "atlas-runtime-current.css?r=${ATLAS_BUILD}" _site/index.html
+          grep -q 'assets/atlas-public-spend-v2.js?v=gp2-2' _site/index.html
+          grep -q 'assets/atlas-public-spend-route-authority-0578.js?v=gp2-a3' _site/index.html
+          grep -q 'assets/atlas-operational-recovery-0704.js?v=0704-1' _site/index.html
+          grep -q 'assets/atlas-universo-so-workbench-0700.js?v=0704-2' _site/index.html
           ! grep -q 'atlas-auth-stability-0440.js' _site/index.html
           ! test -e _site/assets/atlas-auth-stability-0440.js
           ! test -e _site/v0441-session-shell-guard.module.js
@@ -158,12 +173,15 @@ jobs:
             test -e "$f" || continue
             node --check "$f"
           done
-          node --check _site/assets/atlas-public-spend-mobile-route-0573.js
-          test -s _site/assets/atlas-public-spend-progressive-0577.css
+          node --check _site/assets/atlas-public-spend-v2.js
+          node --check _site/assets/atlas-public-spend-route-authority-0578.js
+          node --check _site/assets/atlas-operational-recovery-0704.js
+          node --check _site/assets/atlas-universo-so-workbench-0700.js
+          test -s _site/assets/atlas-public-spend-v2.css
           test -s _site/data/public-spend/spend_view_v2.json
-          grep -q 'progressive route 0577' _site/assets/atlas-public-spend-mobile-route-0573.js
-          grep -q 'atlas-public-spend-fast-host' _site/assets/atlas-public-spend-mobile-route-0573.js
-          ! grep -q "class=\"v037-spend" _site/assets/atlas-public-spend-mobile-route-0573.js
+          grep -q "const VIEW='public-spend', VERSION='GP2.2'" _site/assets/atlas-public-spend-v2.js
+          grep -q "VERSION='GP2-AUTH.3'" _site/assets/atlas-public-spend-route-authority-0578.js
+          grep -q "VERSION='0.70.4'" _site/assets/atlas-operational-recovery-0704.js
           python tools/audit_runtime_authority.py --root _site
           grep -R -q 'aml_v0444_uaf_sii_summary' _site/atlas-runtime-current-*.js
           grep -R -q 'AtlasReconciliationFilters' _site/atlas-runtime-current-*.js
@@ -187,6 +205,9 @@ jobs:
           assert r['policy']=='CANONICAL_COMPILED_RUNTIME_ONLY',r
           assert r['historical_source_assets_published'] is False,r
           assert r.get('legacy_auth_runtime_published') is False,r
+          assert r['published_css']==['atlas-runtime-current.css','assets/atlas-public-spend-v2.css'],r
+          assert 'assets/atlas-public-spend-v2.js' in r['published_js'],r
+          assert 'assets/atlas-public-spend-route-authority-0578.js' in r['published_js'],r
           PY
 
       - name: Configure GitHub Pages
@@ -213,6 +234,7 @@ jobs:
           curl -fsSL --retry 12 --retry-delay 2 "$base/atlas-runtime-report.json?_atlas=${stamp}" -o /tmp/runtime.json
           curl -fsSL --retry 12 --retry-delay 2 "$base/?_atlas=${stamp}" -o /tmp/index.html
           curl -fsSL --retry 12 --retry-delay 2 "$base/data/public-spend/spend_view_v2.json?_atlas=${stamp}" -o /tmp/public-spend-fast.json
+          curl -fsSL --retry 12 --retry-delay 2 "$base/assets/atlas-operational-recovery-0704.js?_atlas=${stamp}" -o /tmp/recovery.js
           python - <<'PY'
           import json,os
           r=json.load(open('/tmp/release.json'))
@@ -221,9 +243,16 @@ jobs:
           assert r['release']==os.environ['ATLAS_RELEASE'] and r['build']==os.environ['ATLAS_BUILD'],r
           assert rt['release']==os.environ['ATLAS_RELEASE'] and rt['build']==os.environ['ATLAS_BUILD'],rt
           assert rt.get('legacy_auth_runtime_published') is False,rt
+          assert rt['published_css']==['atlas-runtime-current.css','assets/atlas-public-spend-v2.css'],rt
+          assert 'assets/atlas-public-spend-v2.js' in rt['published_js'],rt
+          assert 'assets/atlas-public-spend-route-authority-0578.js' in rt['published_js'],rt
           assert sp.get('schema')=='PRESUPUESTO_SPEND_VIEW_V2',sp.get('schema')
           assert len(sp.get('services') or [])>0 and len(sp.get('flows') or [])>0
           PY
           grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" /tmp/index.html
           grep -q "atlas-runtime-current-01.js?r=${ATLAS_BUILD}" /tmp/index.html
-          grep -q 'atlas-public-spend-mobile-route-0573.js?v=0577-1' /tmp/index.html
+          grep -q 'assets/atlas-public-spend-v2.js?v=gp2-2' /tmp/index.html
+          grep -q 'assets/atlas-public-spend-route-authority-0578.js?v=gp2-a3' /tmp/index.html
+          grep -q 'assets/atlas-operational-recovery-0704.js?v=0704-1' /tmp/index.html
+          grep -q 'assets/atlas-universo-so-workbench-0700.js?v=0704-2' /tmp/index.html
+          grep -q "VERSION='0.70.4'" /tmp/recovery.js
