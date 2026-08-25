@@ -1,7 +1,7 @@
 'use strict';
 /* ATLAS AML 0.64.1 · limpieza Radar Integrado + auditoría compacta en topbar */
 (function atlasRadarIntegratedCleanup0641(){
-  const VERSION='0641.1';
+  const VERSION='0641.2';
   let raf=0;
 
   const norm=s=>String(s||'').replace(/\s+/g,' ').trim().toLowerCase();
@@ -39,19 +39,40 @@
     });
   }
 
+  function searchInput(){
+    return document.querySelector('input[placeholder*="Buscar entidad" i],input[placeholder*="entidad o RUT" i],input[placeholder*="RUT" i]');
+  }
+
+  function searchWrapper(input){
+    if(!input)return null;
+    let node=input;
+    for(let i=0;i<4&&node.parentElement;i++){
+      const p=node.parentElement;
+      const r=p.getBoundingClientRect?.();
+      const inputRect=input.getBoundingClientRect?.();
+      const cls=String(p.className||'');
+      if(/search/i.test(cls))return p;
+      if(r&&inputRect&&r.width>=inputRect.width&&r.width<=inputRect.width+90&&r.height<=Math.max(48,inputRect.height+18))return p;
+      node=p;
+    }
+    return input.parentElement||input;
+  }
+
   function findTopbar(){
-    const search=document.querySelector('input[placeholder*="Buscar entidad" i],input[placeholder*="RUT" i]');
-    if(search){
-      let p=search.parentElement;
-      for(let i=0;i<5&&p;i++,p=p.parentElement){
+    const input=searchInput();
+    if(input){
+      let p=input.parentElement;
+      for(let i=0;i<7&&p;i++,p=p.parentElement){
         const txt=norm(p.textContent);
-        if(txt.includes('salir')||txt.includes('admin')||p.querySelector('button'))return p;
+        const hasSearch=p.contains(input);
+        const hasSession=txt.includes('salir')||txt.includes('admin')||[...p.querySelectorAll('button,a')].some(el=>norm(el.textContent)==='salir');
+        if(hasSearch&&hasSession)return p;
       }
     }
     const logout=[...document.querySelectorAll('button,a')].find(el=>norm(el.textContent)==='salir');
     if(logout){
       let p=logout.parentElement;
-      for(let i=0;i<4&&p;i++,p=p.parentElement){if(p.children.length>=2)return p;}
+      for(let i=0;i<5&&p;i++,p=p.parentElement){if(p.children.length>=2)return p;}
     }
     return document.querySelector('header,.topbar,.app-topbar,.atlas-topbar,.v019-topbar');
   }
@@ -59,17 +80,20 @@
   function moveAudit(){
     const audit=document.querySelector('.ash-audit,.a57-data-audit');
     if(!audit)return;
+    const input=searchInput();
+    const wrapper=searchWrapper(input);
     const bar=findTopbar();
     if(!bar)return;
     audit.dataset.topbarMode='1';
 
-    const search=bar.querySelector('input[placeholder*="Buscar entidad" i],input[placeholder*="RUT" i]');
-    const anchor=search?.closest('div')||search;
-    if(anchor&&anchor.parentElement===bar){
-      if(audit.parentElement!==bar||audit.nextSibling!==anchor)bar.insertBefore(audit,anchor);
-    }else if(audit.parentElement!==bar){
-      bar.appendChild(audit);
+    if(wrapper?.parentElement){
+      const parent=wrapper.parentElement;
+      audit.dataset.topbarPlacement='before-search';
+      if(audit.parentElement!==parent||audit.nextSibling!==wrapper)parent.insertBefore(audit,wrapper);
+      return;
     }
+
+    if(audit.parentElement!==bar)bar.appendChild(audit);
   }
 
   function apply(){
