@@ -39,30 +39,41 @@ jobs:
           grep -q '"build": "0705"' atlas-release.json
           grep -q '"release": "0.70.5"' atlas-runtime-manifest.json
           grep -q '"build": "0705"' atlas-runtime-manifest.json
+          grep -q '"path":"app.js","type":"classic","role":"core"' atlas-runtime-manifest.json
+          grep -q '<!-- ATLAS_RUNTIME_STYLES -->' index.html
+          grep -q '<!-- ATLAS_RUNTIME_SCRIPTS -->' index.html
           grep -q 'atlas-source-health-global-0694.js?v=0710-1' index.html
           grep -q 'atlas-universo-so-workbench-0700.js?v=0705-2' index.html
           ! grep -Eq 'atlas-universo-so-(0600|0610|0620|0630|0640)' index.html
           node --check atlas-release-guard.js
+          node --check app.js
+          node --check v0333-auth-preflight.js
+          node --check v0422-auth-bootstrap-fix.js
           node --check assets/atlas-source-health-global-0694.js
           node --check assets/atlas-universo-so-workbench-0700.js
 
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-
-      - name: Prepare site
+      - name: Build canonical Pages site
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p _site
-          rsync -a ./ _site/ \
-            --exclude '.git/' \
-            --exclude '.github/' \
-            --exclude '_site/' \
-            --exclude 'tests/'
-          touch _site/.nojekyll
+          python3 tools/build_atlas_site.py --out _site
           test -s _site/index.html
+          test -s _site/atlas-runtime-current.css
+          test -s _site/atlas-runtime-current-01.js
           grep -q 'data-aml-version="0.70.5"' _site/index.html
+          grep -q 'data-aml-build="0705"' _site/index.html
+          grep -q 'atlas-runtime-current-01.js?r=0705' _site/index.html
+          grep -q 'atlas-runtime-current.css?r=0705' _site/index.html
+          grep -q 'const sb=supabase.createClient' _site/atlas-runtime-current-01.js
+          grep -q 'sb.auth.getSession' _site/atlas-runtime-current-01.js
+          grep -q 'shell();' _site/atlas-runtime-current-01.js
+          grep -q 'loadOverview();' _site/atlas-runtime-current-01.js
+          grep -q 'atlas-source-health-global-0694.js?v=0710-1' _site/index.html
+          grep -q 'atlas-universo-so-workbench-0700.js?v=0705-2' _site/index.html
           ! grep -Eq 'atlas-universo-so-(0600|0610|0620|0630|0640)' _site/index.html
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
