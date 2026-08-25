@@ -1,0 +1,46 @@
+name: Validate RES Entity Context 0680
+
+on:
+  pull_request:
+    paths:
+      - 'assets/atlas-entity-res-context-0680.js'
+      - 'assets/atlas-entity-federation-0640.js'
+      - 'sql/atlas_v0680_res_entity_context.sql'
+      - 'docs/res-demo-experimental-backlog.md'
+      - '.github/workflows/validate-res-entity-context-0680.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: node --check assets/atlas-entity-res-context-0680.js && node --check assets/atlas-entity-federation-0640.js
+      - name: Governance contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          js=Path('assets/atlas-entity-res-context-0680.js').read_text()
+          fed=Path('assets/atlas-entity-federation-0640.js').read_text()
+          sql=Path('sql/atlas_v0680_res_entity_context.sql').read_text()
+          backlog=Path('docs/res-demo-experimental-backlog.md').read_text()
+          for marker in ["RUT_EXACTO_ONLY","DOCUMENTED_ONLY","scoreMutation:false","POTENTIAL_SO != LEGAL_BREACH","aml_entity_lifecycle_v0680","aml_entity_res_discovery_v0680"]:
+              assert marker in js or marker in sql, marker
+          for marker in ["security_invoker=true","security invoker","set search_path=public","revoke all on function","aml_mp_order_fact"]:
+              assert marker in sql.lower(), marker
+          assert "atlas-entity-res-context-0680.js?v=0680-1" in fed
+          forbidden=['beneficial_owner_score','societary_complexity_score','capital_magnitude_ratio','short_lived_score','recent_intensity_score']
+          low=js.lower()+sql.lower()
+          for marker in forbidden:
+              assert marker not in low, marker
+          for marker in ['Sociedades de constitución reciente con actividad intensa','Beneficiario final probabilístico','Índice de complejidad societaria']:
+              assert marker in backlog, marker
+          print('RES entity context 0680 contract OK')
+          PY
