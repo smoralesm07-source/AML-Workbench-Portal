@@ -1,0 +1,4 @@
+ATLAS AML canonical Pages republish
+release=0.70.5
+build=0705
+purpose=force ordinary main push after pages workflow correction
