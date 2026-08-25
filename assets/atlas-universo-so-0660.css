@@ -1,3 +1,4 @@
+@import url('./atlas-universo-so-workbench-0700.css?v=0700-1');
 /* ATLAS AML · Universo SO 0.66 multisource */
 .uso66-multi{margin:10px 0 14px;padding:14px;border:1px solid var(--line,#24384b);border-radius:13px;background:var(--panel,#101923)}
 .uso66-title{display:flex;justify-content:space-between;gap:18px;align-items:flex-end}.uso66-title span{display:block;font-size:9px;letter-spacing:.14em;color:var(--muted,#8fa9c1)}

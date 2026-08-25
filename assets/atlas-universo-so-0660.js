@@ -8,6 +8,14 @@
   const esc=core.esc||((v)=>String(v??''));
   let cache=null,loadPromise=null,queued=false,running=false;
 
+  function load0700(){
+    if(window.__ATLAS_UNIVERSO_SO_0700__?.active||document.querySelector('script[data-atlas-uso70]'))return;
+    const s=document.createElement('script');
+    s.src='./assets/atlas-universo-so-workbench-0700.js?v=0700-1';
+    s.dataset.atlasUso70='1';
+    document.head.appendChild(s);
+  }
+
   async function load(){
     if(cache)return cache;
     if(loadPromise)return loadPromise;
@@ -61,7 +69,7 @@
   }
 
   const obs=new MutationObserver(schedule);
-  const start=()=>{const c=document.querySelector('#content')||document.body;obs.observe(c,{childList:true,subtree:true});schedule();};
+  const start=()=>{load0700();const c=document.querySelector('#content')||document.body;obs.observe(c,{childList:true,subtree:true});schedule();};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-  window.__ATLAS_UNIVERSO_SO_0660__={active:true,version:'0.67.0',view:VIEW,patch,schedule};
+  window.__ATLAS_UNIVERSO_SO_0660__={active:true,version:'0.70.0',view:VIEW,patch,schedule,load0700};
 })();
