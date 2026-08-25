@@ -10,31 +10,49 @@
   top:50%!important;
   transform:translate(-50%,-50%)!important;
   margin:0!important;
-  width:220px!important;
-  min-width:220px!important;
-  max-width:220px!important;
+  width:230px!important;
+  min-width:230px!important;
+  max-width:230px!important;
   border-radius:8px!important;
   box-shadow:none!important;
   overflow:visible!important;
   z-index:40!important;
 }
 .ash-audit[data-topbar-mode="1"] .ash-main{
-  min-height:30px!important;height:30px!important;padding:3px 8px!important;
-  display:grid!important;grid-template-columns:1fr auto!important;gap:6px!important;
-  align-items:center!important;justify-items:center!important;border-radius:8px!important;text-align:center!important
+  min-height:30px!important;height:30px!important;padding:3px 9px!important;
+  display:grid!important;grid-template-columns:minmax(0,1fr) auto auto!important;gap:7px!important;
+  align-items:center!important;justify-items:stretch!important;border-radius:8px!important;text-align:left!important
 }
-.ash-audit[data-topbar-mode="1"] .a57-title{display:flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;min-width:0;width:100%;text-align:center!important}
-.ash-audit[data-topbar-mode="1"] .a57-title>span{min-width:0;display:block;text-align:center!important}
-.ash-audit[data-topbar-mode="1"] .a57-title strong{display:block;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif!important;font-size:9.5px!important;font-weight:650!important;line-height:1.05!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center!important}
+.ash-audit[data-topbar-mode="1"] .a57-title{
+  display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:5px!important;
+  min-width:0;width:100%;text-align:left!important
+}
+.ash-audit[data-topbar-mode="1"] .a57-title>span{min-width:0;display:block;text-align:left!important}
+.ash-audit[data-topbar-mode="1"] .a57-title strong{
+  display:block;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif!important;font-size:9.5px!important;font-weight:650!important;
+  line-height:1!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left!important
+}
 .ash-audit[data-topbar-mode="1"] .a57-title small{display:none!important}
 .ash-audit[data-topbar-mode="1"] .ash-dot{width:6px!important;height:6px!important;flex:0 0 6px!important}
-.ash-audit[data-topbar-mode="1"] .ash-quick{position:absolute!important;right:23px!important;top:50%!important;transform:translateY(-50%)!important;display:flex!important;align-items:center!important;gap:3px!important;margin:0!important;white-space:nowrap;pointer-events:none}
-.ash-audit[data-topbar-mode="1"] .ash-quick>b{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif!important;font-size:10px!important;line-height:1!important}
+.ash-audit[data-topbar-mode="1"] .ash-quick{
+  position:static!important;transform:none!important;display:flex!important;align-items:center!important;justify-content:center!important;
+  gap:0!important;margin:0!important;white-space:nowrap!important;pointer-events:none!important;align-self:center!important
+}
+.ash-audit[data-topbar-mode="1"] .ash-quick>b{
+  display:block!important;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif!important;font-size:9.5px!important;
+  font-weight:700!important;line-height:1!important;margin:0!important;padding:0!important;color:#dbe7f0!important
+}
 .ash-audit[data-topbar-mode="1"] .ash-quick>small,.ash-audit[data-topbar-mode="1"] .ash-quick>span{display:none!important}
-.ash-audit[data-topbar-mode="1"] .a57-chevron{justify-self:end!important;font-size:9px!important;line-height:1!important}
+.ash-audit[data-topbar-mode="1"] .a57-chevron{
+  display:flex!important;align-items:center!important;justify-content:center!important;justify-self:center!important;
+  align-self:center!important;font-size:9px!important;line-height:1!important;margin:0!important;padding:0!important
+}
+
+/* El atributo hidden debe gobernar el estado real del panel. */
+.ash-audit[data-topbar-mode="1"] .ash-detail[hidden]{display:none!important}
 
 /* Panel desplegable: una sola retícula, ancho útil completo y tipografía uniforme. */
-.ash-audit[data-topbar-mode="1"] .ash-detail{
+.ash-audit[data-topbar-mode="1"] .ash-detail:not([hidden]){
   position:absolute!important;top:calc(100% + 8px)!important;left:50%!important;right:auto!important;transform:translateX(-50%)!important;
   z-index:1000!important;width:min(880px,calc(100vw - 32px))!important;max-width:none!important;max-height:min(68vh,620px)!important;
   display:block!important;overflow:auto!important;margin:0!important;padding:0 16px 14px!important;
@@ -79,7 +97,6 @@
   white-space:normal!important;overflow-wrap:anywhere!important
 }
 
-/* Dominios: mismo alto, misma retícula, sin cajas improvisadas. */
 .ash-audit[data-topbar-mode="1"] .ash-domains{
   display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px!important;width:100%!important;padding:0 0 10px!important;margin:0!important
 }
@@ -91,7 +108,6 @@
 .ash-audit[data-topbar-mode="1"] .ash-domains b{grid-row:1/-1!important;grid-column:2!important;margin:0!important;font-size:16px!important;font-weight:750!important;line-height:1!important;color:#d4e0e9!important;white-space:nowrap!important}
 .ash-audit[data-topbar-mode="1"] .ash-domains small{font-size:8.5px!important;line-height:1.25!important;color:#72879a!important;white-space:normal!important;overflow-wrap:anywhere!important}
 
-/* Estado general a ancho completo. */
 .ash-audit[data-topbar-mode="1"] .ash-impact{
   display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:8px!important;width:100%!important;min-height:38px!important;
   margin:0!important;padding:9px 11px!important;border:1px solid rgba(34,197,94,.1)!important;border-radius:8px!important;background:rgba(20,83,45,.055)!important;
@@ -100,7 +116,6 @@
 .ash-audit[data-topbar-mode="1"] .ash-impact b{flex:0 0 auto!important;font-size:9.5px!important;color:#c4d1db!important;white-space:nowrap!important}
 .ash-audit[data-topbar-mode="1"] .ash-impact span{min-width:0!important;white-space:normal!important;overflow-wrap:anywhere!important}
 
-/* Catálogo: tabla estable, cuatro columnas, truncado controlado. */
 .ash-audit[data-topbar-mode="1"] .ash-catalog{display:block!important;width:100%!important;padding-top:10px!important}
 .ash-audit[data-topbar-mode="1"] .ash-catalog-head,.ash-audit[data-topbar-mode="1"] .ash-catalog-row{
   display:grid!important;grid-template-columns:minmax(230px,1.45fr) minmax(120px,.7fr) minmax(210px,1.2fr) 100px!important;gap:14px!important;align-items:center!important;width:100%!important
@@ -112,7 +127,6 @@
 .ash-audit[data-topbar-mode="1"] .ash-source-name small,.ash-audit[data-topbar-mode="1"] .ash-catalog-cell small{display:block!important;margin-top:2px!important;font-size:8.5px!important;line-height:1.25!important;color:#71869a!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
 .ash-audit[data-topbar-mode="1"] .ash-state{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:74px!important;padding:4px 7px!important;font-size:8px!important;font-weight:750!important;line-height:1!important;white-space:nowrap!important}
 
-/* Integraciones: encabezados y detalles con la misma escala tipográfica. */
 .ash-audit[data-topbar-mode="1"] .ash-oplist{display:grid!important;gap:7px!important;width:100%!important;padding-top:10px!important}
 .ash-audit[data-topbar-mode="1"] .ash-op{width:100%!important;border-radius:8px!important;overflow:hidden!important}
 .ash-audit[data-topbar-mode="1"] .ash-op summary{display:grid!important;grid-template-columns:minmax(250px,1.5fr) 90px 160px 92px!important;gap:12px!important;align-items:center!important;width:100%!important;padding:9px 10px!important}
@@ -127,17 +141,17 @@
 .ash-audit[data-topbar-mode="1"] .ash-detail>footer{display:block!important;width:100%!important;padding:10px 0 0!important;margin:0!important;font-size:8px!important;line-height:1.35!important;color:#5f7487!important;white-space:normal!important}
 
 @media(max-width:900px){
-  .ash-audit[data-topbar-mode="1"]{width:190px!important;min-width:190px!important;max-width:190px!important}
+  .ash-audit[data-topbar-mode="1"]{width:198px!important;min-width:198px!important;max-width:198px!important}
   .ash-audit[data-topbar-mode="1"] .ash-quick{display:none!important}
-  .ash-audit[data-topbar-mode="1"] .ash-detail{width:min(720px,calc(100vw - 24px))!important}
+  .ash-audit[data-topbar-mode="1"] .ash-detail:not([hidden]){width:min(720px,calc(100vw - 24px))!important}
   .ash-audit[data-topbar-mode="1"] .ash-summary-grid,.ash-audit[data-topbar-mode="1"] .ash-domains{grid-template-columns:1fr!important}
   .ash-audit[data-topbar-mode="1"] .ash-catalog-head{display:none!important}
   .ash-audit[data-topbar-mode="1"] .ash-catalog-row{grid-template-columns:1fr 1fr!important}
   .ash-audit[data-topbar-mode="1"] .ash-source-name{grid-column:1/-1!important}
 }
 @media(max-width:640px){
-  .ash-audit[data-topbar-mode="1"]{width:160px!important;min-width:160px!important;max-width:160px!important}
-  .ash-audit[data-topbar-mode="1"] .ash-detail{position:fixed!important;top:48px!important;right:8px!important;left:8px!important;transform:none!important;width:auto!important;padding:0 12px 12px!important}
+  .ash-audit[data-topbar-mode="1"]{width:168px!important;min-width:168px!important;max-width:168px!important}
+  .ash-audit[data-topbar-mode="1"] .ash-detail:not([hidden]){position:fixed!important;top:48px!important;right:8px!important;left:8px!important;transform:none!important;width:auto!important;padding:0 12px 12px!important}
   .ash-audit[data-topbar-mode="1"] .ash-tabs{overflow-x:auto!important}
   .ash-audit[data-topbar-mode="1"] .ash-catalog-row,.ash-audit[data-topbar-mode="1"] .ash-op summary,.ash-audit[data-topbar-mode="1"] .ash-opdetail{grid-template-columns:1fr!important}
   .ash-audit[data-topbar-mode="1"] .ash-source-name,.ash-audit[data-topbar-mode="1"] .ash-opdetail .wide{grid-column:auto!important}
