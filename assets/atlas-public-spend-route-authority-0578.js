@@ -5,8 +5,8 @@
  */
 (function(){
   const VIEW='public-spend';
-  const VERSION='GP2-AUTH.1';
-  const HOST='.atlas-public-spend-fast-host';
+  const VERSION='GP2-AUTH.2';
+  const HOST='.atlas-public-spend-v2-host';
   let active=false,dispatching=false,delegatedNavigate=null,recoveryTimer=null;
   function api(){return window.AtlasPublicSpendV2||window.AtlasPublicSpendRoute0573||null;}
   function publish(status,extra={}){window.__ATLAS_PUBLIC_SPEND_ROUTE_AUTHORITY_0578__={status,version:VERSION,active,host:!!document.querySelector(HOST),navigateWrapped:!!window.navigate?.__atlasGp2Authority,checkedAt:new Date().toISOString(),...extra};}
