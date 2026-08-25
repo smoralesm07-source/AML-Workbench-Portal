@@ -1,4 +1,5 @@
-/* ATLAS AML · Universo SO 0.65 */
+@import url('./atlas-universo-so-0660.css?v=0660-1');
+/* ATLAS AML · Universo SO 0.66 */
 .uso61-truth,.uso63-scope,.uso64-tier-strip{display:none!important}
 .uso65-screening{margin:10px 0 14px;padding:14px;border:1px solid var(--line,#24384b);border-radius:13px;background:var(--panel,#101923)}
 .uso65-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-end;padding-bottom:12px;border-bottom:1px solid var(--line,#24384b)}
