@@ -52,7 +52,10 @@ jobs:
           test ! -e _site-public-spend-route/v037-public-spend.js
           test ! -e _site-public-spend-route/v037-public-spend.css
           grep -q 'progressive route 0577' _site-public-spend-route/assets/atlas-public-spend-mobile-route-0573.js
-          grep -q 'navigation authority 0578' _site-public-spend-route/assets/atlas-public-spend-route-authority-0578.js
+          grep -q 'navigation authority 0579' _site-public-spend-route/assets/atlas-public-spend-route-authority-0578.js
+          grep -q "const VERSION='0579.0'" _site-public-spend-route/assets/atlas-public-spend-route-authority-0578.js
+          grep -q '__atlasPublicSpendAuthority0579' _site-public-spend-route/assets/atlas-public-spend-route-authority-0578.js
+          grep -q 'scheduleRecovery' _site-public-spend-route/assets/atlas-public-spend-route-authority-0578.js
           grep -q "if(view===VIEW)return openFast('window.navigate')" _site-public-spend-route/assets/atlas-public-spend-route-authority-0578.js
           grep -q 'atlas-public-spend-mobile-route-0573.js?v=0577-1' _site-public-spend-route/index.html
-          grep -q 'atlas-public-spend-route-authority-0578.js?v=0578-1' _site-public-spend-route/index.html
+          grep -q 'atlas-public-spend-route-authority-0578.js?v=0579-1' _site-public-spend-route/index.html
