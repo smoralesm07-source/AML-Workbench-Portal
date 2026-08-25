@@ -1,7 +1,7 @@
 'use strict';
-/* ATLAS AML · Gasto Público mobile/SPA route resilience 0573
+/* ATLAS AML · Gasto Público route resilience 0573.2
  * Conserva los nodos audit/guided al cambiar de vista y fuerza la ruta oficial v037
- * desde navegación móvil. No modifica datos, scores ni semántica analítica.
+ * desde navegación desktop y móvil. No modifica datos, scores ni semántica analítica.
  */
 (function(){
   const VIEW='public-spend';
@@ -12,6 +12,7 @@
   let lastHost=null;
   let scheduled=false;
   let refreshing=false;
+  let opening=false;
 
   const isMobile=()=>window.matchMedia?window.matchMedia('(max-width: 768px)').matches:window.innerWidth<=768;
   const diag=()=>window.__ATLAS_PUBLIC_SPEND_AUDIT_0550__||null;
@@ -36,7 +37,7 @@
   function publish(status,extra={}){
     window.__ATLAS_PUBLIC_SPEND_MOBILE_0573__={
       status,
-      version:'0573.1',
+      version:'0573.2',
       view:VIEW,
       mobile:isMobile(),
       hostConnected:!!document.querySelector('.v037-spend'),
@@ -95,35 +96,44 @@
 
     if((hostChanged||restored||!audit)&&diag())refreshAudit();
     publish(guided?'ready':audit?'audit-ready':'mounting',{hostChanged,restored});
-    return !!(guided||audit);
+    return !!(guided||audit||host);
   }
 
-  async function openPublicSpendMobile(){
+  async function openPublicSpend(){
+    if(opening)return false;
     const loader=window.__AML_PUBLIC_SPEND__?.load;
     if(typeof loader!=='function'){
       publish('route-loader-missing');
       return false;
     }
+    opening=true;
     rememberCurrent();
     window.AtlasMobileNav?.close?.();
     publish('opening');
-    await loader();
-    ensureMounted();
-    setTimeout(schedule,60);
-    setTimeout(schedule,260);
-    setTimeout(schedule,800);
-    return true;
+    try{
+      await loader();
+      ensureMounted();
+      setTimeout(schedule,60);
+      setTimeout(schedule,260);
+      setTimeout(schedule,800);
+      publish('opened',{routeAuthority:'DIRECT_PUBLIC_SPEND_LOADER'});
+      return true;
+    }catch(error){
+      publish('route-error',{error:String(error?.message||error||'UNKNOWN')});
+      throw error;
+    }finally{
+      opening=false;
+    }
   }
 
   document.addEventListener('click',event=>{
-    if(!isMobile())return;
-    const button=event.target?.closest?.('[data-atlas-mobile-view="public-spend"]');
+    const button=event.target?.closest?.('[data-view="public-spend"],[data-atlas-mobile-view="public-spend"]');
     if(!button)return;
     const loader=window.__AML_PUBLIC_SPEND__?.load;
     if(typeof loader!=='function')return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    openPublicSpendMobile().catch(error=>{
+    openPublicSpend().catch(error=>{
       publish('route-error',{error:String(error?.message||error||'UNKNOWN')});
     });
   },true);
@@ -140,7 +150,8 @@
   window.addEventListener('pageshow',schedule);
   window.addEventListener('atlas:nav-refresh',schedule);
   window.addEventListener('resize',schedule,{passive:true});
-  window.AtlasPublicSpendMobile0573={ensure:ensureMounted,open:openPublicSpendMobile,health:()=>window.__ATLAS_PUBLIC_SPEND_MOBILE_0573__||null};
+  window.AtlasPublicSpendMobile0573={ensure:ensureMounted,open:openPublicSpend,health:()=>window.__ATLAS_PUBLIC_SPEND_MOBILE_0573__||null};
+  window.AtlasPublicSpendRoute0573=window.AtlasPublicSpendMobile0573;
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});
   else schedule();
