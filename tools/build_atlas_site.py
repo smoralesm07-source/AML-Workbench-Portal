@@ -75,7 +75,6 @@ def build(out_dir: Path):
         shutil.rmtree(out_dir)
     out_dir.mkdir(parents=True)
 
-    # Canonical boot/control files. No version-named runtime JS/CSS is copied.
     for name in ["atlas-release.json", "atlas-runtime-manifest.json", "build.json", "atlas-release-guard.js", "atlas-theme-bootstrap.js"]:
         copy_file(ROOT / name, out_dir / name)
 
@@ -85,8 +84,6 @@ def build(out_dir: Path):
     if collision:
         raise SystemExit(f"forbidden runtime assets declared as source fragments: {sorted(collision)}")
 
-    # Compile all CSS source fragments, preserving declaration order. This makes
-    # historical style filenames source-only and gives the browser one CSS asset.
     css_parts = ["/* ATLAS AML compiled current stylesheet. Source fragments are Git-only. */"]
     for name in runtime["styles"]:
         src = ROOT / name
@@ -96,9 +93,6 @@ def build(out_dir: Path):
     compiled_css = "atlas-runtime-current.css"
     (out_dir / compiled_css).write_text("\n".join(css_parts), encoding="utf-8")
 
-    # Compile classic scripts into ordered segments. Module boundaries are kept
-    # because module execution semantics differ from classic scripts. Each module
-    # is copied under a canonical, non-versioned production name.
     script_tags = []
     compiled_js = []
     classic_parts = []
@@ -135,15 +129,10 @@ def build(out_dir: Path):
             classic_parts.append(boundary)
     flush_classic()
 
-    # Same-origin governed snapshots stay available to active features.
     data_dir = ROOT / "data"
     if data_dir.exists():
         shutil.copytree(data_dir, out_dir / "data", dirs_exist_ok=True)
 
-    # Static media are current assets and may be published as-is, except legacy
-    # executable assets retired from the canonical runtime. Keeping those files
-    # out of the Pages artifact prevents stale HTML/browser caches from executing
-    # old session-recovery behavior after a new release is published.
     assets_dir = ROOT / "assets"
     if assets_dir.exists():
         shutil.copytree(
@@ -164,6 +153,25 @@ def build(out_dir: Path):
     template = re.sub(r'\.\/atlas-release-guard\.js(?:\?[^"\']*)?', f'./atlas-release-guard.js?r={build_id}', template)
     template = re.sub(r'\.\/atlas-theme-bootstrap\.js(?:\?[^"\']*)?', f'./atlas-theme-bootstrap.js?r={build_id}', template)
 
+    # Public Spend v2 is intentionally published as a clean standalone native
+    # controller. Replace the historical 0573 route only in the Pages artifact,
+    # keeping source history untouched for rollback and traceability.
+    template = re.sub(
+        r'\.\/assets\/atlas-public-spend-mobile-route-0573\.js(?:\?[^"\']*)?',
+        './assets/atlas-public-spend-v2.js?v=gp2-1',
+        template,
+    )
+    template = re.sub(
+        r'\.\/assets\/atlas-public-spend-route-authority-0578\.js(?:\?[^"\']*)?',
+        './assets/atlas-public-spend-route-authority-0578.js?v=gp2-a1',
+        template,
+    )
+    template = re.sub(
+        r'\.\/assets\/atlas-public-spend-progressive-0577\.css(?:\?[^"\']*)?',
+        './assets/atlas-public-spend-progressive-0577.css?v=gp2-1',
+        template,
+    )
+
     styles_tag = f'  <link rel="stylesheet" href="./{compiled_css}?r={build_id}" data-atlas-runtime="current" />'
     scripts = "\n".join(script_tags)
     if "<!-- ATLAS_RUNTIME_STYLES -->" not in template or "<!-- ATLAS_RUNTIME_SCRIPTS -->" not in template:
@@ -175,6 +183,10 @@ def build(out_dir: Path):
         raise SystemExit("legacy ?b= cache key remains in built index")
     if "atlas-auth-stability-0440.js" in template:
         raise SystemExit("legacy standalone auth runtime remains in built index")
+    if "atlas-public-spend-mobile-route-0573.js" in template:
+        raise SystemExit("legacy public-spend route remains in built index")
+    if "atlas-public-spend-v2.js?v=gp2-1" not in template:
+        raise SystemExit("native public-spend v2 runtime missing from built index")
     for source_name in source_assets:
         if f"./{source_name}" in template:
             raise SystemExit(f"source fragment leaked into production index: {source_name}")
@@ -199,6 +211,7 @@ def build(out_dir: Path):
         "published_js": compiled_js,
         "historical_source_assets_published": False,
         "legacy_auth_runtime_published": False,
+        "public_spend_runtime": "assets/atlas-public-spend-v2.js?v=gp2-1",
         "visible_version_authority": "atlas-release-guard.js",
     }
     (out_dir / "atlas-runtime-report.json").write_text(json.dumps(runtime_report, ensure_ascii=False, indent=2), encoding="utf-8")
