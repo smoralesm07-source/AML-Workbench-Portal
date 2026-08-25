@@ -7,8 +7,8 @@ const index=fs.readFileSync('index.html','utf8');
 
 assert.match(js,/aml_v_uaf_reporting_obligation_0620/);
 assert.match(js,/aml_v_uaf_entity_reporting_behavior_0620/);
-assert.match(js,/NOT_MATERIALIZED/);
 assert.match(js,/Esto no significa cero reportes/);
+assert.match(sql,/NOT_MATERIALIZED/);
 assert.match(sql,/aml_uaf_reporting_sector_alias_0620/);
 assert.match(sql,/GOVERNED_ALIAS/);
 assert.match(sql,/aml_uaf_entity_reporting_observation_0620/);
