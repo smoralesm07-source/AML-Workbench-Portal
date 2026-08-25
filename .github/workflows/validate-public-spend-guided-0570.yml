@@ -1,0 +1,20 @@
+name: Validate Public Spend Guided 0570
+on:
+  pull_request:
+    paths:
+      - 'assets/atlas-public-spend-guided-0570.js'
+      - 'assets/atlas-public-spend-guided-0570.css'
+      - 'tests/atlas-public-spend-guided-0570.mjs'
+      - 'index.html'
+      - '.github/workflows/validate-public-spend-guided-0570.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tests/atlas-public-spend-guided-0570.mjs

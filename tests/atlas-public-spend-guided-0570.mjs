@@ -1,0 +1,18 @@
+import fs from 'node:fs';
+const js=fs.readFileSync('assets/atlas-public-spend-guided-0570.js','utf8');
+const css=fs.readFileSync('assets/atlas-public-spend-guided-0570.css','utf8');
+const html=fs.readFileSync('index.html','utf8');
+const must=(c,m)=>{if(!c)throw new Error(m)};
+must(html.includes('atlas-public-spend-guided-0570.css?v=0570-1'),'CSS 0570 no cargado');
+must(html.includes('atlas-public-spend-guided-0570.js?v=0570-1'),'JS 0570 no cargado');
+must(js.includes("['overview','Resumen']")&&js.includes("['services','Servicios públicos']")&&js.includes("['providers','Proveedores']")&&js.includes("['regions','Regiones']"),'vistas guiadas incompletas');
+must(js.includes('Mercado Público')&&js.includes('Presupuesto Abierto')&&js.includes('InfoLobby')&&js.includes('CGR')&&js.includes('SII'),'capas de evidencia incompletas');
+must(js.includes('Concentración elevada')&&js.includes('Precio comparable elevado')&&js.includes('Posible fragmentación'),'taxonomía legible incompleta');
+must(!js.includes('ALTANUEVO'),'código técnico ALTANUEVO expuesto');
+must(js.includes('Prioridad de revisión ≠ irregularidad'),'guardrail metodológico ausente');
+must(js.includes('data-open-service')&&js.includes('data-open-provider')&&js.includes('data-open-region'),'drill-down incompleto');
+must(js.includes('peer_benchmark')&&js.includes('price_benchmark'),'pares/precios no preservados');
+must(css.includes('.mpg-dots i.high')&&css.includes('.mpg-dots i.mid')&&css.includes('.mpg-dots i.context'),'semáforos visuales incompletos');
+must(css.includes('.mpa-strategic-host>#atlas-mp-audit-0550{display:none!important}'),'superficie anterior no suprimida');
+new Function(js);
+console.log('ATLAS Public Spend Guided 0570 OK');
