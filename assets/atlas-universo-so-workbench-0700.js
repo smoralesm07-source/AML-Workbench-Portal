@@ -1,25 +1,14 @@
 'use strict';
-/* ATLAS AML · Navigation recovery 0.70.3
+/* ATLAS AML · Navigation recovery 0.70.4
  *
- * Hotfix transversal para Universo SO, Territorio y OSFL.
- *
- * Root cause 0.70.2: esta capa y la autoridad de Gasto Público competían por
- * re-afirmar window.navigate mediante MutationObserver. Esa carrera podía crear
- * una cadena creciente de wrappers y degradar rutas no relacionadas.
- *
- * Política 0.70.3:
- * - NO reescribe window.navigate.
- * - NO usa MutationObserver.
- * - NO modifica datos, RLS, scores ni metodología.
- * - Captura solamente los tres destinos afectados y llama a sus loaders
- *   canónicos de forma directa.
- * - Universo SO mantiene el Workbench visual 0.70 desactivado y usa el core
- *   estable 0.56–0.67.
+ * Bootstrap pasivo de recuperación operacional. Mantiene la recuperación
+ * directa de Universo SO / Territorio / OSFL y carga la autoridad transversal
+ * 0.70.4 para Radar Integrado, Preguntas y Gasto Público.
  */
-(function atlasRouteRecovery0703(){
+(function atlasRouteRecovery0704Bootstrap(){
   if(window.AtlasRouteRecovery0703)return;
 
-  const VERSION='0.70.3';
+  const VERSION='0.70.4';
   const SO_VIEW='sujetos-obligados';
   const TERRITORY_VIEW='territory';
   const OSFL_VIEW='osfl';
@@ -30,6 +19,18 @@
   const db=()=>{try{return typeof sb!=='undefined'?sb:(window.sb||null);}catch(_e){return window.sb||null;}};
   const soCore=()=>window.__ATLAS_OBLIGATED__||null;
   const host=()=>document.querySelector('#content');
+
+  function loadCss(href,key){if(document.querySelector(`link[data-atlas-${key}]`))return;const l=document.createElement('link');l.rel='stylesheet';l.href=href;l.dataset[`atlas${key.replace(/-([a-z])/g,(_,c)=>c.toUpperCase())}`]='1';document.head.appendChild(l);}
+  function loadScript(src,key,onload){
+    const selector=`script[data-atlas-${key}]`,existing=document.querySelector(selector);
+    if(existing){if(onload)onload();return existing;}
+    const s=document.createElement('script');s.src=src;s.dataset[`atlas${key.replace(/-([a-z])/g,(_,c)=>c.toUpperCase())}`]='1';if(onload)s.addEventListener('load',onload,{once:true});document.head.appendChild(s);return s;
+  }
+  function bootstrapOperational(){
+    loadCss('./assets/atlas-public-spend-v2.css?v=gp2-2','gp2-css');
+    const ready=()=>loadScript('./assets/atlas-operational-recovery-0704.js?v=0704-1','op-0704');
+    if(window.AtlasPublicSpendV2)ready();else loadScript('./assets/atlas-public-spend-v2.js?v=gp2-2','gp2-js',ready);
+  }
 
   function publish(status,extra={}){
     window.__ATLAS_ROUTE_RECOVERY_0703__={
@@ -129,7 +130,7 @@
         try{api?.render?.();}catch(_e){const box=host();if(box)box.innerHTML='<section class="so-root"><div class="so-error">No fue posible abrir Universo SO.</div></section>';}
       }
       publish('error',{view,source,error:message});
-      console.error('[ATLAS route recovery 0.70.3]',view,error);
+      console.error('[ATLAS route recovery 0.70.4]',view,error);
       return false;
     }finally{
       dispatching=false;
@@ -162,5 +163,6 @@
     policy:'PASSIVE_DELEGATED_NO_NAVIGATE_MUTATION_NO_OBSERVER'
   };
 
+  bootstrapOperational();
   publish('installed');
 })();
