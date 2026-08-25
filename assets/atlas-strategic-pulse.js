@@ -70,7 +70,6 @@
     const hero=document.querySelector('.v036-hero'),ctx=window.__AML_V036_CONTEXT;
     if(!hero||!ctx)return;
     loadScreeningMeta();
-    document.querySelectorAll('.atlas-sector-representation').forEach(n=>n.remove());
     const k=ctx.uaf?.dashboard?.kpis||{},regLatest=Number(k.registered_total_latest)||Number(ctx.counts?.total)||9911;
     const latestDate=String(k.registered_total_as_of||'último corte operativo');
     const noSii=Number(ctx.counts?.noSii)||0,totalRecon=Number(ctx.counts?.total)||0,coverage=totalRecon?100*(totalRecon-noSii)/totalRecon:0;
