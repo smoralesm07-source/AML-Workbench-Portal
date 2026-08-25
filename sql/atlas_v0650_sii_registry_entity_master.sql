@@ -1,9 +1,21 @@
 -- ATLAS AML 0.65.0 · Padrón SII completo + Entity Master + potenciales SO
--- Migración productiva aplicada en Supabase el 2026-08-25.
+-- Migraciones productivas Supabase:
+--   atlas_v0650_sii_registry_entity_master
+--   atlas_v0651_potential_screening_materialization
 --
--- Objetivo: separar el universo jurídico/tributario completo del subconjunto
--- histórico de entidades ya observadas por radares. La identidad se forma sólo
--- por RUT chileno válido y canónico.
+-- Objetivo
+-- Formar identidad con el padrón SII completo y materializar a nivel RUT el
+-- universo que Atlas 0.65 ya define como potencial SO.
+--
+-- Definición operacional aprobada del titular:
+--   potencial SO = persona jurídica con ACTECO cuya política tiene
+--                  candidate_use=SI
+--                  + ACTIVE_AS_PUBLISHED en SII
+--                  + RUT no observado en aml_uaf_obligated_subject_snapshot.
+--
+-- A/B/C puede conservarse como DESGLOSE de fuerza, pero nunca filtra quién
+-- entra al universo potencial. RES tampoco es gatillante: aporta identidad,
+-- fecha de constitución, forma societaria y contexto.
 --
 -- Objetos productivos:
 --   aml_sii_registry_snapshot
@@ -15,32 +27,22 @@
 --   aml_entity_master_v0650
 --   refresh_aml_uaf_potential_registry_v0650()
 --
--- Fuentes oficiales SII:
---   https://www.sii.cl/estadisticas/nominas/PUB_NOMBRES_PJ.zip
---   https://www.sii.cl/estadisticas/nominas/PUB_NOM_ACTECOS.zip
--- Política explicable:
---   Radar_SII/config/uaf_sii_screening_policy.csv
+-- El refresh actualiza además aml_uaf_potential_screening_scope_0650.CURRENT,
+-- reemplazando el 79.449 de corte 2026-05 por el conteo único RUT del padrón
+-- oficial SII que se encuentre vigente al ejecutar la carga.
 --
--- Semántica del cálculo:
---   1. Padrón SII completo de personas jurídicas => universo tributario.
---   2. Actividades vigentes SII => evidencia observable por RUT.
---   3. Política A/B/C => clasifica fuerza de compatibilidad con sectores UAF.
---   4. Anti-join exacto contra aml_uaf_obligated_subject_snapshot (10.294 RUT).
---   5. Término de giro queda separado; no se cuenta como activo.
---   6. RES se usa como contexto de constitución/forma societaria, no como prueba
---      de actividad regulada ni de obligación UAF.
---
--- Cifras publicables una vez normalizados los tres insumos:
---   potential_a_not_uaf   = A_STRONG activos, cifra estricta de screening.
---   potential_ab_not_uaf  = A+B activos, universo respaldado.
---   potential_all_not_uaf = A+B+C activos, screening ampliado.
+-- Fuentes:
+--   SII PUB_NOMBRES_PJ.zip      -> identidad, inicio, término de giro
+--   SII PUB_NOM_ACTECOS.zip     -> actividades vigentes
+--   Radar_SII screening policy  -> ACTECO candidate_use=SI
+--   UAF snapshot                -> exclusión exacta de inscritos
+--   RES                         -> enriquecimiento societario
 --
 -- Guardarraíles:
 --   RUT_EXACTO_ONLY
 --   NO_NAME_IDENTITY_PROMOTION
+--   candidate_use=SI
+--   ACTIVE_AS_PUBLISHED
 --   POTENTIAL_SO != LEGAL_BREACH
---   TERMINATED_AS_PUBLISHED excluded from active headline
+--   TERMINATED_AS_PUBLISHED excluded from headline
 --   SECURITY_INVOKER views + RLS + allowed users
---
--- La DDL canónica está registrada en el historial de migraciones de Supabase
--- bajo: atlas_v0650_sii_registry_entity_master.
