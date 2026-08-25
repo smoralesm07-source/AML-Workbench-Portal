@@ -6,12 +6,15 @@ const ui=fs.readFileSync('assets/atlas-reportability-irar.js','utf8');
 const css=fs.readFileSync('assets/atlas-reportability-irar.css','utf8');
 const index=fs.readFileSync('index.html','utf8');
 
-assert.match(ui,/IRAR-UI-1\.5/);
-assert.match(ui,/Credibilidad estadística IRAR/);
+assert.match(ui,/IRAR-UI-1\.6/);
+assert.match(ui,/Índice de Confianza de Evidencia/);
+assert.match(ui,/PRODUCTIVIDAD_POR_CONFIRMAR/);
+assert.match(ui,/SENAL_PROMETEDORA/);
+assert.match(ui,/productive_min_ice:50/);
 assert.match(ui,/Number\.isFinite\(Number\(r\.iir\)\)&&Number\(r\.iir\)>=0/,'IIR=0 must remain visible in the profile map');
 assert.match(ui,/buildColorLegend/,'profile map must publish a color legend');
 assert.match(ui,/Quién reporta más y con qué rendimiento/,'profile map must use plain-language title');
-assert.match(ui,/Derecha = más reporte · Arriba = mejor rendimiento/,'profile map must explain the axes in plain language');
+assert.match(ui,/Derecha = más reporte · Arriba = mejor IRAR-E/,'profile map must explain the axes and evidence encoding');
 assert.match(ui,/clientWidth\|\|1000/,'svg map must measure the live plane width to preserve circular markers');
 assert.match(ui,/<circle class="atlas-irar-dot/,'profile points must render as SVG circles');
 assert.doesNotMatch(ui,/<button class="atlas-irar-dot/,'empty button markers must not return');
@@ -62,17 +65,19 @@ assert.equal(prepared[0].iir,.62,'IRAR overlay must defensively preserve/recover
 assert.equal(prepared[0].irarAdjusted,3.8);
 assert.equal(prepared[0].irarCredibility,61);
 assert.equal(prepared[0].irarConfidence,61,'legacy confidence alias must remain compatible');
+assert.equal(prepared[0].ice,61,'ICE must expose evidence weight');
 
 const html=sandbox.v036Dashboard({rows:[]});
 const iirPos=html.indexOf('data-v036-sort="iir"');
 const irarPos=html.indexOf('data-v036-sort="irarAdjusted"');
 const deltaPos=html.indexOf('data-v036-sort="delta"');
-assert.ok(iirPos>=0&&irarPos>iirPos&&deltaPos>irarPos,'header order must be IIR → IRAR → delta');
+assert.ok(iirPos>=0&&irarPos>iirPos&&deltaPos>irarPos,'header order must be IIR → IRAR-E → delta');
 assert.equal((html.match(/data-v036-sort="iir"/g)||[]).length,1,'IIR header must not be duplicated');
-assert.equal((html.match(/data-v036-sort="irarAdjusted"/g)||[]).length,1,'IRAR header must appear exactly once');
-assert.match(html,/intensidad y rendimiento por industria/);
-assert.match(html,/IIR describe intensidad relativa 2025 e IRAR el rendimiento analítico ajustado 2021–2025/);
-assert.equal(sandbox.window.ATLAS_IRAR_UI.integration_version,'IRAR-UI-1.5');
-assert.equal(sandbox.window.ATLAS_IRAR_UI.credibility_label,'CREDIBILIDAD_IRAR');
+assert.equal((html.match(/data-v036-sort="irarAdjusted"/g)||[]).length,1,'IRAR-E header must appear exactly once');
+assert.match(html,/intensidad, rendimiento y evidencia/);
+assert.match(html,/IIR describe intensidad relativa, IRAR-E rendimiento ajustado e ICE la solidez de la evidencia/);
+assert.equal(sandbox.window.ATLAS_IRAR_UI.integration_version,'IRAR-UI-1.6');
+assert.equal(sandbox.window.ATLAS_IRAR_UI.evidence,'ICE');
+assert.equal(sandbox.window.ATLAS_IRAR_UI.productive_min_ice,50);
 
-console.log('ATLAS IRAR UI integration contract OK');
+console.log('ATLAS IRAR-E UI integration contract OK');
