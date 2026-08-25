@@ -1,5 +1,5 @@
 'use strict';
-(function atlasUniversoSO0650(){
+(function atlasUniversoSO0670(){
   const core=window.__ATLAS_OBLIGATED__;
   if(!core){window.__ATLAS_UNIVERSO_SO_0640__={active:false,reason:'obligated-core-unavailable'};return;}
   const SCOPE='aml_uaf_potential_screening_scope_0650';
@@ -7,7 +7,7 @@
   const db=()=>{try{return typeof sb!=='undefined'?sb:(window.sb||null);}catch(_e){return window.sb||null;}};
   const fmt=core.fmt||((v)=>Number(v||0).toLocaleString('es-CL'));
   const esc=core.esc||((v)=>String(v??''));
-  let scopeCache=null,loading=false;
+  let scopeCache=null,scopePromise=null,patchQueued=false,patchRunning=false;
 
   function load0660(){
     if(document.querySelector('script[data-atlas-uso66]'))return;
@@ -17,8 +17,11 @@
     document.head.appendChild(s);
   }
 
+  /* 0.61 y 0.63 mantienen nodos metodológicos ocultos por CSS. No se eliminan
+     desde aquí: eliminarlos hacía que sus propios observers los reconstruyeran
+     y ambos módulos entraran en un ping-pong infinito de mutaciones. */
   function cleanLegacyCards(){
-    document.querySelectorAll('.uso61-truth,.uso63-scope,.uso64-tier-strip').forEach(n=>n.remove());
+    document.querySelectorAll('.uso64-tier-strip').forEach(n=>n.remove());
   }
 
   function humanizePendingSector(){
@@ -27,19 +30,25 @@
     });
   }
 
+  function fallbackScope(){
+    return {potential_count:FALLBACK_COUNT,sii_cutoff:'2026-05',criteria:{acteco_policy:'candidate_use=SI',sii_status:'ACTIVE_AS_PUBLISHED',uaf_exclusion:'RUT no observado en padrón UAF'}};
+  }
+
   async function loadScope(){
-    if(scopeCache||loading)return scopeCache;
+    if(scopeCache)return scopeCache;
+    if(scopePromise)return scopePromise;
     const client=db();
-    loading=true;
-    try{
-      if(client){
+    if(!client){scopeCache=fallbackScope();return scopeCache;}
+    scopePromise=(async()=>{
+      try{
         const {data,error}=await client.from(SCOPE).select('*').eq('snapshot_key','CURRENT').maybeSingle();
-        if(!error&&data){scopeCache=data;return data;}
-      }
-    }catch(_e){}
-    finally{loading=false;}
-    scopeCache={potential_count:FALLBACK_COUNT,sii_cutoff:'2026-05',criteria:{acteco_policy:'candidate_use=SI',sii_status:'ACTIVE_AS_PUBLISHED',uaf_exclusion:'RUT no observado en padrón UAF'}};
-    return scopeCache;
+        if(error)throw error;
+        scopeCache=data||fallbackScope();
+      }catch(_e){scopeCache=fallbackScope();}
+      finally{scopePromise=null;}
+      return scopeCache;
+    })();
+    return scopePromise;
   }
 
   function patchOverviewState(scope){
@@ -81,22 +90,36 @@
     content.querySelector('[data-uso65-back]')?.addEventListener('click',()=>{core.state.mode='potenciales';void core.render();});
   }
 
+  function setTextIfChanged(node,value){
+    if(node&&node.textContent!==value)node.textContent=value;
+  }
+
   function patchPanoramaCopy(){
     const root=document.querySelector('.so-root');
     if(!root)return;
     const firstKpi=root.querySelector('.so-kpis .so-kpi:first-child b');
     const firstLabel=root.querySelector('.so-kpis .so-kpi:first-child span');
-    if(firstKpi&&core.state?.overview?.registry?.subjects!=null)firstKpi.textContent=fmt(core.state.overview.registry.subjects);
-    if(firstLabel)firstLabel.textContent='Sujetos obligados inscritos';
+    if(firstKpi&&core.state?.overview?.registry?.subjects!=null)setTextIfChanged(firstKpi,fmt(core.state.overview.registry.subjects));
+    if(firstLabel)setTextIfChanged(firstLabel,'Sujetos obligados inscritos');
   }
 
   async function patch(){
-    cleanLegacyCards();
-    humanizePendingSector();
-    const scope=await loadScope();
-    patchOverviewState(scope);
-    patchPanoramaCopy();
-    renderPotential(scope);
+    if(patchRunning)return;
+    patchRunning=true;
+    try{
+      cleanLegacyCards();
+      humanizePendingSector();
+      const scope=await loadScope();
+      patchOverviewState(scope);
+      patchPanoramaCopy();
+      renderPotential(scope);
+    }finally{patchRunning=false;}
+  }
+
+  function schedulePatch(){
+    if(patchQueued)return;
+    patchQueued=true;
+    requestAnimationFrame(()=>{patchQueued=false;void patch();});
   }
 
   document.addEventListener('click',async(e)=>{
@@ -106,8 +129,8 @@
     renderCoverage(await loadScope());
   },true);
 
-  const obs=new MutationObserver(()=>{void patch();});
-  const start=()=>{load0660();const c=document.querySelector('#content')||document.body;obs.observe(c,{childList:true,subtree:true});void patch();};
+  const obs=new MutationObserver(schedulePatch);
+  const start=()=>{load0660();const c=document.querySelector('#content')||document.body;obs.observe(c,{childList:true,subtree:true});schedulePatch();};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-  window.__ATLAS_UNIVERSO_SO_0640__={active:true,version:'0.66.0',operationalSO:10294,potentialSO:79449,potentialDefinition:'ACTECO_19913_VIGENTE_SII_NO_UAF',multisource:true,legacy2033:false,patch};
+  window.__ATLAS_UNIVERSO_SO_0640__={active:true,version:'0.67.0',operationalSO:10294,potentialSO:79449,potentialDefinition:'ACTECO_19913_VIGENTE_SII_NO_UAF',multisource:true,legacy2033:false,patch,schedulePatch};
 })();
