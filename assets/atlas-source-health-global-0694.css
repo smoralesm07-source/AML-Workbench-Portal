@@ -1,0 +1,11 @@
+/* ATLAS AML 0.69.4 · auditoría global en ubicación uniforme */
+[data-atlas-global-audit-host="0694"]{position:relative!important}
+[data-atlas-global-audit-fallback="1"]{
+  position:fixed!important;top:8px!important;left:50%!important;transform:translateX(-50%)!important;
+  width:230px!important;height:30px!important;z-index:1200!important;pointer-events:none!important
+}
+[data-atlas-global-audit-fallback="1"]>.ash-audit,[data-atlas-global-audit-fallback="1"]>.a57-data-audit{pointer-events:auto!important}
+.ash-audit[data-global-audit="0694"]{z-index:1201!important}
+.ash-audit[data-global-audit="0694"] .ash-detail:not([hidden]){z-index:1202!important}
+@media(max-width:900px){[data-atlas-global-audit-fallback="1"]{width:198px!important}}
+@media(max-width:640px){[data-atlas-global-audit-fallback="1"]{top:7px!important;width:168px!important}}
