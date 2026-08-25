@@ -37,13 +37,17 @@ jobs:
           grep -q 'atlas-irg-irar-adapter.module.js' index.html
           ! grep -q 'atlas-reportability-icr.js' index.html
           grep -q 'IRAR_E_ADJUSTED' assets/atlas-reportability-irar.js
-          grep -q 'IRAR-UI-1.6' assets/atlas-reportability-irar.js
-          grep -q 'Quién reporta más y con qué rendimiento' assets/atlas-reportability-irar.js
-          grep -q 'Derecha = más reporte · Arriba = mejor IRAR-E' assets/atlas-reportability-irar.js
+          grep -q 'IRAR-UI-1.7' assets/atlas-reportability-irar.js
+          grep -q 'Intensidad, rendimiento y evidencia' assets/atlas-reportability-irar.js
+          grep -q 'Derecha = mayor intensidad · Arriba = mayor rendimiento' assets/atlas-reportability-irar.js
           grep -q '<circle class="atlas-irar-dot' assets/atlas-reportability-irar.js
           grep -q 'buildColorLegend' assets/atlas-reportability-irar.js
-          grep -q 'PRODUCTIVIDAD_POR_CONFIRMAR' assets/atlas-reportability-irar.js
-          grep -q 'SENAL_PROMETEDORA' assets/atlas-reportability-irar.js
+          grep -q 'EVIDENCIA_BAJA' assets/atlas-reportability-irar.js
+          grep -q 'PRIORIDAD_REVISION' assets/atlas-reportability-irar.js
+          grep -q 'REVISAR_EFECTIVIDAD' assets/atlas-reportability-irar.js
+          grep -q 'SEGUIMIENTO_SELECTIVO' assets/atlas-reportability-irar.js
+          grep -q 'MONITOREO_ESTABLE' assets/atlas-reportability-irar.js
+          grep -q 'MONITOREO_ORDINARIO' assets/atlas-reportability-irar.js
           grep -q 'Índice de Confianza de Evidencia' data/irar_methodology_v1.json
           grep -q 'IRG-LAFT-0.34.0' assets/atlas-irg-irar-adapter.module.js
       - name: Build canonical ATLAS candidate
@@ -55,4 +59,4 @@ jobs:
           test -f _site-irar/assets/atlas-irg-irar-adapter.module.js
           grep -q 'atlas-reportability-irar.js?v=0468-6' _site-irar/index.html
           grep -q 'atlas-irg-irar-adapter.module.js' _site-irar/index.html
-          grep -q 'IRAR-UI-1.6' _site-irar/assets/atlas-reportability-irar.js
+          grep -q 'IRAR-UI-1.7' _site-irar/assets/atlas-reportability-irar.js
