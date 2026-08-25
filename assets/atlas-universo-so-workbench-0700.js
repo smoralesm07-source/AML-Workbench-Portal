@@ -14,6 +14,8 @@
   const OSFL_VIEW='osfl';
   const OVERVIEW='aml_uaf_obligated_overview_snapshot';
   const SECTORS='aml_uaf_obligated_sector_snapshot';
+  const CURRENT_UNIVERSE='aml_v_uaf_universe_current_v0671';
+  const CURRENT_POTENTIAL_SECTORS='aml_v_uaf_potential_sector_current_v0671';
   let dispatching=false;
 
   const db=()=>{try{return typeof sb!=='undefined'?sb:(window.sb||null);}catch(_e){return window.sb||null;}};
@@ -61,21 +63,56 @@
   async function hydrateUniverso(){
     const api=soCore();
     if(!api)throw new Error('El núcleo de Universo SO no está disponible.');
-    if(api.state?.overview&&api.state?.sectors)return true;
     const client=db();
     if(!client)throw new Error('La sesión de datos no está disponible.');
 
-    const [ov,sec]=await Promise.all([
+    /* Always refresh CURRENT on route entry. This prevents a previously loaded
+       overview payload from pinning Universo SO to an older potential universe. */
+    const [ov,sec,current,currentSectors]=await Promise.all([
       client.from(OVERVIEW).select('payload,refreshed_at').eq('snapshot_key','CURRENT').maybeSingle(),
-      client.from(SECTORS).select('*').order('subject_count',{ascending:false})
+      client.from(SECTORS).select('*').order('subject_count',{ascending:false}),
+      client.from(CURRENT_UNIVERSE).select('*').maybeSingle(),
+      client.from(CURRENT_POTENTIAL_SECTORS).select('*').order('potential_ruts',{ascending:false}).order('sector',{ascending:true})
     ]);
     if(ov.error)throw ov.error;
     if(sec.error)throw sec.error;
+    if(current.error)throw current.error;
+    if(currentSectors.error)throw currentSectors.error;
     if(!ov.data)throw new Error('El panorama del padrón aún no está materializado en este corte.');
+    if(!current.data)throw new Error('El universo potencial vigente aún no está materializado.');
 
-    api.state.overview=ov.data.payload||null;
+    api.state.overview=ov.data.payload||{};
     api.state.overviewAt=ov.data.refreshed_at||null;
     api.state.sectors=sec.data||[];
+
+    const row=current.data,potentialSectors=currentSectors.data||[];
+    api.state.overview.registry=api.state.overview.registry||{};
+    api.state.overview.registry.subjects=Number(row.obligated_ruts||0);
+    api.state.overview.potential=api.state.overview.potential||{};
+    api.state.overview.potential.universe={
+      ...(api.state.overview.potential.universe||{}),
+      candidates:Number(row.potential_ruts||0),
+      actionable:Number(row.potential_ruts||0),
+      res_overlap:Number(row.potential_res_overlap_ruts||0),
+      sectors:potentialSectors.length,
+      definition:'ACTECO_CANDIDATE_USE_SI_ACTIVE_SII_NOT_UAF_RUT_EXACT',
+      sii_cutoff:row.sii_cutoff||null,
+      refreshed_at:row.refreshed_at||null
+    };
+    api.state.overview.potential.sectors=potentialSectors.map(r=>({
+      sector:r.sector,
+      candidates:Number(r.potential_ruts||0),
+      actionable:Number(r.potential_ruts||0),
+      res_overlap:Number(r.res_overlap_ruts||0)
+    }));
+    window.__ATLAS_UNIVERSO_CURRENT_0704__={
+      obligatedRuts:Number(row.obligated_ruts||0),
+      potentialRuts:Number(row.potential_ruts||0),
+      resOverlap:Number(row.potential_res_overlap_ruts||0),
+      siiCutoff:row.sii_cutoff||null,
+      sectorCount:potentialSectors.length,
+      refreshedAt:row.refreshed_at||null
+    };
     return true;
   }
 
@@ -92,8 +129,9 @@
     api.state.mode='panorama';
     api.state.dossier=null;
     api.render();
+    try{window.__ATLAS_UNIVERSO_SO_0640__?.patch?.();}catch(_e){}
     window.dispatchEvent(new CustomEvent('atlas:nav-refresh'));
-    publish('ready',{view:SO_VIEW,source});
+    publish('ready',{view:SO_VIEW,source,current:window.__ATLAS_UNIVERSO_CURRENT_0704__||null});
     return true;
   }
 
@@ -160,6 +198,7 @@
   window.AtlasRouteRecovery0703={
     open,
     health:()=>window.__ATLAS_ROUTE_RECOVERY_0703__||null,
+    hydrateUniverso,
     policy:'PASSIVE_DELEGATED_NO_NAVIGATE_MUTATION_NO_OBSERVER'
   };
 
