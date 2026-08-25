@@ -1,0 +1,48 @@
+-- ATLAS AML 0.65.0 · Padrón SII completo + Entity Master + potenciales SO
+-- Migraciones productivas Supabase:
+--   atlas_v0650_sii_registry_entity_master
+--   atlas_v0651_potential_screening_materialization
+--
+-- Objetivo
+-- Formar identidad con el padrón SII completo y materializar a nivel RUT el
+-- universo que Atlas 0.65 ya define como potencial SO.
+--
+-- Definición operacional aprobada del titular:
+--   potencial SO = persona jurídica con ACTECO cuya política tiene
+--                  candidate_use=SI
+--                  + ACTIVE_AS_PUBLISHED en SII
+--                  + RUT no observado en aml_uaf_obligated_subject_snapshot.
+--
+-- A/B/C puede conservarse como DESGLOSE de fuerza, pero nunca filtra quién
+-- entra al universo potencial. RES tampoco es gatillante: aporta identidad,
+-- fecha de constitución, forma societaria y contexto.
+--
+-- Objetos productivos:
+--   aml_sii_registry_snapshot
+--   aml_sii_registry_company
+--   aml_sii_registry_activity
+--   aml_uaf_sii_screening_policy_v0650
+--   aml_uaf_potential_registry_snapshot_v0650
+--   aml_v_uaf_potential_registry_summary_v0650
+--   aml_entity_master_v0650
+--   refresh_aml_uaf_potential_registry_v0650()
+--
+-- El refresh actualiza además aml_uaf_potential_screening_scope_0650.CURRENT,
+-- reemplazando el 79.449 de corte 2026-05 por el conteo único RUT del padrón
+-- oficial SII que se encuentre vigente al ejecutar la carga.
+--
+-- Fuentes:
+--   SII PUB_NOMBRES_PJ.zip      -> identidad, inicio, término de giro
+--   SII PUB_NOM_ACTECOS.zip     -> actividades vigentes
+--   Radar_SII screening policy  -> ACTECO candidate_use=SI
+--   UAF snapshot                -> exclusión exacta de inscritos
+--   RES                         -> enriquecimiento societario
+--
+-- Guardarraíles:
+--   RUT_EXACTO_ONLY
+--   NO_NAME_IDENTITY_PROMOTION
+--   candidate_use=SI
+--   ACTIVE_AS_PUBLISHED
+--   POTENTIAL_SO != LEGAL_BREACH
+--   TERMINATED_AS_PUBLISHED excluded from headline
+--   SECURITY_INVOKER views + RLS + allowed users
