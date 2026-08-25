@@ -1,0 +1,21 @@
+name: Validate Public Spend Context Links 0572
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/sync-public-spend-context-0571.yml'
+      - 'tests/atlas-public-spend-context-links-0572.mjs'
+      - '.github/workflows/validate-public-spend-context-links-0572.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tests/atlas-public-spend-context-links-0572.mjs
