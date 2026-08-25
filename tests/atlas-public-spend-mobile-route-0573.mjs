@@ -1,38 +1,41 @@
 import fs from 'node:fs';
 
-const patch=fs.readFileSync('assets/atlas-public-spend-mobile-route-0573.js','utf8');
+const route=fs.readFileSync('assets/atlas-public-spend-mobile-route-0573.js','utf8');
+const authority=fs.readFileSync('assets/atlas-public-spend-route-authority-0578.js','utf8');
 const index=fs.readFileSync('index.html','utf8');
+const css=fs.readFileSync('assets/atlas-public-spend-progressive-0577.css','utf8');
 const mobile=fs.readFileSync('assets/atlas-mobile-nav.js','utf8');
-const guided=fs.readFileSync('assets/atlas-public-spend-guided-0570.css','utf8');
 const build=fs.readFileSync('tools/build_atlas_site.py','utf8');
 
 function ok(value,message){if(!value)throw new Error(message)}
 
-ok(patch.includes("const VIEW='public-spend'"),'la autoridad debe estar limitada a Gasto Público');
-ok(patch.includes("[data-atlas-mobile-view=\"public-spend\"]"),'debe interceptar la entrada móvil explícita');
-ok(patch.includes("[data-view=\"public-spend\"]"),'debe interceptar también la entrada desktop');
-ok(patch.includes("window.__AML_PUBLIC_SPEND__?.load"),'debe reutilizar el loader compilado cuando esté disponible');
-ok(!patch.includes("./v037-public-spend.js")&&!patch.includes("./v037-public-spend.css"),'producción no debe intentar cargar fragmentos fuente no publicados');
-ok(patch.includes("COMPILED_BUNDLES_ONLY_NO_SOURCE_FETCH"),'debe declarar el contrato de despliegue compilado');
-ok(patch.includes("createStableHost")&&patch.includes("recoverVisibleSurface"),'debe reconstruir un host visible si el loader no lo deja montado');
-ok(patch.includes("data-atlas-public-spend-recovery=\"0575\""),'el host de recuperación debe ser identificable');
-ok(patch.includes("record.removedNodes"),'debe preservar nodos al desmontar la vista SPA');
-ok(patch.includes("savedAudit")&&patch.includes("savedGuided"),'debe conservar audit 0550 y guided 0570');
-ok(patch.includes("host.classList.add('mpa-strategic-host')"),'debe restaurar el contrato visual del host');
-ok(patch.includes("refreshAudit()"),'debe refrescar datos después del remount');
-ok(patch.includes('MutationObserver'),'debe observar reemplazos del host SPA');
-ok(patch.includes('event.stopImmediatePropagation()'),'la ruta corregida debe evitar doble despacho');
-ok(!patch.includes('location.reload'),'no debe resolver el bug recargando la aplicación');
-ok(!patch.includes('service_role')&&!patch.includes('SUPABASE_SERVICE_ROLE_KEY'),'no debe introducir credenciales');
-ok(build.includes('COMPILED_BUNDLES_ONLY')&&build.includes('historical source assets'),'el build debe conservar la política de no publicar fragmentos fuente');
+ok(route.includes("const VIEW='public-spend'"),'la ruta progresiva debe limitarse a Gasto Público');
+ok(route.includes("const HOST_CLASS='atlas-public-spend-fast-host'"),'debe usar un host rápido aislado');
+ok(route.includes("LOCAL_URL='./data/public-spend/spend_view_v2.json'"),'debe preferir snapshot compacto same-origin');
+ok(route.includes('AbortController'),'debe tener timeout/cancelación de red');
+ok(route.includes("cache:cacheMode"),'debe permitir caché en la ruta rápida');
+ok(route.includes("window.__AML_PUBLIC_SPEND__?.load"),'el histórico completo debe seguir disponible bajo demanda');
+ok(!route.includes('class="v037-spend'),'la entrada rápida no debe crear el host legado y disparar Audit/Guided');
+ok(!route.includes('<style'),'la ruta no debe inyectar estilos inline bloqueados por CSP');
+ok(route.includes('event.stopImmediatePropagation()'),'debe impedir doble despacho de clic');
+ok(route.includes("version:'0577.0'"),'debe publicar telemetría 0577');
 
-const contextPos=index.indexOf('atlas-public-spend-context-0571.js?v=0571-1');
-const fixPos=index.indexOf('atlas-public-spend-mobile-route-0573.js?v=0573-1');
+ok(authority.includes("window.navigate=function(view,...args)"),'0578 debe asumir autoridad sobre navegación programática');
+ok(authority.includes("if(view===VIEW)return openFast('window.navigate')"),'public-spend debe ir siempre a la entrada rápida');
+ok(authority.includes('AtlasPublicSpendRoute0573'),'0578 debe delegar en la ruta progresiva');
+ok(authority.includes('event.stopImmediatePropagation()'),'0578 debe impedir que listeners posteriores invoquen el histórico');
+ok(!authority.includes('__AML_PUBLIC_SPEND__'),'0578 no debe abrir el histórico directamente');
+
+const routePos=index.indexOf('atlas-public-spend-mobile-route-0573.js?v=0577-1');
+const authorityPos=index.indexOf('atlas-public-spend-route-authority-0578.js?v=0578-1');
 const mobilePos=index.indexOf('atlas-mobile-nav.js?v=0469-1');
-ok(contextPos>=0&&fixPos>contextPos,'la autoridad debe cargar después del contexto 0571');
-ok(mobilePos>fixPos,'debe registrar captura antes del listener móvil delegado');
+ok(routePos>=0,'index debe cargar la ruta progresiva 0577');
+ok(authorityPos>routePos,'la autoridad 0578 debe cargar después de la ruta');
+ok(mobilePos>authorityPos,'la autoridad debe instalarse antes del listener móvil delegado');
+ok(index.includes('atlas-public-spend-progressive-0577.css?v=0577-1'),'index debe cargar CSS externo CSP-safe');
+ok(css.includes('.atlas-public-spend-fast-host'),'el CSS debe cubrir el host rápido');
 ok(index.includes('data-aml-version="0.51.1"')&&index.includes('data-aml-build="0511"'),'el fix no debe alterar el release global');
-ok(mobile.includes("view:'public-spend'"),'el menú móvil debe conservar Gasto público');
-ok(guided.includes('@media(max-width:760px)'),'la UI guiada debe conservar reglas responsive móviles');
+ok(mobile.includes("view:'public-spend'"),'el menú móvil debe conservar Gasto Público');
+ok(build.includes('COMPILED_BUNDLES_ONLY')&&build.includes('historical source assets'),'el build debe mantener política compiled-only');
 
-console.log('OK atlas-public-spend-mobile-route-0575');
+console.log('OK atlas-public-spend progressive 0577 + authority 0578');
