@@ -1,0 +1,85 @@
+name: RES historical backfill 2013-2025
+
+on:
+  pull_request:
+    paths:
+      - 'ops/res/**'
+      - '.github/workflows/res-backfill-2013-2025.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/res-backfill-2013-2025.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+# Share the same concurrency group as the daily RES ingest so a historical
+# backfill never overlaps the current-year refresh.
+concurrency:
+  group: atlas-res-ingest
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate RES loader and historical contract
+        run: |
+          set -euo pipefail
+          python -m py_compile ops/res/ingest.py
+          python ops/res/ingest.py --self-test
+          python ops/res/ingest.py --help >/dev/null
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('ops/res/ingest.py').read_text()
+          assert 'datos.gob.cl' in p
+          assert 'registrodeempresasysociedades.cl' in p
+          assert 'NO automatiza ni raspa' in p
+          assert 'RUT exacto' in p
+          assert '--year' in p
+          print('RES historical governance contract OK')
+          PY
+
+  backfill:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Backfill official RES 2013-2025
+        shell: bash
+        run: |
+          set -uo pipefail
+          failures=0
+          completed=0
+          echo '## RES historical backfill 2013-2025' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo '| Año | Resultado |' >> "$GITHUB_STEP_SUMMARY"
+          echo '|---:|---|' >> "$GITHUB_STEP_SUMMARY"
+          for year in $(seq 2013 2025); do
+            echo "[RES] processing year $year"
+            if python ops/res/ingest.py --year "$year"; then
+              completed=$((completed+1))
+              echo "| $year | OK / ya normalizado |" >> "$GITHUB_STEP_SUMMARY"
+            else
+              failures=$((failures+1))
+              echo "| $year | ERROR |" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo "Años procesados correctamente: $completed/13" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$failures" -ne 0 ]; then
+            echo "RES historical backfill finished with $failures failed year(s)" >&2
+            exit 1
+          fi
+          echo 'RES historical backfill completed successfully.'
