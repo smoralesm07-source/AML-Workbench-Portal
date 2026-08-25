@@ -1,5 +1,5 @@
 'use strict';
-/* ATLAS AML 0.71.0 · Auditoría global con semántica fuente/integración/materialización */
+/* ATLAS AML 0.71.0 · Auditoría y salud de fuentes global · semántica fuente/integración/materialización */
 (function atlasGlobalSourceHealth0710(){
   const VERSION='0710.1',TTL=5*60*1000;
   const PIPELINES=['RUNTIME_SNAPSHOT','UAF_SECTOR_PROFILE','SII_ENTITY_YEAR','OSFL_PROFILE','SANCTION_IDENTITY'];
