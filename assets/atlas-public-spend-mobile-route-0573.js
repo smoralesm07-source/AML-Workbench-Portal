@@ -1,146 +1,94 @@
 'use strict';
-/* ATLAS AML · Gasto Público progressive route 0577
- * Isolated fast surface: does NOT create .v037-spend, therefore legacy Audit/Guided
- * cannot auto-start and block the lightweight entry path.
- * Production first tries the same-origin snapshot vendored by Pages; raw GitHub is
- * only a fallback. Full v037 history is opt-in.
+/* ATLAS AML · Gasto Público v2 native runtime
+ * One authority, one state store, one compact same-origin snapshot.
+ * Legacy v037/Audit/Guided runtimes are intentionally not invoked.
  */
 (function(){
   const VIEW='public-spend';
-  const FAST_ID='atlas-public-spend-fast-0577';
+  const VERSION='GP2.0';
   const HOST_CLASS='atlas-public-spend-fast-host';
-  const STATUS_ID='atlas-public-spend-route-status-0577';
+  const ROOT_ID='atlas-public-spend-v2';
   const LOCAL_URL='./data/public-spend/spend_view_v2.json';
   const FALLBACK_URL='https://raw.githubusercontent.com/smoralesm07-source/Rada_Presupuesto_Abierto/main/docs/data/spend_view_v2.json';
-  const TITLE='Gasto Público';
-  const SUBTITLE='Flujos, concentración y proveedores desde Presupuesto Abierto.';
-  let opening=false;
-  let payload=null;
-  let inflight=null;
-
+  const S={data:null,index:null,tab:'overview',query:'',region:'ALL',detail:null,loading:false,error:null,perf:null};
+  let inflight=null,opening=false;
   const nf=new Intl.NumberFormat('es-CL');
-  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const money=v=>{const n=Number(v||0),a=Math.abs(n);if(a>=1e12)return '$'+(n/1e12).toLocaleString('es-CL',{maximumFractionDigits:2})+' bill.';if(a>=1e9)return '$'+(n/1e9).toLocaleString('es-CL',{maximumFractionDigits:1})+' mil M';if(a>=1e6)return '$'+(n/1e6).toLocaleString('es-CL',{maximumFractionDigits:1})+' M';return '$'+nf.format(Math.round(n));};
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+  const norm=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,' ').trim();
+  const num=v=>Number.isFinite(Number(v))?Number(v):0;
+  const amount=x=>num(x?.amount_l12??x?.amount_clp??x?.amount??x?.total_clp);
+  const money=v=>{const n=num(v),a=Math.abs(n);if(a>=1e12)return '$'+(n/1e12).toLocaleString('es-CL',{maximumFractionDigits:2})+' bill.';if(a>=1e9)return '$'+(n/1e9).toLocaleString('es-CL',{maximumFractionDigits:1})+' mil M';if(a>=1e6)return '$'+(n/1e6).toLocaleString('es-CL',{maximumFractionDigits:1})+' M';return '$'+nf.format(Math.round(n));};
   const pct=v=>Number.isFinite(Number(v))?(100*Number(v)).toLocaleString('es-CL',{maximumFractionDigits:1})+'%':'—';
-  const clock=()=>window.performance?.now?.()||Date.now();
+  const clock=()=>performance?.now?.()||Date.now();
+  const sid=x=>String(x?.organization_id??x?.buyer_id??x?.buyer_key??x?.id??'');
+  const sname=x=>String(x?.organization_name??x?.buyer_name??x?.name??sid(x)||'Servicio sin nombre');
+  const pid=x=>String(x?.provider_id??x?.supplier_id??x?.supplier_key??x?.id??'');
+  const pname=x=>String(x?.provider_name??x?.supplier_name??x?.name??pid(x)||'Proveedor sin nombre');
+  const freg=x=>String(x?.main_region??x?.region??x?.organization_region??'Sin región');
+  const fsid=x=>String(x?.organization_id??x?.buyer_id??x?.buyer_key??'');
+  const fpid=x=>String(x?.provider_id??x?.supplier_id??x?.supplier_key??'');
+  const fnameS=x=>String(x?.organization_name??x?.buyer_name??'');
+  const fnameP=x=>String(x?.provider_name??x?.supplier_name??'');
 
   function publish(status,extra={}){
-    window.__ATLAS_PUBLIC_SPEND_MOBILE_0573__={
-      status,version:'0577.0',view:VIEW,fastReady:!!payload,
-      isolatedFastHost:!!document.querySelector('.'+HOST_CLASS),
-      legacyHost:!!document.querySelector('.v037-spend'),
-      legacyLoaderReady:typeof window.__AML_PUBLIC_SPEND__?.load==='function',
-      checkedAt:new Date().toISOString(),...extra
-    };
+    window.__ATLAS_PUBLIC_SPEND_MOBILE_0573__={status,version:VERSION,view:VIEW,ready:!!S.index,tab:S.tab,detail:S.detail,legacyInvoked:false,checkedAt:new Date().toISOString(),...extra};
   }
-
   function shell(){
-    try{if(typeof window.shell==='function')window.shell(TITLE,SUBTITLE,VIEW);}catch(error){publish('shell-error',{error:String(error?.message||error)});}
+    try{if(typeof window.shell==='function')window.shell('Gasto Público','Compradores, proveedores, relaciones y señales explicables desde Presupuesto Abierto.');}catch(error){publish('shell-error',{error:String(error?.message||error)});}
     return document.querySelector('#content');
   }
-
-  function content(){return document.querySelector('#content')||shell();}
-
-  function fastHost(reset=false){
-    const c=content();if(!c)return null;
+  function host(reset=false){
+    const c=document.querySelector('#content')||shell();if(!c)return null;
     let h=c.querySelector('.'+HOST_CLASS);
-    if(!h||reset){
-      c.innerHTML=`<section class="${HOST_CLASS}" data-atlas-public-spend-mode="fast"></section>`;
-      h=c.querySelector('.'+HOST_CLASS);
-    }
-    return h;
+    if(!h||reset){c.innerHTML=`<section class="${HOST_CLASS}" data-atlas-public-spend-runtime="${VERSION}"></section>`;h=c.querySelector('.'+HOST_CLASS);}return h;
   }
+  function loading(){const h=host(true);if(!h)return;h.innerHTML=`<div id="${ROOT_ID}" class="gp2"><div class="gp2-hero"><div><span class="gp2-eyebrow">ATLAS · Gasto Público v2</span><h2>Preparando universo de compras públicas</h2><p>Cargando el snapshot compacto y construyendo índices comprador–proveedor.</p></div><span class="gp2-status">Cargando…</span></div><div class="gp2-loading"><i></i></div></div>`;publish('loading');}
 
-  function loading(message='Cargando resumen optimizado…'){
-    const h=fastHost(true);if(!h)return false;
-    h.innerHTML=`<div id="${FAST_ID}"><div class="psf-bar"><div><h2>Gasto Público</h2><p>Presupuesto Abierto · entrada optimizada</p></div><div id="${STATUS_ID}" class="psf-status">${esc(message)}</div></div><div class="psf-card"><div class="psf-note">La entrada rápida está aislada del histórico pesado y del auditor avanzado.</div><div class="psf-progress" aria-hidden="true"><i></i></div></div></div>`;
-    publish('fast-loading');return true;
+  async function fetchJson(url,cacheMode,timeoutMs){
+    const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),timeoutMs);const t0=clock();
+    try{const r=await fetch(url,{cache:cacheMode,signal:ctl.signal});if(!r.ok)throw new Error(`HTTP ${r.status}`);const text=await r.text();const t1=clock(),D=JSON.parse(text),t2=clock();if(D?.schema!=='PRESUPUESTO_SPEND_VIEW_V2')throw new Error('Esquema de snapshot no compatible');return{D,perf:{bytes:text.length,networkMs:t1-t0,parseMs:t2-t1,totalMs:t2-t0}};}finally{clearTimeout(timer);}
   }
-
-  function amount(x){return Number(x?.amount_l12??x?.amount_clp??x?.amount??0)||0;}
-
-  function render(D,perf={}){
-    const h=fastHost(false);if(!h)return false;
-    const services=[...(D.services||[])].sort((a,b)=>amount(b)-amount(a));
-    const providers=[...(D.providers||[])].sort((a,b)=>amount(b)-amount(a));
-    const flows=D.flows||[];
-    const total=Number(D.overview?.amount_l12||D.overview?.total_amount_l12||services.reduce((a,s)=>a+amount(s),0));
-    const tx=Number(D.overview?.transactions_l12||0);
-    const top10=providers.length&&total?providers.slice(0,10).reduce((a,p)=>a+amount(p),0)/total:null;
-    const months=D.window?.months||[];
-    const windowText=months.length?`${months[0]} → ${months[months.length-1]}`:'ventana publicada';
-    h.innerHTML=`<div id="${FAST_ID}">
-      <div class="psf-bar"><div><h2>Gasto Público</h2><p>Presupuesto Abierto · ${esc(windowText)}</p></div><div><div class="psf-actions"><button id="psf-reload-0577" type="button">Actualizar resumen</button><button id="psf-full-0577" type="button">Análisis histórico completo</button></div><div id="${STATUS_ID}" class="psf-status">Listo${perf.totalMs?` · ${Math.round(perf.totalMs)} ms`:''}${perf.source?` · ${esc(perf.source)}`:''}</div></div></div>
-      <div class="psf-kpis"><div class="psf-kpi"><small>Devengado visible</small><b>${money(total)}</b></div><div class="psf-kpi"><small>Servicios públicos</small><b>${nf.format(services.length)}</b></div><div class="psf-kpi"><small>Proveedores</small><b>${nf.format(providers.length)}</b></div><div class="psf-kpi"><small>Relaciones publicadas</small><b>${nf.format(flows.length)}</b></div></div>
-      <div class="psf-grid"><section class="psf-card"><h3>Servicios con mayor magnitud</h3>${services.slice(0,10).map((s,i)=>`<div class="psf-row"><div class="psf-name">${i+1}. ${esc(s.organization_name||s.name||s.organization_id)}</div><div class="psf-amt">${money(amount(s))}</div></div>`).join('')||'<div class="psf-note">Sin servicios visibles.</div>'}</section><section class="psf-card"><h3>Proveedores con mayor magnitud</h3>${providers.slice(0,10).map((p,i)=>`<div class="psf-row"><div class="psf-name">${i+1}. ${esc(p.provider_name||p.name||p.provider_id)}</div><div class="psf-amt">${money(amount(p))}</div></div>`).join('')||'<div class="psf-note">Sin proveedores visibles.</div>'}</section></div>
-      <div class="psf-note">${tx?`${nf.format(tx)} pagos en la ventana publicada · `:''}${top10!=null?`Top 10 proveedores: ${pct(top10)} del monto visible · `:''}El histórico multianual y el auditor avanzado se activan sólo al solicitar el análisis completo.</div>
-    </div>`;
-    document.getElementById('psf-reload-0577')?.addEventListener('click',()=>loadFast(true));
-    document.getElementById('psf-full-0577')?.addEventListener('click',loadFull);
-    publish('fast-ready',{services:services.length,providers:providers.length,flows:flows.length,...perf});
-    window.dispatchEvent(new CustomEvent('atlas:public-spend-fast-ready',{detail:{version:'0577.0',perf}}));
-    return true;
-  }
-
-  async function fetchWithTimeout(url,cacheMode,timeoutMs=10000){
-    const ctl=new AbortController();const timer=setTimeout(()=>ctl.abort(),timeoutMs);
-    try{
-      const t0=clock();const r=await fetch(url,{cache:cacheMode,signal:ctl.signal});const t1=clock();
-      if(!r.ok)throw new Error(`HTTP ${r.status}`);
-      const text=await r.text();const t2=clock();const D=JSON.parse(text);const t3=clock();
-      if(D?.schema!=='PRESUPUESTO_SPEND_VIEW_V2')throw new Error('esquema inesperado');
-      return {D,perf:{bytes:text.length,networkMs:t1-t0,readMs:t2-t1,parseMs:t3-t2,totalMs:t3-t0}};
-    }finally{clearTimeout(timer);}
-  }
-
   async function obtain(force=false){
-    if(payload&&!force)return {D:payload,perf:{...(window.__ATLAS_PUBLIC_SPEND_PERF__||{}),source:'memoria'}};
+    if(S.data&&!force)return{D:S.data,perf:{...(S.perf||{}),source:'memoria'}};
     if(inflight&&!force)return inflight;
-    inflight=(async()=>{
-      let firstError=null;
-      try{
-        const out=await fetchWithTimeout(LOCAL_URL,force?'reload':'default',8000);
-        out.perf.source='snapshot local';payload=out.D;window.__ATLAS_PUBLIC_SPEND_PERF__={version:'0577.0',...out.perf,measuredAt:new Date().toISOString()};return out;
-      }catch(error){firstError=error;publish('local-snapshot-fallback',{error:String(error?.message||error)});}
-      try{
-        const out=await fetchWithTimeout(FALLBACK_URL,force?'reload':'force-cache',12000);
-        out.perf.source='respaldo remoto';payload=out.D;window.__ATLAS_PUBLIC_SPEND_PERF__={version:'0577.0',...out.perf,measuredAt:new Date().toISOString()};return out;
-      }catch(error){throw new Error(`Snapshot local: ${String(firstError?.message||firstError||'no disponible')} · respaldo: ${String(error?.message||error)}`);}
-    })().finally(()=>{inflight=null;});
-    return inflight;
+    inflight=(async()=>{let first;
+      try{const out=await fetchJson(LOCAL_URL,force?'reload':'default',8000);out.perf.source='snapshot local';return out;}catch(e){first=e;}
+      try{const out=await fetchJson(FALLBACK_URL,force?'reload':'force-cache',12000);out.perf.source='respaldo remoto';return out;}catch(e){throw new Error(`Snapshot local: ${first?.message||first}; respaldo: ${e?.message||e}`);}
+    })().finally(()=>inflight=null);return inflight;
   }
 
-  function renderError(error){
-    const h=fastHost(false)||fastHost(true);if(!h)return false;
-    h.innerHTML=`<div id="${FAST_ID}"><div class="psf-bar"><div><h2>Gasto Público</h2><p>Presupuesto Abierto</p></div></div><div class="psf-error"><b>No fue posible cargar el resumen de Gasto Público.</b><br><small>${esc(error?.message||error)}</small><div class="psf-actions"><button id="psf-retry-0577" type="button">Reintentar</button><button id="psf-full-0577" type="button">Análisis histórico completo</button></div></div></div>`;
-    document.getElementById('psf-retry-0577')?.addEventListener('click',()=>loadFast(true));document.getElementById('psf-full-0577')?.addEventListener('click',loadFull);return true;
+  function buildIndex(D){
+    const t0=clock();const services=new Map(),providers=new Map(),serviceFlows=new Map(),providerFlows=new Map(),relations=[];
+    for(const s of D.services||[]){const id=sid(s);if(id)services.set(id,{...s,_id:id,_name:sname(s),_region:freg(s),_amount:amount(s)});}
+    for(const p of D.providers||[]){const id=pid(p);if(id)providers.set(id,{...p,_id:id,_name:pname(p),_amount:amount(p)});}
+    for(const f of D.flows||[]){const si=fsid(f),pi=fpid(f),a=amount(f);if(!si&&!pi)continue;const row={...f,_sid:si,_pid:pi,_sname:fnameS(f)||services.get(si)?._name||si,_pname:fnameP(f)||providers.get(pi)?._name||pi,_amount:a};relations.push(row);if(si){if(!serviceFlows.has(si))serviceFlows.set(si,[]);serviceFlows.get(si).push(row);}if(pi){if(!providerFlows.has(pi))providerFlows.set(pi,[]);providerFlows.get(pi).push(row);}}
+    const serviceRows=[...services.values()].map(s=>{const fs=serviceFlows.get(s._id)||[],total=s._amount||fs.reduce((a,f)=>a+f._amount,0),top=fs.slice().sort((a,b)=>b._amount-a._amount)[0],share=top&&total?top._amount/total:0;return{...s,_amount:total,_relations:fs.length,_top:top,_share:share,_level:share>=.6?'high':share>=.4?'mid':'info'};}).sort((a,b)=>b._amount-a._amount);
+    const providerRows=[...providers.values()].map(p=>{const fs=providerFlows.get(p._id)||[],total=p._amount||fs.reduce((a,f)=>a+f._amount,0),top=fs.slice().sort((a,b)=>b._amount-a._amount)[0],share=top&&total?top._amount/total:0;return{...p,_amount:total,_relations:fs.length,_top:top,_share:share,_level:share>=.75?'high':share>=.5?'mid':'info'};}).sort((a,b)=>b._amount-a._amount);
+    const sortedRelations=relations.sort((a,b)=>b._amount-a._amount);const total=num(D.overview?.amount_l12||D.overview?.total_amount_l12)||serviceRows.reduce((a,s)=>a+s._amount,0);const top10=providerRows.slice(0,10).reduce((a,p)=>a+p._amount,0)/(total||1);
+    const regions=new Map();for(const s of serviceRows){const r=s._region||'Sin región';if(!regions.has(r))regions.set(r,{region:r,amount:0,services:0});const x=regions.get(r);x.amount+=s._amount;x.services++;}
+    return{services,providers,serviceFlows,providerFlows,serviceRows,providerRows,relations:sortedRelations,regions:[...regions.values()].sort((a,b)=>b.amount-a.amount),total,top10,indexMs:clock()-t0};
   }
-
-  async function loadFast(force=false){
-    loading(force?'Actualizando resumen…':'Cargando resumen optimizado…');const started=clock();
-    try{const out=await obtain(force);out.perf.totalMs=clock()-started;render(out.D,out.perf);return true;}
-    catch(error){publish('fast-error',{error:String(error?.message||error)});renderError(error);return false;}
-  }
-
-  async function loadFull(){
-    const loader=window.__AML_PUBLIC_SPEND__?.load;
-    if(typeof loader!=='function'){const error=new Error('El cargador histórico compilado no está disponible.');publish('full-loader-missing');renderError(error);return false;}
-    const s=document.getElementById(STATUS_ID);if(s)s.textContent='Abriendo análisis histórico completo…';
-    publish('full-loading');
-    try{await loader();publish('full-ready');return true;}catch(error){publish('full-error',{error:String(error?.message||error)});shell();if(payload)render(payload,{...(window.__ATLAS_PUBLIC_SPEND_PERF__||{}),source:'memoria'});else renderError(error);return false;}
-  }
-
-  async function open(){
-    if(opening)return false;opening=true;window.AtlasMobileNav?.close?.();publish('opening');
-    try{shell();return await loadFast(false);}finally{opening=false;}
-  }
-
-  document.addEventListener('click',event=>{
-    const button=event.target?.closest?.('[data-view="public-spend"],[data-atlas-mobile-view="public-spend"]');if(!button)return;
-    event.preventDefault();event.stopImmediatePropagation();open().catch(error=>{publish('route-error',{error:String(error?.message||error)});renderError(error);});
-  },true);
-
-  window.AtlasPublicSpendMobile0573={open,ensure:()=>!!document.querySelector('.'+HOST_CLASS),recover:()=>loadFast(false),health:()=>window.__ATLAS_PUBLIC_SPEND_MOBILE_0573__||null,loadFull};
-  window.AtlasPublicSpendRoute0573=window.AtlasPublicSpendMobile0573;
+  function months(){const x=S.data?.window?.months||[];return x.length?`${x[0]} → ${x[x.length-1]}`:'ventana publicada';}
+  function signal(level,label,why){return `<span class="gp2-signal ${level}" title="${esc(why)}"><i></i>${esc(label)}</span>`;}
+  function shareSignal(v,type){if(type==='service'){if(v>=.6)return signal('high','Concentración alta','El proveedor principal supera 60% del gasto observado del servicio.');if(v>=.4)return signal('mid','Concentración relevante','El proveedor principal representa entre 40% y 60% del gasto observado.');return signal('info','Diversificación relativa','El proveedor principal representa menos de 40% del gasto observado.');}if(v>=.75)return signal('high','Dependencia alta','El principal comprador concentra al menos 75% del gasto público observado del proveedor.');if(v>=.5)return signal('mid','Dependencia relevante','El principal comprador concentra entre 50% y 75% del gasto público observado.');return signal('info','Compradores diversificados','El principal comprador concentra menos de 50% del gasto público observado.');}
+  function nav(){return `<div class="gp2-nav">${[['overview','Resumen'],['services','Servicios'],['providers','Proveedores'],['relations','Relaciones'],['method','Metodología']].map(([k,l])=>`<button type="button" data-gp2-tab="${k}" class="${S.tab===k?'active':''}">${l}</button>`).join('')}</div>`;}
+  function toolbar(){const regions=['ALL',...S.index.regions.map(x=>x.region)];return `<div class="gp2-toolbar"><label><span>Buscar</span><input id="gp2-search" type="search" value="${esc(S.query)}" placeholder="Servicio, proveedor o relación…" autocomplete="off"></label><label><span>Región del servicio</span><select id="gp2-region">${regions.map(r=>`<option value="${esc(r)}" ${S.region===r?'selected':''}>${r==='ALL'?'Todas las regiones':esc(r)}</option>`).join('')}</select></label><button type="button" data-gp2-action="reload">Actualizar snapshot</button></div>`;}
+  function header(){const p=S.perf||{};return `<div class="gp2-hero"><div><span class="gp2-eyebrow">ATLAS · Gasto Público v2</span><h2>Inteligencia de gasto y relaciones comprador–proveedor</h2><p>Presupuesto Abierto · ${esc(months())}</p></div><div class="gp2-health"><b>Operativo</b><span>${esc(p.source||'snapshot')} · ${p.totalMs?Math.round(p.totalMs)+' ms':'memoria'}</span></div></div>${nav()}${toolbar()}`;}
+  function kpis(){const I=S.index,tx=num(S.data?.overview?.transactions_l12);return `<div class="gp2-kpis">${[['Gasto visible',money(I.total),'monto agregado'],['Servicios',nf.format(I.serviceRows.length),'organismos compradores'],['Proveedores',nf.format(I.providerRows.length),'contrapartes observadas'],['Relaciones',nf.format(I.relations.length),'pares comprador–proveedor'],['Top 10 proveedores',pct(I.top10),'concentración del monto']].map(x=>`<article><small>${x[0]}</small><b>${x[1]}</b><span>${x[2]}${x[0]==='Relaciones'&&tx?' · '+nf.format(tx)+' operaciones':''}</span></article>`).join('')}</div>`;}
+  function match(row,type){const q=norm(S.query);if(S.region!=='ALL'&&type==='service'&&row._region!==S.region)return false;if(!q)return true;const text=type==='service'?`${row._name} ${row._region} ${row._top?._pname||''}`:type==='provider'?`${row._name} ${row.rut||''} ${row._top?._sname||''}`:`${row._sname} ${row._pname}`;return norm(text).includes(q);}
+  function rowButton(row,type,i){if(type==='service')return `<button class="gp2-row" data-gp2-detail="service" data-key="${esc(row._id)}"><span class="rank">${i+1}</span><div><b>${esc(row._name)}</b><small>${esc(row._region)} · ${nf.format(row._relations)} relaciones</small></div><strong>${money(row._amount)}</strong>${shareSignal(row._share,'service')}</button>`;if(type==='provider')return `<button class="gp2-row" data-gp2-detail="provider" data-key="${esc(row._id)}"><span class="rank">${i+1}</span><div><b>${esc(row._name)}</b><small>${row.rut?esc(row.rut)+' · ':''}${nf.format(row._relations)} compradores</small></div><strong>${money(row._amount)}</strong>${shareSignal(row._share,'provider')}</button>`;return `<button class="gp2-row relation" data-gp2-detail="relation" data-key="${esc(row._sid+'|'+row._pid)}"><span class="rank">${i+1}</span><div><b>${esc(row._sname)}</b><small>→ ${esc(row._pname)}</small></div><strong>${money(row._amount)}</strong></button>`;}
+  function overview(){const I=S.index,svc=I.serviceRows.slice(0,6),pr=I.providerRows.slice(0,6),rel=I.relations.slice(0,6);return `${kpis()}<div class="gp2-insight"><div><span class="gp2-star">✦</span><div><b>Qué revisar primero</b><p>Atlas prioriza relaciones por concentración, dependencia y materialidad. Estas señales orientan revisión; no estiman probabilidad de LA/FT.</p></div></div><div>${signal('high','Alta prioridad','Umbral analítico material para revisión.')}${signal('mid','Relevante','Comportamiento que merece comparación con pares.')}${signal('info','Contextual','Información descriptiva sin juicio adverso.')}</div></div><div class="gp2-grid3"><section class="gp2-card"><header><h3>Servicios con mayor gasto</h3><button data-gp2-tab="services">Ver todos</button></header>${svc.map((x,i)=>rowButton(x,'service',i)).join('')}</section><section class="gp2-card"><header><h3>Proveedores con mayor gasto</h3><button data-gp2-tab="providers">Ver todos</button></header>${pr.map((x,i)=>rowButton(x,'provider',i)).join('')}</section><section class="gp2-card"><header><h3>Relaciones materiales</h3><button data-gp2-tab="relations">Ver todas</button></header>${rel.map((x,i)=>rowButton(x,'relation',i)).join('')}</section></div><div class="gp2-grid2"><section class="gp2-card"><header><h3>Concentración en servicios</h3><span>Proveedor principal / gasto del servicio</span></header>${I.serviceRows.slice().sort((a,b)=>b._share-a._share).slice(0,8).map((x,i)=>`<div class="gp2-meter"><span>${i+1}. ${esc(x._name)}</span><progress max="1" value="${Math.min(1,x._share)}"></progress><b>${pct(x._share)}</b></div>`).join('')}</section><section class="gp2-card"><header><h3>Foco territorial</h3><span>Gasto agregado por región principal</span></header>${I.regions.slice(0,8).map((x,i)=>`<button class="gp2-region-row" data-gp2-region="${esc(x.region)}"><span>${i+1}</span><b>${esc(x.region)}</b><strong>${money(x.amount)}</strong><small>${nf.format(x.services)} servicios</small></button>`).join('')}</section></div>`;}
+  function listView(type){const rows=(type==='services'?S.index.serviceRows:type==='providers'?S.index.providerRows:S.index.relations).filter(r=>match(r,type==='services'?'service':type==='providers'?'provider':'relation')).slice(0,120);const singular=type==='services'?'service':type==='providers'?'provider':'relation';return `<section class="gp2-card gp2-list"><header><div><h3>${type==='services'?'Servicios públicos':type==='providers'?'Proveedores':'Relaciones comprador–proveedor'}</h3><span>${nf.format(rows.length)} resultados visibles</span></div></header>${rows.map((x,i)=>rowButton(x,singular,i)).join('')||'<div class="gp2-empty">Sin resultados para los filtros actuales.</div>'}</section>`;}
+  function method(){return `<div class="gp2-method"><section class="gp2-card"><h3>Cómo leer el módulo</h3><p>El módulo usa un snapshot agregado de Presupuesto Abierto para entregar una entrada rápida y estable. El detalle se calcula en el navegador a partir de las relaciones publicadas; no requiere el runtime histórico v037.</p></section>${[['Concentración del servicio','Monto del proveedor principal ÷ gasto observado del servicio.','≥60% alta; 40–60% relevante; <40% contextual.'],['Dependencia del proveedor','Monto del comprador principal ÷ gasto público observado del proveedor.','≥75% alta; 50–75% relevante; <50% contextual.'],['Materialidad','Monto observado de la relación comprador–proveedor.','Ordena revisión, pero el monto por sí solo no es una señal de irregularidad.'],['Top 10 proveedores','Suma del gasto de los 10 proveedores con mayor monto ÷ gasto total visible.','Describe concentración agregada del universo.']].map(x=>`<section class="gp2-card"><h3>${x[0]}</h3><p><b>Cálculo:</b> ${x[1]}</p><p><b>Lectura:</b> ${x[2]}</p></section>`).join('')}<section class="gp2-card"><h3>Regla de interpretación</h3><p>Las señales son herramientas de priorización analítica y contexto. No constituyen por sí mismas evidencia de delito, lavado de activos, fraude o incumplimiento.</p></section></div>`;}
+  function detail(){if(!S.detail)return'';const [type,key]=S.detail.split(':');let body='';if(type==='service'){const x=S.index.services.get(key),row=S.index.serviceRows.find(r=>r._id===key),fs=(S.index.serviceFlows.get(key)||[]).slice().sort((a,b)=>b._amount-a._amount);if(row)body=`<h3>${esc(row._name)}</h3><p>${esc(row._region)} · ${money(row._amount)} · ${nf.format(row._relations)} proveedores relacionados</p><div class="gp2-detail-kpis"><span><small>Proveedor principal</small><b>${esc(row._top?._pname||'—')}</b></span><span><small>Concentración</small><b>${pct(row._share)}</b></span></div>${shareSignal(row._share,'service')}<h4>Principales proveedores</h4>${fs.slice(0,12).map((f,i)=>rowButton(f,'relation',i)).join('')}`;}else if(type==='provider'){const row=S.index.providerRows.find(r=>r._id===key),fs=(S.index.providerFlows.get(key)||[]).slice().sort((a,b)=>b._amount-a._amount);if(row)body=`<h3>${esc(row._name)}</h3><p>${row.rut?esc(row.rut)+' · ':''}${money(row._amount)} · ${nf.format(row._relations)} compradores relacionados</p><div class="gp2-detail-kpis"><span><small>Comprador principal</small><b>${esc(row._top?._sname||'—')}</b></span><span><small>Dependencia</small><b>${pct(row._share)}</b></span></div>${shareSignal(row._share,'provider')}<h4>Principales compradores</h4>${fs.slice(0,12).map((f,i)=>rowButton(f,'relation',i)).join('')}`;}else{const [si,pi]=key.split('|'),f=S.index.relations.find(x=>x._sid===si&&x._pid===pi);if(f){const s=S.index.serviceRows.find(x=>x._id===si),p=S.index.providerRows.find(x=>x._id===pi);body=`<h3>${esc(f._sname)} → ${esc(f._pname)}</h3><p>Monto observado de la relación: <b>${money(f._amount)}</b></p><div class="gp2-detail-kpis"><span><small>Peso en el servicio</small><b>${s&&s._amount?pct(f._amount/s._amount):'—'}</b></span><span><small>Peso en el proveedor</small><b>${p&&p._amount?pct(f._amount/p._amount):'—'}</b></span></div><p class="gp2-note">La relación se presenta para revisión por materialidad y dependencia relativa; no implica irregularidad.</p>`;}}return `<aside class="gp2-drawer"><button type="button" class="gp2-close" data-gp2-action="close">×</button>${body||'<p>Detalle no disponible.</p>'}</aside>`;}
+  function render(){const h=host(false);if(!h||!S.index)return false;let body=S.tab==='overview'?overview():S.tab==='services'?listView('services'):S.tab==='providers'?listView('providers'):S.tab==='relations'?listView('relations'):method();h.innerHTML=`<div id="${ROOT_ID}" class="gp2">${header()}<main>${body}</main>${detail()}<footer>Fuente: Presupuesto Abierto · snapshot gobernado ${esc(months())}. Señales explicables para priorización analítica.</footer></div>`;bind();publish('ready',{services:S.index.serviceRows.length,providers:S.index.providerRows.length,relations:S.index.relations.length,indexMs:S.index.indexMs});window.dispatchEvent(new CustomEvent('atlas:public-spend-v2-ready',{detail:{version:VERSION}}));return true;}
+  function bind(){const root=document.getElementById(ROOT_ID);if(!root)return;root.addEventListener('click',e=>{const tab=e.target.closest('[data-gp2-tab]');if(tab){S.tab=tab.dataset.gp2Tab;S.detail=null;render();return;}const det=e.target.closest('[data-gp2-detail]');if(det){S.detail=`${det.dataset.gp2Detail}:${det.dataset.key}`;render();return;}const reg=e.target.closest('[data-gp2-region]');if(reg){S.region=reg.dataset.gp2Region;S.tab='services';render();return;}const act=e.target.closest('[data-gp2-action]');if(act?.dataset.gp2Action==='close'){S.detail=null;render();return;}if(act?.dataset.gp2Action==='reload'){load(true);}});root.querySelector('#gp2-search')?.addEventListener('input',e=>{S.query=e.target.value;clearTimeout(root._gp2q);root._gp2q=setTimeout(render,120);});root.querySelector('#gp2-region')?.addEventListener('change',e=>{S.region=e.target.value;render();});}
+  function errorView(error){const h=host(true);if(!h)return;h.innerHTML=`<div id="${ROOT_ID}" class="gp2"><div class="gp2-error"><h3>No fue posible abrir Gasto Público</h3><p>${esc(error?.message||error)}</p><button type="button" data-gp2-retry>Reintentar</button></div></div>`;h.querySelector('[data-gp2-retry]')?.addEventListener('click',()=>load(true));publish('error',{error:String(error?.message||error)});}
+  async function load(force=false){if(S.loading)return false;S.loading=true;S.error=null;loading();const t0=clock();try{const out=await obtain(force);S.data=out.D;S.index=buildIndex(out.D);S.perf={...out.perf,totalMs:clock()-t0,indexMs:S.index.indexMs};window.__ATLAS_PUBLIC_SPEND_PERF__={version:VERSION,...S.perf,measuredAt:new Date().toISOString()};render();return true;}catch(e){S.error=e;errorView(e);return false;}finally{S.loading=false;}}
+  async function open(){if(opening)return false;opening=true;window.AtlasMobileNav?.close?.();try{shell();return await load(false);}finally{opening=false;}}
+  document.addEventListener('click',e=>{const b=e.target?.closest?.('[data-view="public-spend"],[data-atlas-mobile-view="public-spend"]');if(!b)return;e.preventDefault();e.stopImmediatePropagation();open().catch(error=>errorView(error));},true);
+  window.AtlasPublicSpendV2={open,load,render,state:S,health:()=>window.__ATLAS_PUBLIC_SPEND_MOBILE_0573__||null};
+  window.AtlasPublicSpendMobile0573=window.AtlasPublicSpendV2;
+  window.AtlasPublicSpendRoute0573=window.AtlasPublicSpendV2;
   publish('installed');
 })();
