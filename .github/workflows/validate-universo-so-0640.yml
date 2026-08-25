@@ -23,8 +23,10 @@ jobs:
           node --check assets/atlas-universo-so-0640.js
           node --check assets/atlas-universo-so-0660.js
           node --check assets/atlas-public-spend-context-0571.js
-      - name: Contrato 0640
-        run: node tests/atlas-universo-so-0640.mjs
+      - name: Contrato Universo SO vigente
+        run: |
+          node tests/atlas-universo-so-0640.mjs
+          node tests/atlas-universo-so-0660.mjs
       - name: Regresión congelamiento 0670
         run: node tests/atlas-runtime-freeze-0670.mjs
       - name: Publicación
@@ -34,5 +36,7 @@ jobs:
           test -s _site/assets/atlas-universo-so-0640.css
           test -s _site/assets/atlas-universo-so-0660.js
           test -s _site/assets/atlas-public-spend-context-0571.js
-          grep -q 'atlas-universo-so-0640.js?v=0640-1' _site/index.html
-          grep -q 'atlas-universo-so-0640.css?v=0640-1' _site/index.html
+          grep -q 'atlas-universo-so-0640.js?v=0672-1' _site/index.html
+          grep -q 'atlas-universo-so-0640.css?v=0672-1' _site/index.html
+          ! grep -q '79\.449\|79449' _site/assets/atlas-universo-so-0640.js
+          ! grep -q '79\.449\|79449' _site/assets/atlas-universo-so-0660.js
