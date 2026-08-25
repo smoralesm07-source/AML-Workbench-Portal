@@ -1,0 +1,24 @@
+name: Validate Sector Representation 0690
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: JavaScript syntax
+        run: node --check assets/atlas-radar-layout-so-history.js
+      - name: Sector representation contract
+        run: node tests/atlas-sector-representation-0690.mjs
