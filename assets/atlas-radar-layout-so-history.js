@@ -1,8 +1,9 @@
-/* ATLAS AML · Radar Integrado refinement · compact sanctions */
+/* ATLAS AML · Radar Integrado refinement · compact sanctions + sector coverage */
 (() => {
   'use strict';
 
   let raf=0;
+  const CANONICAL_SECTORS=55;
 
   const fmt=(v,d=0)=>Number(v).toLocaleString('es-CL',{minimumFractionDigits:d,maximumFractionDigits:d});
   const pct=(v,d=1)=>`${v>=0?'+':''}${fmt(v,d)}%`;
@@ -60,11 +61,50 @@
     body.append(aside);
   }
 
+  function representedSectorCount(root){
+    const state=root.querySelector('#v036-fstate')?.textContent||'';
+    const match=state.match(/Mostrando\s+[\d.]+\s+de\s+([\d.]+)\s+sectores/i);
+    if(match)return Number(match[1].replace(/\./g,''))||0;
+    return root.querySelectorAll('.v036-mxrow').length;
+  }
+
+  function refineSectorRepresentation(root){
+    const represented=representedSectorCount(root);
+    if(!represented)return;
+    const missing=Math.max(0,CANONICAL_SECTORS-represented);
+    const coverage=100*represented/CANONICAL_SECTORS;
+    let card=root.querySelector('.atlas-sector-representation');
+
+    if(!card){
+      const cards=[...root.querySelectorAll('.v036-card')];
+      const historyCard=cards.find(c=>c.querySelector('h3')?.textContent.includes('Capacidad supervisiva frente al padrón'))
+        ||cards.find(c=>(c.textContent||'').includes('2021–2025'));
+      const anchor=historyCard?.closest('.v036-grid2eq,.v036-grid2')||historyCard;
+      if(!anchor)return;
+      card=document.createElement('article');
+      card.className='v036-card atlas-sector-representation';
+      anchor.insertAdjacentElement('afterend',card);
+    }
+
+    const signature=`${represented}|${missing}`;
+    if(card.dataset.signature===signature)return;
+    card.dataset.signature=signature;
+    card.innerHTML=`<header class="v036-cardhead"><div><span class="v036-kicker">Cobertura sectorial</span><h3>Sectores económicos sin representación</h3><p class="v036-hint">Catálogo canónico Ley 19.913 vs sectores con sujetos obligados inscritos observados en el corte estadístico 2025.</p></div></header>
+      <div class="v036-stats">
+        <div class="v036-stat"><div><span>Catálogo canónico</span><small>Actividades/sectores gobernados en Atlas</small></div><b>${fmt(CANONICAL_SECTORS)}</b></div>
+        <div class="v036-stat"><div><span>Sectores representados</span><small>Con fila materializada en el contrato 2025</small></div><b>${fmt(represented)}</b></div>
+        <div class="v036-stat crit"><div><span>Sin representación observada</span><small>Sin SO inscritos materializados en este corte</small></div><b>${fmt(missing)}</b></div>
+        <div class="v036-stat"><div><span>Cobertura sectorial</span><small>Representados / catálogo canónico</small></div><b>${fmt(coverage,1)}%</b></div>
+      </div>
+      <div class="v036-hint"><b>Cómo leer este dato:</b> “sin representación” significa que el contrato estadístico 2025 no materializa sujetos obligados inscritos para ese sector. No implica que la actividad esté fuera de la Ley 19.913 ni constituye por sí sola incumplimiento o riesgo.</div>`;
+  }
+
   function apply(){
     raf=0;
     const root=document.querySelector('.v036-real');
     if(!root) return;
     refineSanctions(root);
+    refineSectorRepresentation(root);
   }
 
   function schedule(){if(!raf)raf=requestAnimationFrame(apply);}
