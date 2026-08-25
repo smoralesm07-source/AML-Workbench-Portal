@@ -1,0 +1,41 @@
+name: Validate RES Federated Entity Master 0640
+
+on:
+  pull_request:
+    paths:
+      - 'assets/atlas-entity-federation-0640.js'
+      - 'assets/atlas-universo-so-0630.js'
+      - 'sql/atlas_v0640_res_federated_entity_master.sql'
+      - '.github/workflows/validate-res-federated-0640.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: node --check assets/atlas-entity-federation-0640.js && node --check assets/atlas-universo-so-0630.js
+      - name: Governance contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          js=Path('assets/atlas-entity-federation-0640.js').read_text()
+          hook=Path('assets/atlas-universo-so-0630.js').read_text()
+          sql=Path('sql/atlas_v0640_res_federated_entity_master.sql').read_text()
+          for marker in ["MASTER='aml_entity_master_v0553'","BASE='aml_entities'","identityPolicy:'RUT_EXACTO_ONLY'","scoreMutation:false","s.view==='entities'"]:
+              assert marker in js, marker
+          assert 'atlas-entity-federation-0640.js?v=0640-1' in hook
+          for marker in ['RES_RUT_CANONICO','RES_RUT_EXACTO_FORMA_SOCIETARIA','security_invoker=true','aml_entity_classification_override_v0620','refresh_aml_res_entity_bridge_v1']:
+              assert marker in sql, marker
+          assert "company_code in ('EIRL','SpA','SRL')" in sql
+          assert "'fuentes',jsonb_build_array('RES')" in sql
+          assert 'fuzzy' not in js.lower()
+          print('RES federated entity master 0640 contract OK')
+          PY
