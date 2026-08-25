@@ -1,0 +1,12 @@
+/* ATLAS AML · Universo SO 0.64 */
+.uso61-truth,.uso63-scope{display:none!important}
+.uso64-tier-strip{margin:10px 0 14px;padding:12px 14px;border:1px solid var(--line,#24384b);border-radius:12px;background:var(--panel,#101923)}
+.uso64-tier-strip h3{margin:0 0 4px;font-size:14px}
+.uso64-tier-strip>p{margin:0 0 10px;color:var(--muted,#8fa9c1);font-size:12px}
+.uso64-tiers{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.uso64-tier{padding:9px 10px;border:1px solid var(--line,#24384b);border-radius:9px;min-width:0}
+.uso64-tier b{display:block;font-size:18px;line-height:1.1}
+.uso64-tier span{display:block;margin-top:3px;font-size:11px;color:var(--muted,#8fa9c1)}
+.uso64-tier.total b{font-size:20px}
+.uso64-note{margin-top:8px;font-size:11px;color:var(--muted,#8fa9c1)}
+@media(max-width:780px){.uso64-tiers{grid-template-columns:repeat(2,minmax(0,1fr))}}
