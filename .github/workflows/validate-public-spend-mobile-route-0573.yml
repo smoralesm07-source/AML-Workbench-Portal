@@ -1,11 +1,12 @@
-name: Validate Public Spend Route 0575
+name: Validate Public Spend Progressive Route
 
 on:
   pull_request:
     paths:
       - 'assets/atlas-public-spend-mobile-route-0573.js'
+      - 'assets/atlas-public-spend-route-authority-0578.js'
+      - 'assets/atlas-public-spend-progressive-0577.css'
       - 'assets/atlas-mobile-nav.js'
-      - 'assets/atlas-public-spend-guided-0570.css'
       - 'index.html'
       - 'tools/build_atlas_site.py'
       - 'tests/atlas-public-spend-mobile-route-0573.mjs'
@@ -14,8 +15,9 @@ on:
     branches: [main]
     paths:
       - 'assets/atlas-public-spend-mobile-route-0573.js'
+      - 'assets/atlas-public-spend-route-authority-0578.js'
+      - 'assets/atlas-public-spend-progressive-0577.css'
       - 'assets/atlas-mobile-nav.js'
-      - 'assets/atlas-public-spend-guided-0570.css'
       - 'index.html'
       - 'tools/build_atlas_site.py'
       - 'tests/atlas-public-spend-mobile-route-0573.mjs'
@@ -34,18 +36,23 @@ jobs:
         with:
           node-version: 22
       - name: Syntax
-        run: node --check assets/atlas-public-spend-mobile-route-0573.js
-      - name: Production route contract
+        run: |
+          node --check assets/atlas-public-spend-mobile-route-0573.js
+          node --check assets/atlas-public-spend-route-authority-0578.js
+      - name: Progressive route contract
         run: node tests/atlas-public-spend-mobile-route-0573.mjs
-      - name: Verify compiled-only source policy
+      - name: Verify compiled production artifact
         shell: bash
         run: |
           set -euo pipefail
-          ! grep -q "./v037-public-spend.js" assets/atlas-public-spend-mobile-route-0573.js
-          ! grep -q "./v037-public-spend.css" assets/atlas-public-spend-mobile-route-0573.js
-          grep -q "COMPILED_BUNDLES_ONLY_NO_SOURCE_FETCH" assets/atlas-public-spend-mobile-route-0573.js
-          grep -q "recoverVisibleSurface" assets/atlas-public-spend-mobile-route-0573.js
           python tools/build_atlas_site.py --out _site-public-spend-route
           test -s _site-public-spend-route/assets/atlas-public-spend-mobile-route-0573.js
+          test -s _site-public-spend-route/assets/atlas-public-spend-route-authority-0578.js
+          test -s _site-public-spend-route/assets/atlas-public-spend-progressive-0577.css
           test ! -e _site-public-spend-route/v037-public-spend.js
           test ! -e _site-public-spend-route/v037-public-spend.css
+          grep -q 'progressive route 0577' _site-public-spend-route/assets/atlas-public-spend-mobile-route-0573.js
+          grep -q 'navigation authority 0578' _site-public-spend-route/assets/atlas-public-spend-route-authority-0578.js
+          grep -q "if(view===VIEW)return openFast('window.navigate')" _site-public-spend-route/assets/atlas-public-spend-route-authority-0578.js
+          grep -q 'atlas-public-spend-mobile-route-0573.js?v=0577-1' _site-public-spend-route/index.html
+          grep -q 'atlas-public-spend-route-authority-0578.js?v=0578-1' _site-public-spend-route/index.html
