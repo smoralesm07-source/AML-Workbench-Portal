@@ -17,7 +17,7 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Materializar Presupuesto, InfoLobby y CGR
         shell: bash
@@ -32,3 +32,11 @@ jobs:
             'https://ldmtlwzqaqmegedktlxr.supabase.co/functions/v1/aml-public-spend-context-sync')"
           printf '%s\n' "$RESPONSE"
           printf '%s' "$RESPONSE" | python -c 'import json,sys; d=json.load(sys.stdin); assert d.get("ok") is True, d; print("Context materialized:", d.get("counts"), "total=", d.get("total"))'
+
+          LINKS="$(curl -fsSL -X POST \
+            -H "Authorization: Bearer ${OIDC_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -d '{}' \
+            'https://ldmtlwzqaqmegedktlxr.supabase.co/functions/v1/aml-public-spend-context-links-refresh')"
+          printf '%s\n' "$LINKS"
+          printf '%s' "$LINKS" | python -c 'import json,sys; d=json.load(sys.stdin); assert d.get("ok") is True, d; print("Context links refreshed:", d.get("links"))'
