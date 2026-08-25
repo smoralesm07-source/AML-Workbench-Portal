@@ -131,6 +131,25 @@ jobs:
           ! test -e _site/assets/atlas-auth-stability-0440.js
           ! test -e _site/v0441-session-shell-guard.module.js
 
+      - name: Vendor Gasto Público fast snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p _site/data/public-spend
+          curl --fail --location --retry 4 --retry-delay 2 --max-time 90 \
+            'https://raw.githubusercontent.com/smoralesm07-source/Rada_Presupuesto_Abierto/main/docs/data/spend_view_v2.json' \
+            -o _site/data/public-spend/spend_view_v2.json
+          python - <<'PY'
+          import json, pathlib
+          p=pathlib.Path('_site/data/public-spend/spend_view_v2.json')
+          assert p.stat().st_size > 100_000, p.stat().st_size
+          d=json.loads(p.read_text(encoding='utf-8'))
+          assert d.get('schema')=='PRESUPUESTO_SPEND_VIEW_V2', d.get('schema')
+          assert isinstance(d.get('services'), list) and len(d['services'])>0
+          assert isinstance(d.get('flows'), list) and len(d['flows'])>0
+          print(f'Public spend fast snapshot: {p.stat().st_size} bytes · {len(d["services"])} services · {len(d["flows"])} flows')
+          PY
+
       - name: Validate compiled runtime
         shell: bash
         run: |
@@ -139,6 +158,12 @@ jobs:
             test -e "$f" || continue
             node --check "$f"
           done
+          node --check _site/assets/atlas-public-spend-mobile-route-0573.js
+          test -s _site/assets/atlas-public-spend-progressive-0577.css
+          test -s _site/data/public-spend/spend_view_v2.json
+          grep -q 'progressive route 0577' _site/assets/atlas-public-spend-mobile-route-0573.js
+          grep -q 'atlas-public-spend-fast-host' _site/assets/atlas-public-spend-mobile-route-0573.js
+          ! grep -q "class=\"v037-spend" _site/assets/atlas-public-spend-mobile-route-0573.js
           python tools/audit_runtime_authority.py --root _site
           grep -R -q 'aml_v0444_uaf_sii_summary' _site/atlas-runtime-current-*.js
           grep -R -q 'AtlasReconciliationFilters' _site/atlas-runtime-current-*.js
@@ -187,13 +212,18 @@ jobs:
           curl -fsSL --retry 12 --retry-delay 2 "$base/atlas-release.json?_atlas=${stamp}" -o /tmp/release.json
           curl -fsSL --retry 12 --retry-delay 2 "$base/atlas-runtime-report.json?_atlas=${stamp}" -o /tmp/runtime.json
           curl -fsSL --retry 12 --retry-delay 2 "$base/?_atlas=${stamp}" -o /tmp/index.html
+          curl -fsSL --retry 12 --retry-delay 2 "$base/data/public-spend/spend_view_v2.json?_atlas=${stamp}" -o /tmp/public-spend-fast.json
           python - <<'PY'
           import json,os
           r=json.load(open('/tmp/release.json'))
           rt=json.load(open('/tmp/runtime.json'))
+          sp=json.load(open('/tmp/public-spend-fast.json'))
           assert r['release']==os.environ['ATLAS_RELEASE'] and r['build']==os.environ['ATLAS_BUILD'],r
           assert rt['release']==os.environ['ATLAS_RELEASE'] and rt['build']==os.environ['ATLAS_BUILD'],rt
           assert rt.get('legacy_auth_runtime_published') is False,rt
+          assert sp.get('schema')=='PRESUPUESTO_SPEND_VIEW_V2',sp.get('schema')
+          assert len(sp.get('services') or [])>0 and len(sp.get('flows') or [])>0
           PY
           grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" /tmp/index.html
           grep -q "atlas-runtime-current-01.js?r=${ATLAS_BUILD}" /tmp/index.html
+          grep -q 'atlas-public-spend-mobile-route-0573.js?v=0577-1' /tmp/index.html
