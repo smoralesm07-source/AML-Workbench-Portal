@@ -58,12 +58,24 @@ jobs:
           assert rt['historical_source_assets_published'] is False,rt
           assert rt.get('legacy_auth_runtime_published') is False,rt
           assert rt['visible_version_authority']=='atlas-release-guard.js',rt
-          assert len(rt['published_css'])==1 and rt['published_js'],rt
+          assert rt['published_css']==['atlas-runtime-current.css','assets/atlas-public-spend-v2.css'],rt
+          assert 'assets/atlas-public-spend-v2.js' in rt['published_js'],rt
+          assert 'assets/atlas-public-spend-route-authority-0578.js' in rt['published_js'],rt
           PY
           grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" /tmp/live.html
           grep -q "data-aml-build=\"${ATLAS_BUILD}\"" /tmp/live.html
           grep -q "atlas-runtime-current.css?r=${ATLAS_BUILD}" /tmp/live.html
           grep -q "atlas-runtime-current-01.js?r=${ATLAS_BUILD}" /tmp/live.html
+          grep -q 'assets/atlas-public-spend-v2.js?v=gp2-2' /tmp/live.html
+          grep -q 'assets/atlas-public-spend-route-authority-0578.js?v=gp2-a3' /tmp/live.html
+          grep -q 'assets/atlas-radar-integrated-cleanup-0641.js?v=0704-1' /tmp/live.html
+          grep -q 'assets/atlas-universo-so-workbench-0700.js?v=0704-2' /tmp/live.html
+          grep -q 'assets/atlas-operational-recovery-0704.js?v=0704-1' /tmp/live.html
+          curl -fsSL "${URL}assets/atlas-operational-recovery-0704.js?_atlas=${stamp}" -o /tmp/recovery.js
+          grep -q "VERSION='0.70.4'" /tmp/recovery.js
+          grep -q "v019LoadOverview" /tmp/recovery.js
+          grep -q "v019LoadQuestions" /tmp/recovery.js
+          grep -q "AtlasPublicSpendV2" /tmp/recovery.js
           ! grep -q '?b=' /tmp/live.html
           ! grep -q 'atlas-auth-stability-0440.js' /tmp/live.html
           for old in v0222-radar-hotfix.js v028-ipa3-global.js v032-irg-territory.js v0342-runtime.js v035-radar-command-center.js v037-public-spend.js v038-entity360.js v039-atlas-brand.js v040-theme-bootstrap.js v0441-session-shell-guard.module.js; do
