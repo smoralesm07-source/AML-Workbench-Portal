@@ -9,6 +9,14 @@
   const esc=core.esc||((v)=>String(v??''));
   let scopeCache=null,loading=false;
 
+  function load0660(){
+    if(document.querySelector('script[data-atlas-uso66]'))return;
+    const s=document.createElement('script');
+    s.src='./assets/atlas-universo-so-0660.js?v=0660-1';
+    s.dataset.atlasUso66='1';
+    document.head.appendChild(s);
+  }
+
   function cleanLegacyCards(){
     document.querySelectorAll('.uso61-truth,.uso63-scope,.uso64-tier-strip').forEach(n=>n.remove());
   }
@@ -99,7 +107,7 @@
   },true);
 
   const obs=new MutationObserver(()=>{void patch();});
-  const start=()=>{const c=document.querySelector('#content')||document.body;obs.observe(c,{childList:true,subtree:true});void patch();};
+  const start=()=>{load0660();const c=document.querySelector('#content')||document.body;obs.observe(c,{childList:true,subtree:true});void patch();};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-  window.__ATLAS_UNIVERSO_SO_0640__={active:true,version:'0.65.0',operationalSO:10294,potentialSO:79449,potentialDefinition:'ACTECO_19913_VIGENTE_SII_NO_UAF',legacy2033:false,patch};
+  window.__ATLAS_UNIVERSO_SO_0640__={active:true,version:'0.66.0',operationalSO:10294,potentialSO:79449,potentialDefinition:'ACTECO_19913_VIGENTE_SII_NO_UAF',multisource:true,legacy2033:false,patch};
 })();
