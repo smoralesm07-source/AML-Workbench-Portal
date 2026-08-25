@@ -2,6 +2,45 @@
 
 Frontend estático y autenticado del **AML Analytical Workbench**.
 
+## Sujetos Obligados (build 0560) — caracterización y priorización fiscalizadora
+
+Nueva sección **Sujetos Obligados** (`docs/obligated-subjects-0560.md`). El padrón
+público de la UAF —9.782 inscritos en 49 sectores de la Ley 19.913— deja de ser
+una bandera booleana que teñía otras pantallas y pasa a tener superficie propia.
+
+- **Panorama del padrón:** cuadrante de vigilancia sectorial (vulnerabilidad
+  estructural contra eventos UAF por cada 100 inscritos, con las medianas del
+  propio padrón como referencia), serie sancionatoria por año con su porción
+  atribuida, brechas de coherencia registral, distribución territorial y carga
+  por sector repartida por banda.
+- **Padrón fiscalizable:** exploración con facetas por sector, territorio,
+  condición tributaria, naturaleza del sujeto, banda del índice, historial
+  sancionatorio, término de giro y giro atípico.
+- **Expediente de fiscalización:** identidad, descomposición completa del índice
+  con la evidencia de cada componente, coherencia UAF ↔ SII, historial de
+  supervisión en línea de tiempo, trayectoria tributaria por año, posición frente
+  a pares del propio sector y lectura cruzada con IPA3 v0.4-shadow.
+- **IPF-1.0:** vulnerabilidad sectorial (25), historial de supervisión UAF (25),
+  coherencia registral (20), escala y complejidad (18) y brecha de
+  observabilidad (12). Promedio ponderado sólo sobre los componentes con
+  evidencia; un componente sin evidencia sale del promedio y baja la credibilidad
+  declarada, que se muestra siempre aparte del puntaje.
+- **Atribución sancionatoria:** los 324 eventos publicados por la UAF llegaban
+  todos con `entity_id` nulo. La sección atribuye 243 de ellos a 213 sujetos
+  obligados por coincidencia única de nombre normalizado, sin escribir en
+  `aml_sanctions` y sin promover identidad canónica.
+- **Tres hechos que la sección deja a la vista:** 429 sujetos con término de giro
+  publicado en SII e inscripción vigente en el padrón; 2.110 sin perfil
+  tributario de empresa —todos personas naturales, de modo que la ausencia es
+  esperable y no puntúa como brecha—; y sectores de alta vulnerabilidad
+  estructural con supervisión publicada bajo la mediana.
+
+Las bandas se anclan en percentiles del padrón vigente y así se declaran: el IPF
+ordena a quién mirar primero, no estima probabilidad de LA/FT ni imputa
+incumplimiento. Sanción administrativa no es delito, término de giro publicado no
+es baja del registro, giro atípico no es incumplimiento y ausencia de dato no es
+cero.
+
 ## v0.51.1 — Entidades: exploración y caracterización profunda
 
 La sección **Entidades** se reconstruyó completa (`docs/entity-intelligence-0510.md`).
