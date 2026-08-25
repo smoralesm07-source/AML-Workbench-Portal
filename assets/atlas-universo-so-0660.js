@@ -1,75 +1,47 @@
 'use strict';
-(function atlasUniversoSO0660(){
+(function atlasUniversoSO0672Evidence(){
   const core=window.__ATLAS_OBLIGATED__;
   if(!core){window.__ATLAS_UNIVERSO_SO_0660__={active:false};return;}
-  const VIEW='aml_v_uaf_potential_architecture_status_v0660';
+  const VIEW='aml_v_uaf_universe_current_v0671';
   const db=()=>{try{return typeof sb!=='undefined'?sb:(window.sb||null);}catch(_e){return window.sb||null;}};
   const fmt=core.fmt||((v)=>Number(v||0).toLocaleString('es-CL'));
-  const esc=core.esc||((v)=>String(v??''));
   let cache=null,loadPromise=null,queued=false,running=false;
 
   function load0700(){
     if(window.__ATLAS_UNIVERSO_SO_0700__?.active||document.querySelector('script[data-atlas-uso70]'))return;
-    const s=document.createElement('script');
-    s.src='./assets/atlas-universo-so-workbench-0700.js?v=0700-1';
-    s.dataset.atlasUso70='1';
-    document.head.appendChild(s);
+    const s=document.createElement('script');s.src='./assets/atlas-universo-so-workbench-0700.js?v=0703-1';s.dataset.atlasUso70='1';document.head.appendChild(s);
   }
 
   async function load(){
-    if(cache)return cache;
-    if(loadPromise)return loadPromise;
+    if(cache)return cache;if(loadPromise)return loadPromise;
     const client=db();if(!client)return null;
-    loadPromise=(async()=>{
-      try{
-        const {data,error}=await client.from(VIEW).select('*').order('source_id');
-        if(error)throw error;
-        cache=data||[];
-        return cache;
-      }catch(_e){return null;}
-      finally{loadPromise=null;}
-    })();
+    loadPromise=(async()=>{try{const {data,error}=await client.from(VIEW).select('*').maybeSingle();if(error)throw error;cache=data||null;return cache;}catch(_e){return null;}finally{loadPromise=null;}})();
     return loadPromise;
   }
 
-  function card(rows){
-    const sii=rows.find(r=>r.source_id==='SII_ACTECO')||{};
-    const res=rows.find(r=>r.source_id==='RES')||{};
-    const authoritative=Boolean(sii.unified_count_authoritative);
-    const unified=Number(sii.unified_materialized_ruts||0);
-    const baseline=Number(sii.baseline_declared_ruts||79449);
-    const resN=Number(res.eligible_materialized_ruts||0);
+  function card(row){
+    const potential=Number(row?.potential_ruts||0),obligated=Number(row?.obligated_ruts||0),res=Number(row?.potential_res_overlap_ruts||0);
+    if(!potential)return '';
+    const coverage=potential?Math.round(res*10000/potential)/100:0;
     return `<section class="uso66-multi">
-      <div class="uso66-title"><div><span>ARQUITECTURA MULTIFUENTE</span><h3>Potenciales SO preparados para SII + RES + nuevas fuentes</h3><p>Los productores agregan evidencia sobre un mismo RUT. Atlas deduplica la entidad y conserva todas las fuentes que justifican su incorporación al screening.</p></div><div class="uso66-total"><b>${fmt(authoritative?unified:baseline)}</b><small>${authoritative?'universo consolidado':'piso vigente de screening'}</small></div></div>
+      <div class="uso66-title"><div><span>COBERTURA DE FUENTES</span><h3>Universo potencial materializado por RUT</h3><p>El screening SII está materializado individualmente. RES se utiliza como enriquecimiento societario y no como gatillante autónomo de obligación.</p></div><div class="uso66-total"><b>${fmt(potential)}</b><small>RUT potenciales vigentes</small></div></div>
       <div class="uso66-sources">
-        <div class="uso66-source ready"><i></i><div><strong>SII · ACTECO</strong><span>${fmt(baseline)} declarados · ${fmt(sii.eligible_materialized_ruts||0)} RUT materializados en la nueva capa</span></div><em>${esc(sii.source_status||'BASELINE_DECLARED')}</em></div>
-        <div class="uso66-source ${resN?'ready':'standby'}"><i></i><div><strong>RES · Registro de Empresas y Sociedades</strong><span>${resN?fmt(resN)+' candidatos RES calificados':'adaptador preparado; aún sin candidatos RES calificados'}</span></div><em>${esc(res.source_status||'ADAPTER_READY')}</em></div>
+        <div class="uso66-source ready"><i></i><div><strong>SII · ACTECO</strong><span>${fmt(potential)} RUT únicos · corte ${row?.sii_cutoff||'vigente'}</span></div><em>MATERIALIZADO</em></div>
+        <div class="uso66-source ready"><i></i><div><strong>RES · Registro de Empresas y Sociedades</strong><span>${fmt(res)} potenciales con enriquecimiento societario · ${coverage.toLocaleString('es-CL')}% de cobertura</span></div><em>ENRIQUECIMIENTO</em></div>
+        <div class="uso66-source ready"><i></i><div><strong>UAF · padrón inscrito</strong><span>${fmt(obligated)} RUT usados para exclusión exacta del screening potencial</span></div><em>ANTI-JOIN RUT</em></div>
       </div>
-      <div class="uso66-rule"><b>Regla de expansión:</b> una entidad nueva se suma sólo si una fuente produce evidencia que la vincula con una categoría o actividad de la Ley 19.913 y no aparece inscrita en UAF. <b>Estar en RES, por sí solo, no basta.</b></div>
-      <details><summary>Cómo evita Atlas duplicar o inflar el universo</summary><p>Cada productor registra evidencia con identificador de fuente y clave propia, pero la unión operacional se hace por RUT. Si SII y RES detectan la misma entidad, cuenta una sola vez y aumenta su huella de fuentes. Mientras los 79.449 RUT SII no estén individualmente materializados, Atlas mantiene ese total como piso y no suma RES a ciegas, porque todavía no puede medir el solapamiento exacto.</p></details>
+      <div class="uso66-rule"><b>Control de integridad:</b> los potenciales se deduplican por RUT y todo RUT observado en el padrón UAF queda excluido. La presencia en RES no incorpora por sí sola una entidad al universo potencial.</div>
+      <details><summary>Cómo interpreta Atlas el universo</summary><p>El total publicado corresponde al último snapshot materializado con ACTECO candidate_use=SI, estado SII ACTIVE_AS_PUBLISHED y exclusión exacta del padrón UAF. La distribución sectorial puede contar un RUT en más de un sector cuando tiene varias actividades elegibles; el headline, en cambio, siempre cuenta RUT únicos.</p></details>
     </section>`;
   }
 
   async function patch(){
-    if(running)return;
-    const host=document.querySelector('#so-potential');
-    if(!host||host.querySelector('.uso66-multi'))return;
-    running=true;
-    try{
-      const rows=await load();if(!rows||!document.contains(host)||host.querySelector('.uso66-multi'))return;
-      const first=host.querySelector('.uso65-screening')||host.firstElementChild;
-      if(first)first.insertAdjacentHTML('afterend',card(rows));else host.insertAdjacentHTML('afterbegin',card(rows));
-    }finally{running=false;}
+    if(running)return;const host=document.querySelector('#so-potential');if(!host||host.querySelector('.uso66-multi'))return;
+    running=true;try{const row=await load();if(!row||!document.contains(host)||host.querySelector('.uso66-multi'))return;const html=card(row);if(!html)return;const first=host.querySelector('.uso65-screening')||host.firstElementChild;if(first)first.insertAdjacentHTML('afterend',html);else host.insertAdjacentHTML('afterbegin',html);}finally{running=false;}
   }
-
-  function schedule(){
-    if(queued)return;
-    queued=true;
-    requestAnimationFrame(()=>{queued=false;void patch();});
-  }
-
+  function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;void patch();});}
   const obs=new MutationObserver(schedule);
   const start=()=>{load0700();const c=document.querySelector('#content')||document.body;obs.observe(c,{childList:true,subtree:true});schedule();};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-  window.__ATLAS_UNIVERSO_SO_0660__={active:true,version:'0.70.0',view:VIEW,patch,schedule,load0700};
+  window.__ATLAS_UNIVERSO_SO_0660__={active:true,version:'0.67.2',view:VIEW,patch,schedule,load0700};
 })();
