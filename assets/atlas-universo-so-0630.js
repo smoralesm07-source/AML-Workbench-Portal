@@ -92,3 +92,14 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
   window.__ATLAS_UNIVERSO_SO_0630__={active:true,version:'0.63.0',publicScopeOnly:true,individualReportingBehavior:false};
 })();
+
+/* Loader tardío y autocontenido: evita tocar las autoridades históricas de
+   Entidades y mantiene la federación limitada a esa sección. */
+(function loadAtlasEntityFederation0640(){
+  if(document.querySelector('script[data-atlas-entity-federation="0640"]'))return;
+  const script=document.createElement('script');
+  script.src='./assets/atlas-entity-federation-0640.js?v=0640-1';
+  script.async=false;
+  script.dataset.atlasEntityFederation='0640';
+  document.head.appendChild(script);
+})();
