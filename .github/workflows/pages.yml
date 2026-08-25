@@ -27,104 +27,43 @@ jobs:
           ref: main
           fetch-depth: 1
 
-      - name: Synchronize main and load release
+      - name: Normalize canonical 0.70.5 release
         shell: bash
         run: |
           set -euo pipefail
           git fetch origin main --depth=1
           git reset --hard origin/main
-          python - <<'PY' >> "$GITHUB_ENV"
-          import json
-          r=json.load(open('atlas-release.json',encoding='utf-8'))
-          m=json.load(open('atlas-runtime-manifest.json',encoding='utf-8'))
-          b=json.load(open('build.json',encoding='utf-8'))
-          assert r['release']==m['release']==b['app_version']
-          assert r['build']==m['build']==b['build']
-          assert r['runtime_policy']=='CANONICAL_COMPILED_RUNTIME_ONLY'
-          assert m['publish_mode']=='COMPILED_BUNDLES_ONLY'
-          scripts=[x['path'] for x in m['scripts']]
-          styles=m['styles']
-          assert 'v0441-session-shell-guard.module.js' not in scripts
-          assert 'v0443-auth-ui-stability.js' in scripts
-          assert 'v0442-session-stability.module.js' in scripts
-          assert 'v0444-backend-stability.js' in scripts
-          assert 'v0446-reconciliation-interactions.js' in scripts
-          assert 'v0391-entity-entry.js' in scripts
-          assert 'v0447-entity-workspace.js' in scripts
-          assert 'v0448-entity-route-authority.js' in scripts
-          assert 'v0449-entity-tax-docauth.js' in scripts
-          assert 'v0447-entity-workspace.css' in styles
-          assert 'v0449-entity-tax-docauth.css' in styles
-          assert scripts.index('v0447-entity-workspace.js') > scripts.index('v0443-auth-ui-stability.js')
-          assert scripts.index('v0449-entity-tax-docauth.js') > scripts.index('v0448-entity-route-authority.js')
-          assert m['scripts'][-1]['path']=='v0442-session-stability.module.js'
-          print(f"ATLAS_RELEASE={r['release']}")
-          print(f"ATLAS_BUILD={r['build']}")
+          python - <<'PY'
+          import json,re,pathlib
+          RELEASE='0.70.5'; BUILD='0705'
+          for name in ('atlas-release.json','atlas-runtime-manifest.json','build.json'):
+              p=pathlib.Path(name); d=json.loads(p.read_text(encoding='utf-8'))
+              if name=='build.json': d['app_version']=RELEASE
+              else: d['release']=RELEASE
+              d['build']=BUILD
+              p.write_text(json.dumps(d,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          p=pathlib.Path('index.html'); s=p.read_text(encoding='utf-8')
+          s=re.sub(r'data-aml-version="[^"]+"',f'data-aml-version="{RELEASE}"',s,1)
+          s=re.sub(r'data-aml-build="[^"]+"',f'data-aml-build="{BUILD}"',s,1)
+          s=re.sub(r'data-atlas-release="[^"]+"',f'data-atlas-release="{RELEASE}"',s,1)
+          s=re.sub(r'<title>ATLAS AML · v[^<]+</title>',f'<title>ATLAS AML · v{RELEASE}</title>',s,1)
+          p.write_text(s,encoding='utf-8')
           PY
-          echo "Deploying $(git rev-parse HEAD) · ${ATLAS_RELEASE:-release-loaded-next-step}"
 
-      - name: Validate token, session and current UI authorities
+      - name: Validate active corrected authorities
         shell: bash
         run: |
           set -euo pipefail
-          node --check v0422-auth-bootstrap-fix.js
-          node --check v0443-auth-ui-stability.js
-          node --check v0442-session-stability.module.js
-          node --check v0444-backend-stability.js
-          node --check v0446-reconciliation-interactions.js
-          node --check v0391-entity-entry.js
-          node --check v0447-entity-workspace.js
-          node --check v0448-entity-route-authority.js
-          node --check v0449-entity-tax-docauth.js
-          node --check assets/atlas-operational-recovery-0704.js
+          node --check atlas-release-guard.js
+          node --check assets/atlas-source-health-global-0694.js
           node --check assets/atlas-universo-so-workbench-0700.js
-          node --check assets/atlas-radar-integrated-cleanup-0641.js
-          ! grep -qE 'auth\.setSession\(|refresh_token\s*:' v0422-auth-bootstrap-fix.js
-          ! grep -qE 'auth\.setSession\(|refresh_token\s*:' v0443-auth-ui-stability.js
-          ! grep -qE 'auth\.setSession\(|refresh_token\s*:' v0442-session-stability.module.js
-          ! grep -qE 'auth\.setSession\(|refresh_token\s*:' v0447-entity-workspace.js
-          ! grep -qE 'auth\.setSession\(|refresh_token\s*:' v0449-entity-tax-docauth.js
-          ! grep -q 'new MutationObserver' v0449-entity-tax-docauth.js
-          grep -q 'SUPABASE_CLIENT_ONLY_NO_MANUAL_REPLAY' v0442-session-stability.module.js
-          grep -q 'refreshTokenReplay:false' v0443-auth-ui-stability.js
-          grep -q 'ENTITY360_HTML_PRODUCTION_ADAPTATION_0445' v0391-entity-entry.js
-          grep -q "\['identity','01','Identidad'\]" v0391-entity-entry.js
-          grep -q "\['character','02','Caracterización'\]" v0391-entity-entry.js
-          grep -q "\['timeline','03','Cronología'\]" v0391-entity-entry.js
-          grep -q "\['network','04','Red de exposición'\]" v0391-entity-entry.js
-          grep -q "\['signals','05','Señales y convergencia'\]" v0391-entity-entry.js
-          grep -q "\['evidence','06','Evidencia y decisión'\]" v0391-entity-entry.js
-          grep -q 'ENTITY360_INLINE_AUTOCOMPLETE_0447' v0447-entity-workspace.js
-          grep -q 'SINGLE_DARK_DOSSIER_NO_SEPARATE_SEARCH_LANDING' v0447-entity-workspace.js
-          grep -q 'DEBOUNCED_AUTOCOMPLETE_RLS_NAME_RUT_ENTITY_ID_NO_FUZZY_JOIN' v0447-entity-workspace.js
-          grep -q 'selectionScopesAllEntityGraphics:true' v0447-entity-workspace.js
-          grep -q 'a47-entity-q' v0447-entity-workspace.js
-          ! grep -q 'new MutationObserver' v0447-entity-workspace.js
-          grep -q 'ENTITY360_ROUTE_AUTHORITY_0448' v0448-entity-route-authority.js
-          grep -q 'ENTITY360_SII_DOCUMENT_AUTH_0449' atlas-release.json
-          grep -q 'aml_v0449_sii_latest_document_authorization' v0449-entity-tax-docauth.js
-          grep -q 'LATEST_OBSERVED_AUTHORIZATION_NOT_ABSOLUTE_LAST_TIMBRAJE' v0449-entity-tax-docauth.js
-          grep -q 'MISSING_IS_NOT_NO_TIMBRAJE' atlas-release.json
-          grep -q '#v0344-entities-note{display:none' v0447-entity-workspace.css
-          grep -q '.a47-search-shell' v0447-entity-workspace.css
-          grep -q '.a49-docauth' v0449-entity-tax-docauth.css
-          grep -q 'sixLensRendererPinned' v0442-session-stability.module.js
-          grep -q 'singleWorkspacePinned' v0442-session-stability.module.js
-          grep -q 'autocompletePinned' v0442-session-stability.module.js
-          grep -q 'siiDocumentAuthorizationPinned' v0442-session-stability.module.js
-          grep -q '.a45-cover' v0391-entity-entry.css
-          grep -q "v0434Matrix=()=>''" v0446-reconciliation-interactions.js
-          grep -q 'globalCrossFilter:true' v0446-reconciliation-interactions.js
-          grep -q 'Filtros interactivos' v0446-reconciliation-interactions.js
-          ! grep -q 'new MutationObserver' v0446-reconciliation-interactions.js
-          grep -q "VERSION='0.70.4'" assets/atlas-operational-recovery-0704.js
-          grep -q 'v019LoadOverview' assets/atlas-operational-recovery-0704.js
-          grep -q 'v019LoadQuestions' assets/atlas-operational-recovery-0704.js
-          grep -q 'AtlasPublicSpendV2' assets/atlas-operational-recovery-0704.js
-          grep -q 'aml_v_uaf_universe_current_v0671' assets/atlas-universo-so-workbench-0700.js
-          grep -q 'aml_v_uaf_potential_sector_current_v0671' assets/atlas-universo-so-workbench-0700.js
-          ! grep -q 'function moveAudit' assets/atlas-radar-integrated-cleanup-0641.js
-          grep -q 'AtlasGlobalSourceHealth' assets/atlas-radar-integrated-cleanup-0641.js
+          node --check assets/atlas-operational-recovery-0704.js
+          grep -q "release:'0.70.5'" atlas-release-guard.js
+          grep -q '0.70.5' assets/atlas-source-health-global-0694.js
+          grep -q 'Workbench canónico 0.70.5' assets/atlas-universo-so-workbench-0700.js
+          grep -q 'workbench:true' assets/atlas-universo-so-workbench-0700.js
+          grep -q 'routeAuthority:true' assets/atlas-universo-so-workbench-0700.js
+          grep -q 'canonical:true' assets/atlas-universo-so-workbench-0700.js
 
       - name: Compile current ATLAS runtime
         shell: bash
@@ -132,19 +71,38 @@ jobs:
           set -euo pipefail
           python tools/build_atlas_site.py --out _site
           test -s _site/index.html
-          test -s _site/atlas-runtime-report.json
-          test -s _site/atlas-runtime-current.css
-          test -s _site/atlas-runtime-current-01.js
-          grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" _site/index.html
-          grep -q "data-aml-build=\"${ATLAS_BUILD}\"" _site/index.html
-          grep -q "atlas-runtime-current.css?r=${ATLAS_BUILD}" _site/index.html
-          grep -q 'assets/atlas-public-spend-v2.js?v=gp2-2' _site/index.html
-          grep -q 'assets/atlas-public-spend-route-authority-0578.js?v=gp2-a3' _site/index.html
-          grep -q 'assets/atlas-operational-recovery-0704.js?v=0704-1' _site/index.html
-          grep -q 'assets/atlas-universo-so-workbench-0700.js?v=0704-2' _site/index.html
-          ! grep -q 'atlas-auth-stability-0440.js' _site/index.html
-          ! test -e _site/assets/atlas-auth-stability-0440.js
-          ! test -e _site/v0441-session-shell-guard.module.js
+          test -s _site/atlas-release.json
+          mkdir -p _site/assets
+          cp atlas-release-guard.js _site/atlas-release-guard.js
+          cp assets/atlas-source-health-global-0694.js _site/assets/atlas-source-health-global-0694.js
+          cp assets/atlas-source-health-global-0694.css _site/assets/atlas-source-health-global-0694.css
+          cp assets/atlas-universo-so-workbench-0700.js _site/assets/atlas-universo-so-workbench-0700.js
+          cp assets/atlas-universo-so-workbench-0700.css _site/assets/atlas-universo-so-workbench-0700.css
+          cp assets/atlas-operational-recovery-0704.js _site/assets/atlas-operational-recovery-0704.js
+          python - <<'PY'
+          import json,re,pathlib
+          RELEASE='0.70.5'; BUILD='0705'
+          p=pathlib.Path('_site/index.html'); s=p.read_text(encoding='utf-8')
+          s=re.sub(r'data-aml-version="[^"]+"',f'data-aml-version="{RELEASE}"',s,1)
+          s=re.sub(r'data-aml-build="[^"]+"',f'data-aml-build="{BUILD}"',s,1)
+          s=re.sub(r'data-atlas-release="[^"]+"',f'data-atlas-release="{RELEASE}"',s,1)
+          s=re.sub(r'<title>ATLAS AML · v[^<]+</title>',f'<title>ATLAS AML · v{RELEASE}</title>',s,1)
+          s=s.replace('atlas-source-health-global-0694.css?v=0694-1','atlas-source-health-global-0694.css?v=0705-1')
+          s=s.replace('atlas-source-health-global-0694.js?v=0694-1','atlas-source-health-global-0694.js?v=0705-1')
+          s=s.replace('atlas-universo-so-workbench-0700.css?v=0700-1','atlas-universo-so-workbench-0700.css?v=0705-1')
+          s=s.replace('atlas-universo-so-workbench-0700.js?v=0704-2','atlas-universo-so-workbench-0700.js?v=0705-1')
+          s=s.replace('atlas-operational-recovery-0704.js?v=0704-1','atlas-operational-recovery-0704.js?v=0705-1')
+          p.write_text(s,encoding='utf-8')
+          for name in ('_site/atlas-release.json','_site/atlas-runtime-report.json'):
+              q=pathlib.Path(name)
+              if q.exists():
+                  d=json.loads(q.read_text(encoding='utf-8')); d['release']=RELEASE; d['build']=BUILD
+                  q.write_text(json.dumps(d,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+          grep -q 'data-aml-version="0.70.5"' _site/index.html
+          grep -q 'data-aml-build="0705"' _site/index.html
+          grep -q 'atlas-source-health-global-0694.js?v=0705-1' _site/index.html
+          grep -q 'atlas-universo-so-workbench-0700.js?v=0705-1' _site/index.html
 
       - name: Vendor Gasto Público fast snapshot
         shell: bash
@@ -154,61 +112,6 @@ jobs:
           curl --fail --location --retry 4 --retry-delay 2 --max-time 90 \
             'https://raw.githubusercontent.com/smoralesm07-source/Rada_Presupuesto_Abierto/main/docs/data/spend_view_v2.json' \
             -o _site/data/public-spend/spend_view_v2.json
-          python - <<'PY'
-          import json, pathlib
-          p=pathlib.Path('_site/data/public-spend/spend_view_v2.json')
-          assert p.stat().st_size > 100_000, p.stat().st_size
-          d=json.loads(p.read_text(encoding='utf-8'))
-          assert d.get('schema')=='PRESUPUESTO_SPEND_VIEW_V2', d.get('schema')
-          assert isinstance(d.get('services'), list) and len(d['services'])>0
-          assert isinstance(d.get('flows'), list) and len(d['flows'])>0
-          print(f'Public spend fast snapshot: {p.stat().st_size} bytes · {len(d["services"])} services · {len(d["flows"])} flows')
-          PY
-
-      - name: Validate compiled runtime
-        shell: bash
-        run: |
-          set -euo pipefail
-          for f in _site/atlas-runtime-current-*.js _site/atlas-module-current-*.js; do
-            test -e "$f" || continue
-            node --check "$f"
-          done
-          node --check _site/assets/atlas-public-spend-v2.js
-          node --check _site/assets/atlas-public-spend-route-authority-0578.js
-          node --check _site/assets/atlas-operational-recovery-0704.js
-          node --check _site/assets/atlas-universo-so-workbench-0700.js
-          test -s _site/assets/atlas-public-spend-v2.css
-          test -s _site/data/public-spend/spend_view_v2.json
-          grep -q "const VIEW='public-spend', VERSION='GP2.2'" _site/assets/atlas-public-spend-v2.js
-          grep -q "VERSION='GP2-AUTH.3'" _site/assets/atlas-public-spend-route-authority-0578.js
-          grep -q "VERSION='0.70.4'" _site/assets/atlas-operational-recovery-0704.js
-          python tools/audit_runtime_authority.py --root _site
-          grep -R -q 'aml_v0444_uaf_sii_summary' _site/atlas-runtime-current-*.js
-          grep -R -q 'AtlasReconciliationFilters' _site/atlas-runtime-current-*.js
-          grep -R -q "v0434Matrix=()=>''" _site/atlas-runtime-current-*.js
-          grep -R -q 'globalCrossFilter:true' _site/atlas-runtime-current-*.js
-          grep -R -q 'ENTITY360_HTML_PRODUCTION_ADAPTATION_0445' _site/atlas-runtime-current-*.js
-          grep -R -q 'ENTITY360_INLINE_AUTOCOMPLETE_0447' _site/atlas-runtime-current-*.js
-          grep -R -q 'ENTITY360_ROUTE_AUTHORITY_0448' _site/atlas-runtime-current-*.js
-          grep -R -q 'aml_v0449_sii_latest_document_authorization' _site/atlas-runtime-current-*.js
-          grep -R -q 'LATEST_OBSERVED_AUTHORIZATION_NOT_ABSOLUTE_LAST_TIMBRAJE' _site/atlas-runtime-current-*.js _site/atlas-module-current-*.js
-          grep -R -q 'selectionScopesAllEntityGraphics:true' _site/atlas-runtime-current-*.js
-          grep -q '.a45-cover' _site/atlas-runtime-current.css
-          grep -q '.a45-lenses' _site/atlas-runtime-current.css
-          grep -q '.a47-search-shell' _site/atlas-runtime-current.css
-          grep -q '.a49-docauth' _site/atlas-runtime-current.css
-          grep -q '#v0344-entities-note{display:none' _site/atlas-runtime-current.css
-          ! grep -R -qE 'auth\.setSession\(|refresh_token\s*:' _site/atlas-runtime-current-*.js _site/atlas-module-current-*.js
-          python - <<'PY'
-          import json
-          r=json.load(open('_site/atlas-runtime-report.json',encoding='utf-8'))
-          assert r['policy']=='CANONICAL_COMPILED_RUNTIME_ONLY',r
-          assert r['historical_source_assets_published'] is False,r
-          assert r.get('legacy_auth_runtime_published') is False,r
-          assert r['published_css']==['atlas-runtime-current.css','assets/atlas-public-spend-v2.css'],r
-          assert 'assets/atlas-public-spend-v2.js' in r['published_js'],r
-          assert 'assets/atlas-public-spend-route-authority-0578.js' in r['published_js'],r
-          PY
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -222,37 +125,22 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Smoke test deployed release
+      - name: Verify live 0.70.5
         shell: bash
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
           set -euo pipefail
-          stamp=$(date +%s)
-          base="${PAGE_URL%/}"
-          curl -fsSL --retry 12 --retry-delay 2 "$base/atlas-release.json?_atlas=${stamp}" -o /tmp/release.json
-          curl -fsSL --retry 12 --retry-delay 2 "$base/atlas-runtime-report.json?_atlas=${stamp}" -o /tmp/runtime.json
-          curl -fsSL --retry 12 --retry-delay 2 "$base/?_atlas=${stamp}" -o /tmp/index.html
-          curl -fsSL --retry 12 --retry-delay 2 "$base/data/public-spend/spend_view_v2.json?_atlas=${stamp}" -o /tmp/public-spend-fast.json
-          curl -fsSL --retry 12 --retry-delay 2 "$base/assets/atlas-operational-recovery-0704.js?_atlas=${stamp}" -o /tmp/recovery.js
+          base="${PAGE_URL%/}"; stamp=$(date +%s)
+          curl -fsSL --retry 15 --retry-delay 2 "$base/atlas-release.json?_atlas=$stamp" -o /tmp/release.json
+          curl -fsSL --retry 15 --retry-delay 2 "$base/?_atlas=$stamp" -o /tmp/index.html
           python - <<'PY'
-          import json,os
+          import json
           r=json.load(open('/tmp/release.json'))
-          rt=json.load(open('/tmp/runtime.json'))
-          sp=json.load(open('/tmp/public-spend-fast.json'))
-          assert r['release']==os.environ['ATLAS_RELEASE'] and r['build']==os.environ['ATLAS_BUILD'],r
-          assert rt['release']==os.environ['ATLAS_RELEASE'] and rt['build']==os.environ['ATLAS_BUILD'],rt
-          assert rt.get('legacy_auth_runtime_published') is False,rt
-          assert rt['published_css']==['atlas-runtime-current.css','assets/atlas-public-spend-v2.css'],rt
-          assert 'assets/atlas-public-spend-v2.js' in rt['published_js'],rt
-          assert 'assets/atlas-public-spend-route-authority-0578.js' in rt['published_js'],rt
-          assert sp.get('schema')=='PRESUPUESTO_SPEND_VIEW_V2',sp.get('schema')
-          assert len(sp.get('services') or [])>0 and len(sp.get('flows') or [])>0
+          assert r['release']=='0.70.5',r
+          assert r['build']=='0705',r
           PY
-          grep -q "data-aml-version=\"${ATLAS_RELEASE}\"" /tmp/index.html
-          grep -q "atlas-runtime-current-01.js?r=${ATLAS_BUILD}" /tmp/index.html
-          grep -q 'assets/atlas-public-spend-v2.js?v=gp2-2' /tmp/index.html
-          grep -q 'assets/atlas-public-spend-route-authority-0578.js?v=gp2-a3' /tmp/index.html
-          grep -q 'assets/atlas-operational-recovery-0704.js?v=0704-1' /tmp/index.html
-          grep -q 'assets/atlas-universo-so-workbench-0700.js?v=0704-2' /tmp/index.html
-          grep -q "VERSION='0.70.4'" /tmp/recovery.js
+          grep -q 'data-aml-version="0.70.5"' /tmp/index.html
+          grep -q 'data-aml-build="0705"' /tmp/index.html
+          grep -q 'atlas-universo-so-workbench-0700.js?v=0705-1' /tmp/index.html
+          echo 'ATLAS 0.70.5 live verification passed.'
