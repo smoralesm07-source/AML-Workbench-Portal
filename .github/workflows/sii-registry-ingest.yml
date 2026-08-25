@@ -1,0 +1,53 @@
+name: SII registry → Entity Master 0650
+
+on:
+  schedule:
+    - cron: '25 8 5 * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'ops/sii_registry/**'
+      - '.github/workflows/sii-registry-ingest.yml'
+  pull_request:
+    paths:
+      - 'ops/sii_registry/**'
+      - '.github/workflows/sii-registry-ingest.yml'
+      - 'sql/atlas_v0650_sii_registry_entity_master.sql'
+      - 'assets/atlas-entity-federation-0650.js'
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: atlas-sii-registry-ingest
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate loader
+        run: |
+          python -m py_compile ops/sii_registry/ingest.py
+          python ops/sii_registry/ingest.py --self-test
+      - name: Validate federation JS
+        run: node --check assets/atlas-entity-federation-0650.js
+
+  ingest:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Load official SII registry and recompute potential SO universe
+        run: python ops/sii_registry/ingest.py
