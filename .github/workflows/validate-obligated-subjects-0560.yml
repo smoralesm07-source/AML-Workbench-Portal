@@ -1,0 +1,80 @@
+name: Validate Sujetos Obligados 0560
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Sintaxis de los módulos y de la navegación que tocan
+        run: |
+          node --check assets/atlas-obligated-subjects-0560.js
+          node --check assets/atlas-obligated-dossier-0560.js
+          node --check atlas-current-ui.js
+          node --check assets/atlas-mobile-nav.js
+
+      - name: Contrato de la sección y render de todas las superficies
+        run: node tests/atlas-obligated-subjects-0560.mjs
+
+      - name: Coherencia de release, manifiesto y build
+        run: |
+          python - <<'PY'
+          import json
+          r=json.load(open('atlas-release.json',encoding='utf-8'))
+          m=json.load(open('atlas-runtime-manifest.json',encoding='utf-8'))
+          b=json.load(open('build.json',encoding='utf-8'))
+          assert r['release']==m['release']==b['app_version'], 'release descoordinado'
+          assert r['build']==m['build']==b['build'], 'build descoordinado'
+          assert 'UAF_OBLIGATED_SUBJECTS_0560' in r['ui_authority_policy']
+          assert 'OBLIGATED_SUBJECTS_ROUTE_0560' in r['navigation_policy']
+          assert 'obligated_subjects_policy' in r, 'falta la politica declarada de la seccion'
+          assert 'UAF_OBLIGATED_SUBJECT_SNAPSHOT_0560' in b['data_contract']
+          PY
+
+      - name: La sección se publica en el artefacto compilado
+        run: |
+          set -euo pipefail
+          python tools/build_atlas_site.py --out _site
+          test -s _site/assets/atlas-obligated-subjects-0560.js
+          test -s _site/assets/atlas-obligated-dossier-0560.js
+          test -s _site/assets/atlas-obligated-subjects-0560.css
+          grep -q 'atlas-obligated-subjects-0560.js?v=0560-1' _site/index.html
+          grep -q 'atlas-obligated-dossier-0560.js?v=0560-1' _site/index.html
+          grep -q 'atlas-obligated-subjects-0560.css?v=0560-1' _site/index.html
+          grep -q 'sujetos-obligados' _site/atlas-runtime-current-03.js
+
+      - name: La capa SQL declara su semántica y sus guardarraíles
+        run: |
+          set -euo pipefail
+          F=sql/atlas_v0560_uaf_obligated_subjects.sql
+          grep -q 'SUPERVISORY_PRIORITIZATION_NOT_LAFT_PROBABILITY' "$F"
+          grep -q 'promotes_identity' "$F"
+          grep -q 'enable row level security' "$F"
+          grep -q 'aml_allowed_users' "$F"
+          ! grep -qi 'service_role' "$F"
+          # Las cinco tablas de la seccion quedan bajo la misma politica de lectura.
+          for T in aml_uaf_sector_vulnerability_ref \
+                   aml_uaf_sanction_subject_link_snapshot \
+                   aml_uaf_obligated_subject_snapshot \
+                   aml_uaf_obligated_sector_snapshot \
+                   aml_uaf_obligated_overview_snapshot; do
+            grep -q "$T" "$F" || { echo "tabla sin declarar: $T"; exit 1; }
+          done
+          grep -q "grant select on public.%I to authenticated" "$F"
+          grep -q "grant select on public.aml_uaf_obligated_overview_snapshot to authenticated" "$F"

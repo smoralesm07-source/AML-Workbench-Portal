@@ -5,13 +5,14 @@
   const NEWS_KEY='atlas-aml:nav-news:v1';
   const GROUPS=[
     {label:'Explorar',views:['overview','entities','territory']},
-    {label:'Radares',views:['sanctions','public-spend','osfl']},
+    {label:'Radares',views:['sujetos-obligados','sanctions','public-spend','osfl']},
     {label:'Análisis',views:['questions']}
   ];
   const META={
     overview:{label:'Radar integrado',icon:'grid'},
     entities:{label:'Entidades',icon:'entity'},
     territory:{label:'Territorio',icon:'map'},
+    'sujetos-obligados':{label:'Sujetos Obligados',icon:'registry'},
     sanctions:{label:'Sanciones',icon:'alert'},
     'public-spend':{label:'Gasto público',icon:'flow'},
     osfl:{label:'OSFL',icon:'network'},
@@ -22,6 +23,7 @@
     entity:'<circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/>',
     map:'<path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"/><path d="M9 3v15M15 6v15"/>',
     alert:'<path d="M12 3 2.8 20h18.4L12 3Z"/><path d="M12 9v5M12 17.5h.01"/>',
+    registry:'<path d="M12 2.6 4.5 5.4v6.2c0 4.4 3.1 8.4 7.5 9.8 4.4-1.4 7.5-5.4 7.5-9.8V5.4L12 2.6Z"/><path d="M9 10.5h6M9 13.8h4"/>',
     flow:'<circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7 6h10M6.5 7.6l4.3 8M17.5 7.6l-4.3 8"/>',
     network:'<circle cx="12" cy="5" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="18" r="2"/><path d="m11 6.8-5 9.4M13 6.8l5 9.4M7 18h10"/>',
     question:'<circle cx="12" cy="12" r="9"/><path d="M9.8 9.5a2.5 2.5 0 1 1 3.3 2.4c-.8.3-1.1.8-1.1 1.6v.5M12 17.5h.01"/>'

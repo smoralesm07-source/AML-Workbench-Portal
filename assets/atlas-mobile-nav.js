@@ -2,7 +2,7 @@
   'use strict';
 
   const BREAKPOINT=768;
-  const RADAR_VIEWS=new Set(['sanctions','public-spend','osfl']);
+  const RADAR_VIEWS=new Set(['sujetos-obligados','sanctions','public-spend','osfl']);
   const MORE_VIEWS=new Set(['questions']);
   const ICONS={
     radar:'<rect x="3" y="3" width="7" height="7" rx="1.4"/><rect x="14" y="3" width="7" height="7" rx="1.4"/><rect x="3" y="14" width="7" height="7" rx="1.4"/><rect x="14" y="14" width="7" height="7" rx="1.4"/>',
@@ -11,6 +11,7 @@
     radars:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><path d="M12 4v2M20 12h-2M12 20v-2M4 12h2"/>',
     more:'<circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/>',
     sanctions:'<path d="M12 3 2.8 20h18.4L12 3Z"/><path d="M12 9v5M12 17.5h.01"/>',
+    obligated:'<path d="M12 2.6 4.5 5.4v6.2c0 4.4 3.1 8.4 7.5 9.8 4.4-1.4 7.5-5.4 7.5-9.8V5.4L12 2.6Z"/><path d="M9 10.5h6M9 13.8h4"/>',
     spend:'<circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7 6h10M6.5 7.6l4.3 8M17.5 7.6l-4.3 8"/>',
     osfl:'<circle cx="12" cy="5" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="18" r="2"/><path d="m11 6.8-5 9.4M13 6.8l5 9.4M7 18h10"/>',
     questions:'<circle cx="12" cy="12" r="9"/><path d="M9.8 9.5a2.5 2.5 0 1 1 3.3 2.4c-.8.3-1.1.8-1.1 1.6v.5M12 17.5h.01"/>',
@@ -103,6 +104,7 @@
     if(kind==='radars'){
       host.innerHTML=`<div class="atlas-mobile-sheet-head"><strong>Radares</strong><button type="button" class="atlas-mobile-sheet-close" data-atlas-mobile-close aria-label="Cerrar">×</button></div>
         <div class="atlas-mobile-sheet-list">
+          ${sheetItem({view:'sujetos-obligados',label:'Sujetos Obligados',sub:'Padrón UAF y prioridad fiscalizadora',icon:'obligated'})}
           ${sheetItem({view:'sanctions',label:'Sanciones',sub:'Eventos y señales sancionatorias',icon:'sanctions'})}
           ${sheetItem({view:'public-spend',label:'Gasto público',sub:'Presupuesto abierto y proveedores',icon:'spend'})}
           ${sheetItem({view:'osfl',label:'OSFL',sub:'Organizaciones sin fines de lucro',icon:'osfl'})}
