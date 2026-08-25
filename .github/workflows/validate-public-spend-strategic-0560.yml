@@ -1,0 +1,20 @@
+name: Validate Public Spend Strategic 0560
+on:
+  pull_request:
+    paths:
+      - 'assets/atlas-public-spend-audit-0550.js'
+      - 'assets/atlas-public-spend-audit-0550.css'
+      - 'assets/atlas-public-spend-strategic-0560.css'
+      - 'tests/atlas-public-spend-strategic-0560.mjs'
+      - '.github/workflows/validate-public-spend-strategic-0560.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node tests/atlas-public-spend-strategic-0560.mjs
