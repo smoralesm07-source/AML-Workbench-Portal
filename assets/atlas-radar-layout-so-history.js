@@ -4,6 +4,18 @@
 
   let raf=0;
   const CANONICAL_SECTORS=55;
+  const CANONICAL_REPRESENTED_2025=47;
+  const NON_CANONICAL_ROWS_2025=['Instituciones Públicas'];
+  const MISSING_CANONICAL_2025=[
+    'Administradoras de Fondos Mutuos',
+    'Armas: Personas que se Dediquen a la Fabricación de Armas',
+    'Clubes de Caza',
+    'Clubes de Pesca',
+    'Fintec: Custodia de Instrumentos Financieros',
+    'Fintec: Plataformas de Financiamiento Colectivo',
+    'Fintec: Sistemas Alternativos de Transacción',
+    'Fintec: Iniciación de Pagos'
+  ];
 
   const fmt=(v,d=0)=>Number(v).toLocaleString('es-CL',{minimumFractionDigits:d,maximumFractionDigits:d});
   const pct=(v,d=1)=>`${v>=0?'+':''}${fmt(v,d)}%`;
@@ -69,10 +81,12 @@
   }
 
   function refineSectorRepresentation(root){
-    const represented=representedSectorCount(root);
-    if(!represented)return;
-    const missing=Math.max(0,CANONICAL_SECTORS-represented);
-    const coverage=100*represented/CANONICAL_SECTORS;
+    const statisticalRows=representedSectorCount(root);
+    if(!statisticalRows)return;
+    const canonicalRepresented=statisticalRows===48?CANONICAL_REPRESENTED_2025:Math.min(CANONICAL_SECTORS,statisticalRows);
+    const missing=statisticalRows===48?MISSING_CANONICAL_2025.length:Math.max(0,CANONICAL_SECTORS-canonicalRepresented);
+    const coverage=100*canonicalRepresented/CANONICAL_SECTORS;
+    const nonCanonical=statisticalRows===48?NON_CANONICAL_ROWS_2025:[];
     let card=root.querySelector('.atlas-sector-representation');
 
     if(!card){
@@ -86,17 +100,25 @@
       anchor.insertAdjacentElement('afterend',card);
     }
 
-    const signature=`${represented}|${missing}`;
+    const signature=`${statisticalRows}|${canonicalRepresented}|${missing}`;
     if(card.dataset.signature===signature)return;
     card.dataset.signature=signature;
-    card.innerHTML=`<header class="v036-cardhead"><div><span class="v036-kicker">Cobertura sectorial</span><h3>Sectores económicos sin representación</h3><p class="v036-hint">Catálogo canónico Ley 19.913 vs sectores con sujetos obligados inscritos observados en el corte estadístico 2025.</p></div></header>
+    const missingList=statisticalRows===48
+      ? `<details class="v036-hint" style="margin-top:12px"><summary style="cursor:pointer"><b>Ver los ${missing} sectores canónicos sin representación observada</b></summary><ol style="margin:10px 0 0 22px;display:grid;gap:5px">${MISSING_CANONICAL_2025.map(x=>`<li>${x}</li>`).join('')}</ol></details>`
+      : '';
+    const extraNote=nonCanonical.length
+      ? `<div class="v036-hint" style="margin-top:10px"><b>Por qué 48 filas no equivalen a 48 de 55:</b> el contrato 2025 incorpora además <b>${nonCanonical.join(', ')}</b>, categoría estadística que no forma parte del catálogo canónico de 55 usado por esta comparación. Por eso hay 47 categorías canónicas representadas y 8 ausentes.</div>`
+      : '';
+    card.innerHTML=`<header class="v036-cardhead"><div><span class="v036-kicker">Cobertura sectorial</span><h3>Sectores económicos sin representación</h3><p class="v036-hint">Catálogo canónico Ley 19.913 vs categorías canónicas con sujetos obligados inscritos observadas en el corte estadístico 2025.</p></div></header>
       <div class="v036-stats">
         <div class="v036-stat"><div><span>Catálogo canónico</span><small>Actividades/sectores gobernados en Atlas</small></div><b>${fmt(CANONICAL_SECTORS)}</b></div>
-        <div class="v036-stat"><div><span>Sectores representados</span><small>Con fila materializada en el contrato 2025</small></div><b>${fmt(represented)}</b></div>
-        <div class="v036-stat crit"><div><span>Sin representación observada</span><small>Sin SO inscritos materializados en este corte</small></div><b>${fmt(missing)}</b></div>
-        <div class="v036-stat"><div><span>Cobertura sectorial</span><small>Representados / catálogo canónico</small></div><b>${fmt(coverage,1)}%</b></div>
+        <div class="v036-stat"><div><span>Filas sectoriales del contrato</span><small>Incluye categorías estadísticas adicionales</small></div><b>${fmt(statisticalRows)}</b></div>
+        <div class="v036-stat"><div><span>Canónicos representados</span><small>Coinciden con el catálogo de 55</small></div><b>${fmt(canonicalRepresented)}</b></div>
+        <div class="v036-stat crit"><div><span>Sin representación observada</span><small>Canónicos ausentes del corte 2025</small></div><b>${fmt(missing)}</b></div>
+        <div class="v036-stat"><div><span>Cobertura sectorial</span><small>Canónicos representados / 55</small></div><b>${fmt(coverage,1)}%</b></div>
       </div>
-      <div class="v036-hint"><b>Cómo leer este dato:</b> “sin representación” significa que el contrato estadístico 2025 no materializa sujetos obligados inscritos para ese sector. No implica que la actividad esté fuera de la Ley 19.913 ni constituye por sí sola incumplimiento o riesgo.</div>`;
+      ${missingList}${extraNote}
+      <div class="v036-hint" style="margin-top:10px"><b>Cómo leer este dato:</b> “sin representación” significa que el contrato estadístico 2025 no materializa sujetos obligados inscritos para esa categoría canónica. No implica que la actividad esté fuera de la Ley 19.913 ni constituye por sí sola incumplimiento o riesgo.</div>`;
   }
 
   function apply(){
