@@ -439,7 +439,7 @@
   }
 
   function modeBar(){
-    const modes=[['panorama','Panorama del padrón'],['padron','Padrón fiscalizable']];
+    const modes=[['panorama','Panorama'],['padron','Padrón inscrito'],['potenciales','Potenciales SO']];
     return `<div class="so-modes">`
       +modes.map(([k,l])=>`<button type="button" data-so-mode="${k}" class="${state.mode===k?'on':''}" aria-pressed="${state.mode===k}">${esc(l)}</button>`).join('')
       +`</div>`;
@@ -632,6 +632,21 @@
       wire();
       return;
     }
+    if(state.mode==='potenciales'){
+      /* El módulo de potenciales se monta aparte: el padrón inscrito y las
+         candidatas a incorporación son dos preguntas distintas y no comparten
+         estado, aunque vivan en la misma sección. */
+      host.innerHTML=`<section class="so-root">${sourceBar()}${modeBar()}`
+        +`<div id="so-potential"><div class="so-loading">Consultando potenciales sujetos obligados…</div></div></section>`;
+      wire();
+      const potential=window.__ATLAS_OBLIGATED__?.potential;
+      if(potential&&typeof potential.render==='function')potential.render();
+      else{
+        const box=document.querySelector('#so-potential');
+        if(box)box.innerHTML='<div class="so-empty">El módulo de potenciales no está disponible en este corte.</div>';
+      }
+      return;
+    }
     host.innerHTML=`<section class="so-root">${state.mode==='panorama'?panoramaHtml():padronHtml()}</section>`;
     wire();
   }
@@ -779,7 +794,7 @@
     button.type='button';
     button.className='v019-nav-btn';
     button.dataset.view=VIEW;
-    button.textContent='Sujetos Obligados';
+    button.textContent='Universo SO';
     /* La autoridad de navegación elimina el botón heredado 'uaf', así que el
        anclaje es 'entities'. El reordenamiento por grupos lo hace después
        atlas-current-ui.js: aquí sólo importa que el botón exista. */
@@ -792,8 +807,8 @@
 
   async function load(){
     if(typeof window.shell==='function'){
-      window.shell('Sujetos Obligados',
-        'Caracterización del padrón inscrito en la UAF y priorización fiscalizadora explicable, con su evidencia y sus límites declarados.');
+      window.shell('Universo SO',
+        'El padrón inscrito en la UAF y las entidades que Atlas observa comportándose como sujetos obligados sin figurar en él, con su evidencia y sus límites declarados.');
     }
     ensureNav();
     const host=content();

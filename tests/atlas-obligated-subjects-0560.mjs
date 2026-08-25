@@ -214,9 +214,10 @@ const sqlSrc=fs.readFileSync('sql/atlas_v0560_uaf_obligated_subjects.sql','utf8'
 
 /* La sección debe existir como ruta y quedar publicada. */
 assertStrict.match(coreSrc,/const VIEW='sujetos-obligados'/);
-assertStrict.match(uiSrc,/views:\['sujetos-obligados','sanctions'/,'la autoridad de navegación debe agrupar la ruta');
-assertStrict.match(uiSrc,/'sujetos-obligados':\{label:'Sujetos Obligados'/,'la ruta necesita etiqueta e icono');
-assertStrict.match(mobileSrc,/RADAR_VIEWS=new Set\(\['sujetos-obligados'/,'la navegación móvil debe ofrecer la ruta');
+/* 0580 renombró la sección y la movió de Radares a Explorar. */
+assertStrict.match(uiSrc,/views:\['overview','entities','sujetos-obligados','territory'\]/,'Universo SO debe vivir en Explorar');
+assertStrict.match(uiSrc,/'sujetos-obligados':\{label:'Universo SO'/,'la ruta necesita etiqueta e icono');
+assertStrict.match(mobileSrc,/MORE_VIEWS=new Set\(\['sujetos-obligados'/,'la navegación móvil debe ofrecer la ruta');
 assertStrict.match(indexSrc,/atlas-obligated-subjects-0560\.css\?v=0560-1/);
 assertStrict.match(indexSrc,/atlas-obligated-subjects-0560\.js\?v=0560-1/);
 assertStrict.match(indexSrc,/atlas-obligated-dossier-0560\.js\?v=0560-1/);

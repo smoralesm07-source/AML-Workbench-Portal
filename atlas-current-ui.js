@@ -4,15 +4,15 @@
   const THEME_KEY='atlas-aml:theme:v1';
   const NEWS_KEY='atlas-aml:nav-news:v1';
   const GROUPS=[
-    {label:'Explorar',views:['overview','entities','territory']},
-    {label:'Radares',views:['sujetos-obligados','sanctions','public-spend','osfl']},
+    {label:'Explorar',views:['overview','entities','sujetos-obligados','territory']},
+    {label:'Radares',views:['sanctions','public-spend','osfl']},
     {label:'Análisis',views:['questions']}
   ];
   const META={
     overview:{label:'Radar integrado',icon:'grid'},
     entities:{label:'Entidades',icon:'entity'},
     territory:{label:'Territorio',icon:'map'},
-    'sujetos-obligados':{label:'Sujetos Obligados',icon:'registry'},
+    'sujetos-obligados':{label:'Universo SO',icon:'registry'},
     sanctions:{label:'Sanciones',icon:'alert'},
     'public-spend':{label:'Gasto público',icon:'flow'},
     osfl:{label:'OSFL',icon:'network'},

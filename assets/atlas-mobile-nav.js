@@ -2,8 +2,8 @@
   'use strict';
 
   const BREAKPOINT=768;
-  const RADAR_VIEWS=new Set(['sujetos-obligados','sanctions','public-spend','osfl']);
-  const MORE_VIEWS=new Set(['questions']);
+  const RADAR_VIEWS=new Set(['sanctions','public-spend','osfl']);
+  const MORE_VIEWS=new Set(['sujetos-obligados','questions']);
   const ICONS={
     radar:'<rect x="3" y="3" width="7" height="7" rx="1.4"/><rect x="14" y="3" width="7" height="7" rx="1.4"/><rect x="3" y="14" width="7" height="7" rx="1.4"/><rect x="14" y="14" width="7" height="7" rx="1.4"/>',
     entity:'<circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/>',
@@ -104,7 +104,6 @@
     if(kind==='radars'){
       host.innerHTML=`<div class="atlas-mobile-sheet-head"><strong>Radares</strong><button type="button" class="atlas-mobile-sheet-close" data-atlas-mobile-close aria-label="Cerrar">×</button></div>
         <div class="atlas-mobile-sheet-list">
-          ${sheetItem({view:'sujetos-obligados',label:'Sujetos Obligados',sub:'Padrón UAF y prioridad fiscalizadora',icon:'obligated'})}
           ${sheetItem({view:'sanctions',label:'Sanciones',sub:'Eventos y señales sancionatorias',icon:'sanctions'})}
           ${sheetItem({view:'public-spend',label:'Gasto público',sub:'Presupuesto abierto y proveedores',icon:'spend'})}
           ${sheetItem({view:'osfl',label:'OSFL',sub:'Organizaciones sin fines de lucro',icon:'osfl'})}
@@ -112,6 +111,7 @@
     }else{
       host.innerHTML=`<div class="atlas-mobile-sheet-head"><strong>Más opciones</strong><button type="button" class="atlas-mobile-sheet-close" data-atlas-mobile-close aria-label="Cerrar">×</button></div>
         <div class="atlas-mobile-sheet-list">
+          ${sheetItem({view:'sujetos-obligados',label:'Universo SO',sub:'Padrón inscrito y potenciales sujetos obligados',icon:'obligated'})}
           ${sheetItem({view:'questions',label:'Preguntas',sub:'Entrada a análisis y consultas',icon:'questions'})}
         </div>
         <div class="atlas-mobile-sheet-separator"></div>

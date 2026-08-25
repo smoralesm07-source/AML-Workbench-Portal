@@ -1,0 +1,63 @@
+name: Validate Potenciales SO 0580
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Sintaxis de los módulos de la sección
+        run: |
+          node --check assets/atlas-potential-subjects-0580.js
+          node --check assets/atlas-obligated-subjects-0560.js
+          node --check assets/atlas-obligated-dossier-0560.js
+          node --check atlas-current-ui.js
+          node --check assets/atlas-mobile-nav.js
+
+      - name: Contrato de la sección y render de todas las superficies
+        run: |
+          node tests/atlas-obligated-subjects-0560.mjs
+          node tests/atlas-potential-subjects-0580.mjs
+
+      - name: La gestión no puede editar ni borrar anotaciones
+        run: |
+          set -euo pipefail
+          F=sql/atlas_v0580_uaf_potential_subjects.sql
+          grep -q 'revoke update, delete on public.aml_uaf_potential_review from authenticated' "$F"
+          grep -q 'aml_uaf_potential_review_descarte_motivado' "$F"
+          grep -q 'user_id = (select auth.uid())' "$F"
+          grep -q 'REGISTRATION_HYPOTHESIS_NOT_PROVEN_NON_COMPLIANCE' "$F"
+          ! grep -qi 'service_role' "$F"
+
+      - name: Las tres pruebas de calibración siguen en su sitio
+        run: |
+          set -euo pipefail
+          F=sql/atlas_v0580_uaf_potential_subjects.sql
+          grep -q 'co.cuota_dominante >= 0.35' "$F"
+          grep -q 'st.subject_count >= 0.05' "$F"
+          grep -q 'ts.cuota >= 0.05' "$F"
+
+      - name: La sección se publica en el artefacto compilado
+        run: |
+          set -euo pipefail
+          python tools/build_atlas_site.py --out _site
+          test -s _site/assets/atlas-potential-subjects-0580.js
+          test -s _site/assets/atlas-potential-subjects-0580.css
+          grep -q 'atlas-potential-subjects-0580.js?v=0580-1' _site/index.html
+          grep -q 'Universo SO' _site/atlas-runtime-current-03.js

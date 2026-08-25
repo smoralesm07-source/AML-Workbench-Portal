@@ -2,6 +2,38 @@
 
 Frontend estático y autenticado del **AML Analytical Workbench**.
 
+## Universo SO (build 0580) — potenciales sujetos obligados y su gestión
+
+La sección **Sujetos Obligados** pasa a llamarse **Universo SO** y se mueve al
+grupo *Explorar* (`docs/potential-subjects-0580.md`). Suma la pregunta inversa a
+la del padrón: qué entidades observa Atlas comportándose como sujetos obligados
+sin figurar en el corte público del registro UAF.
+
+- **Detección medida, no declarada:** no hay tabla de correspondencias entre giro
+  y sector. La correspondencia se mide sobre los propios inscritos, y la
+  concentración observada es a la vez criterio y evidencia en pantalla.
+- **Tres clases de evidencia:** sancionada por la UAF sin figurar en el padrón
+  (la más concluyente), giro principal característico, y giro secundario.
+- **Dos índices separados:** IVO (verosimilitud de obligación) y materialidad de
+  incorporación. Mezclarlos los vuelve indistinguibles; el cuadrante que los
+  cruza es lo que ordena el trabajo de campo.
+- **Plausible no es incorporable:** un banco con término de giro publicado es
+  plausiblemente un sujeto obligado y aun así no es candidato a inscripción. La
+  accionabilidad se declara aparte del índice.
+- **Gestión de sólo anexado:** el fiscalizador marca revisadas, selecciona las
+  que hay que ir a buscar para inscribir, o descarta con motivo obligatorio.
+  Nadie edita ni borra la anotación de otro, y Atlas recuerda lo ya visto entre
+  sesiones y entre fiscalizadores.
+
+La calibración fue el trabajo real: tres pruebas —coherencia de actividad del
+sector, soporte del giro dentro del sector y coherencia de tipo de entidad—
+existen porque las tres fallaron primero en los datos, y llevaron el listado de
+1.027 candidatas con ruido grueso a 64 legibles.
+
+Ausencia del corte público no es no inscrito, el giro característico describe al
+giro y no a la entidad, y seleccionar para inscripción no es una decisión
+institucional ni un ROS.
+
 ## Sujetos Obligados (build 0560) — caracterización y priorización fiscalizadora
 
 Nueva sección **Sujetos Obligados** (`docs/obligated-subjects-0560.md`). El padrón

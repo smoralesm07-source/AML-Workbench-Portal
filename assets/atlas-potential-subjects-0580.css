@@ -1,0 +1,119 @@
+/* ATLAS AML · build 0580 · Potenciales sujetos obligados
+ *
+ * Extiende el vocabulario gráfico de la sección (atlas-obligated-subjects-0560).
+ * Aquí sólo vive lo propio de la gestión: la fila de trabajo con sus acciones,
+ * la barra de selección múltiple y el formulario de descarte.
+ *
+ * Todo gráfico es SVG con atributos de presentación: sin estilos en línea, de
+ * modo que la política CSP del portal se cumple sin excepciones.
+ */
+
+:root{
+  --pot-ivo:var(--atlas-crit,#ef6b68);
+  --pot-mat:var(--atlas-accent,#3b98e0);
+  --pot-ok:var(--atlas-ok,#54b686);
+}
+
+/* --- medidores compartidos ------------------------------------------------ */
+.pot-meter{display:block;width:100%;height:6px}
+.pot-meter .track{fill:var(--so-track)}
+.pot-meter .fill{fill:var(--atlas-muted)}
+.pot-meter.m-ivo .fill{fill:var(--pot-ivo)}
+.pot-meter.m-mat .fill{fill:var(--pot-mat)}
+.pot-meter.m-progress .fill{fill:var(--pot-ok)}
+.pot-meter.m-progress{margin-top:8px}
+
+/* --- cuadrante ----------------------------------------------------------- */
+.pot-quadrant .dot{fill:var(--pot-ivo);fill-opacity:.85;stroke:var(--atlas-panel);stroke-width:1.2;
+  vector-effect:non-scaling-stroke;cursor:pointer}
+.pot-quadrant .dot.seen{fill:var(--atlas-faint);fill-opacity:.6}
+.pot-quadrant .dot:hover,.pot-quadrant .dot:focus-visible{stroke:var(--atlas-ink);stroke-width:1.8;outline:none}
+.pot-quadrant .dot.on{stroke:var(--atlas-accent-hi);stroke-width:2.4}
+.so-legend i.pot-dot-sample{width:10px;height:10px;border-radius:50%;background:var(--pot-ivo)}
+.so-legend i.pot-dot-sample.seen{background:var(--atlas-faint)}
+
+/* --- aviso --------------------------------------------------------------- */
+.pot-notice{border:1px solid var(--atlas-line);border-radius:11px;padding:11px 15px;font-size:12.5px;
+  color:var(--atlas-ink);background:var(--atlas-panel-lift);line-height:1.5}
+.pot-notice.ok{border-color:color-mix(in srgb,var(--atlas-ok) 42%,transparent);background:var(--atlas-ok-soft);
+  color:var(--atlas-ok)}
+.pot-notice.warn{border-color:color-mix(in srgb,var(--atlas-warn) 45%,transparent);background:var(--atlas-warn-soft);
+  color:var(--atlas-warn)}
+
+/* --- barra de selección múltiple ----------------------------------------- */
+.pot-bulk{position:sticky;top:8px;z-index:6;display:flex;flex-wrap:wrap;align-items:center;gap:9px;
+  border:1px solid var(--atlas-accent-border);border-radius:12px;background:var(--atlas-accent-soft);
+  padding:11px 15px;box-shadow:var(--atlas-shadow-soft)}
+.pot-bulk b{font-size:12.5px;color:var(--atlas-accent-hi);margin-right:auto}
+.pot-bulk button{appearance:none;border:1px solid var(--atlas-accent-border);background:var(--atlas-panel);
+  color:var(--atlas-ink);border-radius:9px;padding:8px 15px;font-size:12px;cursor:pointer;font-family:inherit}
+.pot-bulk button:hover:not(:disabled){border-color:var(--atlas-accent);color:var(--atlas-accent-hi)}
+.pot-bulk button:disabled{opacity:.5;cursor:progress}
+.pot-bulk button.ghost{border-color:transparent;background:none;color:var(--atlas-muted)}
+
+/* --- formulario de descarte ---------------------------------------------- */
+.pot-discard{display:flex;flex-wrap:wrap;align-items:center;gap:9px;grid-column:1/-1;
+  border:1px solid color-mix(in srgb,var(--atlas-warn) 40%,transparent);border-radius:11px;
+  background:var(--atlas-warn-soft);padding:12px 15px;margin-top:10px}
+.pot-discard label{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--atlas-faint)}
+.pot-discard select,.pot-discard input{appearance:none;border:1px solid var(--atlas-line);border-radius:9px;
+  background:var(--atlas-panel);color:var(--atlas-ink);padding:8px 11px;font-size:12.5px;font-family:inherit}
+.pot-discard input{flex:1;min-width:220px}
+.pot-discard button{appearance:none;border:1px solid var(--atlas-line);background:var(--atlas-panel);
+  color:var(--atlas-ink);border-radius:9px;padding:8px 15px;font-size:12px;cursor:pointer;font-family:inherit}
+.pot-discard button#pot-discard-confirm{border-color:color-mix(in srgb,var(--atlas-warn) 55%,transparent);
+  color:var(--atlas-warn);font-weight:600}
+.pot-discard button.ghost{border-color:transparent;background:none;color:var(--atlas-muted)}
+.pot-discard small{flex-basis:100%;font-size:11px;color:var(--atlas-muted);line-height:1.5}
+
+/* --- lista de trabajo ----------------------------------------------------- */
+.pot-listhead{display:flex;align-items:center;gap:12px;padding:0 4px 10px;
+  font-size:11.5px;color:var(--atlas-muted);border-bottom:1px solid var(--atlas-line)}
+.pot-list{display:flex;flex-direction:column}
+.pot-row{display:grid;grid-template-columns:auto minmax(0,2.4fr) minmax(140px,1fr) minmax(120px,.9fr) auto;
+  gap:14px;align-items:center;padding:12px 4px;border-bottom:1px solid var(--atlas-line-soft)}
+.pot-row.selected{background:var(--atlas-accent-soft)}
+.pot-row.busy{opacity:.55;cursor:progress}
+.pot-pick{display:flex;align-items:center;justify-content:center}
+.pot-pick input{width:16px;height:16px;accent-color:var(--atlas-accent);cursor:pointer}
+.pot-who{min-width:0}
+.pot-who strong{display:block;font-size:13px;color:var(--atlas-ink);font-weight:600;line-height:1.3;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pot-who small{display:block;font-size:11px;color:var(--atlas-muted);margin-top:3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pot-who .so-flagset{margin-top:6px}
+.pot-scores{display:flex;flex-direction:column;gap:8px;min-width:0}
+.pot-score{display:grid;grid-template-columns:auto 1fr;grid-template-areas:'lab val' 'bar bar';gap:2px 8px;align-items:baseline}
+.pot-score em{grid-area:lab;font-style:normal;font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--atlas-faint)}
+.pot-score b{grid-area:val;font-size:12.5px;color:var(--atlas-ink);font-variant-numeric:tabular-nums;text-align:right}
+.pot-score .pot-meter{grid-area:bar}
+.pot-status{display:flex;flex-direction:column;gap:4px;min-width:0}
+.pot-status small{font-size:10.5px;color:var(--atlas-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pot-state{font-size:10.5px;font-weight:600;letter-spacing:.02em;padding:3px 9px;border-radius:999px;
+  border:1px solid var(--atlas-line);color:var(--atlas-muted);background:var(--atlas-panel-lift);
+  white-space:nowrap;align-self:flex-start}
+.pot-state.s-SELECCIONADO_PARA_INSCRIPCION{color:var(--pot-ok);
+  border-color:color-mix(in srgb,var(--pot-ok) 45%,transparent);background:var(--atlas-ok-soft)}
+.pot-state.s-REVISADO{color:var(--atlas-accent-hi);border-color:var(--atlas-accent-border);background:var(--atlas-accent-soft)}
+.pot-state.s-DESCARTADO{color:var(--atlas-faint);text-decoration:line-through}
+.pot-actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.pot-actions button{appearance:none;border:1px solid var(--atlas-line);background:var(--atlas-panel-lift);
+  color:var(--atlas-muted);border-radius:8px;padding:6px 11px;font-size:11.5px;cursor:pointer;font-family:inherit;
+  white-space:nowrap}
+.pot-actions button:hover:not(:disabled){color:var(--atlas-ink);border-color:var(--atlas-accent-border)}
+.pot-actions button:disabled{opacity:.5;cursor:progress}
+.pot-actions button[data-pot-act="SELECCIONADO_PARA_INSCRIPCION"]:hover{color:var(--pot-ok);
+  border-color:color-mix(in srgb,var(--pot-ok) 50%,transparent)}
+.pot-actions button[data-pot-act="DESCARTADO"]:hover{color:var(--atlas-warn);
+  border-color:color-mix(in srgb,var(--atlas-warn) 50%,transparent)}
+
+@media (max-width:900px){
+  .pot-row{grid-template-columns:auto minmax(0,1fr);grid-template-areas:
+    'pick who' '. scores' '. status' '. actions';gap:9px}
+  .pot-row .pot-pick{grid-area:pick;align-self:start;padding-top:2px}
+  .pot-row .pot-who{grid-area:who}
+  .pot-row .pot-scores{grid-area:scores}
+  .pot-row .pot-status{grid-area:status}
+  .pot-row .pot-actions{grid-area:actions;justify-content:flex-start}
+  .pot-bulk{position:static}
+}
