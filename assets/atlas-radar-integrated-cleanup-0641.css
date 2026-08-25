@@ -41,7 +41,9 @@
 .ash-audit[data-topbar-mode="1"] .a57-title>span{min-width:0;display:block;text-align:center!important}
 .ash-audit[data-topbar-mode="1"] .a57-title strong{
   display:block;
+  font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif!important;
   font-size:9.5px!important;
+  font-weight:650!important;
   line-height:1.05!important;
   white-space:nowrap;
   overflow:hidden;
@@ -62,7 +64,7 @@
   white-space:nowrap;
   pointer-events:none;
 }
-.ash-audit[data-topbar-mode="1"] .ash-quick>b{font-size:10px!important;line-height:1!important}
+.ash-audit[data-topbar-mode="1"] .ash-quick>b{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif!important;font-size:10px!important;line-height:1!important}
 .ash-audit[data-topbar-mode="1"] .ash-quick>small,.ash-audit[data-topbar-mode="1"] .ash-quick>span{display:none!important}
 .ash-audit[data-topbar-mode="1"] .a57-chevron{justify-self:end!important;font-size:9px!important;line-height:1!important}
 
@@ -73,25 +75,57 @@
   right:auto!important;
   transform:translateX(-50%)!important;
   z-index:1000!important;
-  width:min(760px,calc(100vw - 28px))!important;
+  width:min(780px,calc(100vw - 28px))!important;
   max-width:none!important;
   max-height:min(64vh,560px)!important;
   overflow:auto!important;
   margin:0!important;
-  padding:0 12px 10px!important;
+  padding:0 14px 12px!important;
   border:1px solid rgba(56,189,248,.14)!important;
   border-radius:10px!important;
   background:var(--atlas-surface,#101827)!important;
   box-shadow:0 18px 50px rgba(2,6,23,.38)!important;
   text-align:left!important;
+  font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif!important;
+  font-size:11px!important;
+  line-height:1.35!important;
+  color:#b7c6d3!important;
 }
-.ash-audit[data-topbar-mode="1"] .ash-tabs{top:0!important;padding-top:8px!important}
+.ash-audit[data-topbar-mode="1"] .ash-detail *{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif!important;box-sizing:border-box}
+.ash-audit[data-topbar-mode="1"] .ash-tabs{top:0!important;padding:9px 0 8px!important;gap:6px!important}
+.ash-audit[data-topbar-mode="1"] .ash-tabs button{font-size:10px!important;line-height:1.2!important;padding:6px 9px!important}
+.ash-audit[data-topbar-mode="1"] .ash-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;padding:10px 0 8px!important}
+.ash-audit[data-topbar-mode="1"] .ash-metric{min-height:66px!important;padding:10px!important}
+.ash-audit[data-topbar-mode="1"] .ash-metric span,.ash-audit[data-topbar-mode="1"] .ash-domains span{font-size:9px!important;line-height:1.2!important;letter-spacing:.05em!important}
+.ash-audit[data-topbar-mode="1"] .ash-metric b,.ash-audit[data-topbar-mode="1"] .ash-domains b{font-size:16px!important;line-height:1.15!important;margin-top:4px!important}
+.ash-audit[data-topbar-mode="1"] .ash-metric small,.ash-audit[data-topbar-mode="1"] .ash-domains small{font-size:9px!important;line-height:1.3!important;margin-top:3px!important}
+.ash-audit[data-topbar-mode="1"] .ash-domains{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;padding:0 0 8px!important}
+.ash-audit[data-topbar-mode="1"] .ash-domains>div{min-width:0!important;padding:8px 9px!important;display:block!important}
+.ash-audit[data-topbar-mode="1"] .ash-impact{padding:8px 10px!important;font-size:9.5px!important;line-height:1.35!important;gap:7px!important}
+.ash-audit[data-topbar-mode="1"] .ash-catalog{padding-top:8px!important}
+.ash-audit[data-topbar-mode="1"] .ash-catalog-head,.ash-audit[data-topbar-mode="1"] .ash-catalog-row{grid-template-columns:minmax(250px,1.45fr) minmax(125px,.75fr) minmax(180px,1fr) 105px!important;gap:12px!important;align-items:center!important}
+.ash-audit[data-topbar-mode="1"] .ash-catalog-head{padding:6px 10px!important;font-size:8.5px!important}
+.ash-audit[data-topbar-mode="1"] .ash-catalog-row{min-height:46px!important;padding:8px 10px!important}
+.ash-audit[data-topbar-mode="1"] .ash-source-name b,.ash-audit[data-topbar-mode="1"] .ash-catalog-cell b{font-size:10px!important;line-height:1.2!important;font-weight:650!important}
+.ash-audit[data-topbar-mode="1"] .ash-source-name small,.ash-audit[data-topbar-mode="1"] .ash-catalog-cell small{font-size:8.5px!important;line-height:1.25!important;margin-top:2px!important}
+.ash-audit[data-topbar-mode="1"] .ash-state{font-size:8px!important;line-height:1!important;padding:4px 7px!important}
+.ash-audit[data-topbar-mode="1"] .ash-oplist{gap:6px!important;padding-top:8px!important}
+.ash-audit[data-topbar-mode="1"] .ash-op summary{grid-template-columns:minmax(250px,1.45fr) 90px 150px 95px!important;gap:10px!important;padding:8px 10px!important}
+.ash-audit[data-topbar-mode="1"] .ash-op summary b{font-size:10px!important;line-height:1.2!important}
+.ash-audit[data-topbar-mode="1"] .ash-op summary small{font-size:8.5px!important;line-height:1.2!important}
+.ash-audit[data-topbar-mode="1"] .ash-opdetail{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:7px!important;padding:9px 10px!important}
+.ash-audit[data-topbar-mode="1"] .ash-opdetail span{font-size:9px!important;line-height:1.3!important;padding:7px 8px!important}
+.ash-audit[data-topbar-mode="1"] .ash-opdetail span b{font-size:8px!important;line-height:1.15!important;margin-bottom:3px!important}
+.ash-audit[data-topbar-mode="1"] .ash-detail>footer{font-size:8.5px!important;line-height:1.35!important;padding-top:8px!important}
 
 @media(max-width:900px){
   .ash-audit[data-topbar-mode="1"]{width:190px!important;min-width:190px!important;max-width:190px!important}
   .ash-audit[data-topbar-mode="1"] .ash-quick{display:none!important}
+  .ash-audit[data-topbar-mode="1"] .ash-summary-grid,.ash-audit[data-topbar-mode="1"] .ash-domains{grid-template-columns:1fr!important}
 }
 @media(max-width:640px){
   .ash-audit[data-topbar-mode="1"]{width:160px!important;min-width:160px!important;max-width:160px!important}
   .ash-audit[data-topbar-mode="1"] .ash-detail{position:fixed!important;top:48px!important;right:8px!important;left:8px!important;transform:none!important;width:auto!important}
+  .ash-audit[data-topbar-mode="1"] .ash-catalog-head{display:none!important}
+  .ash-audit[data-topbar-mode="1"] .ash-catalog-row,.ash-audit[data-topbar-mode="1"] .ash-op summary,.ash-audit[data-topbar-mode="1"] .ash-opdetail{grid-template-columns:1fr!important}
 }
