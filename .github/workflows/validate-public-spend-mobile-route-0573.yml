@@ -1,4 +1,4 @@
-name: Validate Public Spend Mobile Route 0573
+name: Validate Public Spend Route 0575
 
 on:
   pull_request:
@@ -7,6 +7,17 @@ on:
       - 'assets/atlas-mobile-nav.js'
       - 'assets/atlas-public-spend-guided-0570.css'
       - 'index.html'
+      - 'tools/build_atlas_site.py'
+      - 'tests/atlas-public-spend-mobile-route-0573.mjs'
+      - '.github/workflows/validate-public-spend-mobile-route-0573.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'assets/atlas-public-spend-mobile-route-0573.js'
+      - 'assets/atlas-mobile-nav.js'
+      - 'assets/atlas-public-spend-guided-0570.css'
+      - 'index.html'
+      - 'tools/build_atlas_site.py'
       - 'tests/atlas-public-spend-mobile-route-0573.mjs'
       - '.github/workflows/validate-public-spend-mobile-route-0573.yml'
   workflow_dispatch:
@@ -24,5 +35,17 @@ jobs:
           node-version: 22
       - name: Syntax
         run: node --check assets/atlas-public-spend-mobile-route-0573.js
-      - name: Contract
+      - name: Production route contract
         run: node tests/atlas-public-spend-mobile-route-0573.mjs
+      - name: Verify compiled-only source policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -q "./v037-public-spend.js" assets/atlas-public-spend-mobile-route-0573.js
+          ! grep -q "./v037-public-spend.css" assets/atlas-public-spend-mobile-route-0573.js
+          grep -q "COMPILED_BUNDLES_ONLY_NO_SOURCE_FETCH" assets/atlas-public-spend-mobile-route-0573.js
+          grep -q "recoverVisibleSurface" assets/atlas-public-spend-mobile-route-0573.js
+          python tools/build_atlas_site.py --out _site-public-spend-route
+          test -s _site-public-spend-route/assets/atlas-public-spend-mobile-route-0573.js
+          test ! -e _site-public-spend-route/v037-public-spend.js
+          test ! -e _site-public-spend-route/v037-public-spend.css
