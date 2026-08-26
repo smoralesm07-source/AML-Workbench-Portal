@@ -128,9 +128,15 @@ jobs:
           assert report['visible_version_authority']=='atlas-release-guard.js',report
           assert set(report['published_css'])=={'atlas-runtime-current.css','assets/atlas-public-spend-v2.css'},report
           assert report['published_js'],report
+          final_authority='assets/atlas-ui-authority-0901.js'
+          authorities=[x for x in m['scripts'] if x['path']==final_authority]
+          assert len(authorities)==1 and authorities[0].get('role')=='final-ui-runtime-authority',authorities
           for source in [*m['styles'],*[x['path'] for x in m['scripts']]]:
               assert f'./{source}' not in html,f'source fragment leaked into index: {source}'
-              assert not Path('_site-test',source).exists(),f'source fragment published: {source}'
+              if source==final_authority:
+                  assert Path('_site-test',source).is_file(),'declared final UI authority missing from artifact'
+              else:
+                  assert not Path('_site-test',source).exists(),f'source fragment published: {source}'
           for forbidden in m['forbidden_runtime_assets']:
               assert not Path('_site-test',forbidden).exists(),f'forbidden runtime published: {forbidden}'
           refs=re.findall(r'(?:src|href)="\.\/(atlas-(?:runtime|module)-current[^?\"]+)\?r=([^\"]+)"',html)
