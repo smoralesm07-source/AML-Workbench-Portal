@@ -12,6 +12,15 @@
 .uso816-evidence h4{display:flex;align-items:center;margin:0 0 7px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#d7e4f1}
 .uso816-evidence p,.uso816-evidence ul{margin:0;color:#a9bbcc;font-size:10px;line-height:1.5}
 .uso816-evidence ul{padding-left:16px}.uso816-evidence li+li{margin-top:5px}.uso816-evidence b{color:#d7e4f1}
-.uso816-management-help{display:inline-flex;align-items:center;margin-right:auto;color:#7890a6;font-size:10px}
+.uso816-management-help{display:inline-flex;align-items:center;margin-right:4px;color:#7890a6;font-size:9px;flex:0 0 auto;white-space:nowrap}
 .uso816 .aex-legend-item{overflow:visible}.uso816 .uso81-metrics span{overflow:visible}
+/* Ficha 360: acciones compactas, siempre dentro del marco */
+.uso816 .aex-sheet-foot{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:nowrap;min-width:0;overflow:hidden;padding-left:12px;padding-right:12px}
+.uso816 .aex-sheet-foot .aex-btn{flex:0 1 auto;min-width:0!important;max-width:none;height:34px;padding:0 9px;font-size:10px;line-height:1;white-space:nowrap;border-radius:9px}
+.uso816 .aex-sheet-foot [data-u816-review="REVISADO"]{max-width:138px}
+.uso816 .aex-sheet-foot [data-u816-review="CANDIDATO_SELECCIONADO"]{max-width:148px}
+.uso816 .aex-sheet-foot [data-u816-review="NO_CANDIDATO"]{max-width:104px}
+.uso816 .aex-sheet-foot #u816-exp{max-width:132px;padding-left:8px;padding-right:8px;font-size:9.5px}
+@media(max-width:900px){.uso816 .aex-sheet-foot{gap:5px;padding-left:8px;padding-right:8px}.uso816 .aex-sheet-foot .aex-btn{font-size:9.5px;padding:0 7px}.uso816-management-help{font-size:8.5px;margin-right:2px}}
+@media(max-width:700px){.uso816 .aex-sheet-foot{flex-wrap:wrap;overflow:visible;justify-content:flex-start}.uso816-management-help{width:100%;margin-right:0}.uso816 .aex-sheet-foot .aex-btn{flex:1 1 auto;max-width:none!important}}
 @media(max-width:820px){.uso816-evidence-grid{grid-template-columns:1fr}.uso816-pop{left:0;transform:none;width:min(280px,70vw)}.uso816-help-wrap:hover .uso816-pop,.uso816-help-wrap:focus .uso816-pop,.uso816-help-wrap:focus-within .uso816-pop{transform:none}}
