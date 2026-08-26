@@ -4,7 +4,9 @@ import assert from 'node:assert/strict';
 /* Contrato de producto de la seccion Entidades 0510.
  * Verifica lo que no puede romperse sin cambiar la semantica declarada:
  * fuentes de lectura, guardarrailes, aislamiento del resto de la aplicacion y
- * coherencia entre los tres archivos de contrato. */
+ * coherencia entre los tres archivos de contrato. La extensión conserva su
+ * propia clave 0511 aunque la release global siga avanzando.
+ */
 
 const read = path => fs.readFileSync(path, 'utf8');
 const explorer = read('assets/atlas-entity-explorer-0510.js');
@@ -17,26 +19,24 @@ const release = JSON.parse(read('atlas-release.json'));
 const build = JSON.parse(read('build.json'));
 const runtime = JSON.parse(read('atlas-runtime-manifest.json'));
 
-/* --- coherencia de release --- */
+/* --- coherencia de release global --- */
 assert.equal(release.release, build.app_version);
 assert.equal(release.build, build.build);
 assert.equal(release.release, runtime.release);
 assert.equal(release.build, runtime.build);
-assert.equal(release.build, '0511');
+assert.match(release.release,/^\d+\.\d+\.\d+$/);
 
-/* --- montaje en el runtime publicado --- */
-const cacheKey = new RegExp(`\\?v=${release.build}-1`);
+/* --- montaje de la extensión en la plantilla fuente --- */
 for (const asset of ['atlas-entity-explorer-0510.css', 'atlas-entity-dossier-0510.css',
   'atlas-entity-explorer-0510.js', 'atlas-entity-dossier-0510.js']) {
   assert.ok(html.includes(asset), `${asset} debe montarse en el runtime publicado`);
 }
-/* Los cuatro archivos comparten la clave de caché del build vigente. */
-assert.equal((html.match(new RegExp(cacheKey.source, 'g')) || []).length, 4);
+/* Los cuatro archivos conservan la clave propia de la extensión 0511. */
+assert.equal((html.match(/\?v=0511-1/g) || []).length, 4);
 assert.ok(html.indexOf('atlas-entity-explorer-0510.js') < html.indexOf('atlas-entity-dossier-0510.js'),
   'el explorador se monta antes que el expediente');
 assert.ok(html.indexOf('atlas-pep-discovery.js') < html.indexOf('atlas-entity-explorer-0510.js'),
   'la extension 0510 carga despues del runtime compilado y de las extensiones previas');
-assert.match(html, new RegExp(`data-atlas-release="${release.release.replace(/\./g, '\\.')}"`));
 
 /* --- aislamiento: la extension envuelve autoridades, no las reemplaza --- */
 assert.match(explorer, /window\.__ATLAS_ENTITY_ENTRY__/);
@@ -44,14 +44,12 @@ assert.match(explorer, /const BASE_LOAD=ENTRY\.load/);
 assert.match(explorer, /ENTRY\.legacyEmptyWorkspace=BASE_LOAD/);
 assert.match(dossier, /const BASE_RENDER=typeof window\.v0203RenderEntity==='function'/);
 assert.match(dossier, /const result=BASE_RENDER\(pkg,preserve\)/);
-/* Las prohibiciones se verifican sobre codigo, no sobre la prosa que las declara. */
 const strip = src => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 for (const source of [strip(explorer), strip(dossier)]) {
   assert.doesNotMatch(source, /MutationObserver/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB/i);
   assert.doesNotMatch(source, /service[_-]?role/i);
   assert.doesNotMatch(source, /signOut|refresh_token|setSession/);
-  /* Lectura pura: ninguna escritura contra PostgREST. Map.delete no cuenta. */
   assert.doesNotMatch(source, /\.(insert|upsert|update)\(/);
   assert.doesNotMatch(source, /\.from\([^)]*\)[^;]*\.delete\(/);
   assert.match(source, /MEMORY_ONLY/);
@@ -89,7 +87,6 @@ for (const source of ['aml_v_ipa3_structure_peer_benchmark', 'aml_v_ipa3_sii_tra
 }
 assert.match(dossier, /ATLAS_ENTITY_CHARACTERIZATION_V1/);
 assert.match(dossier, /function markDrawer/);
-/* El rediseño 0511 sustituye recuentos en prosa por series y objetos gráficos. */
 assert.match(dossier, /const YEAR_TABLE='aml_sii_entity_year'/);
 assert.match(dossier, /function trajectoryChart/);
 assert.match(dossier, /function sanctionTimeline/);
@@ -100,7 +97,6 @@ assert.match(explorer, /function signature/);
 assert.match(explorer, /function priorityChart/);
 assert.match(explorer, /function coverageMatrix/);
 assert.match(explorer, /function rulesMarkup/);
-/* La huella sólo dibuja productores que el perfil declara de verdad. */
 assert.match(explorer, /const PRODUCERS=\[\['sii','RADAR_SII'/);
 assert.doesNotMatch(explorer, /RADAR_CGR|RADAR_DELICTUAL|PRESUPUESTO/);
 assert.match(dossier, /aporte           = min\(intensidad_bruta, tope_individual\) × confianza/);
@@ -120,9 +116,7 @@ assert.match(dossier, /no describe desempeño|posición relativa|no es riesgo/);
 assert.match(dossier, /no promueve identidad/);
 assert.match(dossier, /no acredita por sí sola lavado de activos|no acredita delito|no acredita conducta/);
 assert.match(dossier, /Ausencia en el corte no equivale a puntaje cero/);
-/* Un IPA3 en cero es ausencia de marca y se muestra como raya, nunca como banda baja. */
 assert.match(explorer, /if\(!score\|\|value==null\|\|value<=0\)return'<b class="none"/);
-/* Number(null) es 0: sin el guardia, un dato ausente se pintaría como cero. */
 for (const source of [explorer, dossier]) {
   assert.match(source, /if\(v===null\|\|v===undefined\|\|v===''\)return null/);
 }

@@ -8,7 +8,7 @@ const index=fs.readFileSync('index.html','utf8');
 assert.match(js,/Auditoría y salud de fuentes/);
 assert.match(js,/findTopbar/);
 assert.match(js,/ensureSeed/);
-assert.match(js,/data\.topbarMode|dataset\.topbarMode/);
+assert.match(js,/setData\(audit,'topbarMode','1'\)/);
 assert.match(js,/AtlasGlobalSourceHealth/);
 assert.match(js,/NO_GLOBAL_DOM_OBSERVER/);
 assert.doesNotMatch(js,/new\s+MutationObserver\s*\(/,'global source health must remain observer-free');
