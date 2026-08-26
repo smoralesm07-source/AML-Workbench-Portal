@@ -98,7 +98,15 @@ jobs:
           assert 'data-aml-build="0511"' not in html
           for legacy in ('atlas-universo-so-0600','atlas-universo-so-0610','atlas-universo-so-0620','atlas-universo-so-0630','atlas-universo-so-0640'):
               assert legacy not in html
+          bundles = sorted(Path('_site').glob('atlas-runtime-current-*.js')) + sorted(Path('_site').glob('atlas-module-current-*.js'))
+          print('Compiled runtime bundles:')
+          for bundle in bundles:
+              print(f'  {bundle.name}: {bundle.stat().st_size / 1024:.1f} KiB')
           PY
+          for js in _site/atlas-runtime-current-*.js _site/atlas-module-current-*.js; do
+            test -f "$js" || continue
+            node --check "$js"
+          done
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
