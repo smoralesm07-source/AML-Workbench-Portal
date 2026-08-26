@@ -1,49 +1,8 @@
 'use strict';
-/* ATLAS AML · IRG refinement.
- * Improves interpretation by:
- *  - forcing the formula to one line with help for every term;
- *  - coloring the regional map by comparative quintile so national dispersion is visible;
- *  - documenting the evolved V/E v2 internal methodology while top-level IRG weights remain unchanged.
+/* ATLAS AML · RETIRED compatibility stub
+ * Legacy IGR 45/20/20/15 presentation was retired by IGR v2A on 2026-08-26.
+ * Filename is retained because current deploy manifests still reference it.
  */
 (function(){
-  const HELP={
-    irg:{title:'IRG · Índice de Riesgo Geográfico LA/FT',body:'Score territorial compuesto. Mantiene la estructura 45% V/E + 20% Densidad SO + 20% Brecha + 15% Amenaza.',note:'No es probabilidad de delito ni atribución de riesgo a una entidad específica.'},
-    ve:{title:'V/E · Vulnerabilidad / Exposición v2',body:'El 45% del IRG se calcula con dos capas: 85% núcleo sectorial y 15% materialidad territorial SII. El núcleo sectorial combina 35% vulnerabilidad estructural base, 25% exposición a vulnerabilidades de la ENR de Chile, 20% ICR histórico de ROS y 20% materialidad sectorial derivada de la evaluación GAFILAT.',note:'ICR usa 2021–2025 y se suaviza hacia la tasa nacional para evitar que sectores con pocos ROS dominen el score. La capa SII combina percentiles de tramo de ventas, trabajadores por entidad e inicios de actividad 2024+ en el universo potencial. Este último es un proxy de dinamismo, no una fecha legal de constitución. ENR/GAFILAT son adaptadores ATLAS explícitos, no scores oficiales sectoriales.'},
-    density:{title:'Densidad SO · Sujetos Obligados',body:'Percentil nacional de sujetos obligados UAF observados por cada 1.000 entidades activas SII de la región.',note:'Mide concentración relativa, no incumplimiento. Peso: 20%.'},
-    gap:{title:'Brecha potencial de cobertura',body:'Diferencia entre el universo potencial SII en actividades homologadas y los sujetos obligados UAF observados/localizados.',note:'Es una señal de screening y requiere validación documental. Peso: 20%.'},
-    threat:{title:'Amenaza territorial · CEAD Score v1',body:'El 15% de Amenaza usa el componente criminógeno CEAD: 55% delito base directo + 35% economía criminal y facilitadores + 10% contexto criminógeno. Cada componente combina intensidad 40%, persistencia 25%, tendencia 20% y anomalía 15%.',note:'La confianza se informa separadamente; faltantes no se convierten en cero. El indicador prioriza presión territorial y no acredita LA/FT ni atribuye conductas a personas o entidades.'}
-  };
-  const COLORS=['#8fb8a8','#d7c67d','#e59a55','#cf6548','#a43a38'];
-  let tip=null,scheduled=false;
-  function ensureTip(){if(tip)return tip;tip=document.createElement('div');tip.className='v032-irg-tip';document.body.appendChild(tip);return tip;}
-  function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-  function showTip(el,key){const h=HELP[key];if(!h)return;const t=ensureTip(),r=el.getBoundingClientRect();t.innerHTML=`<b>${esc(h.title)}</b><div>${esc(h.body)}</div><small>${esc(h.note)}</small>`;t.style.left=`${Math.min(window.innerWidth-355,Math.max(8,r.left))}px`;t.style.top=`${Math.min(window.innerHeight-150,r.bottom+8)}px`;t.classList.add('on');}
-  function hideTip(){tip?.classList.remove('on');}
-  function help(key,label){return `<span class="v032-term">${label}<span class="v032-help" tabindex="0" role="button" aria-label="Ayuda ${label}" data-v032-help="${key}">i</span></span>`;}
-  function patchFormula(){
-    document.querySelectorAll('.v032-formula-eq').forEach(eq=>{
-      if(eq.dataset.atlasIrgRefined==='1')return;
-      eq.dataset.atlasIrgRefined='1';
-      eq.innerHTML=`${help('irg','IRG')} = <b>45%</b>&nbsp;${help('ve','V/E')} + <b>20%</b>&nbsp;${help('density','Densidad SO')} + <b>20%</b>&nbsp;${help('gap','Brecha')} + <b>15%</b>&nbsp;${help('threat','Amenaza')}`;
-    });
-    document.querySelectorAll('[data-v032-help]').forEach(el=>{
-      if(el.dataset.helpBound==='1')return;el.dataset.helpBound='1';
-      const key=el.dataset.v032Help;el.addEventListener('mouseenter',()=>showTip(el,key));el.addEventListener('mouseleave',hideTip);el.addEventListener('focus',()=>showTip(el,key));el.addEventListener('blur',hideTip);
-    });
-  }
-  function parseValue(path){const s=path.querySelector('title')?.textContent||'';const m=s.match(/(?:IRG|V\/E|Densidad SO|Brecha|Amenaza)\s+(-?\d+(?:[.,]\d+)?)/i);return m?Number(m[1].replace(',','.')):NaN;}
-  function quantileRank(values,v){if(values.length<=1)return .5;let below=0,equal=0;for(const x of values){if(x<v)below++;else if(x===v)equal++;}return (below+(equal-1)/2)/(values.length-1);}
-  function patchMap(){
-    const map=document.querySelector('.v032-map');if(!map)return;
-    const paths=[...map.querySelectorAll('path.v032-region')].map(p=>({p,v:parseValue(p)})).filter(x=>Number.isFinite(x.v));
-    if(paths.length<3)return;
-    const vals=paths.map(x=>x.v).sort((a,b)=>a-b);
-    paths.forEach(({p,v})=>{const q=quantileRank(vals,v);const band=Math.min(4,Math.max(0,Math.floor(q*5)));p.setAttribute('fill',COLORS[band]);p.dataset.v032RelativeBand=`q${band+1}`;const title=p.querySelector('title');if(title&&!/quintil comparativo/i.test(title.textContent))title.textContent+=` · color: quintil comparativo ${band+1}/5`;});
-    const legend=document.querySelector('.v032-legend');if(legend&&!legend.querySelector('.v032-rel-note')){const note=document.createElement('span');note.className='v032-rel-note';note.innerHTML='<b>Color</b> = quintil relativo nacional';legend.appendChild(note);}
-  }
-  function run(){scheduled=false;patchFormula();patchMap();}
-  function queue(){if(scheduled)return;scheduled=true;requestAnimationFrame(run);}
-  const obs=new MutationObserver(queue);obs.observe(document.documentElement,{subtree:true,childList:true});
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',queue,{once:true});else queue();
-  window.addEventListener('hashchange',queue);window.addEventListener('popstate',queue);
+  window.ATLAS_IGR_REFINEMENT={retired:true,replacedBy:'IGR-2A-1.0.0',reason:'SECTOR_AND_ENTITY_ORTHOGONALITY'};
 })();
