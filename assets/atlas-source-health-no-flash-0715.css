@@ -1,0 +1,20 @@
+/* ATLAS source-health no-flash guard 0715
+ * The detailed audit renderer may be instantiated before the canonical topbar
+ * authority positions it. Keep every audit surface non-rendered until the
+ * global authority explicitly marks topbar mode. This prevents legacy content
+ * flash on Radar Integrado without observing the DOM or delaying app startup.
+ */
+.a57-data-audit:not([data-topbar-mode="1"]),
+.ash-audit:not([data-topbar-mode="1"]){
+  display:none!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+.a57-data-audit[data-topbar-mode="1"],
+.ash-audit[data-topbar-mode="1"]{
+  visibility:visible!important;
+  pointer-events:auto!important;
+}
+[data-atlas-global-audit-fallback="1"]{
+  display:none!important;
+}
