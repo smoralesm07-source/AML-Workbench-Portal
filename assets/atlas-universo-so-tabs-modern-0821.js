@@ -1,10 +1,11 @@
 'use strict';
-/* ATLAS AML · Universo SO tabs estables 0.82.4
- * Autoridad única de los tres accesos superiores. Reconciliación sin timers,
- * sin dependencia del orden de carga entre Universo SO y Gestión candidatos.
+/* ATLAS AML · Universo SO tabs estables 0.82.5
+ * Autoridad única de los tres accesos superiores.
+ * Observación restringida exclusivamente a reemplazos completos de la barra:
+ * nunca observa mutaciones internas de Universo SO ni las generadas por sí misma.
  */
-(function atlasUniversoSOTabsStable0824(){
-  if(window.AtlasUniversoSOTabsStable0824)return;
+(function atlasUniversoSOTabsStable0825(){
+  if(window.AtlasUniversoSOTabsStable0825)return;
 
   const icons=[
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M15.8 10.5a2.5 2.5 0 1 0 0-5"/><path d="M3.5 19c.4-3.4 2.1-5.2 5-5.2s4.6 1.8 5 5.2"/><path d="M14.5 14.2c2.8.2 4.4 1.8 4.8 4.8"/></svg>',
@@ -30,9 +31,11 @@
       b.dataset.uso830Candidates='1';
       b.classList.add('uso820-management-tab');
     }
-    b.dataset.usoStable0824=String(i);
-    const active=i<2 && ((c.mode==='inscritos'&&existing?.classList.contains('active'))||(c.mode==='potenciales'&&existing?.classList.contains('active')));
-    if(i<2)b.classList.toggle('active',!!active);
+    b.dataset.usoStable0825=String(i);
+    if(i<2){
+      const active=(c.mode==='inscritos'&&b.classList.contains('active'))||(c.mode==='potenciales'&&b.classList.contains('active'));
+      b.classList.toggle('active',active);
+    }
     const wanted=`<span class="uso-tab-icon">${icons[i]}</span><span class="uso-tab-copy"><b>${c.title}</b><small>${c.subtitle}</small></span><span class="uso-tab-badge${c.muted?' muted':''}">${c.badge}</span>`;
     if(b.innerHTML!==wanted)b.innerHTML=wanted;
     return b;
@@ -42,16 +45,10 @@
     const tabs=document.querySelector('.uso81-tabs');
     if(!tabs)return false;
     const current=[...tabs.children].filter(n=>n.tagName==='BUTTON');
-    const byMode={
-      inscritos:current.find(b=>b.dataset.u816Mode==='inscritos'),
-      potenciales:current.find(b=>b.dataset.u816Mode==='potenciales'),
-      management:current.find(b=>b.dataset.uso830Candidates==='1')
-    };
-    const ordered=[
-      canonicalButton(0,byMode.inscritos||current[0]),
-      canonicalButton(1,byMode.potenciales||current.find(b=>b!==byMode.inscritos&&b!==current[0])||current[1]),
-      canonicalButton(2,byMode.management)
-    ];
+    const inscritos=current.find(b=>b.dataset.u816Mode==='inscritos')||current[0]||null;
+    const potenciales=current.find(b=>b.dataset.u816Mode==='potenciales')||current.find(b=>b!==inscritos)||null;
+    const management=current.find(b=>b.dataset.uso830Candidates==='1')||null;
+    const ordered=[canonicalButton(0,inscritos),canonicalButton(1,potenciales),canonicalButton(2,management)];
     let changed=false;
     ordered.forEach((b,i)=>{
       if(tabs.children[i]!==b){tabs.insertBefore(b,tabs.children[i]||null);changed=true}
@@ -67,18 +64,34 @@
     queueMicrotask(()=>{queued=false;reconcile()});
   }
 
+  /*
+   * IMPORTANTE: el observer solo reacciona cuando una mutación INSERTA una nueva
+   * barra .uso81-tabs (o un contenedor que la incluya). No escucha mutaciones cuyo
+   * target esté dentro de .uso81. Así, innerHTML/insertBefore de reconcile() jamás
+   * realimentan el observer y no pueden bloquear el hilo principal.
+   */
   const observer=new MutationObserver(muts=>{
-    if(muts.some(m=>m.type==='childList'&&(m.target?.classList?.contains('uso81-tabs')||m.target?.closest?.('.uso81')||[...m.addedNodes].some(n=>n.nodeType===1&&(n.classList?.contains('uso81-tabs')||n.querySelector?.('.uso81-tabs'))))))queue();
+    const replaced=muts.some(m=>m.type==='childList'&&[...m.addedNodes].some(n=>
+      n.nodeType===1&&(n.classList?.contains('uso81-tabs')||n.querySelector?.('.uso81-tabs'))
+    ));
+    if(replaced)queue();
   });
+
   function start(){
     if(!document.body)return;
     observer.observe(document.body,{childList:true,subtree:true});
     reconcile();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-  document.addEventListener('click',e=>{if(e.target.closest?.('.uso81,[data-uso830-candidates],[data-u816-mode]'))queue()},true);
 
-  window.AtlasUniversoSOTabsStable0824={version:'0.82.4',reconcile};
-  window.AtlasUniversoSOTabsModern0823=window.AtlasUniversoSOTabsStable0824;
-  window.AtlasUniversoSOTabsModern0822=window.AtlasUniversoSOTabsStable0824;
+  /* Los eventos de navegación son una segunda vía determinista, sin polling. */
+  document.addEventListener('click',e=>{
+    if(e.target.closest?.('[data-uso830-candidates],[data-u816-mode],#uso830-back'))queue();
+  },true);
+  window.addEventListener('atlas:universo-so-0816-ready',queue);
+
+  window.AtlasUniversoSOTabsStable0825={version:'0.82.5',reconcile};
+  window.AtlasUniversoSOTabsStable0824=window.AtlasUniversoSOTabsStable0825;
+  window.AtlasUniversoSOTabsModern0823=window.AtlasUniversoSOTabsStable0825;
+  window.AtlasUniversoSOTabsModern0822=window.AtlasUniversoSOTabsStable0825;
 })();
