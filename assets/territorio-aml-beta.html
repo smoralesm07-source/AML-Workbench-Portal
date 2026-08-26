@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es" data-atlas-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow,noarchive" />
+  <meta name="referrer" content="no-referrer" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src 'self' https://raw.githubusercontent.com; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'" />
+  <title>ATLAS · Territorio AML comunal · Beta aislada</title>
+  <link rel="stylesheet" href="./atlas-territory-communal-beta-0900.css?v=0900-1" />
+</head>
+<body>
+  <main id="territory-beta-root" class="territory-beta-shell">
+    <header class="territory-beta-topbar">
+      <div>
+        <span class="beta-kicker">ATLAS · TERRITORIO</span>
+        <h1>Inteligencia geográfica AML comunal <em>BETA AISLADA</em></h1>
+        <p>Prototipo funcional con datos CEAD comunales reales. No modifica la sección Territorio vigente ni sus indicadores.</p>
+      </div>
+      <a class="beta-return" href="../">← Volver a ATLAS</a>
+    </header>
+    <section class="beta-safety">
+      <b>Modo evaluación reversible</b>
+      <span>Esta página es independiente. Nada de lo que ves aquí altera Territorio actual, IRG, navegación ni scoring productivo.</span>
+    </section>
+    <section class="beta-controls" aria-label="Controles del prototipo">
+      <div class="beta-segment" id="beta-layer-switch">
+        <button class="active" data-layer="score">Score CEAD</button>
+        <button data-layer="predicate_direct">Delito base</button>
+        <button data-layer="criminal_economy">Economía criminal</button>
+        <button data-layer="criminogenic_context">Contexto</button>
+      </div>
+      <label>Región<select id="beta-region"><option value="ALL">Todo Chile</option></select></label>
+      <label>Buscar comuna<input id="beta-search" type="search" placeholder="Ej. San Bernardo" autocomplete="off" /></label>
+    </section>
+    <section class="beta-kpis" id="beta-kpis"></section>
+    <section class="beta-main-grid">
+      <article class="beta-map-card">
+        <header>
+          <div><span>LECTURA TERRITORIAL</span><h2>Mapa comunal AML · esquema norte–sur</h2><p>Representación exploratoria por posición regional norte–sur. Los puntos son comunas reales; el tamaño y tono reflejan la capa seleccionada. La geometría cartográfica final no se activa en esta beta.</p></div>
+          <div class="beta-legend"><span>Bajo</span><i></i><i></i><i></i><i></i><i></i><span>Muy alto</span></div>
+        </header>
+        <div id="beta-map" class="beta-map" role="list"></div>
+      </article>
+      <aside class="beta-priority-card"><header><span>QUÉ REQUIERE ATENCIÓN</span><h2>Prioridad comunal</h2></header><div id="beta-ranking" class="beta-ranking"></div></aside>
+    </section>
+    <section class="beta-detail-grid">
+      <article class="beta-profile" id="beta-profile"><div class="beta-empty">Selecciona una comuna para abrir su ficha 360 territorial.</div></article>
+      <article class="beta-explain" id="beta-explain"><header><span>LECTURA EXPLICABLE</span><h2>¿Por qué esta comuna?</h2></header><p>Selecciona una comuna. ATLAS resumirá qué capa explica la señal, su intensidad, persistencia, tendencia y anomalía sin atribuir conductas a personas o empresas.</p></article>
+    </section>
+    <section class="beta-method"><details><summary>Ayuda metodológica</summary><p>El score CEAD del prototipo usa la estructura vigente 55% delito base directo, 35% economía criminal/facilitadores y 10% contexto criminógeno. La vista no modifica pesos, no recalcula IRG y conserva la interpretación territorial: presión criminógena no equivale a probabilidad de lavado de activos.</p></details></section>
+  </main>
+  <script src="./atlas-territory-communal-beta-0900.js?v=0900-1"></script>
+</body>
+</html>
