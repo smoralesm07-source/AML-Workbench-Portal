@@ -1,11 +1,158 @@
-/* ATLAS AML 0.71.3 · auditoría global estable en topbar */
-[data-atlas-global-audit-host="0713"]{position:relative!important}
-[data-atlas-global-audit-host="0713"]>.ash-audit,[data-atlas-global-audit-host="0713"]>.a57-data-audit{
-  position:absolute!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;
-  width:min(330px,32vw)!important;max-width:330px!important;z-index:1201!important;margin:0!important
+/* ATLAS AML 0.71.4 · topbar limpio + auditoría centrada en estándar ATLAS */
+[data-atlas-global-audit-host="0714"]{position:relative!important}
+
+/* El menú superior no debe duplicar búsquedas que ya existen dentro de cada módulo. */
+[data-atlas-global-audit-host="0714"] [data-atlas-top-search-hidden="1"]{display:none!important}
+
+/* Control compacto, centrado y estable. */
+[data-atlas-global-audit-host="0714"]>.ash-audit,
+[data-atlas-global-audit-host="0714"]>.a57-data-audit{
+  position:absolute!important;
+  left:50%!important;
+  top:50%!important;
+  transform:translate(-50%,-50%)!important;
+  width:min(258px,28vw)!important;
+  max-width:258px!important;
+  z-index:1201!important;
+  margin:0!important;
+  overflow:visible!important;
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
 }
+
 [data-atlas-global-audit-fallback="1"]{display:none!important}
-.ash-audit[data-global-audit="0713"],.a57-data-audit[data-global-audit="0713"]{z-index:1201!important}
-.ash-audit[data-global-audit="0713"] .ash-detail:not([hidden]),.a57-data-audit[data-global-audit="0713"] .ash-detail:not([hidden]){z-index:1202!important}
-@media(max-width:900px){[data-atlas-global-audit-host="0713"]>.ash-audit,[data-atlas-global-audit-host="0713"]>.a57-data-audit{width:min(250px,36vw)!important}}
-@media(max-width:640px){[data-atlas-global-audit-host="0713"]>.ash-audit,[data-atlas-global-audit-host="0713"]>.a57-data-audit{position:static!important;transform:none!important;width:100%!important;max-width:none!important}}
+.ash-audit[data-global-audit="0714"],.a57-data-audit[data-global-audit="0714"]{z-index:1201!important}
+
+/* Botón principal: más corto, limpio y visualmente alineado con ATLAS. */
+.ash-audit[data-global-audit="0714"] .ash-main,
+.a57-data-audit[data-global-audit="0714"] .ash-main{
+  min-height:34px!important;
+  height:34px!important;
+  width:100%!important;
+  padding:0 11px!important;
+  display:grid!important;
+  grid-template-columns:1fr auto!important;
+  align-items:center!important;
+  gap:8px!important;
+  border:1px solid rgba(82,165,231,.24)!important;
+  border-radius:9px!important;
+  background:linear-gradient(180deg,rgba(19,43,65,.94),rgba(12,28,44,.96))!important;
+  color:#dbe9f5!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 8px 24px rgba(2,10,20,.16)!important;
+  cursor:pointer!important;
+  transition:border-color .16s ease,background .16s ease,box-shadow .16s ease!important;
+}
+.ash-audit[data-global-audit="0714"] .ash-main:hover,
+.a57-data-audit[data-global-audit="0714"] .ash-main:hover,
+.ash-audit[data-global-audit="0714"] .ash-main[aria-expanded="true"],
+.a57-data-audit[data-global-audit="0714"] .ash-main[aria-expanded="true"]{
+  border-color:rgba(56,189,248,.48)!important;
+  background:linear-gradient(180deg,rgba(22,49,74,.98),rgba(13,31,49,.98))!important;
+  box-shadow:0 0 0 1px rgba(56,189,248,.06),0 10px 28px rgba(2,12,24,.22)!important;
+}
+.ash-audit[data-global-audit="0714"] .a57-title,
+.a57-data-audit[data-global-audit="0714"] .a57-title{display:flex!important;align-items:center!important;gap:7px!important;min-width:0!important}
+.ash-audit[data-global-audit="0714"] .a57-title>span,
+.a57-data-audit[data-global-audit="0714"] .a57-title>span{min-width:0!important}
+.ash-audit[data-global-audit="0714"] .a57-title strong,
+.a57-data-audit[data-global-audit="0714"] .a57-title strong{
+  display:block!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+  color:#d8e7f3!important;
+  font-size:10px!important;
+  font-weight:750!important;
+  letter-spacing:.005em!important;
+}
+.ash-audit[data-global-audit="0714"] .a57-title small,
+.a57-data-audit[data-global-audit="0714"] .a57-title small,
+.ash-audit[data-global-audit="0714"] .ash-quick,
+.a57-data-audit[data-global-audit="0714"] .ash-quick{display:none!important}
+.ash-audit[data-global-audit="0714"] .ash-dot,
+.a57-data-audit[data-global-audit="0714"] .ash-dot{width:6px!important;height:6px!important;box-shadow:0 0 9px currentColor!important;flex:none!important}
+.ash-audit[data-global-audit="0714"] .a57-chevron,
+.a57-data-audit[data-global-audit="0714"] .a57-chevron{
+  color:#7890a8!important;
+  font-size:13px!important;
+  line-height:1!important;
+  transition:transform .16s ease,color .16s ease!important;
+}
+.ash-audit[data-global-audit="0714"] .ash-main[aria-expanded="true"] .a57-chevron,
+.a57-data-audit[data-global-audit="0714"] .ash-main[aria-expanded="true"] .a57-chevron{transform:rotate(180deg)!important;color:#7dd3fc!important}
+
+/* Despliegue flotante ATLAS: oscuro, compacto, legible y sin cambiar el layout del header. */
+.ash-audit[data-global-audit="0714"] .ash-detail:not([hidden]),
+.a57-data-audit[data-global-audit="0714"] .ash-detail:not([hidden]){
+  display:block!important;
+  position:absolute!important;
+  left:50%!important;
+  top:calc(100% + 8px)!important;
+  transform:translateX(-50%)!important;
+  width:min(560px,72vw)!important;
+  max-width:560px!important;
+  max-height:min(62vh,560px)!important;
+  z-index:1205!important;
+  padding:10px 12px 11px!important;
+  overflow:auto!important;
+  border:1px solid rgba(75,145,199,.22)!important;
+  border-radius:13px!important;
+  background:linear-gradient(180deg,rgba(13,29,45,.99),rgba(8,19,31,.99))!important;
+  color:#d7e4ef!important;
+  box-shadow:0 18px 50px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.025)!important;
+  scrollbar-gutter:stable!important;
+}
+.ash-audit[data-global-audit="0714"] .ash-tabs,
+.a57-data-audit[data-global-audit="0714"] .ash-tabs{
+  top:0!important;
+  margin:-2px 0 8px!important;
+  padding:5px!important;
+  gap:4px!important;
+  border:1px solid rgba(94,130,163,.10)!important;
+  border-radius:9px!important;
+  background:rgba(16,35,53,.76)!important;
+  backdrop-filter:blur(10px)!important;
+}
+.ash-audit[data-global-audit="0714"] .ash-tabs button,
+.a57-data-audit[data-global-audit="0714"] .ash-tabs button{
+  min-height:27px!important;
+  padding:0 9px!important;
+  border-radius:7px!important;
+  border:1px solid transparent!important;
+  background:transparent!important;
+  color:#7790a7!important;
+  font-size:8.5px!important;
+  font-weight:700!important;
+}
+.ash-audit[data-global-audit="0714"] .ash-tabs button:hover,
+.a57-data-audit[data-global-audit="0714"] .ash-tabs button:hover{background:rgba(56,189,248,.055)!important;color:#c3d6e5!important}
+.ash-audit[data-global-audit="0714"] .ash-tabs button.active,
+.a57-data-audit[data-global-audit="0714"] .ash-tabs button.active{
+  border-color:rgba(56,189,248,.20)!important;
+  background:linear-gradient(180deg,rgba(28,72,105,.40),rgba(18,48,73,.34))!important;
+  color:#dceaf5!important;
+  box-shadow:inset 2px 0 0 rgba(56,189,248,.74)!important;
+}
+.ash-audit[data-global-audit="0714"] .ash-tabs [data-ash-refresh],
+.a57-data-audit[data-global-audit="0714"] .ash-tabs [data-ash-refresh]{margin-left:auto!important;border-color:rgba(117,146,174,.12)!important}
+.ash-audit[data-global-audit="0714"] .ash-metric,
+.a57-data-audit[data-global-audit="0714"] .ash-metric,
+.ash-audit[data-global-audit="0714"] .ash-domains>div,
+.a57-data-audit[data-global-audit="0714"] .ash-domains>div,
+.ash-audit[data-global-audit="0714"] .ash-op,
+.a57-data-audit[data-global-audit="0714"] .ash-op{
+  border-color:rgba(111,151,187,.10)!important;
+  background:rgba(13,29,45,.58)!important;
+}
+.ash-audit[data-global-audit="0714"] .ash-impact,
+.a57-data-audit[data-global-audit="0714"] .ash-impact{background:rgba(19,66,88,.10)!important;border-color:rgba(56,189,248,.12)!important}
+
+@media(max-width:900px){
+  [data-atlas-global-audit-host="0714"]>.ash-audit,[data-atlas-global-audit-host="0714"]>.a57-data-audit{width:min(232px,38vw)!important;max-width:232px!important}
+  .ash-audit[data-global-audit="0714"] .ash-detail:not([hidden]),.a57-data-audit[data-global-audit="0714"] .ash-detail:not([hidden]){width:min(500px,86vw)!important}
+}
+@media(max-width:640px){
+  [data-atlas-global-audit-host="0714"]>.ash-audit,[data-atlas-global-audit-host="0714"]>.a57-data-audit{position:static!important;transform:none!important;width:min(230px,78vw)!important;max-width:230px!important;margin:0 auto!important}
+  .ash-audit[data-global-audit="0714"] .ash-detail:not([hidden]),.a57-data-audit[data-global-audit="0714"] .ash-detail:not([hidden]){position:fixed!important;left:12px!important;right:12px!important;top:64px!important;transform:none!important;width:auto!important;max-width:none!important;max-height:calc(100vh - 82px)!important}
+}
