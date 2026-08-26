@@ -57,9 +57,10 @@ jobs:
           grep -q 'PRESUPUESTO_SPEND_VIEW_V2' _site-public-spend-route/assets/atlas-public-spend-v2.js
           grep -q 'AtlasPublicSpendV2' _site-public-spend-route/assets/atlas-public-spend-v2.js
           ! grep -q '__AML_PUBLIC_SPEND__' _site-public-spend-route/assets/atlas-public-spend-v2.js
-          grep -q "VERSION='GP2-AUTH.3'" _site-public-spend-route/assets/atlas-public-spend-route-authority-0578.js
-          grep -q "HOST='.atlas-public-spend-v2-host'" _site-public-spend-route/assets/atlas-public-spend-route-authority-0578.js
-          grep -q '__atlasGp2Authority' _site-public-spend-route/assets/atlas-public-spend-route-authority-0578.js
+          grep -q "VERSION='GP-AUTH.0720'" _site-public-spend-route/assets/atlas-public-spend-route-authority-0578.js
+          grep -q 'AtlasPublicSpendIntelligence0720' _site-public-spend-route/assets/atlas-public-spend-route-authority-0578.js
+          grep -q '__atlasGpAuthority0720' _site-public-spend-route/assets/atlas-public-spend-route-authority-0578.js
+          ! grep -q 'MutationObserver' _site-public-spend-route/assets/atlas-public-spend-route-authority-0578.js
           grep -q 'atlas-public-spend-v2.css?v=gp2-2' _site-public-spend-route/index.html
           grep -q 'atlas-public-spend-v2.js?v=gp2-2' _site-public-spend-route/index.html
           grep -q 'atlas-public-spend-route-authority-0578.js?v=gp2-a3' _site-public-spend-route/index.html

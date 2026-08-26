@@ -172,6 +172,15 @@ def build(out_dir: Path):
             dirs_exist_ok=True,
             ignore=shutil.ignore_patterns(*sorted(LEGACY_UNPUBLISHED_ASSETS)),
         )
+        # Assets that are declared in the runtime manifest are build-time source
+        # fragments. They have already been folded into the compiled bundles and
+        # must not remain as independently executable/versioned files in Pages.
+        for source_name in source_assets:
+            if not source_name.startswith("assets/"):
+                continue
+            published_source = out_dir / source_name
+            if published_source.is_file():
+                published_source.unlink()
     for pattern in ("*.png", "*.svg", "*.ico", "*.webp", "*.jpg", "*.jpeg"):
         for src in ROOT.glob(pattern):
             copy_file(src, out_dir / src.name)
@@ -219,6 +228,8 @@ def build(out_dir: Path):
     for source_name in source_assets:
         if f"./{source_name}" in template:
             raise SystemExit(f"source fragment leaked into production index: {source_name}")
+        if (out_dir / source_name).exists():
+            raise SystemExit(f"source fragment leaked into Pages artifact: {source_name}")
     for name in forbidden:
         if name in template or (out_dir / name).exists():
             raise SystemExit(f"forbidden runtime asset leaked into Pages artifact: {name}")

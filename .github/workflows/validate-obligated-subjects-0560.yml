@@ -47,17 +47,25 @@ jobs:
           assert 'UAF_OBLIGATED_SUBJECT_SNAPSHOT_0560' in b['data_contract']
           PY
 
-      - name: La sección se publica en el artefacto compilado
+      - name: La sección vigente se publica en Pages
         run: |
           set -euo pipefail
           python tools/build_atlas_site.py --out _site
-          test -s _site/assets/atlas-obligated-subjects-0560.js
-          test -s _site/assets/atlas-obligated-dossier-0560.js
-          test -s _site/assets/atlas-obligated-subjects-0560.css
-          grep -q 'atlas-obligated-subjects-0560.js?v=0560-1' _site/index.html
-          grep -q 'atlas-obligated-dossier-0560.js?v=0560-1' _site/index.html
-          grep -q 'atlas-obligated-subjects-0560.css?v=0560-1' _site/index.html
-          grep -q 'sujetos-obligados' _site/atlas-runtime-current-03.js
+          test -s _site/atlas-runtime-current.css
+          test -s _site/atlas-runtime-current-01.js
+          # Sujetos Obligados 0560 es una extensión standalone vigente y debe conservarse explícitamente.
+          for f in \
+            assets/atlas-obligated-subjects-0560.js \
+            assets/atlas-obligated-dossier-0560.js \
+            assets/atlas-obligated-subjects-0560.css; do
+            test -s "_site/$f"
+            grep -q "./$f" _site/index.html
+          done
+          cat _site/assets/atlas-obligated-subjects-0560.js \
+              _site/assets/atlas-obligated-dossier-0560.js > /tmp/atlas-obligated-0560-js
+          grep -q 'sujetos-obligados' /tmp/atlas-obligated-0560-js
+          grep -q 'aml_uaf_obligated_subject_snapshot' /tmp/atlas-obligated-0560-js
+          grep -q 'aml_uaf_obligated_overview_snapshot' /tmp/atlas-obligated-0560-js
 
       - name: La capa SQL declara su semántica y sus guardarraíles
         run: |
@@ -68,7 +76,6 @@ jobs:
           grep -q 'enable row level security' "$F"
           grep -q 'aml_allowed_users' "$F"
           ! grep -qi 'service_role' "$F"
-          # Las cinco tablas de la seccion quedan bajo la misma politica de lectura.
           for T in aml_uaf_sector_vulnerability_ref \
                    aml_uaf_sanction_subject_link_snapshot \
                    aml_uaf_obligated_subject_snapshot \
