@@ -5,6 +5,7 @@ const read=p=>fs.readFileSync(new URL(`../${p}`,import.meta.url),'utf8');
 const js=read('assets/atlas-indicator-methodology-0910.js');
 const css=read('assets/atlas-indicator-methodology-0910.css');
 const route=read('assets/atlas-operational-recovery-0704.js');
+const territory=read('assets/territorio-igr-real-beta-v4.html');
 const doc=read('docs/atlas-indicator-architecture-v1.md');
 const registry=JSON.parse(read('data/atlas_indicator_methodology_v1.json'));
 
@@ -32,6 +33,9 @@ assert.match(js,/noBodyTreeWalk:true/);
 assert.match(route,/ensureIndicatorMethodology/);
 assert.match(route,/atlas-indicator-methodology-0910\.js/);
 assert.match(route,/AtlasIndicatorMethodologyV1\?\.refresh/);
+assert.match(territory,/atlas-indicator-methodology-0910\.css/);
+assert.match(territory,/atlas-indicator-methodology-0910\.js/);
+assert.match(territory,/AtlasIndicatorMethodologyV1\?\.refresh/);
 assert.match(css,/\[data-atlas-indicator-key\]::after/);
 assert.match(css,/atlas-indicator-methodology-tip/);
 assert.match(doc,/IRAR-E = 0,40/);
