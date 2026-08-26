@@ -4,4 +4,3 @@
  * IRAR-E is the governed home for sector inherent risk.
  */
 window.ATLAS_IGR_VE_V2={retired:true,replacedBy:'IGR-2A-1.0.0',contributesToIgr:false};
-export {};
