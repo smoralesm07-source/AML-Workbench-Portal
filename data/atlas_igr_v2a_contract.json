@@ -1,0 +1,65 @@
+{
+  "schema": "ATLAS_IGR_V2A",
+  "method_version": "IGR-2A-1.0.0",
+  "effective_date": "2026-08-26",
+  "visible_label": "IGR",
+  "domain": "territory",
+  "unit": "commune",
+  "scale": {"min": 0, "max": 100},
+  "formula": {"cead_la": 1.0},
+  "cead_la": {
+    "source": "Radar_delictual/data/processed/cead_geographic_score_v1.json",
+    "layers": {
+      "amenazas_precedentes_la": 0.55,
+      "economia_criminal_facilitadores": 0.35,
+      "contexto_criminogeno": 0.10
+    },
+    "features": {
+      "intensidad": 0.40,
+      "persistencia": 0.25,
+      "tendencia": 0.20,
+      "anomalia": 0.15
+    },
+    "predicate_current_coverage": {
+      "status": "DRUG_DOMINANT",
+      "materialized_families": ["trafico_de_sustancias", "microtrafico_de_sustancias", "elaboracion_o_produccion_de_sustancias"],
+      "not_yet_claimed_as_materialized": ["fraude_estafa", "corrupcion", "delitos_economicos_financieros", "contrabando", "crimen_organizado"]
+    }
+  },
+  "history": {
+    "years": [2020, 2021, 2022, 2023, 2024, 2025],
+    "source_type": "REAL_CEAD_POLICE_CASES",
+    "synthetic_series": false
+  },
+  "regional_aggregation": "CONFIDENCE_WEIGHTED_COMMUNE_MEAN",
+  "confidence": {
+    "published_separately": true,
+    "missing_is_not_zero": true
+  },
+  "excluded_inputs": [
+    "sector_vulnerability",
+    "economic_materiality_sii",
+    "so_density",
+    "regulatory_coverage_gap",
+    "icr",
+    "irar",
+    "ipa",
+    "ivo",
+    "entity_sanctions",
+    "entity_reportability"
+  ],
+  "roadmap": {
+    "v2A": {"cead_la": 1.00},
+    "v2B": {"cead_la": 0.85, "cross_border_logistics": 0.15},
+    "v2C": {"cead_la": 0.75, "cross_border_logistics": 0.15, "territorial_la_evidence": 0.10}
+  },
+  "guardrails": [
+    "TERRITORIAL_CONTEXT_NOT_ENTITY_ATTRIBUTION",
+    "NOT_LAFT_PROBABILITY",
+    "NO_SECTOR_OR_ENTITY_DOUBLE_COUNTING",
+    "MISSING_IS_NOT_ZERO",
+    "NO_NEUTRAL_FILL_FOR_FUTURE_LAYERS",
+    "NO_SILENT_WEIGHT_REDISTRIBUTION",
+    "FUTURE_LAYER_REQUIRES_REAL_DATA_TRACEABILITY_AND_COVERAGE"
+  ]
+}
