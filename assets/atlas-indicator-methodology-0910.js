@@ -2,7 +2,7 @@
 /* ATLAS AML · Indicator methodology facade 0.91.0
  * Canonical presentation + subtle methodological help across dynamic Atlas views.
  * Technical ipa3_* contracts remain unchanged for backward compatibility.
- * No MutationObserver: refresh is coupled to route authority and bounded lifecycle events.
+ * No MutationObserver / no body TreeWalker: refresh is route-coupled and bounded.
  */
 (function atlasIndicatorMethodology0910(){
   if(window.AtlasIndicatorMethodologyV1)return;
@@ -20,6 +20,7 @@
     PRIORIDAD_FISCALIZACION:{label:'Prioridad de Fiscalización',name:'Prioridad de Fiscalización',status:'Nueva síntesis gobernada · sin pesos por defecto',method:'Integra IRAR-E, IGR, IPA y debilidad mitigadora cuando existe cobertura suficiente y ponderadores aprobados. IVO queda fuera y opera en el carril de potenciales SO. La salida prioriza supervisión; no estima probabilidad de LA/FT.'}
   };
   const SKIP=new Set(['SCRIPT','STYLE','NOSCRIPT','TEXTAREA','INPUT','SELECT','OPTION','CODE','PRE']);
+  const CANDIDATE_SELECTOR='h1,h2,h3,h4,h5,h6,p,span,small,strong,b,label,button,a,th,td,li,dt,dd,[role="heading"],[data-view],[data-atlas-mobile-view],[class*="title"],[class*="label"],[class*="metric"],[class*="kpi"],[class*="score"],[class*="pill"],[class*="chip"]';
   const finite=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));
   const score=v=>Math.max(0,Math.min(100,Number(v)));
   const round=v=>Math.round(v*10)/10;
@@ -62,31 +63,25 @@
     parent.dataset.atlasIndicatorKeys=merged.join(',');
     parent.setAttribute('data-atlas-indicator-key','1');
     const title=merged.map(k=>`${CATALOG[k].label}: ${CATALOG[k].method}`).join(' · ');
-    if(!parent.dataset.atlasIndicatorNativeTitle){
-      parent.dataset.atlasIndicatorNativeTitle='1';
-      parent.title=parent.title?`${parent.title} · ${title}`:title;
+    if(!parent.dataset.atlasIndicatorNativeTitle){parent.dataset.atlasIndicatorNativeTitle='1';parent.title=parent.title?`${parent.title} · ${title}`:title;}
+  }
+  function normalizeElement(el){
+    if(!el||SKIP.has(el.tagName))return 0;let touched=0;
+    for(const node of [...el.childNodes]){
+      if(node.nodeType!==3)continue;const before=node.nodeValue||'',after=normalizeVisibleText(before);
+      if(after!==before){node.nodeValue=after;touched++;}
     }
+    const text=el.textContent||'',keys=keysForText(text);if(keys.length&&text.trim().length<=420){annotateParent(el,keys);touched++;}
+    const aria=el.getAttribute?.('aria-label');if(aria&&/\bIPA3\b/i.test(aria)){el.setAttribute('aria-label',normalizeVisibleText(aria));touched++;}
+    return touched;
   }
   function scan(root=document){
     const doc=root?.nodeType===9?root:(root?.ownerDocument||document);
-    const target=root?.nodeType===9?(root.body||root.documentElement):root;
-    if(!target)return 0;
-    let touched=0;
-    const walker=doc.createTreeWalker(target,NodeFilter.SHOW_TEXT,{acceptNode(node){
-      const p=node.parentElement;if(!p||SKIP.has(p.tagName))return NodeFilter.FILTER_REJECT;
-      const t=node.nodeValue||'';return (/\b(?:IPA3?|IVO|IGR|IRAR)\b/i.test(t)||/Brecha de Cobertura Regulatoria|Prioridad de Fiscalizaci[oó]n|Mitigaci[oó]n\s*\/\s*Cumplimiento|capacidad mitigadora|riesgo inherente sectorial/i.test(t))?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT;
-    }});
-    const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
-    for(const node of nodes){
-      const before=node.nodeValue||'',after=normalizeVisibleText(before);if(after!==before){node.nodeValue=after;touched++;}
-      const keys=keysForText(after);if(keys.length){annotateParent(node.parentElement,keys);touched++;}
-    }
-    for(const el of target.querySelectorAll?.('[title],[aria-label]')||[]){
-      if(SKIP.has(el.tagName))continue;
-      for(const attr of ['aria-label']){const v=el.getAttribute(attr);if(v&&/\bIPA3\b/i.test(v))el.setAttribute(attr,normalizeVisibleText(v));}
-    }
-    attachFrames(doc);
-    return touched;
+    const target=root?.nodeType===9?(root.querySelector('#content,#app')||root.body||root.documentElement):root;
+    if(!target)return 0;let touched=0;
+    if(target.matches?.(CANDIDATE_SELECTOR))touched+=normalizeElement(target);
+    for(const el of target.querySelectorAll?.(CANDIDATE_SELECTOR)||[])touched+=normalizeElement(el);
+    attachFrames(doc);return touched;
   }
   function buildTip(doc){
     let tip=doc.getElementById('atlas-indicator-methodology-tip');if(tip)return tip;
@@ -98,8 +93,8 @@
     const tip=buildTip(doc),strong=tip.querySelector('strong'),body=tip.querySelector('div'),small=tip.querySelector('small');
     strong.textContent=keys.map(k=>CATALOG[k].label).join(' · ');body.textContent=keys.map(k=>CATALOG[k].method).join(' ');small.textContent=keys.map(k=>CATALOG[k].status).join(' · ');
     tip.dataset.open='1';el.dataset.atlasMethodOpen='1';
-    const r=el.getBoundingClientRect(),w=Math.min(360,(doc.defaultView?.innerWidth||window.innerWidth)-24);let left=Math.max(12,Math.min(r.left,(doc.defaultView?.innerWidth||window.innerWidth)-w-12));let top=r.bottom+8;
-    tip.style.left=`${left}px`;tip.style.top=`${top}px`;requestAnimationFrame(()=>{const tr=tip.getBoundingClientRect(),vh=doc.defaultView?.innerHeight||window.innerHeight;if(tr.bottom>vh-10)tip.style.top=`${Math.max(10,r.top-tr.height-8)}px`;});
+    const r=el.getBoundingClientRect(),w=Math.min(360,(doc.defaultView?.innerWidth||window.innerWidth)-24);const left=Math.max(12,Math.min(r.left,(doc.defaultView?.innerWidth||window.innerWidth)-w-12));tip.style.left=`${left}px`;tip.style.top=`${r.bottom+8}px`;
+    requestAnimationFrame(()=>{const tr=tip.getBoundingClientRect(),vh=doc.defaultView?.innerHeight||window.innerHeight;if(tr.bottom>vh-10)tip.style.top=`${Math.max(10,r.top-tr.height-8)}px`;});
   }
   function hideTip(doc,el){const tip=doc.getElementById('atlas-indicator-methodology-tip');if(tip)tip.dataset.open='0';if(el)delete el.dataset.atlasMethodOpen;}
   function attachDoc(doc){
@@ -115,14 +110,12 @@
   }
   function attachFrames(doc=document){for(const f of doc.querySelectorAll?.('iframe')||[])attachFrame(f);}
   let scheduled=0;
-  function refresh(root=document){
-    if(scheduled)cancelAnimationFrame(scheduled);scheduled=requestAnimationFrame(()=>{scheduled=0;try{attachDoc(document);scan(root);}catch(error){console.warn('[ATLAS indicators 0.91.0]',error);}});
-  }
+  function refresh(root=document){if(scheduled)cancelAnimationFrame(scheduled);scheduled=requestAnimationFrame(()=>{scheduled=0;try{attachDoc(document);scan(root);}catch(error){console.warn('[ATLAS indicators 0.91.0]',error);}});}
   function scheduleBursts(){refresh();setTimeout(()=>refresh(),180);setTimeout(()=>refresh(),850);setTimeout(()=>refresh(),2400);}
   ['hashchange','popstate','pageshow','focus'].forEach(name=>window.addEventListener(name,()=>refresh(),{passive:true}));
   ['atlas:render','atlas:viewchange','atlas:navigate','atlas:data','atlas:nav-refresh'].forEach(name=>window.addEventListener(name,()=>refresh()));
   document.addEventListener('click',()=>setTimeout(()=>refresh(),40),true);document.addEventListener('change',()=>setTimeout(()=>refresh(),40),true);
-  const API={version:VERSION,catalog:CATALOG,compute,refresh,scan,normalizeVisibleText,technicalAliases:{IPA:['IPA3','ipa3','ipa3_*']},policy:{visibleName:'IPA',technicalAlias:'IPA3',missingIsNotZero:true,priorityIsNotLaftProbability:true}};
+  const API={version:VERSION,catalog:CATALOG,compute,refresh,scan,normalizeVisibleText,technicalAliases:{IPA:['IPA3','ipa3','ipa3_*']},policy:{visibleName:'IPA',technicalAlias:'IPA3',missingIsNotZero:true,priorityIsNotLaftProbability:true,noBodyTreeWalk:true}};
   window.ATLAS_INDICATORS_V1=CATALOG;window.AtlasIndicatorMethodologyV1=API;
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',scheduleBursts,{once:true});else scheduleBursts();
 })();
