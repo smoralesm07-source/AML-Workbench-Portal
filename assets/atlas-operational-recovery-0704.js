@@ -2,7 +2,7 @@
 /* ATLAS AML · Active runtime authority 0.70.5 · freeze-safe */
 (function atlasOperationalRecovery0705(){
   if(window.AtlasOperationalRecovery0705)return;
-  const VERSION='0.70.5',VIEW_SO='sujetos-obligados';
+  const VERSION='0.70.5',VIEW_SO='sujetos-obligados',VIEW_ENTITIES='entities';
   let opening=false;
   const db=()=>{try{return typeof sb!=='undefined'?sb:(window.sb||null);}catch{return window.sb||null;}};
   const fn=name=>{try{return typeof window[name]==='function'?window[name]:null;}catch{return null;}};
@@ -14,9 +14,20 @@
   }
   function publish(status,extra={}){
     enforceRelease();
-    window.__ATLAS_OPERATIONAL_RECOVERY_0704__={active:true,version:VERSION,status,radar:!!fn('v019LoadOverview'),questions:!!fn('v019LoadQuestions'),universo:!!window.__ATLAS_OBLIGATED__,publicSpend:!!window.AtlasPublicSpendV2,freezeGuard:'NO_BODY_TREEWALK_NO_FORCED_SOURCE_REFRESH',checkedAt:new Date().toISOString(),...extra};
+    window.__ATLAS_OPERATIONAL_RECOVERY_0704__={active:true,version:VERSION,status,radar:!!fn('v019LoadOverview'),questions:!!fn('v019LoadQuestions'),entities:!!window.__ATLAS_ENTITY_ENTRY__,universo:!!window.__ATLAS_OBLIGATED__,publicSpend:!!window.AtlasPublicSpendV2,freezeGuard:'NO_BODY_TREEWALK_NO_FORCED_SOURCE_REFRESH',checkedAt:new Date().toISOString(),...extra};
   }
-  function viewFrom(target){if(!target)return '';const explicit=target.dataset?.view||target.dataset?.atlasMobileView||'';if(explicit)return explicit;const text=norm(target.textContent);if(text==='radar integrado')return 'overview';if(text==='preguntas')return 'questions';if(text==='universo so')return VIEW_SO;if(text==='gasto publico')return 'public-spend';return '';}
+  function viewFrom(target){
+    if(!target)return '';
+    const explicit=target.dataset?.view||target.dataset?.atlasMobileView||'';
+    if(explicit)return explicit;
+    const text=norm(target.textContent);
+    if(text==='radar integrado')return 'overview';
+    if(text==='entidades')return VIEW_ENTITIES;
+    if(text==='preguntas')return 'questions';
+    if(text==='universo so')return VIEW_SO;
+    if(text==='gasto publico')return 'public-spend';
+    return '';
+  }
   function setState(view){try{if(window.state)window.state.view=view;}catch{}}
 
   async function refreshUniversoState(){
@@ -35,12 +46,21 @@
     return true;
   }
   async function openUniverso(){setState(VIEW_SO);const canonical=window.AtlasUniversoSO0705;if(canonical?.open)return canonical.open();const recovery=window.AtlasRouteRecovery0703;if(recovery?.open)return recovery.open(VIEW_SO,'0705');throw new Error('Universo SO canónico no disponible');}
+  async function openEntities(){
+    setState(VIEW_ENTITIES);
+    const entry=window.__ATLAS_ENTITY_ENTRY__;
+    if(!entry||typeof entry.load!=='function')throw new Error('Explorador de Entidades canónico no disponible');
+    const result=await entry.load();
+    window.__ATLAS_ENTITY360_CURRENT__={...(window.__ATLAS_ENTITY360_CURRENT__||{}),release:VERSION,build:'0705',authority:'ENTITY_EXPLORER_0512_CANONICAL_ROUTE',mode:'idle',routeAuthority:'OPERATIONAL_RECOVERY_0714',renderedAt:new Date().toISOString()};
+    return result;
+  }
 
   async function open(view,source='delegated-click'){
     if(opening)return false;opening=true;publish('opening',{view,source});
     try{
       setState(view);let result;
       if(view==='overview'){const loader=fn('v019LoadOverview')||fn('loadOverview');if(!loader)throw new Error('Loader Radar Integrado no disponible');result=await loader();}
+      else if(view===VIEW_ENTITIES)result=await openEntities();
       else if(view==='questions'){const loader=fn('v019LoadQuestions');if(!loader)throw new Error('Loader Preguntas no disponible');result=await loader();}
       else if(view===VIEW_SO)result=await openUniverso();
       else if(view==='public-spend'){const api=window.AtlasPublicSpendV2;if(typeof api?.open!=='function')throw new Error('Gasto Público GP2 no disponible');result=await api.open();}
@@ -66,12 +86,17 @@
     Object.defineProperty(wrapped,'__atlas0705Shell',{value:true});window.shell=wrapped;
   }
 
-  document.addEventListener('click',event=>{const target=event.target?.closest?.('[data-view],[data-atlas-mobile-view],button,a');const view=viewFrom(target);if(!['overview','questions',VIEW_SO,'public-spend'].includes(view))return;event.preventDefault();event.stopImmediatePropagation();void open(view,'capture-click');},true);
+  document.addEventListener('click',event=>{
+    const target=event.target?.closest?.('[data-view],[data-atlas-mobile-view],button,a');
+    const view=viewFrom(target);
+    if(!['overview',VIEW_ENTITIES,'questions',VIEW_SO,'public-spend'].includes(view))return;
+    event.preventDefault();event.stopImmediatePropagation();void open(view,'capture-click');
+  },true);
   window.addEventListener('pageshow',()=>{installShellHook();ensureMenu();window.AtlasGlobalSourceHealth?.schedule?.();enforceRelease();});
   window.addEventListener('atlas:nav-refresh',()=>{ensureMenu();window.AtlasGlobalSourceHealth?.schedule?.();enforceRelease();});
   window.addEventListener('atlas:public-spend-v2-ready',()=>ensureMenu());
 
-  window.AtlasOperationalRecovery0705={open,ensureMenu,refreshUniversoState,enforceRelease,health:()=>window.__ATLAS_OPERATIONAL_RECOVERY_0704__};
+  window.AtlasOperationalRecovery0705={open,openEntities,ensureMenu,refreshUniversoState,enforceRelease,health:()=>window.__ATLAS_OPERATIONAL_RECOVERY_0704__};
   window.AtlasOperationalRecovery0704=window.AtlasOperationalRecovery0705;
   installShellHook();enforceRelease();
   setTimeout(()=>{ensureMenu();window.AtlasGlobalSourceHealth?.schedule?.();enforceRelease();},0);
