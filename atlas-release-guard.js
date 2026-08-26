@@ -1,9 +1,9 @@
 'use strict';
-/* ATLAS AML · single active release authority 0.70.5 · freeze-safe */
+/* ATLAS AML · single active release authority 0.90.1 · freeze-safe */
 (function atlasSingleReleaseAuthority(){
   const PRODUCT='ATLAS AML',TAGLINE='Plataforma Integrada de Inteligencia y Riesgo',MANIFEST='./atlas-release.json';
   const root=document.documentElement;
-  const active={release:'0.70.5',build:'0705'};
+  const active={release:'0.90.1',build:'0901'};
   let applying=false,observer=null,queued=false;
 
   function setRootAttr(name,value){if(root.getAttribute(name)!==value)root.setAttribute(name,value);}
@@ -23,7 +23,10 @@
       setAttr(small,'data-runtime-label',versionLabel);
     });
     document.querySelectorAll('[data-atlas-version-label],.atlas-version,.version-badge,.app-version').forEach(el=>{
-      if(/51\.1|0\.51\.1/i.test(el.textContent||''))setText(el,versionLabel);
+      const text=(el.textContent||'').trim();
+      if(!text || /(?:^|\s)v?\d+(?:\.\d+){1,3}(?:\s|$)/i.test(text))setText(el,versionLabel);
+      setAttr(el,'data-runtime-label',versionLabel);
+      setAttr(el,'aria-label',`Versión ${active.release}`);
     });
   }
 
@@ -39,13 +42,13 @@
       window.__AML_BUILD__=active.build;
       window.__ATLAS_ACTIVE_VERSION__=active.release;
       window.__ATLAS_RELEASE_BUILD__=active.build;
-      window.__AML_VERSION_SOURCE__='atlas-release-guard-0705-freeze-safe';
+      window.__AML_VERSION_SOURCE__='atlas-release-guard-0901-freeze-safe';
       const wantedTitle=`${PRODUCT} · v${active.release}`;
       if(document.title!==wantedTitle)document.title=wantedTitle;
       const meta=document.querySelector('meta[name="application-name"]');
       if(meta&&meta.content!==`${PRODUCT} · ${TAGLINE}`)meta.content=`${PRODUCT} · ${TAGLINE}`;
       applyVisibleIdentity();
-      window.__ATLAS_RELEASE_GUARD_HEALTH__={status:'ready',release:active.release,build:active.build,visibleVersionPolicy:'ATLAS_RELEASE_GUARD_0705_ONLY',runtimePolicy:'CANONICAL_COMPILED_RUNTIME_ONLY',freezeGuard:'NO_GLOBAL_CHILD_MUTATION_OBSERVER',checkedAt:new Date().toISOString()};
+      window.__ATLAS_RELEASE_GUARD_HEALTH__={status:'ready',release:active.release,build:active.build,visibleVersionPolicy:'ATLAS_RELEASE_GUARD_0901_ONLY',runtimePolicy:'CANONICAL_COMPILED_RUNTIME_ONLY',freezeGuard:'NO_GLOBAL_CHILD_MUTATION_OBSERVER',checkedAt:new Date().toISOString()};
     }finally{applying=false;}
   }
 
