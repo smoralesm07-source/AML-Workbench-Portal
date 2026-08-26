@@ -2,10 +2,11 @@
 /* ATLAS AML · Universo SO alert drilldown 0.80.2
  * Progressive enhancement only. No MutationObserver and no navigation rewrite.
  * 0.80.3 bootstrap: loads management/evidence enhancement without touching the global router.
+ * 0.81.2 bootstrap: aligns Entidades with the canonical UAF/potential universe by exact RUT.
  */
 (function atlasUniversoSOWideAlerts0802(){
   if(window.AtlasUniversoSOWideAlerts0802)return;
-  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const levelLabel=el=>el.classList.contains('high')?'Prioritaria':el.classList.contains('med')?'Atención':'Contexto';
   const levelMeaning=el=>el.classList.contains('high')?'Señal que justifica revisión prioritaria por la condición factual descrita.':el.classList.contains('med')?'Señal de atención que requiere lectura contextual y contraste con fuentes.':'Antecedente contextual útil para caracterizar a la entidad; no implica irregularidad.';
   function close(){document.querySelector('.uso80-alert-backdrop')?.remove();}
@@ -31,5 +32,10 @@
     if(!document.querySelector('link[data-uso803]')){const l=document.createElement('link');l.rel='stylesheet';l.href='./assets/atlas-universo-so-management-0803.css?v=0803-1';l.dataset.uso803='1';document.head.appendChild(l);}
     if(!window.AtlasUniversoSOManagement0803&&!document.querySelector('script[data-uso803]')){const s=document.createElement('script');s.src='./assets/atlas-universo-so-management-0803.js?v=0803-1';s.dataset.uso803='1';document.body.appendChild(s);s.addEventListener('load',()=>{if(!window.AtlasUniversoSOPools0803&&!document.querySelector('script[data-uso803-pools]')){const p=document.createElement('script');p.src='./assets/atlas-universo-so-management-pools-0803.js?v=0803-1';p.dataset.uso803Pools='1';document.body.appendChild(p);}});}else if(!window.AtlasUniversoSOPools0803&&!document.querySelector('script[data-uso803-pools]')){const p=document.createElement('script');p.src='./assets/atlas-universo-so-management-pools-0803.js?v=0803-1';p.dataset.uso803Pools='1';document.body.appendChild(p);}
   }
+  function load0812(){
+    if(window.AtlasEntityUafStatus0812||document.querySelector('script[data-aeu812]'))return;
+    const s=document.createElement('script');s.src='./assets/atlas-entity-uaf-status-0812.js?v=0812-1';s.dataset.aeu812='1';document.body.appendChild(s);
+  }
   load0803();
+  load0812();
 })();
