@@ -3,15 +3,15 @@
 (function atlasUiAuthority0901(){
   const RELEASE='0.90.1';
   const BUILD='0901';
-  const CSS='./assets/atlas-ui-authority-0901.css?v=0901-2';
+  const CSS='./assets/atlas-ui-authority-0901.css?v=0901-3';
   const VERSION_RE=/\bv?(?:0\.)?(?:16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|49|50|51|52|53|54|56|57|58|64|69|70|71|72|80|81|82|83|84)(?:\.\d+){0,2}\b/gi;
   const VERSION_SELECTORS='.atlas-version,.version-badge,.app-version,.v019-brand small,[data-atlas-version-label]';
-  const RETIRED_MAIN_AUDIT_SELECTOR='#app .v024-audit,main .v024-audit,.v024-audit.a57-data-audit';
+  const AUDIT_SELECTORS='.v024-audit,.a57-data-audit';
 
   function installCss(){
     const old=document.querySelector('link[data-atlas-ui-authority="0901"]');
     if(old){
-      if(!old.href.includes('0901-2')) old.href=CSS;
+      if(!old.href.includes('0901-3')) old.href=CSS;
       return;
     }
     const link=document.createElement('link');
@@ -21,11 +21,26 @@
     document.head.appendChild(link);
   }
 
+  function ensureBrandVersion(label){
+    const brand=document.querySelector('.v019-brand');
+    if(!brand)return;
+    let badge=brand.querySelector('small[data-atlas-version-label],small');
+    if(!badge){
+      badge=document.createElement('small');
+      brand.appendChild(badge);
+    }
+    badge.setAttribute('data-atlas-version-label','1');
+    badge.textContent=label;
+    badge.setAttribute('data-runtime-label',label);
+    badge.setAttribute('aria-label',`Versión ${RELEASE}`);
+  }
+
   function normalizeIdentity(){
     const label=`v${RELEASE}`;
     document.documentElement.setAttribute('data-atlas-release',RELEASE);
     document.documentElement.setAttribute('data-aml-version',RELEASE);
     document.documentElement.setAttribute('data-aml-build',BUILD);
+    ensureBrandVersion(label);
     document.querySelectorAll(VERSION_SELECTORS).forEach(el=>{
       const text=(el.textContent||'').trim();
       if(!text || VERSION_RE.test(text) || /^v?\d+(?:\.\d+)+$/i.test(text)) el.textContent=label;
@@ -38,9 +53,16 @@
     });
   }
 
+  function isGlobalSourceHealth(el){
+    if(!el)return false;
+    if(el.matches('.ash-audit,[data-ash0536],[data-atlas-audit-seed],[data-global-audit],[data-topbar-mode]'))return true;
+    return !!el.closest('[data-atlas-global-audit-host],.v019-top,.topbar,.v18-appbar,.app-topbar,.atlas-topbar');
+  }
+
   function retireLegacyMainAudit(){
     let removed=0;
-    document.querySelectorAll(RETIRED_MAIN_AUDIT_SELECTOR).forEach(el=>{
+    document.querySelectorAll(AUDIT_SELECTORS).forEach(el=>{
+      if(isGlobalSourceHealth(el))return;
       el.remove();
       removed++;
     });
@@ -51,7 +73,7 @@
   }
 
   function markHealth(){
-    window.__ATLAS_UI_AUTHORITY__={release:RELEASE,build:BUILD,status:'ready',css:CSS,mainDataAudit:'retired',checkedAt:new Date().toISOString()};
+    window.__ATLAS_UI_AUTHORITY__={release:RELEASE,build:BUILD,status:'ready',css:CSS,mainDataAudit:'retired',globalSourceHealth:'preserved',checkedAt:new Date().toISOString()};
   }
 
   function apply(){
@@ -59,6 +81,7 @@
     normalizeIdentity();
     retireLegacyMainAudit();
     window.AtlasRelease?.apply?.();
+    window.AtlasGlobalSourceHealth?.schedule?.();
     markHealth();
   }
 
