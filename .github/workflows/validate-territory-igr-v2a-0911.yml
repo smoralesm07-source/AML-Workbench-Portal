@@ -62,7 +62,7 @@ jobs:
           node --check assets/atlas-territory-igr-v2a-history-0911.js
           node --check assets/atlas-territory-igr-v2a-ui-0911.js
           node --check assets/atlas-territory-threat-cead-v1.js
-          node --check assets/atlas-igr-refinement.js
+          node --check assets/atlas-irg-refinement.js
           node --check assets/atlas-irg-ve-v2.module.js
           node --check assets/atlas-irg-irar-adapter.module.js
           node --check assets/atlas-territory-threat-analytics-v2.js
@@ -75,5 +75,8 @@ jobs:
           python tools/build_atlas_site.py --out /tmp/atlas-site
           test -f /tmp/atlas-site/assets/territorio-aml-beta.html
           test -f /tmp/atlas-site/assets/atlas-territory-igr-v2a-core-0911.js
+          test -f /tmp/atlas-site/assets/atlas-territory-igr-v2a-history-0911.js
+          test -f /tmp/atlas-site/assets/atlas-territory-igr-v2a-ui-0911.js
           grep -q 'IGR · v2A operativo' /tmp/atlas-site/assets/territorio-aml-beta.html
-          grep -q 'IGR-2A-1.0.0' /tmp/atlas-site/assets/atlas-territory-threat-cead-v1.js
+          grep -q 'IGR-2A-1.0.0' /tmp/atlas-site/atlas-runtime-current-*.js
+          ! grep -R -q '45% V/E' /tmp/atlas-site/atlas-runtime-current-*.js
