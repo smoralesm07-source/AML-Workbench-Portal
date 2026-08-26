@@ -41,6 +41,8 @@ jobs:
           html=Path('index.html').read_text()
           health=Path('assets/atlas-source-health-global-0694.js').read_text()
           health_css=Path('assets/atlas-source-health-global-0694.css').read_text()
+          recovery=Path('assets/atlas-operational-recovery-0704.js').read_text()
+          entity=Path('assets/atlas-entity-explorer-0512.js').read_text()
           assert release['release']=='0.70.5' and release['build']=='0705'
           assert runtime['release']=='0.70.5' and runtime['build']=='0705'
           assert build['app_version']=='0.70.5' and build['build']=='0705'
@@ -55,6 +57,9 @@ jobs:
           assert 'new MutationObserver' not in health
           assert '[data-atlas-global-audit-host="0713"]' in health_css
           assert '[data-atlas-global-audit-fallback="1"]{display:none!important}' in health_css
+          assert "VIEW_ENTITIES='entities'" in recovery
+          assert 'ENTITY_EXPLORER_0512_CANONICAL_ROUTE' in recovery
+          assert "ENTRY.load=async function atlasEntityExplorer0512Load(){await renderPrequery();};" in entity
           PY
           node --check atlas-release-guard.js
           node --check app.js
@@ -65,6 +70,7 @@ jobs:
           node --check assets/atlas-source-health-global-0694.js
           node --check assets/atlas-operational-recovery-0704.js
           node --check assets/atlas-universo-so-workbench-0700.js
+          node --check assets/atlas-entity-explorer-0512.js
           node tests/atlas-runtime-freeze-0712.mjs
 
       - name: Build restored Atlas site
@@ -114,14 +120,14 @@ jobs:
           for old in ('0711-1','0712-freeze1','0705-1'):
               html=html.replace(f'atlas-source-health-global-0694.js?v={old}','atlas-source-health-global-0694.js?v=0713-auditbar1')
               html=html.replace(f'atlas-source-health-global-0694.css?v={old}','atlas-source-health-global-0694.css?v=0713-auditbar1')
-          html=html.replace('atlas-operational-recovery-0704.js?v=0705-recovery1','atlas-operational-recovery-0704.js?v=0712-freeze1')
-          html=html.replace('atlas-operational-recovery-0704.js?v=0705-1','atlas-operational-recovery-0704.js?v=0712-freeze1')
+          for old in ('0705-recovery1','0705-1','0712-freeze1'):
+              html=html.replace(f'atlas-operational-recovery-0704.js?v={old}','atlas-operational-recovery-0704.js?v=0714-entities1')
           p.write_text(html)
           assert 'atlas-release-guard.js?r=0705-freeze0712' in html
           assert 'atlas-runtime-current-01.js?r=0705-freeze0712' in html
           assert 'atlas-source-health-global-0694.js?v=0713-auditbar1' in html
           assert 'atlas-source-health-global-0694.css?v=0713-auditbar1' in html
-          assert 'atlas-operational-recovery-0704.js?v=0712-freeze1' in html
+          assert 'atlas-operational-recovery-0704.js?v=0714-entities1' in html
           PY
 
       - name: Configure Pages
@@ -147,26 +153,27 @@ jobs:
           ok=0
           for attempt in $(seq 1 12); do
             stamp="${GITHUB_SHA}-${GITHUB_RUN_ATTEMPT}-${attempt}"
-            html="$(curl -fsSL --retry 2 --max-time 20 "${base}/?atlas_auditbar_fix=${stamp}" || true)"
-            manifest="$(curl -fsSL --retry 2 --max-time 20 "${base}/atlas-release.json?atlas_auditbar_fix=${stamp}" || true)"
-            guard="$(curl -fsSL --retry 2 --max-time 20 "${base}/atlas-release-guard.js?atlas_auditbar_fix=${stamp}" || true)"
-            health="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-source-health-global-0694.js?atlas_auditbar_fix=${stamp}" || true)"
-            health_css="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-source-health-global-0694.css?atlas_auditbar_fix=${stamp}" || true)"
-            recovery="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-operational-recovery-0704.js?atlas_auditbar_fix=${stamp}" || true)"
+            html="$(curl -fsSL --retry 2 --max-time 20 "${base}/?atlas_entities_fix=${stamp}" || true)"
+            manifest="$(curl -fsSL --retry 2 --max-time 20 "${base}/atlas-release.json?atlas_entities_fix=${stamp}" || true)"
+            guard="$(curl -fsSL --retry 2 --max-time 20 "${base}/atlas-release-guard.js?atlas_entities_fix=${stamp}" || true)"
+            health="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-source-health-global-0694.js?atlas_entities_fix=${stamp}" || true)"
+            health_css="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-source-health-global-0694.css?atlas_entities_fix=${stamp}" || true)"
+            recovery="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-operational-recovery-0704.js?atlas_entities_fix=${stamp}" || true)"
+            entity="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-entity-explorer-0512.js?atlas_entities_fix=${stamp}" || true)"
             if printf '%s' "$html" | grep -q 'data-aml-version="0.70.5"' \
               && printf '%s' "$html" | grep -q 'data-aml-build="0705"' \
               && printf '%s' "$html" | grep -q 'atlas-release-guard.js?r=0705-freeze0712' \
               && printf '%s' "$html" | grep -q 'atlas-runtime-current-01.js?r=0705-freeze0712' \
               && printf '%s' "$html" | grep -q 'atlas-source-health-global-0694.js?v=0713-auditbar1' \
               && printf '%s' "$html" | grep -q 'atlas-source-health-global-0694.css?v=0713-auditbar1' \
-              && printf '%s' "$html" | grep -q 'atlas-operational-recovery-0704.js?v=0712-freeze1' \
+              && printf '%s' "$html" | grep -q 'atlas-operational-recovery-0704.js?v=0714-entities1' \
               && printf '%s' "$manifest" | grep -q '"release": "0.70.5"' \
               && printf '%s' "$guard" | grep -q 'NO_GLOBAL_CHILD_MUTATION_OBSERVER' \
               && printf '%s' "$health" | grep -q 'NO_GLOBAL_DOM_OBSERVER' \
               && printf '%s' "$health" | grep -q "atlasGlobalAuditHost','0713'" \
               && printf '%s' "$health_css" | grep -q 'data-atlas-global-audit-host="0713"' \
-              && printf '%s' "$health_css" | grep -q 'data-atlas-global-audit-fallback="1".*display:none' \
-              && printf '%s' "$recovery" | grep -q 'NO_BODY_TREEWALK_NO_FORCED_SOURCE_REFRESH'; then
+              && printf '%s' "$recovery" | grep -q 'ENTITY_EXPLORER_0512_CANONICAL_ROUTE' \
+              && printf '%s' "$entity" | grep -q 'atlasEntityExplorer0512Load'; then
               ok=1
               break
             fi
@@ -176,4 +183,4 @@ jobs:
           ! printf '%s' "$health" | grep -q 'new MutationObserver'
           ! printf '%s' "$guard" | grep -q 'new MutationObserver(queueApply).observe(document.documentElement'
           ! printf '%s' "$recovery" | grep -q 'createTreeWalker(document.body'
-          echo "ATLAS auditbar + freeze-safe live smoke OK: release=0.70.5 build=0705 url=${PAGE_URL}"
+          echo "ATLAS Entidades canonical route live smoke OK: release=0.70.5 build=0705 url=${PAGE_URL}"
