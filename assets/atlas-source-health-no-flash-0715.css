@@ -1,9 +1,23 @@
-/* ATLAS source-health no-flash guard 0715
+/* ATLAS source-health no-flash guard 0715 + canonical startup gate 0804
  * The detailed audit renderer may be instantiated before the canonical topbar
  * authority positions it. Keep every audit surface non-rendered until the
- * global authority explicitly marks topbar mode. This prevents legacy content
- * flash on Radar Integrado without observing the DOM or delaying app startup.
+ * global authority explicitly marks topbar mode.
+ *
+ * 0.80.4 additionally keeps #content non-visible until the atomic runtime
+ * barrier declares aml-runtime-ready. This prevents v0.15/v0.20/v0.24/v0.36
+ * intermediate overview renderers from flashing during session restoration.
+ * Authentication remains visible because the auth screen has no #content.
  */
+body:not(.aml-runtime-ready) #content{
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+body.aml-runtime-ready #content{
+  visibility:visible;
+  opacity:1;
+  transition:opacity .12s ease;
+}
 .a57-data-audit:not([data-topbar-mode="1"]),
 .ash-audit:not([data-topbar-mode="1"]){
   display:none!important;
