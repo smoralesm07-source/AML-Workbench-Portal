@@ -1,0 +1,10 @@
+-- Universo SO 0.80.3 database evolution (source mirror)
+-- Applied in Supabase migration: universo_so_candidate_management_0803
+-- Extends aml_uaf_potential_review with CANDIDATO_SELECCIONADO and NO_CANDIDATO states.
+-- Decisions remain append-only; aml_v_uaf_potential_current resolves the latest decision.
+-- Management views:
+--   aml_v_uaf_potential_management_current
+--   aml_v_uaf_potential_pending_v0803
+--   aml_v_uaf_candidate_selected_v0803
+--   aml_v_uaf_not_candidate_v0803
+--   aml_v_uaf_potential_management_summary_v0803
