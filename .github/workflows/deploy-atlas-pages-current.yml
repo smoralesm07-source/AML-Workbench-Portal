@@ -72,7 +72,8 @@ jobs:
           python3 tools/build_atlas_site.py --out _site
           test -s _site/index.html
           test -s _site/atlas-runtime-current.css
-          test -s _site/atlas-runtime-current-01.js
+          test -s _site/atlas-runtime-critical.js
+          test -s _site/atlas-runtime-loader.js
           python3 - <<'PY'
           import json
           from pathlib import Path
@@ -81,6 +82,7 @@ jobs:
           release = json.loads(Path('_site/atlas-release.json').read_text())
           runtime = json.loads(Path('_site/atlas-runtime-manifest.json').read_text())
           build = json.loads(Path('_site/build.json').read_text())
+          report = json.loads(Path('_site/atlas-runtime-report.json').read_text())
 
           assert release['release'] == '0.70.5'
           assert release['build'] == '0705'
@@ -88,22 +90,26 @@ jobs:
           assert runtime['build'] == release['build']
           assert build['app_version'] == release['release']
           assert build['build'] == release['build']
+          assert report['startup_policy'] == 'CRITICAL_BOOT_ONLY_THEN_COOPERATIVE_DEFERRED_FEATURE_CHUNKS'
+          assert report['critical_source_fragments'] == ['v0333-auth-preflight.js','app.js','v0422-auth-bootstrap-fix.js']
+          assert report['critical_bundle_kib'] < 180
+          assert report['deferred_chunk_count'] >= 2
           assert 'data-aml-version="0.70.5"' in html
           assert 'data-aml-build="0705"' in html
-          assert 'atlas-runtime-current-01.js?r=0705' in html
+          assert 'atlas-runtime-critical.js?r=0705' in html
+          assert 'atlas-runtime-loader.js?r=0705' in html
           assert 'atlas-runtime-current.css?r=0705' in html
-          assert 'atlas-source-health-global-0694.js?v=0710-1' in html
-          assert 'atlas-universo-so-workbench-0700.js?v=0705-2' in html
+          assert 'atlas-runtime-current-01.js' not in html
           assert 'data-aml-version="0.51.1"' not in html
           assert 'data-aml-build="0511"' not in html
           for legacy in ('atlas-universo-so-0600','atlas-universo-so-0610','atlas-universo-so-0620','atlas-universo-so-0630','atlas-universo-so-0640'):
               assert legacy not in html
-          bundles = sorted(Path('_site').glob('atlas-runtime-current-*.js')) + sorted(Path('_site').glob('atlas-module-current-*.js'))
+          bundles = sorted(Path('_site').glob('atlas-runtime-*.js')) + sorted(Path('_site').glob('atlas-module-deferred-*.js'))
           print('Compiled runtime bundles:')
           for bundle in bundles:
               print(f'  {bundle.name}: {bundle.stat().st_size / 1024:.1f} KiB')
           PY
-          for js in _site/atlas-runtime-current-*.js _site/atlas-module-current-*.js; do
+          for js in _site/atlas-runtime-*.js _site/atlas-module-deferred-*.js; do
             test -f "$js" || continue
             node --check "$js"
           done
@@ -133,17 +139,19 @@ jobs:
             stamp="${GITHUB_SHA}-${GITHUB_RUN_ATTEMPT}-${attempt}"
             html="$(curl -fsSL --retry 2 --max-time 20 "${base}/?atlas_verify=${stamp}" || true)"
             manifest="$(curl -fsSL --retry 2 --max-time 20 "${base}/atlas-release.json?atlas_verify=${stamp}" || true)"
+            report="$(curl -fsSL --retry 2 --max-time 20 "${base}/atlas-runtime-report.json?atlas_verify=${stamp}" || true)"
             if printf '%s' "$html" | grep -q 'data-aml-version="0.70.5"' \
               && printf '%s' "$html" | grep -q 'data-aml-build="0705"' \
-              && printf '%s' "$html" | grep -q 'atlas-runtime-current-01.js?r=0705' \
+              && printf '%s' "$html" | grep -q 'atlas-runtime-critical.js?r=0705' \
+              && printf '%s' "$html" | grep -q 'atlas-runtime-loader.js?r=0705' \
               && printf '%s' "$manifest" | grep -q '"release": "0.70.5"' \
-              && printf '%s' "$manifest" | grep -q '"build": "0705"'; then
+              && printf '%s' "$manifest" | grep -q '"build": "0705"' \
+              && printf '%s' "$report" | grep -q 'CRITICAL_BOOT_ONLY_THEN_COOPERATIVE_DEFERRED_FEATURE_CHUNKS'; then
               ok=1
               break
             fi
             sleep 10
           done
           test "$ok" -eq 1
-          printf '%s' "$html" | grep -q 'atlas-universo-so-workbench-0700.js?v=0705-2'
           ! printf '%s' "$html" | grep -Eq 'data-aml-version="0\.51\.1"|data-aml-build="0511"'
-          echo "ATLAS live smoke OK: release=0.70.5 build=0705 url=${PAGE_URL}"
+          echo "ATLAS live smoke OK: release=0.70.5 build=0705 startup=critical+deferred url=${PAGE_URL}"
