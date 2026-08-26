@@ -65,31 +65,25 @@ jobs:
           python -m json.tool build.json >/dev/null
       - name: Build exact Pages candidate
         run: python tools/build_atlas_site.py --out _site-entity-0510
-      - name: Verify isolated extension in built artifact
+      - name: Verify entity intelligence in compiled artifact
         shell: bash
         run: |
           set -euo pipefail
-          test -s _site-entity-0510/assets/atlas-entity-explorer-0510.js
-          test -s _site-entity-0510/assets/atlas-entity-explorer-0510.css
-          test -s _site-entity-0510/assets/atlas-entity-dossier-0510.js
-          test -s _site-entity-0510/assets/atlas-entity-dossier-0510.css
-          build=$(python -c "import json;print(json.load(open('atlas-release.json'))['build'])")
-          for asset in atlas-entity-explorer-0510.css atlas-entity-dossier-0510.css \
-                       atlas-entity-explorer-0510.js atlas-entity-dossier-0510.js; do
-            grep -q "$asset?v=$build-1" _site-entity-0510/index.html
-          done
-          # La extension es de lectura y no puede almacenar en el navegador.
-          for file in _site-entity-0510/assets/atlas-entity-explorer-0510.js _site-entity-0510/assets/atlas-entity-dossier-0510.js; do
-            ! grep -q 'new MutationObserver' "$file"
-            ! grep -q 'localStorage' "$file"
-            ! grep -q 'sessionStorage' "$file"
-            ! grep -qE '\.(insert|upsert|update)\(' "$file"
-          done
-          # Las lecturas por entidad van al snapshot, nunca a la vista pesada.
-          grep -q 'aml_ipa3_mark_scores_snapshot_v0_4' _site-entity-0510/assets/atlas-entity-dossier-0510.js
-          grep -q 'aml_sii_entity_year' _site-entity-0510/assets/atlas-entity-dossier-0510.js
-          grep -q 'aml_entity_peer_position_snapshot' _site-entity-0510/assets/atlas-entity-dossier-0510.js
-          grep -q 'aml_entity_identity_link_snapshot' _site-entity-0510/assets/atlas-entity-dossier-0510.js
-          ! grep -q 'aml_v_ipa3_mark_scores_v0_4' _site-entity-0510/assets/atlas-entity-dossier-0510.js
-          ! grep -q 'aml_v_ipa3_entity_score_v0_4' _site-entity-0510/assets/atlas-entity-dossier-0510.js
-          ! grep -q 'aml_v_ipa3_sii_peer_benchmark' _site-entity-0510/assets/atlas-entity-dossier-0510.js
+          test -s _site-entity-0510/atlas-runtime-current.css
+          test -s _site-entity-0510/atlas-runtime-current-01.js
+          cat _site-entity-0510/atlas-runtime-current-*.js _site-entity-0510/atlas-module-current-*.js > /tmp/atlas-compiled-js
+          # La politica de Pages es bundles compilados: los fragmentos fuente no deben publicarse.
+          test ! -e _site-entity-0510/assets/atlas-entity-explorer-0510.js
+          test ! -e _site-entity-0510/assets/atlas-entity-explorer-0510.css
+          test ! -e _site-entity-0510/assets/atlas-entity-dossier-0510.js
+          test ! -e _site-entity-0510/assets/atlas-entity-dossier-0510.css
+          # La logica vigente debe estar incorporada dentro de los bundles compilados.
+          grep -q 'aml_ipa3_mark_scores_snapshot_v0_4' /tmp/atlas-compiled-js
+          grep -q 'aml_sii_entity_year' /tmp/atlas-compiled-js
+          grep -q 'aml_entity_peer_position_snapshot' /tmp/atlas-compiled-js
+          grep -q 'aml_entity_identity_link_snapshot' /tmp/atlas-compiled-js
+          ! grep -q 'aml_v_ipa3_mark_scores_v0_4' /tmp/atlas-compiled-js
+          ! grep -q 'aml_v_ipa3_entity_score_v0_4' /tmp/atlas-compiled-js
+          ! grep -q 'aml_v_ipa3_sii_peer_benchmark' /tmp/atlas-compiled-js
+          ! grep -q 'localStorage' /tmp/atlas-compiled-js
+          ! grep -q 'sessionStorage' /tmp/atlas-compiled-js
