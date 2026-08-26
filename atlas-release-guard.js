@@ -1,5 +1,7 @@
 'use strict';
-/* ATLAS AML · single active release authority 0.90.1 · freeze-safe */
+/* ATLAS AML · single active release authority 0.90.1 · freeze-safe
+ * NO_ACTIVE_SESSION_RELOAD: authenticated sessions are never reloaded to enforce version identity.
+ */
 (function atlasSingleReleaseAuthority(){
   const PRODUCT='ATLAS AML',TAGLINE='Plataforma Integrada de Inteligencia y Riesgo',MANIFEST='./atlas-release.json';
   const root=document.documentElement;
@@ -48,7 +50,7 @@
       const meta=document.querySelector('meta[name="application-name"]');
       if(meta&&meta.content!==`${PRODUCT} · ${TAGLINE}`)meta.content=`${PRODUCT} · ${TAGLINE}`;
       applyVisibleIdentity();
-      window.__ATLAS_RELEASE_GUARD_HEALTH__={status:'ready',release:active.release,build:active.build,visibleVersionPolicy:'ATLAS_RELEASE_GUARD_0901_ONLY',runtimePolicy:'CANONICAL_COMPILED_RUNTIME_ONLY',freezeGuard:'NO_GLOBAL_CHILD_MUTATION_OBSERVER',checkedAt:new Date().toISOString()};
+      window.__ATLAS_RELEASE_GUARD_HEALTH__={status:'ready',release:active.release,build:active.build,visibleVersionPolicy:'ATLAS_RELEASE_GUARD_0901_ONLY',runtimePolicy:'CANONICAL_COMPILED_RUNTIME_ONLY',sessionPolicy:'NO_ACTIVE_SESSION_RELOAD',freezeGuard:'NO_GLOBAL_CHILD_MUTATION_OBSERVER',checkedAt:new Date().toISOString()};
     }finally{applying=false;}
   }
 
@@ -72,12 +74,12 @@
       window.__ATLAS_RELEASE_MISMATCH__=mismatch?{active:{...active},manifest:{release:String(manifest.release),build:String(manifest.build)},checkedAt:new Date().toISOString()}:null;
       applyRelease();return !mismatch;
     }catch(error){
-      window.__ATLAS_RELEASE_GUARD_HEALTH__={status:'manifest-unavailable',release:active.release,build:active.build,freezeGuard:'NO_GLOBAL_CHILD_MUTATION_OBSERVER',error:String(error?.message||error),checkedAt:new Date().toISOString()};
+      window.__ATLAS_RELEASE_GUARD_HEALTH__={status:'manifest-unavailable',release:active.release,build:active.build,sessionPolicy:'NO_ACTIVE_SESSION_RELOAD',freezeGuard:'NO_GLOBAL_CHILD_MUTATION_OBSERVER',error:String(error?.message||error),checkedAt:new Date().toISOString()};
       applyRelease();return false;
     }
   }
 
-  const api={product:PRODUCT,policy:'SINGLE_ACTIVE_RELEASE',runtimePolicy:'CANONICAL_COMPILED_RUNTIME_ONLY',apply:applyRelease,verify:verifyManifest};
+  const api={product:PRODUCT,policy:'SINGLE_ACTIVE_RELEASE',runtimePolicy:'CANONICAL_COMPILED_RUNTIME_ONLY',sessionPolicy:'NO_ACTIVE_SESSION_RELOAD',apply:applyRelease,verify:verifyManifest};
   Object.defineProperties(api,{version:{get:()=>active.release},build:{get:()=>active.build}});
   window.AtlasRelease=api;
   applyRelease();

@@ -8,6 +8,8 @@ const graphCss=fs.readFileSync('assets/atlas-digital-identity-graph-0525.css','u
 const intel=fs.readFileSync('assets/atlas-digital-identity-intelligence-0535.js','utf8');
 const intelCss=fs.readFileSync('assets/atlas-digital-identity-intelligence-0535.css','utf8');
 const index=fs.readFileSync('index.html','utf8');
+const release=JSON.parse(fs.readFileSync('atlas-release.json','utf8'));
+const manifest=JSON.parse(fs.readFileSync('atlas-runtime-manifest.json','utf8'));
 
 assert.match(alias,/DIGITAL-IDENTITY-EXPLORER-0526\.1/);
 assert.match(alias,/aml-digital-identity-live/);
@@ -39,10 +41,12 @@ assert.match(intel,/Aliases derivados/);
 assert.match(intel,/evidencia alta/);
 assert.match(intel,/identityAssertion:false/);
 assert.match(intelCss,/\.adi-wrap/);
-assert.match(index,/data-atlas-release="0\.51\.1"/);
+assert.equal(release.release,manifest.release);
+assert.equal(release.build,manifest.build);
+assert.equal(release.deployment_policy,'SINGLE_ACTIVE_RELEASE');
 assert.match(index,/data-atlas-release-policy="single-active"/);
 assert.match(index,/atlas-entity-search-alias-0522\.js\?v=0526-2/);
 assert.match(index,/atlas-digital-identity-graph-0525\.js\?v=0525-1/);
 assert.match(index,/atlas-digital-identity-intelligence-0535\.js\?v=0535-1/);
 assert.match(index,/atlas-digital-identity-intelligence-0535\.css\?v=0535-1/);
-console.log('ATLAS digital identity intelligence dossier 0535 contract OK');
+console.log(`ATLAS digital identity intelligence dossier 0535 contract OK under ${release.release}/${release.build}`);
