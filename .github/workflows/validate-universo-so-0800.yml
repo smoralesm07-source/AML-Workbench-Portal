@@ -38,7 +38,7 @@ jobs:
           const css=fs.readFileSync('assets/atlas-universo-so-intelligence-0800.css','utf8');
           const req=(ok,msg)=>{if(!ok){console.error('FAIL:',msg);process.exitCode=1}else console.log('OK:',msg)};
           req(ix.includes('atlas-universo-so-intelligence-0800.js?v=0800-1'),'index carga 0.80 directamente');
-          req(ix.includes('atlas-operational-recovery-0704.js?v=0800-1'),'route authority tiene cache bust 0.80');
+          req(ix.includes('atlas-operational-recovery-0704.js?v=0805-perf1'),'route authority usa cache bust activo 0.80.5');
           req(mod.includes("reporting:'aml_v_uaf_entity_reporting_behavior_0620'"),'contrato reportabilidad por RUT');
           req(mod.includes("mp:'aml_entity_mp_summary_v0680'"),'contrato Mercado Público');
           req(mod.includes("lifecycle:'aml_entity_lifecycle_v0680'"),'línea de vida multifuente');
