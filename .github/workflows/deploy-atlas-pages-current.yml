@@ -52,9 +52,9 @@ jobs:
           assert "release:'0.90.1',build:'0901'" in guard
           assert 'atlas-release-guard-0901-freeze-safe' in guard
           assert 'assets/atlas-ui-authority-0901.js' in [x['path'] for x in runtime['scripts']]
-          assert 'assets/atlas-ui-authority-0901.css' in runtime['styles']
           assert "RELEASE='0.90.1'" in ui and "BUILD='0901'" in ui
           assert 'data-atlas-ui-authority' in ui
+          assert "CSS='./assets/atlas-ui-authority-0901.css?v=0901-2'" in ui
           assert 'html[data-atlas-release="0.90.1"]' in css
           assert 'retired' in retired_audit.lower() and 'v024AuditHtml' in retired_audit
 
@@ -98,7 +98,7 @@ jobs:
           test -s _site/atlas-runtime-current.css
           test -s _site/atlas-runtime-current-01.js
           test ! -e _site/assets/atlas-ui-authority-0901.js
-          test ! -e _site/assets/atlas-ui-authority-0901.css
+          test -s _site/assets/atlas-ui-authority-0901.css
           test -s _site/assets/atlas-universo-so-contact-osint-0840.js
           test -s _site/assets/territorio-aml-beta.html
           test ! -e _site/assets/atlas-data-audit.js
@@ -107,7 +107,8 @@ jobs:
           grep -q "RELEASE='0.90.1'" /tmp/atlas-runtime-current.js
           grep -q "BUILD='0901'" /tmp/atlas-runtime-current.js
           grep -q 'data-atlas-ui-authority' /tmp/atlas-runtime-current.js
-          grep -q 'html\[data-atlas-release="0.90.1"\]' _site/atlas-runtime-current.css
+          grep -q "CSS='./assets/atlas-ui-authority-0901.css?v=0901-2'" /tmp/atlas-runtime-current.js
+          grep -q 'html\[data-atlas-release="0.90.1"\]' _site/assets/atlas-ui-authority-0901.css
           python3 - <<'PY'
           from pathlib import Path
           import json
@@ -125,7 +126,6 @@ jobs:
           assert 'atlas-data-audit.js' not in html
           assert 'atlas-data-audit.css' not in html
           assert 'atlas-ui-authority-0901.js' not in html
-          assert 'atlas-ui-authority-0901.css' not in html
           PY
           for js in _site/atlas-runtime-current-*.js _site/atlas-module-current-*.js; do
             test -f "$js" || continue
@@ -171,14 +171,14 @@ jobs:
               && ! printf '%s' "$html" | grep -q 'atlas-data-audit.js' \
               && ! printf '%s' "$html" | grep -q 'atlas-data-audit.css' \
               && ! printf '%s' "$html" | grep -q 'atlas-ui-authority-0901.js' \
-              && ! printf '%s' "$html" | grep -q 'atlas-ui-authority-0901.css' \
               && printf '%s' "$release" | grep -q '"release": "0.90.1"' \
               && printf '%s' "$release" | grep -q '"build": "0901"' \
               && printf '%s' "$runtime_js" | grep -q "RELEASE='0.90.1'" \
               && printf '%s' "$runtime_js" | grep -q 'data-atlas-ui-authority' \
-              && printf '%s' "$runtime_css" | grep -q 'html\[data-atlas-release="0.90.1"\]' \
+              && printf '%s' "$runtime_js" | grep -q "atlas-ui-authority-0901.css?v=0901-2" \
+              && test -n "$runtime_css" \
+              && printf '%s' "$standalone_ui_css" | grep -q 'html\[data-atlas-release="0.90.1"\]' \
               && test -z "$standalone_ui" \
-              && test -z "$standalone_ui_css" \
               && test -z "$retired_audit"; then
               ok=1
               break
@@ -186,4 +186,4 @@ jobs:
             sleep 8
           done
           test "$ok" -eq 1
-          echo "ATLAS AML 0.90.1 live smoke OK with compiled UI authority: ${PAGE_URL}"
+          echo "ATLAS AML 0.90.1 live smoke OK with compiled JS authority and standalone authority CSS: ${PAGE_URL}"
