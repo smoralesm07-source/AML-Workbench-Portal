@@ -15,6 +15,12 @@ GP2_JS = "assets/atlas-public-spend-v2.js"
 GP2_AUTH = "assets/atlas-public-spend-route-authority-0578.js"
 GP2_VERSION = "gp2-2"
 GP2_AUTH_VERSION = "gp2-a3"
+CRITICAL_RUNTIME_PATHS = {
+    "v0333-auth-preflight.js",
+    "app.js",
+    "v0422-auth-bootstrap-fix.js",
+}
+MAX_DEFERRED_CLASSIC_BYTES = 110 * 1024
 LEGACY_PUBLIC_SPEND_STANDALONES = [
     "atlas-public-spend-signal-command-v2",
     "atlas-public-spend-mark-taxonomy-v3",
@@ -115,6 +121,10 @@ def build(out_dir: Path):
     if collision:
         raise SystemExit(f"forbidden runtime assets declared as source fragments: {sorted(collision)}")
 
+    declared_critical = [item["path"] for item in runtime_scripts if item["path"] in CRITICAL_RUNTIME_PATHS]
+    if declared_critical != ["v0333-auth-preflight.js", "app.js", "v0422-auth-bootstrap-fix.js"]:
+        raise SystemExit(f"critical startup order changed unexpectedly: {declared_critical}")
+
     css_parts = ["/* ATLAS AML compiled current stylesheet. Source fragments are Git-only. */"]
     for name in runtime_styles:
         src = ROOT / name
@@ -124,41 +134,137 @@ def build(out_dir: Path):
     compiled_css = "atlas-runtime-current.css"
     (out_dir / compiled_css).write_text("\n".join(css_parts), encoding="utf-8")
 
-    script_tags = []
-    compiled_js = []
-    classic_parts = []
-    classic_index = 0
+    compiled_js: list[str] = []
+    critical_parts: list[str] = []
+    deferred_entries: list[dict[str, str]] = []
+    deferred_parts: list[str] = []
+    deferred_bytes = 0
+    deferred_index = 0
     module_index = 0
 
-    def flush_classic():
-        nonlocal classic_index, classic_parts
-        if not classic_parts:
-            return
-        classic_index += 1
-        name = f"atlas-runtime-current-{classic_index:02d}.js"
-        body = ["'use strict';", "/* ATLAS AML compiled current runtime segment. */", *classic_parts, "window.AtlasRelease?.apply?.();"]
-        (out_dir / name).write_text("\n\n".join(body) + "\n", encoding="utf-8")
-        compiled_js.append(name)
-        script_tags.append(f'  <script src="./{name}?r={build_id}" data-atlas-runtime="current"></script>')
-        classic_parts = []
-
-    for item in runtime_scripts:
-        source_name = item["path"]
+    def transformed_boundary(source_name: str) -> str:
         src = ROOT / source_name
         if not src.is_file():
             raise SystemExit(f"missing script source fragment: {source_name}")
         transformed = sanitize_legacy_authority(src.read_text(encoding="utf-8"))
-        boundary = f"/* ---- source fragment: {source_name} ---- */\n{transformed}\nwindow.AtlasRelease?.apply?.();"
+        return f"/* ---- source fragment: {source_name} ---- */\n{transformed}\nwindow.AtlasRelease?.apply?.();"
+
+    for item in runtime_scripts:
+        if item["path"] in CRITICAL_RUNTIME_PATHS:
+            if item.get("type", "classic") != "classic":
+                raise SystemExit(f"critical startup script must be classic: {item['path']}")
+            critical_parts.append(transformed_boundary(item["path"]))
+
+    critical_name = "atlas-runtime-critical.js"
+    critical_body = [
+        "'use strict';",
+        "/* ATLAS AML critical startup runtime: auth preflight + core + bounded auth rescue only. */",
+        *critical_parts,
+        "window.AtlasRelease?.apply?.();",
+    ]
+    (out_dir / critical_name).write_text("\n\n".join(critical_body) + "\n", encoding="utf-8")
+    compiled_js.append(critical_name)
+
+    def flush_deferred():
+        nonlocal deferred_index, deferred_parts, deferred_bytes
+        if not deferred_parts:
+            return
+        deferred_index += 1
+        name = f"atlas-runtime-deferred-{deferred_index:02d}.js"
+        body = [
+            "'use strict';",
+            "/* ATLAS AML deferred feature runtime chunk. */",
+            *deferred_parts,
+            "window.AtlasRelease?.apply?.();",
+        ]
+        (out_dir / name).write_text("\n\n".join(body) + "\n", encoding="utf-8")
+        compiled_js.append(name)
+        deferred_entries.append({"src": f"./{name}?r={build_id}", "type": "classic"})
+        deferred_parts = []
+        deferred_bytes = 0
+
+    for item in runtime_scripts:
+        source_name = item["path"]
+        if source_name in CRITICAL_RUNTIME_PATHS:
+            continue
+        boundary = transformed_boundary(source_name)
         if item.get("type", "classic") == "module":
-            flush_classic()
+            flush_deferred()
             module_index += 1
-            module_name = f"atlas-module-current-{module_index:02d}.js"
-            (out_dir / module_name).write_text(f"/* ATLAS AML compiled current module. Source: {source_name} */\n{transformed}\n", encoding="utf-8")
+            module_name = f"atlas-module-deferred-{module_index:02d}.js"
+            transformed = sanitize_legacy_authority((ROOT / source_name).read_text(encoding="utf-8"))
+            (out_dir / module_name).write_text(
+                f"/* ATLAS AML deferred module. Source: {source_name} */\n{transformed}\n",
+                encoding="utf-8",
+            )
             compiled_js.append(module_name)
-            script_tags.append(f'  <script type="module" src="./{module_name}?r={build_id}" data-atlas-runtime="current"></script>')
-        else:
-            classic_parts.append(boundary)
-    flush_classic()
+            deferred_entries.append({"src": f"./{module_name}?r={build_id}", "type": "module"})
+            continue
+
+        boundary_bytes = len(boundary.encode("utf-8"))
+        if deferred_parts and deferred_bytes + boundary_bytes > MAX_DEFERRED_CLASSIC_BYTES:
+            flush_deferred()
+        deferred_parts.append(boundary)
+        deferred_bytes += boundary_bytes
+    flush_deferred()
+
+    deferred_entries.extend([
+        {"src": f"./{GP2_JS}?v={GP2_VERSION}", "type": "classic"},
+        {"src": f"./{GP2_AUTH}?v={GP2_AUTH_VERSION}", "type": "classic"},
+    ])
+
+    loader_name = "atlas-runtime-loader.js"
+    loader_entries = json.dumps(deferred_entries, ensure_ascii=False, separators=(",", ":"))
+    loader_body = f"""'use strict';
+/* ATLAS AML cooperative deferred loader. Never block first paint/auth bootstrap with feature layers. */
+(function(){{
+  const entries={loader_entries};
+  const started=performance.now();
+  const state=window.__ATLAS_RUNTIME_LOAD__={{phase:'waiting-for-shell',total:entries.length,loaded:0,startedAt:new Date().toISOString()}};
+  const sleep=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
+  const yieldThread=()=>new Promise(resolve=>{{
+    if('requestIdleCallback' in window) requestIdleCallback(()=>resolve(),{{timeout:250}});
+    else setTimeout(resolve,0);
+  }});
+  const ready=()=>!!document.querySelector('#app .shell, #app #login, #app #logout');
+  async function waitForBootSurface(){{
+    const deadline=performance.now()+2600;
+    while(!ready()&&performance.now()<deadline) await sleep(50);
+  }}
+  function loadOne(entry){{
+    return new Promise((resolve,reject)=>{{
+      const script=document.createElement('script');
+      if(entry.type==='module') script.type='module';
+      script.src=entry.src;
+      script.async=false;
+      script.dataset.atlasRuntime='deferred';
+      script.onload=()=>resolve();
+      script.onerror=()=>reject(new Error(`No fue posible cargar ${{entry.src}}`));
+      document.body.appendChild(script);
+    }});
+  }}
+  async function run(){{
+    await waitForBootSurface();
+    state.phase='loading';
+    for(const entry of entries){{
+      await yieldThread();
+      try{{ await loadOne(entry); }}
+      catch(error){{
+        console.error('[ATLAS] deferred runtime chunk failed',entry.src,error);
+        state.lastError=String(error?.message||error);
+      }}
+      state.loaded++;
+    }}
+    state.phase='ready';
+    state.durationMs=Math.round(performance.now()-started);
+    state.completedAt=new Date().toISOString();
+    window.dispatchEvent(new CustomEvent('atlas:runtime-ready',{{detail:state}}));
+  }}
+  setTimeout(()=>void run(),0);
+}})();
+"""
+    (out_dir / loader_name).write_text(loader_body, encoding="utf-8")
+    compiled_js.append(loader_name)
 
     data_dir = ROOT / "data"
     if data_dir.exists():
@@ -194,9 +300,8 @@ def build(out_dir: Path):
         f'  <link rel="stylesheet" href="./{GP2_CSS}?v={GP2_VERSION}" data-atlas-public-spend="GP2" />',
     ])
     scripts = "\n".join([
-        *script_tags,
-        f'  <script src="./{GP2_JS}?v={GP2_VERSION}" data-atlas-public-spend="GP2"></script>',
-        f'  <script src="./{GP2_AUTH}?v={GP2_AUTH_VERSION}" data-atlas-public-spend="GP2-authority"></script>',
+        f'  <script src="./{critical_name}?r={build_id}" data-atlas-runtime="critical"></script>',
+        f'  <script src="./{loader_name}?r={build_id}" data-atlas-runtime="loader"></script>',
     ])
     if "<!-- ATLAS_RUNTIME_STYLES -->" not in template or "<!-- ATLAS_RUNTIME_SCRIPTS -->" not in template:
         raise SystemExit("index.html is missing ATLAS runtime placeholders")
@@ -210,8 +315,8 @@ def build(out_dir: Path):
     for legacy in ["v037-public-spend.js", "atlas-public-spend-mobile-route-0573.js", "atlas-public-spend-guided-0570.js", "atlas-public-spend-audit-0550.js", "atlas-public-spend-progressive-0577.css"]:
         if legacy in template:
             raise SystemExit(f"legacy public-spend runtime remains in built index: {legacy}")
-    if f"{GP2_JS}?v={GP2_VERSION}" not in template or f"{GP2_CSS}?v={GP2_VERSION}" not in template or f"{GP2_AUTH}?v={GP2_AUTH_VERSION}" not in template:
-        raise SystemExit("native public-spend GP2 assets missing from built index")
+    if f"{GP2_CSS}?v={GP2_VERSION}" not in template:
+        raise SystemExit("native public-spend GP2 stylesheet missing from built index")
     for retired in RETIRED_PUBLIC_SPEND_FRAGMENTS:
         compiled_targets = [out_dir / compiled_css, *[out_dir / name for name in compiled_js]]
         if any(retired in p.read_text(encoding="utf-8", errors="ignore") for p in compiled_targets if p.is_file()):
@@ -229,16 +334,23 @@ def build(out_dir: Path):
     (out_dir / "index.html").write_text(template, encoding="utf-8")
     (out_dir / ".nojekyll").write_text("", encoding="utf-8")
 
+    critical_kib = round((out_dir / critical_name).stat().st_size / 1024, 1)
     runtime_report = {
         "release": rel,
         "build": build_id,
         "policy": release["runtime_policy"],
         "publish_mode": runtime["publish_mode"],
+        "startup_policy": "CRITICAL_BOOT_ONLY_THEN_COOPERATIVE_DEFERRED_FEATURE_CHUNKS",
         "source_style_fragments": len(runtime_styles),
         "source_script_fragments": len(runtime_scripts),
+        "critical_source_fragments": declared_critical,
+        "critical_bundle": critical_name,
+        "critical_bundle_kib": critical_kib,
+        "deferred_chunk_count": len(deferred_entries),
+        "deferred_chunk_max_source_bytes": MAX_DEFERRED_CLASSIC_BYTES,
         "retired_public_spend_fragments": sorted(RETIRED_PUBLIC_SPEND_FRAGMENTS),
         "published_css": [compiled_css, GP2_CSS],
-        "published_js": [*compiled_js, GP2_JS, GP2_AUTH],
+        "published_js": compiled_js,
         "historical_source_assets_published": False,
         "legacy_auth_runtime_published": False,
         "public_spend_runtime": f"{GP2_JS}?v={GP2_VERSION}",
