@@ -1,5 +1,6 @@
 'use strict';
 /* ATLAS AML · Global source health 0.71.4 · low-overhead placement */
+/* NO_GLOBAL_DOM_OBSERVER: placement is event/requestAnimationFrame driven; no document-wide MutationObserver is allowed. */
 (function atlasGlobalSourceHealth0714(){
   const VERSION='0714.1',TTL=5*60*1000;
   const PIPELINES=['RUNTIME_SNAPSHOT','UAF_SECTOR_PROFILE','SII_ENTITY_YEAR','OSFL_PROFILE','SANCTION_IDENTITY'];
@@ -50,5 +51,5 @@
   ['resize','pageshow','atlas:nav-refresh','atlas:runtime-ready'].forEach(evt=>window.addEventListener(evt,resetAndSchedule));
   setTimeout(resetAndSchedule,700);
   setInterval(()=>void loadMaterialization(false),TTL);
-  window.AtlasGlobalSourceHealth={version:VERSION,semanticContract:'SOURCE_INTEGRATION_MATERIALIZATION_0714',freezeGuard:'CACHED_TOPBAR_DEFERRED_SCAN',schedule,place,refresh:(force=false)=>{resetAndSchedule();return loadMaterialization(force);},getMaterializationState:()=>matState};
+  window.AtlasGlobalSourceHealth={version:VERSION,semanticContract:'SOURCE_INTEGRATION_MATERIALIZATION_0714',freezeGuard:'NO_GLOBAL_DOM_OBSERVER:CACHED_TOPBAR_DEFERRED_SCAN',schedule,place,refresh:(force=false)=>{resetAndSchedule();return loadMaterialization(force);},getMaterializationState:()=>matState};
 })();
