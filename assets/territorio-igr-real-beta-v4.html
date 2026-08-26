@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ATLAS · Territorio IGR · Beta v4</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--bg:#06111c;--p:#0a1927;--p2:#0d2030;--l:#294256;--t:#eaf1f7;--m:#90a7b8;--c:#45d0df;--o:#f28b39;--r:#ef6558}
+*{box-sizing:border-box}html,body{height:100%;margin:0}body{font-family:Inter,system-ui;background:#06111c;color:var(--t)}
+.app{max-width:1700px;margin:auto;padding:14px}.top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:10px}
+.brand{display:flex;gap:11px;align-items:center}.mark{width:40px;height:40px;border:1px solid var(--c);border-radius:50%;display:grid;place-items:center;color:var(--c);font-weight:800}
+h1{font-size:22px;margin:0}.sub{color:var(--m);font-size:12px}.beta{border:1px solid #2a6570;color:#74e4ef;border-radius:999px;padding:4px 8px;font-size:10px}
+.status{font-size:11px;color:var(--m)}.srcs,.controls{display:grid;gap:7px;margin-bottom:10px}.srcs{grid-template-columns:repeat(5,1fr)}
+.src{border:1px solid var(--l);border-radius:8px;padding:6px 8px;background:#081722;font-size:9px;color:var(--m)}.src.ok{color:#67d8a1;border-color:#245846}.src.bad{color:#ff9a88;border-color:#663b35}
+.controls{grid-template-columns:1fr 230px 300px}.tabs{display:flex;overflow:hidden;border:1px solid var(--l);border-radius:10px;background:#081722}
+.tab{border:0;border-right:1px solid var(--l);background:transparent;color:#b8c7d2;padding:10px 13px;cursor:pointer}.tab.active{background:#123246;color:#6de1ec}
+select,input{height:40px;border:1px solid var(--l);border-radius:10px;background:#081722;color:var(--t);padding:0 10px}
+.main{display:grid;grid-template-columns:minmax(620px,1.15fr) minmax(470px,.85fr);gap:10px}.card{background:linear-gradient(180deg,#0b1a29,#081520);border:1px solid var(--l);border-radius:12px;overflow:hidden}
+.head{padding:10px 12px;border-bottom:1px solid #1e3547;display:flex;justify-content:space-between;align-items:center}.head b{font-size:13px}.head span{font-size:9px;color:var(--m)}
+.mapwrap{height:690px;position:relative}#map{height:100%}.leaflet-container{background:#071827}.leaflet-tile-pane{filter:brightness(.5) saturate(.75)}
+.legend{position:absolute;left:13px;bottom:13px;z-index:500;width:215px;padding:9px;background:rgba(6,17,28,.92);border:1px solid var(--l);border-radius:9px;font-size:9px}.grad{height:13px;margin:6px 0;background:linear-gradient(90deg,#277da1,#69b7b7,#dabf64,#f09a44,#d94e49)}
+.legrow{display:flex;justify-content:space-between;color:#a8bac7}.right{display:grid;gap:10px}.sel{padding:12px}.selTop{display:flex;justify-content:space-between;gap:10px}
+.place h2{margin:0;font-size:19px}.place p{margin:2px 0;color:var(--m);font-size:10px}.band{padding:5px 8px;border:1px solid #795238;border-radius:999px;color:#ffc178;background:#25190f;font-size:9px;height:max-content}
+.scoregrid{display:grid;grid-template-columns:1.2fr repeat(4,1fr);gap:7px;margin-top:10px}.big{padding:9px}.big small,.k small{display:block;color:var(--m);font-size:8px}.big b{font-size:43px;color:#ff8246}
+.k{border:1px solid #243d50;border-radius:9px;padding:8px;text-align:center}.k b{font-size:17px}
+.pad{padding:11px}.stack{height:16px;display:flex;border-radius:6px;overflow:hidden;background:#172a3c}.seg{height:100%}
+.rows{display:grid;gap:7px;margin-top:9px}.row{display:grid;grid-template-columns:105px 1fr 64px;gap:7px;align-items:center;font-size:9px}.track{height:7px;background:#172a3c;border-radius:999px;overflow:hidden}.fill{height:100%}.val{text-align:right}.val b{display:block;font-size:10px}.val small{color:var(--m);font-size:8px}
+.cead{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.box{border:1px solid #243c50;border-radius:9px;padding:8px}.box b{font-size:10px}.box strong{float:right}.box small{display:block;color:var(--m);font-size:8px;margin-top:5px}
+.rank{display:grid;gap:3px}.rr{display:grid;grid-template-columns:20px 1fr auto;gap:7px;padding:6px 0;border-bottom:1px solid #1e3345;cursor:pointer;font-size:9px}.rr b{font-size:10px}.pill{border:1px solid #4c4f35;border-radius:999px;padding:2px 6px;color:#ebc25a}
+.note{font-size:9px;color:var(--m);line-height:1.45}.loading{height:100%;display:grid;place-items:center;color:var(--m);padding:25px;text-align:center}
+@media(max-width:1100px){.main{grid-template-columns:1fr}.controls,.srcs{grid-template-columns:1fr}.mapwrap{height:560px}}
+</style>
+</head>
+<body><div class="app">
+<div class="top"><div class="brand"><div class="mark">AIE</div><div><h1>Territorio · IGR explicado <span class="beta">BETA v4</span></h1><div class="sub">Snapshot materializado · mapa comunal interactivo · sin afectar Territorio productivo</div></div></div><div class="status" id="status">Cargando…</div></div>
+<div class="srcs"><div class="src" id="s1">Snapshot · esperando</div><div class="src" id="s2">V/E v2 · materializado</div><div class="src" id="s3">UAF↔SII · materializado</div><div class="src" id="s4">CEAD · materializado</div><div class="src" id="s5">Cartografía · esperando</div></div>
+<div class="controls"><div class="tabs" id="tabs"><button class="tab active" data-k="irg">IGR</button><button class="tab" data-k="vulnerability">V/E</button><button class="tab" data-k="density">Densidad SO</button><button class="tab" data-k="gap">Brecha</button><button class="tab" data-k="threat">Amenaza CEAD</button></div><select id="region"><option value="ALL">Todas las regiones</option></select><input id="q" placeholder="Buscar comuna…"></div>
+<div class="main">
+<section class="card"><div class="head"><b>Mapa comunal AML</b><span id="mapmeta">0 comunas</span></div><div class="mapwrap"><div id="map"><div class="loading">Cargando snapshot territorial…</div></div><div class="legend"><b id="legt">IGR</b><div class="grad"></div><div class="legrow"><span id="lo">P10</span><span id="md">P50</span><span id="hi">P90</span></div></div></div></section>
+<div class="right">
+<section class="card sel"><div class="selTop"><div class="place"><h2 id="name">—</h2><p id="reg">—</p></div><div class="band" id="band">—</div></div><div class="scoregrid"><div class="big"><small>IGR-LA/FT</small><b id="igr">—</b></div><div class="k"><small>V/E</small><b id="v">—</b></div><div class="k"><small>Densidad</small><b id="d">—</b></div><div class="k"><small>Brecha</small><b id="g">—</b></div><div class="k"><small>Amenaza</small><b id="t">—</b></div></div></section>
+<section class="card"><div class="head"><b>Composición efectiva del IGR</b><span>45 / 20 / 20 / 15</span></div><div class="pad"><div class="stack" id="stack"></div><div class="rows" id="comp"></div><div class="note" style="margin-top:8px">Aporte = score del componente × peso superior. El IGR solo se muestra cuando las cuatro dimensiones están disponibles; no se renormalizan pesos por ausencia de fuente.</div></div></section>
+<section class="card"><div class="head"><b>Detalle CEAD</b><span>55 / 35 / 10 dentro de Amenaza</span></div><div class="pad"><div class="cead" id="cead"></div></div></section>
+<section class="card"><div class="head"><b>Qué requiere atención</b><span>ranking comunal</span></div><div class="pad"><div class="rank" id="rank"></div></div></section>
+<section class="card"><div class="head"><b>Lectura metodológica</b><span id="method">—</span></div><div class="pad note">Esta beta usa un snapshot del corte actual para asegurar carga estable. El IGR mantiene 45% V/E, 20% Densidad SO, 20% Brecha y 15% Amenaza territorial. CEAD es señal territorial/contextual; no constituye evidencia de lavado de activos ni atribución a personas o empresas.</div></section>
+</div></div></div>
+<script src="./supabase-js-2.111.0.umd.js?v=0460-1"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+'use strict';
+const SB='https://ldmtlwzqaqmegedktlxr.supabase.co',KEY='sb_publishable_Nu21dZFBM3NwtIvOwIM8ag_9tyfDJyR';
+const GEO='https://raw.githubusercontent.com/fcortes/Chile-GeoJSON/refs/heads/master/comunas.geojson';
+const sb=window.supabase.createClient(SB,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+const W={vulnerability:.45,density:.20,gap:.20,threat:.15},META={vulnerability:['V/E','#ef6a55'],density:['Densidad','#f1a23b'],gap:['Brecha','#e5bf4c'],threat:['Amenaza','#42c6d4']};
+let rows=[],selected=null,metric='irg',map,layer,features=new Map();
+const $=s=>document.querySelector(s),finite=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v)),num=(v,d=1)=>finite(v)?Number(v).toLocaleString('es-CL',{minimumFractionDigits:d,maximumFractionDigits:d}):'—';
+const norm=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,' ').trim();
+const band=v=>!finite(v)?'Sin cálculo':v>=80?'Crítico':v>=60?'Alto':v>=40?'Medio':v>=20?'Moderado':'Bajo';
+function color(v){if(!finite(v))return '#253746';return v>=80?'#d94e49':v>=60?'#f09a44':v>=40?'#dabf64':v>=20?'#69b7b7':'#277da1'}
+function qtile(a,q){const x=a.filter(finite).map(Number).sort((a,b)=>a-b);if(!x.length)return null;const p=(x.length-1)*q,i=Math.floor(p),f=p-i;return x[i+1]!==undefined?x[i]+f*(x[i+1]-x[i]):x[i]}
+async function all(table,cols){let out=[],from=0;for(let i=0;i<4;i++){const {data,error}=await sb.from(table).select(cols).range(from,from+999);if(error)throw error;out.push(...(data||[]));if((data||[]).length<1000)break;from+=1000}return out}
+function val(r){return metric==='irg'?r.irg:r[metric]}
+function propName(p){for(const k of ['COMUNA','Comuna','comuna','NOM_COMUNA','NOM_COM','NAME_3','name','Nombre'])if(p?.[k])return p[k];return''}
+function render(){
+ if(!selected)return;$('#name').textContent=selected.commune;$('#reg').textContent=selected.region;$('#band').textContent=band(selected.irg);$('#igr').textContent=num(selected.irg);$('#v').textContent=num(selected.vulnerability);$('#d').textContent=num(selected.density);$('#g').textContent=num(selected.gap);$('#t').textContent=num(selected.threat);$('#method').textContent=selected.method||'snapshot';
+ const parts=Object.entries(META).map(([k,m])=>({k,label:m[0],color:m[1],score:Number(selected[k]),pts:Number(selected[k])*W[k]})),total=Number(selected.irg)||1;
+ $('#stack').innerHTML=parts.map(x=>`<div class="seg" style="width:${100*x.pts/total}%;background:${x.color}" title="${x.label}: ${num(x.pts)} pts"></div>`).join('');
+ $('#comp').innerHTML=parts.map(x=>`<div class="row"><span>${x.label} · ${W[x.k]*100}%</span><div class="track"><div class="fill" style="width:${Math.min(100,x.score)}%;background:${x.color}"></div></div><div class="val"><b>${num(x.pts)} pts</b><small>${num(100*x.pts/total,0)}% IGR</small></div></div>`).join('');
+ const c=selected.cead_json||{},layers=c.layers||{},spec=[['predicate_direct','Delito base',55,'#ef6558'],['criminal_economy','Economía criminal',35,'#f0a044'],['criminogenic_context','Contexto',10,'#45c8d8']];
+ $('#cead').innerHTML=spec.map(([k,l,w,co])=>`<div class="box"><b>${l}</b><strong style="color:${co}">${w}%</strong><div style="clear:both"></div><small>Score capa ${num(layers?.[k]?.score)} · contribuye dentro de Amenaza CEAD</small></div>`).join('');
+ const top=[...rows].sort((a,b)=>b.irg-a.irg).slice(0,8);$('#rank').innerHTML=top.map((r,i)=>`<div class="rr" data-n="${encodeURIComponent(r.commune)}"><span>${i+1}</span><b>${r.commune}</b><span class="pill">${num(r.irg)}</span></div>`).join('');document.querySelectorAll('.rr').forEach(e=>e.onclick=()=>pick(decodeURIComponent(e.dataset.n)));
+ styleMap();
+}
+function pick(name){const r=rows.find(x=>norm(x.commune)===norm(name));if(!r)return;selected=r;render();const f=features.get(norm(name));if(f)map.fitBounds(f.getBounds(),{padding:[25,25],maxZoom:9})}
+function styleMap(){if(!layer)return;layer.setStyle(f=>{const n=propName(f.properties),r=rows.find(x=>norm(x.commune)===norm(n)),active=selected&&r&&norm(r.commune)===norm(selected.commune);return{color:active?'#fff':'rgba(220,233,240,.70)',weight:active?2:.55,fillColor:color(r?val(r):null),fillOpacity:r?.igr!=null?.78:.06}});const a=rows.map(val);$('#legt').textContent=metric==='irg'?'IGR':META[metric]?.[0]||metric;$('#lo').textContent='P10 '+num(qtile(a,.1),0);$('#md').textContent='P50 '+num(qtile(a,.5),0);$('#hi').textContent='P90 '+num(qtile(a,.9),0)}
+function filter(){const reg=$('#region').value,q=norm($('#q').value);layer?.eachLayer(l=>{const n=propName(l.feature?.properties||{}),r=rows.find(x=>norm(x.commune)===norm(n)),show=r&&(!q||norm(n).includes(q))&&(reg==='ALL'||r.region===reg);l.setStyle({opacity:show?1:.08,fillOpacity:show?.78:.01})})}
+async function boot(){try{
+ const session=(await sb.auth.getSession())?.data?.session;if(!session)throw new Error('No hay sesión Atlas activa. Abre ATLAS, inicia sesión y recarga esta beta.');
+ rows=await all('aml_beta_territory_igr_snapshot_v4','region,commune,commune_code,igr,vulnerability,density,gap,threat,cead_json,generated_at,method');$('#s1').classList.add('ok');$('#s1').textContent=`Snapshot · ${rows.length} comunas`;['s2','s3','s4'].forEach(id=>$('#'+id).classList.add('ok'));
+ const geo=await fetch(GEO,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('Cartografía '+r.status);return r.json()});$('#s5').classList.add('ok');$('#s5').textContent=`Cartografía · ${geo.features?.length||0} polígonos`;
+ const regs=[...new Set(rows.map(r=>r.region))].sort((a,b)=>a.localeCompare(b,'es'));$('#region').innerHTML='<option value="ALL">Todas las regiones</option>'+regs.map(x=>`<option>${x}</option>`).join('');
+ selected=[...rows].sort((a,b)=>b.irg-a.irg)[0];map=L.map('map',{zoomControl:true,attributionControl:false,minZoom:4,maxZoom:12,preferCanvas:true});L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(map);
+ layer=L.geoJSON(geo,{style:()=>({}),onEachFeature:(f,l)=>{const n=propName(f.properties),r=rows.find(x=>norm(x.commune)===norm(n));features.set(norm(n),l);l.bindTooltip(()=>r?`<b>${n}</b><br>IGR ${num(r.irg)} · ${band(r.irg)}`:`<b>${n}</b><br>Sin IGR completo`,{sticky:true});l.on({click:()=>r&&pick(r.commune)})}}).addTo(map);
+ const linked=[];layer.eachLayer(l=>{const n=propName(l.feature?.properties||{});if(rows.some(r=>norm(r.commune)===norm(n)))linked.push(l)});if(linked.length)map.fitBounds(L.featureGroup(linked).getBounds(),{padding:[8,8]});
+ $('#mapmeta').textContent=`${rows.length} comunas con 4/4 componentes`;$('#status').textContent=`Corte ${new Date(rows[0]?.generated_at).toLocaleString('es-CL')} · sesión activa`;render();
+ }catch(e){console.error(e);$('#status').textContent='Carga fallida';$('#s1').classList.add('bad');$('#map').innerHTML=`<div class="loading"><div><b>No se pudo cargar la beta con datos.</b><br><br>${e.message}</div></div>`}}
+$('#tabs').onclick=e=>{const b=e.target.closest('[data-k]');if(!b)return;metric=b.dataset.k;document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));styleMap();filter()};$('#region').onchange=filter;$('#q').oninput=filter;boot();
+</script></body></html>
