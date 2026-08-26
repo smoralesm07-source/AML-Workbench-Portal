@@ -51,13 +51,16 @@ jobs:
         run: |
           set -euo pipefail
           python tools/build_atlas_site.py --out _site
-          test -s _site/assets/atlas-obligated-subjects-0560.js
-          test -s _site/assets/atlas-obligated-dossier-0560.js
-          test -s _site/assets/atlas-obligated-subjects-0560.css
-          grep -q 'atlas-obligated-subjects-0560.js?v=0560-1' _site/index.html
-          grep -q 'atlas-obligated-dossier-0560.js?v=0560-1' _site/index.html
-          grep -q 'atlas-obligated-subjects-0560.css?v=0560-1' _site/index.html
-          grep -q 'sujetos-obligados' _site/atlas-runtime-current-03.js
+          test -s _site/atlas-runtime-current.css
+          test -s _site/atlas-runtime-current-01.js
+          cat _site/atlas-runtime-current-*.js _site/atlas-module-current-*.js > /tmp/atlas-compiled-js
+          # Los fragmentos fuente versionados no se publican; la sección debe estar dentro del runtime compilado.
+          test ! -e _site/assets/atlas-obligated-subjects-0560.js
+          test ! -e _site/assets/atlas-obligated-dossier-0560.js
+          test ! -e _site/assets/atlas-obligated-subjects-0560.css
+          grep -q 'sujetos-obligados' /tmp/atlas-compiled-js
+          grep -q 'aml_uaf_obligated_subject_snapshot' /tmp/atlas-compiled-js
+          grep -q 'aml_uaf_obligated_overview_snapshot' /tmp/atlas-compiled-js
 
       - name: La capa SQL declara su semántica y sus guardarraíles
         run: |
