@@ -126,7 +126,7 @@ jobs:
           assert report['publish_mode']=='COMPILED_BUNDLES_ONLY',report
           assert report['historical_source_assets_published'] is False,report
           assert report['visible_version_authority']=='atlas-release-guard.js',report
-          assert len(report['published_css'])==1,report
+          assert set(report['published_css'])=={'atlas-runtime-current.css','assets/atlas-public-spend-v2.css'},report
           assert report['published_js'],report
           for source in [*m['styles'],*[x['path'] for x in m['scripts']]]:
               assert f'./{source}' not in html,f'source fragment leaked into index: {source}'
