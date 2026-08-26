@@ -1,6 +1,6 @@
 {
   "schema": "ATLAS_INDICATOR_METHODOLOGY_V1",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "effective_date": "2026-08-26",
   "presentation_policy": {
     "ipa_display_name": "IPA",
@@ -24,9 +24,19 @@
       "label": "IGR",
       "name": "Índice de Riesgo Geográfico",
       "domain": "territory",
-      "status": "ACTIVE_BETA_GOVERNED",
-      "methodology": "Mide exposición territorial relativa. Mantiene separadas vulnerabilidad/exposición, densidad de sujetos obligados, brecha territorial y amenaza. Es contexto geográfico y no atribuye riesgo o conducta a una entidad por su domicilio.",
-      "guardrails": ["TERRITORIAL_CONTEXT_NOT_ENTITY_ATTRIBUTION", "MISSING_IS_NOT_ZERO", "CEAD_IS_CONTEXT_NOT_LAFT_EVIDENCE"]
+      "status": "ACTIVE_GOVERNED_V2A",
+      "method_version": "IGR-2A-1.0.0",
+      "formula": "1.00 * amenaza_territorial_cead_la",
+      "weights": {"amenaza_territorial_cead_la": 1.00},
+      "cead_la_composition": {"amenazas_precedentes_la": 0.55, "economia_criminal_facilitadores": 0.35, "contexto_criminogeno": 0.10},
+      "feature_weights": {"intensidad": 0.40, "persistencia": 0.25, "tendencia": 0.20, "anomalia": 0.15},
+      "roadmap": {
+        "v2A": "1.00 * CEAD_LA",
+        "v2B": "0.85 * CEAD_LA + 0.15 * EXPOSICION_TRANSFRONTERIZA_LOGISTICA",
+        "v2C": "0.75 * CEAD_LA + 0.15 * EXPOSICION_TRANSFRONTERIZA_LOGISTICA + 0.10 * EVIDENCIA_TERRITORIAL_LA"
+      },
+      "methodology": "IGR v2A mide amenaza territorial LA utilizando CEAD-LA como único componente puntuado. No incorpora vulnerabilidad sectorial, densidad de sujetos obligados, brecha de cobertura, reportabilidad, IPA ni IVO, para evitar doble conteo con IRAR-E y la capa individual. CEAD-LA se compone de 55% amenazas precedentes LA, 35% economía criminal/facilitadores y 10% contexto criminógeno. Cada driver integra intensidad, persistencia, tendencia y anomalía. La capa de amenazas precedentes está materializada actualmente principalmente con delitos de drogas; su ampliación a otras amenazas ENR requiere fuentes territoriales suficientes. Las futuras capas transfronteriza y evidencia territorial LA no reciben puntaje hasta estar materializadas.",
+      "guardrails": ["TERRITORIAL_CONTEXT_NOT_ENTITY_ATTRIBUTION", "MISSING_IS_NOT_ZERO", "NO_SECTOR_OR_ENTITY_INPUTS", "FUTURE_LAYERS_NO_SCORE_UNTIL_MATERIALIZED", "PREDICATE_LAYER_CURRENTLY_DRUG_DOMINANT", "NO_SILENT_WEIGHT_REDISTRIBUTION"]
     },
     "IPA": {
       "label": "IPA",
