@@ -1,0 +1,86 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+
+const read=p=>fs.readFileSync(new URL(`../${p}`,import.meta.url),'utf8');
+const html=read('assets/territorio-aml-beta.html');
+const core=read('assets/atlas-territory-igr-v2a-core-0911.js');
+const history=read('assets/atlas-territory-igr-v2a-history-0911.js');
+const ui=read('assets/atlas-territory-igr-v2a-ui-0911.js');
+const authority=read('assets/atlas-territory-threat-cead-v1.js');
+const ve=read('assets/atlas-irg-ve-v2.module.js');
+const irarAdapter=read('assets/atlas-irg-irar-adapter.module.js');
+const refinement=read('assets/atlas-irg-refinement.js');
+const threatAnalytics=read('assets/atlas-territory-threat-analytics-v2.js');
+const copyCleanup=read('assets/atlas-territory-copy-cleanup.js');
+const oldBeta=read('assets/territorio-igr-real-beta-v4.html');
+const methods=read('assets/atlas-indicator-methodology-0910.js');
+const doc=read('docs/atlas-indicator-architecture-v1.md');
+const contract=JSON.parse(read('data/atlas_igr_v2a_contract.json'));
+const registry=JSON.parse(read('data/atlas_indicator_methodology_v1.json'));
+const index=read('index.html');
+
+// Product surface.
+assert.match(html,/Territorio · Índice de Riesgo Geográfico/);
+assert.match(html,/IGR · v2A operativo/);
+assert.match(html,/Amenazas precedentes LA/);
+assert.match(html,/pipeline en construcción/);
+for(const asset of ['atlas-territory-igr-v2a-0911.css','atlas-territory-igr-v2a-core-0911.js','atlas-territory-igr-v2a-history-0911.js','atlas-territory-igr-v2a-ui-0911.js'])assert.ok(html.includes(asset),`missing ${asset}`);
+assert.doesNotMatch(html,/45\s*%\s*V\/E/i);
+assert.doesNotMatch(html,/Densidad SO/);
+
+// CEAD-LA methodology and real history.
+assert.match(core,/layerWeights:\{predicate_direct:\.55,criminal_economy:\.35,criminogenic_context:\.10\}/);
+assert.match(core,/\.40\*intensity\+\.25\*persistence\+\.20\*trend\+\.15\*anomaly/);
+assert.match(core,/Tráfico de sustancias/);
+assert.match(core,/Microtráfico de sustancias/);
+assert.match(core,/Elaboración o producción de sustancias/);
+assert.match(core,/HISTORY_YEARS=\[2020,2021,2022,2023,2024,2025\]/);
+assert.match(history,/IGR anual/);
+assert.match(history,/casos policiales CEAD \(denuncias \+ hechos conocidos por detención en flagrancia\)/i);
+assert.match(ui,/Las capas transfronteriza y evidencia territorial LA aún no aportan puntaje/);
+assert.match(ui,/85% CEAD-LA \+ 15% frontera\/logística/);
+assert.match(ui,/75% CEAD-LA \+ 15% transfronteriza \+ 10% evidencia LA/);
+
+// Atlas-wide authority.
+assert.match(authority,/IGR-2A-1\.0\.0/);
+assert.match(authority,/weights:\{cead_la:1\}/);
+assert.match(authority,/window\.AML_IRG_TERRITORY=api/);
+assert.match(authority,/window\.v019LoadTerritory=open/);
+assert.match(authority,/V032_STATE\.computed=state\.computed/);
+assert.match(authority,/CONFIDENCE_WEIGHTED_COMMUNE_MEAN/);
+assert.match(authority,/topLevelWeight:1/);
+assert.doesNotMatch(authority,/topLevelWeight:0\.15/);
+
+// Retired paths cannot reintroduce old IGR.
+assert.match(ve,/retired:true/);assert.match(ve,/contributesToIgr:false/);
+assert.match(irarAdapter,/retired:true/);assert.match(irarAdapter,/contributesToIgr:false/);
+assert.match(refinement,/retired:true/);
+assert.match(threatAnalytics,/retired:true/);
+assert.match(copyCleanup,/retired:true/);
+assert.doesNotMatch(refinement,/45% V\/E/);
+assert.doesNotMatch(irarAdapter,/\.45\*Number\(p\.vulnerability\)/);
+assert.match(oldBeta,/territorio-aml-beta\.html\?v=0911-1/);
+
+// Machine contracts.
+assert.equal(contract.schema,'ATLAS_IGR_V2A');
+assert.equal(contract.method_version,'IGR-2A-1.0.0');
+assert.deepEqual(contract.formula,{cead_la:1});
+assert.deepEqual(contract.cead_la.layers,{amenazas_precedentes_la:.55,economia_criminal_facilitadores:.35,contexto_criminogeno:.10});
+assert.deepEqual(contract.cead_la.features,{intensidad:.40,persistencia:.25,tendencia:.20,anomalia:.15});
+for(const excluded of ['sector_vulnerability','so_density','regulatory_coverage_gap','icr','irar','ipa','ivo'])assert.ok(contract.excluded_inputs.includes(excluded),`IGR must exclude ${excluded}`);
+assert.equal(contract.history.synthetic_series,false);
+assert.equal(contract.regional_aggregation,'CONFIDENCE_WEIGHTED_COMMUNE_MEAN');
+assert.equal(registry.indicators.IGR.method_version,'IGR-2A-1.0.0');
+assert.deepEqual(registry.indicators.IGR.weights,{amenaza_territorial_cead_la:1});
+assert.match(registry.indicators.IGR.methodology,/No incorpora vulnerabilidad sectorial/i);
+assert.match(methods,/Territorio · IGR v2A · activo/);
+assert.match(methods,/No incorpora vulnerabilidad sectorial, densidad SO, brecha, reportabilidad, IPA ni IVO/);
+
+// Documentation and load point.
+assert.match(doc,/IGR v2A = 1,00 × Amenaza territorial CEAD-LA/);
+assert.match(doc,/IRAR-E = sector/);
+assert.match(doc,/IGR = territorio/);
+assert.match(doc,/IPA = entidad/);
+assert.ok(index.includes('atlas-territory-threat-cead-v1.js'),'index must retain the synchronous IGR authority load point');
+
+console.log('atlas-igr-v2a-0911: OK');
