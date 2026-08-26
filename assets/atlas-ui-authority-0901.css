@@ -62,14 +62,42 @@ html[data-atlas-release="0.90.1"] :where(.atlas-version,.version-badge,.app-vers
   display: none !important;
 }
 
+/* Sidebar brand owns a dedicated, always-visible release label directly below AIE. */
+html[data-atlas-release="0.90.1"] .v019-brand small[data-atlas-version-label] {
+  display: block !important;
+  width: min(196px,100%) !important;
+  margin: 1px 0 0 !important;
+  padding: 0 4px !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: var(--atlas-muted) !important;
+  text-align: center !important;
+  font-size: 9px !important;
+  font-weight: 800 !important;
+  letter-spacing: .12em !important;
+  line-height: 1.15 !important;
+  opacity: .78 !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+}
+
 /* Eliminate known obsolete visual identity fragments without deleting functional nodes. */
 html[data-atlas-release="0.90.1"] :where(.operational-radar-brand,.legacy-version-ribbon,.legacy-release-ribbon,.old-version-badge,.prerelease-banner[data-legacy="true"]) {
   display: none !important;
 }
 
-/* The old dashboard-level "Auditoría de datos" is retired. Source health lives only in the top bar. */
-html[data-atlas-release="0.90.1"] :where(.v024-audit,.a57-data-audit) {
+/* Retire only the old dashboard audit. The governed source-health control remains visible in the top bar. */
+html[data-atlas-release="0.90.1"] :where(
+  .v024-audit:not(.ash-audit):not([data-ash0536]):not([data-atlas-audit-seed]),
+  .a57-data-audit:not(.ash-audit):not([data-ash0536]):not([data-atlas-audit-seed])
+) {
   display: none !important;
+}
+
+html[data-atlas-release="0.90.1"] [data-atlas-global-audit-host] > :where(.ash-audit,.a57-data-audit)[data-topbar-mode="1"] {
+  display: block !important;
 }
 
 /* Reduce paint/layout work on content that is not currently visible. */
