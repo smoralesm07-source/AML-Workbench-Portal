@@ -4,6 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ATLAS · Territorio IGR · Beta v4</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="./atlas-indicator-methodology-0910.css?v=0910-1">
 <style>
 :root{--bg:#06111c;--p:#0a1927;--p2:#0d2030;--l:#294256;--t:#eaf1f7;--m:#90a7b8;--c:#45d0df;--o:#f28b39;--r:#ef6558}
 *{box-sizing:border-box}html,body{height:100%;margin:0}body{font-family:Inter,system-ui;background:#06111c;color:var(--t)}
@@ -46,6 +47,7 @@ select,input{height:40px;border:1px solid var(--l);border-radius:10px;background
 </div></div></div>
 <script src="./supabase-js-2.111.0.umd.js?v=0460-1"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="./atlas-indicator-methodology-0910.js?v=0910-1"></script>
 <script>
 'use strict';
 const SB='https://ldmtlwzqaqmegedktlxr.supabase.co',KEY='sb_publishable_Nu21dZFBM3NwtIvOwIM8ag_9tyfDJyR';
@@ -69,10 +71,10 @@ function render(){
  const c=selected.cead_json||{},layers=c.layers||{},spec=[['predicate_direct','Delito base',55,'#ef6558'],['criminal_economy','Economía criminal',35,'#f0a044'],['criminogenic_context','Contexto',10,'#45c8d8']];
  $('#cead').innerHTML=spec.map(([k,l,w,co])=>`<div class="box"><b>${l}</b><strong style="color:${co}">${w}%</strong><div style="clear:both"></div><small>Score capa ${num(layers?.[k]?.score)} · contribuye dentro de Amenaza CEAD</small></div>`).join('');
  const top=[...rows].sort((a,b)=>b.irg-a.irg).slice(0,8);$('#rank').innerHTML=top.map((r,i)=>`<div class="rr" data-n="${encodeURIComponent(r.commune)}"><span>${i+1}</span><b>${r.commune}</b><span class="pill">${num(r.irg)}</span></div>`).join('');document.querySelectorAll('.rr').forEach(e=>e.onclick=()=>pick(decodeURIComponent(e.dataset.n)));
- styleMap();
+ styleMap();window.AtlasIndicatorMethodologyV1?.refresh?.();
 }
 function pick(name){const r=rows.find(x=>norm(x.commune)===norm(name));if(!r)return;selected=r;render();const f=features.get(norm(name));if(f)map.fitBounds(f.getBounds(),{padding:[25,25],maxZoom:9})}
-function styleMap(){if(!layer)return;layer.setStyle(f=>{const n=propName(f.properties),r=rows.find(x=>norm(x.commune)===norm(n)),active=selected&&r&&norm(r.commune)===norm(selected.commune);return{color:active?'#fff':'rgba(220,233,240,.70)',weight:active?2:.55,fillColor:color(r?val(r):null),fillOpacity:r?.igr!=null?.78:.06}});const a=rows.map(val);$('#legt').textContent=metric==='irg'?'IGR':META[metric]?.[0]||metric;$('#lo').textContent='P10 '+num(qtile(a,.1),0);$('#md').textContent='P50 '+num(qtile(a,.5),0);$('#hi').textContent='P90 '+num(qtile(a,.9),0)}
+function styleMap(){if(!layer)return;layer.setStyle(f=>{const n=propName(f.properties),r=rows.find(x=>norm(x.commune)===norm(n)),active=selected&&r&&norm(r.commune)===norm(selected.commune);return{color:active?'#fff':'rgba(220,233,240,.70)',weight:active?2:.55,fillColor:color(r?val(r):null),fillOpacity:r?.igr!=null?.78:.06}});const a=rows.map(val);$('#legt').textContent=metric==='irg'?'IGR':META[metric]?.[0]||metric;$('#lo').textContent='P10 '+num(qtile(a,.1),0);$('#md').textContent='P50 '+num(qtile(a,.5),0);$('#hi').textContent='P90 '+num(qtile(a,.9),0);window.AtlasIndicatorMethodologyV1?.refresh?.()}
 function filter(){const reg=$('#region').value,q=norm($('#q').value);layer?.eachLayer(l=>{const n=propName(l.feature?.properties||{}),r=rows.find(x=>norm(x.commune)===norm(n)),show=r&&(!q||norm(n).includes(q))&&(reg==='ALL'||r.region===reg);l.setStyle({opacity:show?1:.08,fillOpacity:show?.78:.01})})}
 async function boot(){try{
  const session=(await sb.auth.getSession())?.data?.session;if(!session)throw new Error('No hay sesión Atlas activa. Abre ATLAS, inicia sesión y recarga esta beta.');
@@ -82,7 +84,7 @@ async function boot(){try{
  selected=[...rows].sort((a,b)=>b.irg-a.irg)[0];map=L.map('map',{zoomControl:true,attributionControl:false,minZoom:4,maxZoom:12,preferCanvas:true});L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(map);
  layer=L.geoJSON(geo,{style:()=>({}),onEachFeature:(f,l)=>{const n=propName(f.properties),r=rows.find(x=>norm(x.commune)===norm(n));features.set(norm(n),l);l.bindTooltip(()=>r?`<b>${n}</b><br>IGR ${num(r.irg)} · ${band(r.irg)}`:`<b>${n}</b><br>Sin IGR completo`,{sticky:true});l.on({click:()=>r&&pick(r.commune)})}}).addTo(map);
  const linked=[];layer.eachLayer(l=>{const n=propName(l.feature?.properties||{});if(rows.some(r=>norm(r.commune)===norm(n)))linked.push(l)});if(linked.length)map.fitBounds(L.featureGroup(linked).getBounds(),{padding:[8,8]});
- $('#mapmeta').textContent=`${rows.length} comunas con 4/4 componentes`;$('#status').textContent=`Corte ${new Date(rows[0]?.generated_at).toLocaleString('es-CL')} · sesión activa`;render();
+ $('#mapmeta').textContent=`${rows.length} comunas con 4/4 componentes`;$('#status').textContent=`Corte ${new Date(rows[0]?.generated_at).toLocaleString('es-CL')} · sesión activa`;render();window.AtlasIndicatorMethodologyV1?.refresh?.();
  }catch(e){console.error(e);$('#status').textContent='Carga fallida';$('#s1').classList.add('bad');$('#map').innerHTML=`<div class="loading"><div><b>No se pudo cargar la beta con datos.</b><br><br>${e.message}</div></div>`}}
 $('#tabs').onclick=e=>{const b=e.target.closest('[data-k]');if(!b)return;metric=b.dataset.k;document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));styleMap();filter()};$('#region').onchange=filter;$('#q').oninput=filter;boot();
 </script></body></html>

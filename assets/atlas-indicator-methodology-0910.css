@@ -1,0 +1,64 @@
+/* ATLAS AML · Indicator methodology facade 0.91.0
+ * Subtle help affordance for governed indicators. Theme-aware tooltip contrast
+ * is also covered by atlas-methodology-help-contrast.css.
+ */
+[data-atlas-indicator-key]{position:relative}
+[data-atlas-indicator-key]::after{
+  content:"ⓘ";
+  display:inline-block;
+  margin-left:.35em;
+  font-size:.72em;
+  line-height:1;
+  vertical-align:.08em;
+  opacity:.42;
+  font-weight:600;
+  cursor:help;
+  transition:opacity .14s ease,transform .14s ease;
+}
+[data-atlas-indicator-key]:hover::after,
+[data-atlas-indicator-key]:focus-within::after,
+[data-atlas-indicator-key][data-atlas-method-open="1"]::after{opacity:.9;transform:translateY(-1px)}
+
+.atlas-indicator-methodology-tip{
+  position:fixed;
+  z-index:2147483600;
+  width:min(360px,calc(100vw - 24px));
+  max-width:360px;
+  padding:10px 12px;
+  border-radius:10px;
+  font-size:11px;
+  line-height:1.45;
+  pointer-events:none;
+  opacity:0;
+  transform:translateY(4px);
+  transition:opacity .12s ease,transform .12s ease;
+}
+.atlas-indicator-methodology-tip[data-open="1"]{opacity:1;transform:none}
+.atlas-indicator-methodology-tip strong{display:block;font-size:11px;margin-bottom:3px}
+.atlas-indicator-methodology-tip small{display:block;font-size:9px;line-height:1.35;margin-top:5px}
+
+html[data-atlas-theme="dark"] .atlas-indicator-methodology-tip,
+html:not([data-atlas-theme="light"]) .atlas-indicator-methodology-tip{
+  background:#f7fafc;
+  color:#142333;
+  border:1px solid #c8d4de;
+  box-shadow:0 18px 44px rgba(0,0,0,.42),0 2px 8px rgba(0,0,0,.18);
+}
+html[data-atlas-theme="dark"] .atlas-indicator-methodology-tip strong,
+html:not([data-atlas-theme="light"]) .atlas-indicator-methodology-tip strong{color:#0b5f9b}
+html[data-atlas-theme="dark"] .atlas-indicator-methodology-tip small,
+html:not([data-atlas-theme="light"]) .atlas-indicator-methodology-tip small{color:#4e6578}
+
+html[data-atlas-theme="light"] .atlas-indicator-methodology-tip{
+  background:#102131;
+  color:#eef5fa;
+  border:1px solid #31506b;
+  box-shadow:0 18px 44px rgba(18,34,48,.24),0 2px 8px rgba(18,34,48,.14);
+}
+html[data-atlas-theme="light"] .atlas-indicator-methodology-tip strong{color:#7fc8ff}
+html[data-atlas-theme="light"] .atlas-indicator-methodology-tip small{color:#aec0cf}
+
+@media(max-width:720px){
+  [data-atlas-indicator-key]::after{font-size:.68em;margin-left:.28em}
+  .atlas-indicator-methodology-tip{width:min(330px,calc(100vw - 18px));padding:9px 10px}
+}
