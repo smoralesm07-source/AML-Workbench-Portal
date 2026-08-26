@@ -20,7 +20,9 @@ on:
       - 'data/atlas_igr_v2a_contract.json'
       - 'data/atlas_indicator_methodology_v1.json'
       - 'docs/atlas-indicator-architecture-v1.md'
+      - 'docs/geographic-risk-methodology-v4-irg-ve2.md'
       - 'tests/atlas-igr-v2a-0911.mjs'
+      - 'tests/atlas-indicator-methodology-0910.mjs'
       - '.github/workflows/validate-territory-igr-v2a-0911.yml'
   push:
     branches: [main]
@@ -42,7 +44,9 @@ on:
       - 'data/atlas_igr_v2a_contract.json'
       - 'data/atlas_indicator_methodology_v1.json'
       - 'docs/atlas-indicator-architecture-v1.md'
+      - 'docs/geographic-risk-methodology-v4-irg-ve2.md'
       - 'tests/atlas-igr-v2a-0911.mjs'
+      - 'tests/atlas-indicator-methodology-0910.mjs'
       - '.github/workflows/validate-territory-igr-v2a-0911.yml'
 
 permissions:
@@ -69,7 +73,9 @@ jobs:
           node --check assets/atlas-territory-copy-cleanup.js
           node --check assets/atlas-indicator-methodology-0910.js
       - name: IGR v2A contract
-        run: node tests/atlas-igr-v2a-0911.mjs
+        run: |
+          node tests/atlas-igr-v2a-0911.mjs
+          node tests/atlas-indicator-methodology-0910.mjs
       - name: Build deployable site
         run: |
           python tools/build_atlas_site.py --out /tmp/atlas-site
@@ -77,6 +83,9 @@ jobs:
           test -f /tmp/atlas-site/assets/atlas-territory-igr-v2a-core-0911.js
           test -f /tmp/atlas-site/assets/atlas-territory-igr-v2a-history-0911.js
           test -f /tmp/atlas-site/assets/atlas-territory-igr-v2a-ui-0911.js
+          test -f /tmp/atlas-site/assets/atlas-territory-threat-cead-v1.js
           grep -q 'IGR · v2A operativo' /tmp/atlas-site/assets/territorio-aml-beta.html
-          grep -q 'IGR-2A-1.0.0' /tmp/atlas-site/atlas-runtime-current-*.js
-          ! grep -R -q '45% V/E' /tmp/atlas-site/atlas-runtime-current-*.js
+          grep -q 'IGR-2A-1.0.0' /tmp/atlas-site/assets/atlas-territory-threat-cead-v1.js
+          grep -q 'contributesToIgr:false' /tmp/atlas-site/assets/atlas-irg-ve-v2.module.js
+          grep -q 'contributesToIgr:false' /tmp/atlas-site/assets/atlas-irg-irar-adapter.module.js
+          ! grep -q '45% V/E' /tmp/atlas-site/assets/atlas-irg-refinement.js
