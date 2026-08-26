@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ATLAS · IGR territorial real · Beta v3</title>
+<style>
+html,body{margin:0;height:100%;background:#06111c;overflow:hidden}
+#demo{border:0;width:100%;height:100%;display:block;background:#06111c}
+#status{position:fixed;right:14px;bottom:14px;z-index:3;padding:7px 10px;border-radius:999px;background:rgba(7,19,31,.92);border:1px solid #2f485e;color:#a9bbc8;font:11px Inter,system-ui}
+</style>
+</head>
+<body>
+<iframe id="demo" src="./territorio-igr-real-beta-v2.html?v=0903-composition" title="ATLAS Territorio IGR Beta"></iframe>
+<div id="status">Aplicando composición efectiva del IGR…</div>
+<script>
+'use strict';
+const frame=document.getElementById('demo');
+const status=document.getElementById('status');
+const finite=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));
+const num=(v,d=1)=>finite(v)?Number(v).toLocaleString('es-CL',{minimumFractionDigits:d,maximumFractionDigits:d}):'—';
+function patch(){
+ const w=frame.contentWindow,d=frame.contentDocument;
+ if(!w||!d)return;
+ const style=d.createElement('style');
+ style.textContent=`
+ .composition{display:grid;gap:8px}
+ .composition-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-end}
+ .composition-total span{display:block;color:#93a7b6;font-size:9px}
+ .composition-total b{font-size:24px}
+ .composition-dom{padding:4px 8px;border:1px solid #3a5164;border-radius:999px;color:#b9cad6;font-size:8px}
+ .igr-stack{height:16px;display:flex;overflow:hidden;border-radius:5px;background:#172a3c;border:1px solid #263d50}
+ .igr-seg{height:100%;min-width:2px;transition:width .25s ease}.igr-seg:hover{filter:brightness(1.2)}
+ .comp-rows{display:grid;gap:5px}.comp-row{display:grid;grid-template-columns:93px 1fr 49px;gap:7px;align-items:center}
+ .comp-row label{font-size:9px;color:#c5d1da}.comp-track{height:7px;border-radius:999px;background:#172a3c;overflow:hidden}
+ .comp-track i{display:block;height:100%;border-radius:999px}.comp-val{text-align:right}.comp-val b{display:block;font-size:10px}
+ .comp-val small{display:block;color:#8ea2b0;font-size:8px}.composition-note{font-size:8px;color:#8ea2b0;line-height:1.35}
+ `;
+ d.head.appendChild(style);
+ const heads=[...d.querySelectorAll('.head h3')];
+ const h=heads.find(x=>x.textContent.trim()==='Alertas territoriales');
+ if(!h)throw new Error('No se encontró la tarjeta de alertas.');
+ const card=h.closest('.card');
+ h.textContent='Composición efectiva del IGR';
+ const link=card.querySelector('.head .link');if(link)link.textContent='aporte real · puntos';
+ const alerts=card.querySelector('#alerts');
+ if(alerts){alerts.id='composition';alerts.className='composition';}
+ function render(){
+  let selected,rows;
+  try{selected=w.eval('selected');rows=w.eval('rows')}catch{return}
+  const host=d.getElementById('composition');if(!host||!selected||!Array.isArray(rows))return;
+  const meta={
+   vulnerability:{label:'V/E',weight:.45,color:'#ef6a55'},
+   density:{label:'Densidad',weight:.20,color:'#f1a23b'},
+   gap:{label:'Brecha',weight:.20,color:'#e5bf4c'},
+   threat:{label:'Amenaza',weight:.15,color:'#42c6d4'}
+  };
+  const contributions=Object.entries(meta).map(([k,m])=>{
+   const score=finite(selected.parts?.[k])?Number(selected.parts[k]):null;
+   const points=finite(score)?score*m.weight:null;
+   return {k,...m,score,points,share:finite(points)&&finite(selected.irg)&&Number(selected.irg)>0?100*points/Number(selected.irg):null};
+  });
+  const observed=contributions.filter(x=>finite(x.points));
+  const dominant=[...observed].sort((a,b)=>b.points-a.points)[0];
+  host.innerHTML=`
+   <div class="composition-top">
+    <div class="composition-total"><span>IGR explicado por componentes</span><b>${num(selected.irg,1)} pts</b></div>
+    <div class="composition-dom">${dominant?`Dominante · ${dominant.label} ${num(dominant.points,1)} pts`:'Sin componente dominante'}</div>
+   </div>
+   <div class="igr-stack" aria-label="Composición efectiva del IGR">
+    ${observed.map(x=>`<div class="igr-seg" title="${x.label}: score ${num(x.score,1)} × peso ${num(x.weight*100,0)}% = ${num(x.points,1)} pts" style="width:${Math.max(0,Math.min(100,x.share||0))}%;background:${x.color}"></div>`).join('')}
+   </div>
+   <div class="comp-rows">
+    ${contributions.map(x=>`<div class="comp-row">
+     <label>${x.label} · ${num(x.weight*100,0)}%</label>
+     <div class="comp-track" title="Aporte ${num(x.points,1)} de un máximo de ${num(x.weight*100,0)} puntos"><i style="width:${finite(x.points)?Math.max(0,Math.min(100,100*x.points/(x.weight*100))):0}%;background:${x.color}"></i></div>
+     <div class="comp-val"><b>${num(x.points,1)} pts</b><small>${finite(x.share)?num(x.share,0)+'% del IGR':'—'}</small></div>
+    </div>`).join('')}
+   </div>
+   <div class="composition-note">Aporte = score del componente × peso superior. La barra apilada distribuye el IGR actual entre sus cuatro fuentes; no crea un indicador adicional.</div>`;
+ }
+ const igr=d.getElementById('igr');
+ if(igr)new MutationObserver(render).observe(igr,{childList:true,subtree:true,characterData:true});
+ render();
+ status.textContent='Beta v3 · composición efectiva activa';
+ setTimeout(()=>status.style.display='none',2600);
+}
+frame.addEventListener('load',()=>setTimeout(()=>{try{patch()}catch(e){console.error(e);status.textContent='No se pudo aplicar la mejora';}},900));
+</script>
+</body>
+</html>
