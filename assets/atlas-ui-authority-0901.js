@@ -2,23 +2,32 @@
 /* ATLAS AML · 0.90.1 · final UI/runtime hygiene authority */
 (function atlasUiAuthority0901(){
   const RELEASE='0.90.1';
-  const BUILD='0901';
+  const BUILD='0902';
   const CSS='./assets/atlas-ui-authority-0901.css?v=0901-3';
+  const LIGHT_CSS='./assets/atlas-light-authority-0901.css?v=0901-1';
   const VERSION_RE=/\bv?(?:0\.)?(?:16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|49|50|51|52|53|54|56|57|58|64|69|70|71|72|80|81|82|83|84)(?:\.\d+){0,2}\b/gi;
   const VERSION_SELECTORS='.atlas-version,.version-badge,.app-version,.v019-brand small,[data-atlas-version-label]';
   const AUDIT_SELECTORS='.v024-audit,.a57-data-audit';
 
-  function installCss(){
-    const old=document.querySelector('link[data-atlas-ui-authority="0901"]');
+  function ensureCss(selector,href,datasetKey,datasetValue){
+    const old=document.querySelector(selector);
     if(old){
-      if(!old.href.includes('0901-3')) old.href=CSS;
-      return;
+      if(!old.href.includes(href.split('?').pop())) old.href=href;
+      return old;
     }
     const link=document.createElement('link');
     link.rel='stylesheet';
-    link.href=CSS;
-    link.dataset.atlasUiAuthority='0901';
+    link.href=href;
+    link.dataset[datasetKey]=datasetValue;
     document.head.appendChild(link);
+    return link;
+  }
+
+  function installCss(){
+    ensureCss('link[data-atlas-ui-authority="0901"]',CSS,'atlasUiAuthority','0901');
+    /* Must be appended after the general UI authority so light-only tokens and
+       module overrides win the final cascade without touching the dark theme. */
+    ensureCss('link[data-atlas-light-authority="0901"]',LIGHT_CSS,'atlasLightAuthority','0901');
   }
 
   function ensureBrandVersion(label){
@@ -73,7 +82,7 @@
   }
 
   function markHealth(){
-    window.__ATLAS_UI_AUTHORITY__={release:RELEASE,build:BUILD,status:'ready',css:CSS,mainDataAudit:'retired',globalSourceHealth:'preserved',checkedAt:new Date().toISOString()};
+    window.__ATLAS_UI_AUTHORITY__={release:RELEASE,build:BUILD,status:'ready',css:CSS,lightCss:LIGHT_CSS,lightTheme:'NEUTRAL_GREY_WHITE_ORANGE',mainDataAudit:'retired',globalSourceHealth:'preserved',checkedAt:new Date().toISOString()};
   }
 
   function apply(){
