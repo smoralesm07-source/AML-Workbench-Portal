@@ -39,12 +39,16 @@ jobs:
           grep -q '"build": "0705"' atlas-release.json
           grep -q '"release": "0.70.5"' atlas-runtime-manifest.json
           grep -q '"build": "0705"' atlas-runtime-manifest.json
+          grep -q '"app_version":"0.70.5"' build.json
+          grep -q '"build":"0705"' build.json
+          grep -q '"asset_coherency_policy":"COMPILED_CURRENT_BUNDLES_PINNED_TO_BUILD"' build.json
           grep -q '"path":"app.js","type":"classic","role":"core"' atlas-runtime-manifest.json
           grep -q '<!-- ATLAS_RUNTIME_STYLES -->' index.html
           grep -q '<!-- ATLAS_RUNTIME_SCRIPTS -->' index.html
           grep -q 'atlas-source-health-global-0694.js?v=0710-1' index.html
           grep -q 'atlas-universo-so-workbench-0700.js?v=0705-2' index.html
           ! grep -Eq 'atlas-universo-so-(0600|0610|0620|0630|0640)' index.html
+          ! grep -Eq '0\.51\.1|0511' index.html atlas-release.json atlas-runtime-manifest.json build.json atlas-release-guard.js
           node --check atlas-release-guard.js
           node --check app.js
           node --check v0333-auth-preflight.js
@@ -71,6 +75,7 @@ jobs:
           grep -q 'atlas-source-health-global-0694.js?v=0710-1' _site/index.html
           grep -q 'atlas-universo-so-workbench-0700.js?v=0705-2' _site/index.html
           ! grep -Eq 'atlas-universo-so-(0600|0610|0620|0630|0640)' _site/index.html
+          ! grep -Eq '0\.51\.1|0511' _site/index.html _site/atlas-release.json _site/atlas-runtime-manifest.json _site/build.json
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -83,3 +88,31 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Verify live release
+        shell: bash
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          set -euo pipefail
+          test -n "$PAGE_URL"
+          base="${PAGE_URL%/}"
+          ok=0
+          for attempt in $(seq 1 12); do
+            stamp="${GITHUB_SHA}-${GITHUB_RUN_ATTEMPT}-${attempt}"
+            html="$(curl -fsSL --retry 2 --max-time 20 "${base}/?atlas_verify=${stamp}" || true)"
+            manifest="$(curl -fsSL --retry 2 --max-time 20 "${base}/atlas-release.json?atlas_verify=${stamp}" || true)"
+            if printf '%s' "$html" | grep -q 'data-aml-version="0.70.5"' \
+              && printf '%s' "$html" | grep -q 'data-aml-build="0705"' \
+              && printf '%s' "$html" | grep -q 'atlas-runtime-current-01.js?r=0705' \
+              && printf '%s' "$manifest" | grep -q '"release": "0.70.5"' \
+              && printf '%s' "$manifest" | grep -q '"build": "0705"'; then
+              ok=1
+              break
+            fi
+            sleep 10
+          done
+          test "$ok" -eq 1
+          printf '%s' "$html" | grep -q 'atlas-universo-so-workbench-0700.js?v=0705-2'
+          ! printf '%s' "$html" | grep -Eq 'data-aml-version="0\.51\.1"|data-aml-build="0511"'
+          echo "ATLAS live smoke OK: release=0.70.5 build=0705 url=${PAGE_URL}"
