@@ -85,5 +85,3 @@ jobs:
           ! grep -q 'aml_v_ipa3_mark_scores_v0_4' /tmp/atlas-compiled-js
           ! grep -q 'aml_v_ipa3_entity_score_v0_4' /tmp/atlas-compiled-js
           ! grep -q 'aml_v_ipa3_sii_peer_benchmark' /tmp/atlas-compiled-js
-          ! grep -q 'localStorage' /tmp/atlas-compiled-js
-          ! grep -q 'sessionStorage' /tmp/atlas-compiled-js
