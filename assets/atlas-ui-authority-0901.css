@@ -1,0 +1,84 @@
+/* ATLAS AML · 0.90.1 · final visual authority
+   Loaded last by atlas-ui-authority-0901.js. This layer deliberately overrides
+   historical presentation fragments while preserving their functional DOM. */
+
+html[data-atlas-release="0.90.1"] {
+  --atlas-bg: #07111f;
+  --atlas-surface: #0c1728;
+  --atlas-surface-2: #101d30;
+  --atlas-border: rgba(148, 163, 184, .18);
+  --atlas-border-strong: rgba(148, 163, 184, .28);
+  --atlas-text: #e8eef7;
+  --atlas-muted: #9aa8bc;
+  --atlas-accent: #f28c28;
+  --atlas-radius: 14px;
+  --atlas-radius-sm: 10px;
+  --atlas-shadow: 0 12px 30px rgba(0, 0, 0, .22);
+  color-scheme: dark;
+}
+
+html[data-atlas-release="0.90.1"] body {
+  background: var(--atlas-bg);
+  color: var(--atlas-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* One current visual language for shared shells, cards and controls. */
+html[data-atlas-release="0.90.1"] :where(.card,.panel,.metric-card,.kpi-card,.drawer,.sheet,.modal-content,.auth-card) {
+  border-color: var(--atlas-border) !important;
+  border-radius: var(--atlas-radius) !important;
+}
+
+html[data-atlas-release="0.90.1"] :where(button,.btn,[role="button"],select,input,textarea) {
+  font-family: inherit;
+}
+
+html[data-atlas-release="0.90.1"] :where(button,.btn,[role="button"]) {
+  border-radius: var(--atlas-radius-sm) !important;
+}
+
+html[data-atlas-release="0.90.1"] :where(.topbar,.app-topbar,.atlas-topbar) {
+  border-bottom-color: var(--atlas-border) !important;
+}
+
+/* Current-version labels: old branded/version-specific treatments must not survive. */
+html[data-atlas-release="0.90.1"] :where(.atlas-version,.version-badge,.app-version,.v019-brand small,[data-atlas-version-label]) {
+  background: rgba(148,163,184,.08) !important;
+  border: 1px solid var(--atlas-border) !important;
+  border-radius: 999px !important;
+  color: var(--atlas-muted) !important;
+  box-shadow: none !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: .02em !important;
+  line-height: 1 !important;
+  padding: 5px 8px !important;
+}
+
+html[data-atlas-release="0.90.1"] :where(.atlas-version,.version-badge,.app-version,.v019-brand small,[data-atlas-version-label])::before,
+html[data-atlas-release="0.90.1"] :where(.atlas-version,.version-badge,.app-version,.v019-brand small,[data-atlas-version-label])::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Eliminate known obsolete visual identity fragments without deleting functional nodes. */
+html[data-atlas-release="0.90.1"] :where(.operational-radar-brand,.legacy-version-ribbon,.legacy-release-ribbon,.old-version-badge,.prerelease-banner[data-legacy="true"]) {
+  display: none !important;
+}
+
+/* Reduce paint/layout work on content that is not currently visible. */
+html[data-atlas-release="0.90.1"] :where([hidden],.is-hidden,.hidden,.view[aria-hidden="true"],.route[aria-hidden="true"]) {
+  display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-atlas-release="0.90.1"] *,
+  html[data-atlas-release="0.90.1"] *::before,
+  html[data-atlas-release="0.90.1"] *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
