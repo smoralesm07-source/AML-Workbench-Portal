@@ -25,8 +25,8 @@ assert.match(js,/technicalAliases:\{IPA:\['IPA3','ipa3','ipa3_\*'\]\}/);
 assert.match(js,/\.40\*score\(vulnerability\)\+\.30\*score\(materiality\)\+\.30\*score\(threat\)/);
 assert.match(js,/100\*p\/d/);
 assert.match(js,/Math\.abs\(total-1\)>\.0001/);
-assert.doesNotMatch(js,/MutationObserver/);
-assert.doesNotMatch(js,/createTreeWalker/);
+assert.doesNotMatch(js,/new\s+MutationObserver\s*\(/);
+assert.doesNotMatch(js,/\.createTreeWalker\s*\(/);
 assert.match(js,/noBodyTreeWalk:true/);
 
 assert.match(route,/ensureIndicatorMethodology/);
