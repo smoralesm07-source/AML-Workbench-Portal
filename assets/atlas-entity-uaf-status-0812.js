@@ -9,7 +9,7 @@
   const entry=window.__ATLAS_ENTITY_ENTRY__;
   const db=()=>{try{return typeof sb!=='undefined'?sb:(window.sb||null)}catch{return window.sb||null}};
   const fmt=v=>{const n=Number(v);return Number.isFinite(n)?n.toLocaleString('es-CL'):'No observado'};
-  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const rutKey=v=>String(v||'').toUpperCase().replace(/[^0-9K]/g,'');
   const stateNow=()=>{try{return typeof state!=='undefined'?state:(window.state||null)}catch{return window.state||null}};
   let universeCache=null;
