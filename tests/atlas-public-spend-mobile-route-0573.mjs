@@ -6,6 +6,7 @@ const css=fs.readFileSync('assets/atlas-public-spend-v2.css','utf8');
 const mobile=fs.readFileSync('assets/atlas-mobile-nav.js','utf8');
 const build=fs.readFileSync('tools/build_atlas_site.py','utf8');
 const index=fs.readFileSync('index.html','utf8');
+const release=JSON.parse(fs.readFileSync('atlas-release.json','utf8'));
 
 function ok(value,message){if(!value)throw new Error(message)}
 
@@ -23,7 +24,7 @@ ok(route.includes('function concentration(')&&route.includes('function dependenc
 ok(route.includes('HHI')&&route.includes('Top 10 proveedores'),'debe cubrir concentración agregada');
 ok(route.includes('data-gp2-detail')&&route.includes('gp2-drawer'),'debe ofrecer fichas de detalle');
 ok(route.includes('data-gp2-region')&&route.includes('data-gp2-service')&&route.includes('data-gp2-provider'),'gráficos deben ser navegables');
-ok(route.includes('Metodología')&&route.includes('no constituyen por sí mismas evidencia'),'debe contener ayuda metodológica AML');
+ok(route.includes('Metodología')&&route.includes('Concentración alta')&&route.includes('Dependencia alta'),'debe conservar metodología y ayuda explicativa de señales AML');
 ok(route.includes('window.__ATLAS_PUBLIC_SPEND_PERF__'),'debe exponer telemetría de carga');
 ok(route.includes('AtlasPublicSpendV2'),'debe publicar API nativa');
 ok(route.includes('stopImmediatePropagation'),'debe bloquear doble navegación');
@@ -53,7 +54,7 @@ ok(build.includes('GP2_AUTH_VERSION = "gp2-a3"'),'build debe cache-bustear autor
 ok(build.includes('legacy public-spend runtime remains in built index'),'build debe impedir fuga de runtime histórico');
 ok(build.includes('retired public-spend fragment leaked into compiled runtime'),'build debe impedir fuga de v037 a bundles');
 ok(build.includes('COMPILED_BUNDLES_ONLY'),'build debe mantener política compiled-only');
-ok(index.includes('data-aml-version="0.51.1"')&&index.includes('data-aml-build="0511"'),'GP2 no debe alterar release global');
+ok(index.includes(`data-aml-version="${release.release}"`)&&index.includes(`data-aml-build="${release.build}"`),'GP2 no debe alterar la release global vigente');
 ok(mobile.includes("view:'public-spend'"),'menú móvil debe conservar Gasto Público');
 
-console.log('OK ATLAS Gasto Público GP2.2 + GP2-AUTH.3 + compiled-only production contract');
+console.log(`OK ATLAS Gasto Público GP2.2 + GP2-AUTH.3 + compiled-only production contract under ${release.release}/${release.build}`);
