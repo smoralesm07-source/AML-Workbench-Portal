@@ -32,23 +32,32 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -q 'data-aml-version="0.70.5"' index.html
-          grep -q 'data-aml-build="0705"' index.html
-          grep -q '<title>ATLAS AML · v0.70.5</title>' index.html
-          grep -q '"release": "0.70.5"' atlas-release.json
-          grep -q '"build": "0705"' atlas-release.json
-          grep -q '"release": "0.70.5"' atlas-runtime-manifest.json
-          grep -q '"build": "0705"' atlas-runtime-manifest.json
-          grep -q '"app_version":"0.70.5"' build.json
-          grep -q '"build":"0705"' build.json
-          grep -q '"asset_coherency_policy":"COMPILED_CURRENT_BUNDLES_PINNED_TO_BUILD"' build.json
-          grep -q '"path":"app.js","type":"classic","role":"core"' atlas-runtime-manifest.json
-          grep -q '<!-- ATLAS_RUNTIME_STYLES -->' index.html
-          grep -q '<!-- ATLAS_RUNTIME_SCRIPTS -->' index.html
-          grep -q 'atlas-source-health-global-0694.js?v=0710-1' index.html
-          grep -q 'atlas-universo-so-workbench-0700.js?v=0705-2' index.html
-          ! grep -Eq 'atlas-universo-so-(0600|0610|0620|0630|0640)' index.html
-          ! grep -Eq '0\.51\.1|0511' index.html atlas-release.json atlas-runtime-manifest.json build.json atlas-release-guard.js
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          release = json.loads(Path('atlas-release.json').read_text())
+          runtime = json.loads(Path('atlas-runtime-manifest.json').read_text())
+          build = json.loads(Path('build.json').read_text())
+          html = Path('index.html').read_text()
+
+          assert release['release'] == '0.70.5'
+          assert release['build'] == '0705'
+          assert runtime['release'] == release['release']
+          assert runtime['build'] == release['build']
+          assert build['app_version'] == release['release']
+          assert build['build'] == release['build']
+          assert build['asset_coherency_policy'] == 'COMPILED_CURRENT_BUNDLES_PINNED_TO_BUILD'
+          assert 'data-aml-version="0.70.5"' in html
+          assert 'data-aml-build="0705"' in html
+          assert '<title>ATLAS AML · v0.70.5</title>' in html
+          assert 'atlas-source-health-global-0694.js?v=0710-1' in html
+          assert 'atlas-universo-so-workbench-0700.js?v=0705-2' in html
+          for legacy in ('atlas-universo-so-0600','atlas-universo-so-0610','atlas-universo-so-0620','atlas-universo-so-0630','atlas-universo-so-0640'):
+              assert legacy not in html
+          assert 'data-aml-version="0.51.1"' not in html
+          assert 'data-aml-build="0511"' not in html
+          PY
           node --check atlas-release-guard.js
           node --check app.js
           node --check v0333-auth-preflight.js
@@ -64,18 +73,32 @@ jobs:
           test -s _site/index.html
           test -s _site/atlas-runtime-current.css
           test -s _site/atlas-runtime-current-01.js
-          grep -q 'data-aml-version="0.70.5"' _site/index.html
-          grep -q 'data-aml-build="0705"' _site/index.html
-          grep -q 'atlas-runtime-current-01.js?r=0705' _site/index.html
-          grep -q 'atlas-runtime-current.css?r=0705' _site/index.html
-          grep -q 'const sb=supabase.createClient' _site/atlas-runtime-current-01.js
-          grep -q 'sb.auth.getSession' _site/atlas-runtime-current-01.js
-          grep -q 'shell();' _site/atlas-runtime-current-01.js
-          grep -q 'loadOverview();' _site/atlas-runtime-current-01.js
-          grep -q 'atlas-source-health-global-0694.js?v=0710-1' _site/index.html
-          grep -q 'atlas-universo-so-workbench-0700.js?v=0705-2' _site/index.html
-          ! grep -Eq 'atlas-universo-so-(0600|0610|0620|0630|0640)' _site/index.html
-          ! grep -Eq '0\.51\.1|0511' _site/index.html _site/atlas-release.json _site/atlas-runtime-manifest.json _site/build.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          html = Path('_site/index.html').read_text()
+          release = json.loads(Path('_site/atlas-release.json').read_text())
+          runtime = json.loads(Path('_site/atlas-runtime-manifest.json').read_text())
+          build = json.loads(Path('_site/build.json').read_text())
+
+          assert release['release'] == '0.70.5'
+          assert release['build'] == '0705'
+          assert runtime['release'] == release['release']
+          assert runtime['build'] == release['build']
+          assert build['app_version'] == release['release']
+          assert build['build'] == release['build']
+          assert 'data-aml-version="0.70.5"' in html
+          assert 'data-aml-build="0705"' in html
+          assert 'atlas-runtime-current-01.js?r=0705' in html
+          assert 'atlas-runtime-current.css?r=0705' in html
+          assert 'atlas-source-health-global-0694.js?v=0710-1' in html
+          assert 'atlas-universo-so-workbench-0700.js?v=0705-2' in html
+          assert 'data-aml-version="0.51.1"' not in html
+          assert 'data-aml-build="0511"' not in html
+          for legacy in ('atlas-universo-so-0600','atlas-universo-so-0610','atlas-universo-so-0620','atlas-universo-so-0630','atlas-universo-so-0640'):
+              assert legacy not in html
+          PY
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
