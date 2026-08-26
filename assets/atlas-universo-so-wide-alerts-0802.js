@@ -5,7 +5,7 @@
  */
 (function atlasUniversoSOWideAlerts0802(){
   if(window.AtlasUniversoSOWideAlerts0802)return;
-  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
   const levelLabel=el=>el.classList.contains('high')?'Prioritaria':el.classList.contains('med')?'Atención':'Contexto';
   const levelMeaning=el=>el.classList.contains('high')?'Señal que justifica revisión prioritaria por la condición factual descrita.':el.classList.contains('med')?'Señal de atención que requiere lectura contextual y contraste con fuentes.':'Antecedente contextual útil para caracterizar a la entidad; no implica irregularidad.';
   function close(){document.querySelector('.uso80-alert-backdrop')?.remove();}
@@ -29,7 +29,7 @@
 
   function load0803(){
     if(!document.querySelector('link[data-uso803]')){const l=document.createElement('link');l.rel='stylesheet';l.href='./assets/atlas-universo-so-management-0803.css?v=0803-1';l.dataset.uso803='1';document.head.appendChild(l);}
-    if(!window.AtlasUniversoSOManagement0803&&!document.querySelector('script[data-uso803]')){const s=document.createElement('script');s.src='./assets/atlas-universo-so-management-0803.js?v=0803-1';s.dataset.uso803='1';document.body.appendChild(s);}
+    if(!window.AtlasUniversoSOManagement0803&&!document.querySelector('script[data-uso803]')){const s=document.createElement('script');s.src='./assets/atlas-universo-so-management-0803.js?v=0803-1';s.dataset.uso803='1';document.body.appendChild(s);s.addEventListener('load',()=>{if(!window.AtlasUniversoSOPools0803&&!document.querySelector('script[data-uso803-pools]')){const p=document.createElement('script');p.src='./assets/atlas-universo-so-management-pools-0803.js?v=0803-1';p.dataset.uso803Pools='1';document.body.appendChild(p);}});}else if(!window.AtlasUniversoSOPools0803&&!document.querySelector('script[data-uso803-pools]')){const p=document.createElement('script');p.src='./assets/atlas-universo-so-management-pools-0803.js?v=0803-1';p.dataset.uso803Pools='1';document.body.appendChild(p);}
   }
   load0803();
 })();
