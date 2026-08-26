@@ -21,10 +21,10 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout main
+      - name: Checkout triggering revision
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.sha }}
           fetch-depth: 1
 
       - name: Validate canonical 0.90.1 source
@@ -57,7 +57,6 @@ jobs:
           assert 'html[data-atlas-release="0.90.1"]' in css
           assert 'retired' in retired_audit.lower() and 'v024AuditHtml' in retired_audit
 
-          # Current feature surfaces must remain present while the shared shell is hardened.
           assert 'atlas-universo-so-contact-osint-0840.css?v=0840-1' in html
           assert 'atlas-universo-so-contact-osint-0840.js?v=0840-1' in html
           assert 'ENTITY_EXPLORER_SPECIALIZATION_0816_LOADING' in loader
@@ -81,10 +80,6 @@ jobs:
           set -euo pipefail
           python3 tools/build_atlas_site.py --out _site
 
-          # The historical data-audit runtime must never be part of the Pages artifact.
-          # index.html still contains compatibility source tags outside the canonical runtime
-          # placeholders, so remove these retired standalone assets at artifact time as a
-          # final publication boundary.
           python3 - <<'PY'
           import re
           from pathlib import Path
