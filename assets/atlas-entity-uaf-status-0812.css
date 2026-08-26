@@ -1,9 +1,8 @@
-.aeu812-universe-strip{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0 16px;padding:12px;border:1px solid color-mix(in srgb,currentColor 12%,transparent);border-radius:14px;background:color-mix(in srgb,currentColor 3%,transparent)}
-.aeu812-universe-strip>div{padding:10px 12px;border-radius:11px;border:1px solid color-mix(in srgb,currentColor 9%,transparent)}
-.aeu812-universe-strip span,.aeu812-status span{display:block;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.62}
-.aeu812-universe-strip b{display:block;margin-top:3px;font-size:20px}.aeu812-universe-strip small{display:block;margin-top:3px;font-size:10px;line-height:1.35;opacity:.68}
+/* Entidades: Universo SO aggregate cards are forbidden on the landing. */
+.aeu812-universe-strip,[data-aeu812-universe]{display:none!important}
+.aeu812-status span{display:block;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.62}
 .aeu812-status{margin:12px 0 0;padding:12px 14px;border:1px solid color-mix(in srgb,#22d3ee 28%,transparent);border-radius:12px;background:color-mix(in srgb,#22d3ee 7%,transparent)}
 .aeu812-status.registered{border-color:color-mix(in srgb,#10b981 36%,transparent);background:color-mix(in srgb,#10b981 8%,transparent)}
 .aeu812-status.potential{border-color:color-mix(in srgb,#f59e0b 38%,transparent);background:color-mix(in srgb,#f59e0b 8%,transparent)}
 .aeu812-status b{display:block;margin:4px 0;font-size:15px}.aeu812-status p{margin:5px 0 0;font-size:11px;line-height:1.5;opacity:.76}.aeu812-status dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0 0}.aeu812-status dl div{padding:8px;border-radius:9px;background:color-mix(in srgb,currentColor 4%,transparent)}.aeu812-status dt{font-size:9px;text-transform:uppercase;letter-spacing:.06em;opacity:.56}.aeu812-status dd{margin:3px 0 0;font-size:11px;font-weight:700}
-@media(max-width:760px){.aeu812-universe-strip,.aeu812-status dl{grid-template-columns:1fr}}
+@media(max-width:760px){.aeu812-status dl{grid-template-columns:1fr}}
