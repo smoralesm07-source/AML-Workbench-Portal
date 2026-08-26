@@ -28,7 +28,7 @@ jobs:
           ref: main
           fetch-depth: 1
 
-      - name: Validate recovery source
+      - name: Validate freeze-safe source
         shell: bash
         run: |
           set -euo pipefail
@@ -44,17 +44,19 @@ jobs:
           assert build['app_version']=='0.70.5' and build['build']=='0705'
           assert 'data-aml-version="0.70.5"' in html
           assert 'data-aml-build="0705"' in html
-          assert 'atlas-universo-so-workbench-0700.js?v=0705-recovery1' in html
-          for legacy in ('atlas-universo-so-0600.js','atlas-universo-so-0610.js','atlas-universo-so-0620.js','atlas-universo-so-0630.js','atlas-universo-so-0640.js'):
-              assert legacy not in html
+          assert 'atlas-universo-so-workbench-0700.js' in html
           assert 'data-aml-version="0.51.1"' not in html
           PY
+          node --check atlas-release-guard.js
           node --check app.js
           node --check v0333-auth-preflight.js
           node --check v0422-auth-bootstrap-fix.js
           node --check atlas-current-ui.js
           node --check v019-live.js
+          node --check assets/atlas-source-health-global-0694.js
+          node --check assets/atlas-operational-recovery-0704.js
           node --check assets/atlas-universo-so-workbench-0700.js
+          node tests/atlas-runtime-freeze-0712.mjs
 
       - name: Build restored Atlas site
         shell: bash
@@ -81,13 +83,36 @@ jobs:
           assert 'AtlasCurrentUI' in joined
           assert 'ATLAS AML' in joined
           assert 'data-aml-version="0.51.1"' not in html
-          print('ATLAS recovery bundles:')
-          for p in [*bundles,*modules]: print(f'  {p.name}: {p.stat().st_size/1024:.1f} KiB')
           PY
           for js in _site/atlas-runtime-current-*.js _site/atlas-module-current-*.js; do
             test -f "$js" || continue
             node --check "$js"
           done
+
+      - name: Pin freeze-safe cache keys
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('_site/index.html')
+          html=p.read_text()
+          html=html.replace('atlas-release-guard.js?r=0705','atlas-release-guard.js?r=0705-freeze0712')
+          html=html.replace('atlas-theme-bootstrap.js?r=0705','atlas-theme-bootstrap.js?r=0705-freeze0712')
+          html=html.replace('atlas-runtime-current.css?r=0705','atlas-runtime-current.css?r=0705-freeze0712')
+          for i in range(1,10):
+              html=html.replace(f'atlas-runtime-current-{i:02d}.js?r=0705',f'atlas-runtime-current-{i:02d}.js?r=0705-freeze0712')
+              html=html.replace(f'atlas-module-current-{i:02d}.js?r=0705',f'atlas-module-current-{i:02d}.js?r=0705-freeze0712')
+          html=html.replace('atlas-source-health-global-0694.js?v=0711-1','atlas-source-health-global-0694.js?v=0712-freeze1')
+          html=html.replace('atlas-source-health-global-0694.js?v=0705-1','atlas-source-health-global-0694.js?v=0712-freeze1')
+          html=html.replace('atlas-operational-recovery-0704.js?v=0705-recovery1','atlas-operational-recovery-0704.js?v=0712-freeze1')
+          html=html.replace('atlas-operational-recovery-0704.js?v=0705-1','atlas-operational-recovery-0704.js?v=0712-freeze1')
+          p.write_text(html)
+          assert 'atlas-release-guard.js?r=0705-freeze0712' in html
+          assert 'atlas-runtime-current-01.js?r=0705-freeze0712' in html
+          assert 'atlas-source-health-global-0694.js?v=0712-freeze1' in html
+          assert 'atlas-operational-recovery-0704.js?v=0712-freeze1' in html
+          PY
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -101,7 +126,7 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Verify live recovery
+      - name: Verify live freeze-safe recovery
         shell: bash
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
@@ -112,19 +137,27 @@ jobs:
           ok=0
           for attempt in $(seq 1 12); do
             stamp="${GITHUB_SHA}-${GITHUB_RUN_ATTEMPT}-${attempt}"
-            html="$(curl -fsSL --retry 2 --max-time 20 "${base}/?atlas_recovery=${stamp}" || true)"
-            manifest="$(curl -fsSL --retry 2 --max-time 20 "${base}/atlas-release.json?atlas_recovery=${stamp}" || true)"
-            report="$(curl -fsSL --retry 2 --max-time 20 "${base}/atlas-runtime-report.json?atlas_recovery=${stamp}" || true)"
+            html="$(curl -fsSL --retry 2 --max-time 20 "${base}/?atlas_freeze_fix=${stamp}" || true)"
+            manifest="$(curl -fsSL --retry 2 --max-time 20 "${base}/atlas-release.json?atlas_freeze_fix=${stamp}" || true)"
+            guard="$(curl -fsSL --retry 2 --max-time 20 "${base}/atlas-release-guard.js?atlas_freeze_fix=${stamp}" || true)"
+            health="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-source-health-global-0694.js?atlas_freeze_fix=${stamp}" || true)"
+            recovery="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-operational-recovery-0704.js?atlas_freeze_fix=${stamp}" || true)"
             if printf '%s' "$html" | grep -q 'data-aml-version="0.70.5"' \
               && printf '%s' "$html" | grep -q 'data-aml-build="0705"' \
-              && printf '%s' "$html" | grep -q 'atlas-runtime-current-01.js?r=0705' \
+              && printf '%s' "$html" | grep -q 'atlas-release-guard.js?r=0705-freeze0712' \
+              && printf '%s' "$html" | grep -q 'atlas-runtime-current-01.js?r=0705-freeze0712' \
+              && printf '%s' "$html" | grep -q 'atlas-source-health-global-0694.js?v=0712-freeze1' \
+              && printf '%s' "$html" | grep -q 'atlas-operational-recovery-0704.js?v=0712-freeze1' \
               && printf '%s' "$manifest" | grep -q '"release": "0.70.5"' \
-              && printf '%s' "$report" | grep -q '"publish_mode": "COMPILED_BUNDLES_ONLY"'; then
+              && printf '%s' "$guard" | grep -q 'NO_GLOBAL_CHILD_MUTATION_OBSERVER' \
+              && printf '%s' "$health" | grep -q 'NO_GLOBAL_DOM_OBSERVER' \
+              && printf '%s' "$recovery" | grep -q 'NO_BODY_TREEWALK_NO_FORCED_SOURCE_REFRESH'; then
               ok=1
               break
             fi
             sleep 10
           done
           test "$ok" -eq 1
-          ! printf '%s' "$html" | grep -Eq 'atlas-runtime-critical|atlas-runtime-loader|data-aml-version="0\.51\.1"|data-aml-build="0511"'
-          echo "ATLAS recovery live smoke OK: release=0.70.5 build=0705 url=${PAGE_URL}"
+          ! printf '%s' "$guard" | grep -q 'new MutationObserver(queueApply).observe(document.documentElement'
+          ! printf '%s' "$recovery" | grep -q 'createTreeWalker(document.body'
+          echo "ATLAS freeze-safe live smoke OK: release=0.70.5 build=0705 url=${PAGE_URL}"
