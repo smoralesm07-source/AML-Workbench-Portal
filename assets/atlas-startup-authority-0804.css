@@ -1,0 +1,15 @@
+/* ATLAS AML · startup authority 0.80.4
+ * Prevents legacy intermediate renderers from becoming visible while the
+ * compiled runtime is still installing the final route authority.
+ * The auth screen remains visible because it does not contain #content.
+ */
+body:not(.aml-runtime-ready) #content{
+  visibility:hidden!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+body.aml-runtime-ready #content{
+  visibility:visible;
+  opacity:1;
+  transition:opacity .12s ease;
+}
