@@ -44,6 +44,7 @@ jobs:
           loader=Path('assets/atlas-universo-so-entity-explorer-0813.js').read_text()
           universo=Path('assets/atlas-universo-so-entity-explorer-0816.js').read_text()
           candidates=Path('assets/atlas-universo-so-candidate-management-0820.js').read_text()
+          retired_audit=Path('assets/atlas-data-audit.js').read_text()
 
           assert release['release']=='0.90.1' and release['build']=='0901'
           assert runtime['release']=='0.90.1' and runtime['build']=='0901'
@@ -54,6 +55,7 @@ jobs:
           assert "RELEASE='0.90.1'" in ui and "BUILD='0901'" in ui
           assert 'data-atlas-ui-authority' in ui
           assert 'html[data-atlas-release="0.90.1"]' in css
+          assert 'retired' in retired_audit.lower() and 'v024AuditHtml' in retired_audit
 
           # Current feature surfaces must remain present while the shared shell is hardened.
           assert 'atlas-universo-so-contact-osint-0840.css?v=0840-1' in html
@@ -67,6 +69,7 @@ jobs:
           PY
           node --check atlas-release-guard.js
           node --check assets/atlas-ui-authority-0901.js
+          node --check assets/atlas-data-audit.js
           node --check assets/atlas-universo-so-entity-explorer-0813.js
           node --check assets/atlas-universo-so-entity-explorer-0816.js
           node --check assets/atlas-universo-so-candidate-management-0820.js
@@ -77,6 +80,22 @@ jobs:
         run: |
           set -euo pipefail
           python3 tools/build_atlas_site.py --out _site
+
+          # The historical data-audit runtime must never be part of the Pages artifact.
+          # index.html still contains compatibility source tags outside the canonical runtime
+          # placeholders, so remove these retired standalone assets at artifact time as a
+          # final publication boundary.
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          p=Path('_site/index.html')
+          html=p.read_text(encoding='utf-8')
+          html=re.sub(r'\s*<link[^>]+href=["\']\./assets/atlas-data-audit\.css(?:\?[^"\']*)?["\'][^>]*>\s*', '\n', html, flags=re.I)
+          html=re.sub(r'\s*<script[^>]+src=["\']\./assets/atlas-data-audit\.js(?:\?[^"\']*)?["\'][^>]*>\s*</script>\s*', '\n', html, flags=re.I)
+          p.write_text(html, encoding='utf-8')
+          PY
+          rm -f _site/assets/atlas-data-audit.js _site/assets/atlas-data-audit.css
+
           test -s _site/index.html
           test -s _site/atlas-release.json
           test -s _site/atlas-release-guard.js
@@ -85,6 +104,8 @@ jobs:
           test -s _site/assets/atlas-ui-authority-0901.css
           test -s _site/assets/atlas-universo-so-contact-osint-0840.js
           test -s _site/assets/territorio-aml-beta.html
+          test ! -e _site/assets/atlas-data-audit.js
+          test ! -e _site/assets/atlas-data-audit.css
           python3 - <<'PY'
           from pathlib import Path
           import json
@@ -99,6 +120,8 @@ jobs:
           assert 'atlas-runtime-current-01.js?r=0901' in html
           assert 'ATLAS AML · v0.70.5' not in html
           assert 'data-aml-version="0.70.5"' not in html
+          assert 'atlas-data-audit.js' not in html
+          assert 'atlas-data-audit.css' not in html
           PY
           for js in _site/atlas-runtime-current-*.js _site/atlas-module-current-*.js; do
             test -f "$js" || continue
@@ -131,17 +154,21 @@ jobs:
             release="$(curl -fsSL --retry 2 --max-time 20 "${base}/atlas-release.json?atlas0901=${stamp}" || true)"
             ui="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-ui-authority-0901.js?atlas0901=${stamp}" || true)"
             css="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-ui-authority-0901.css?atlas0901=${stamp}" || true)"
+            retired_audit="$(curl -fsSL --retry 1 --max-time 10 "${base}/assets/atlas-data-audit.js?atlas0901=${stamp}" || true)"
             if printf '%s' "$html" | grep -q 'data-aml-version="0.90.1"' \
               && printf '%s' "$html" | grep -q '<title>ATLAS AML · v0.90.1</title>' \
               && ! printf '%s' "$html" | grep -q 'data-aml-version="0.70.5"' \
+              && ! printf '%s' "$html" | grep -q 'atlas-data-audit.js' \
+              && ! printf '%s' "$html" | grep -q 'atlas-data-audit.css' \
               && printf '%s' "$release" | grep -q '"release": "0.90.1"' \
               && printf '%s' "$release" | grep -q '"build": "0901"' \
               && printf '%s' "$ui" | grep -q "RELEASE='0.90.1'" \
-              && printf '%s' "$css" | grep -q 'data-atlas-release="0.90.1"'; then
+              && printf '%s' "$css" | grep -q 'data-atlas-release="0.90.1"' \
+              && test -z "$retired_audit"; then
               ok=1
               break
             fi
             sleep 8
           done
           test "$ok" -eq 1
-          echo "ATLAS AML 0.90.1 live smoke OK: ${PAGE_URL}"
+          echo "ATLAS AML 0.90.1 live smoke OK with retired main data audit: ${PAGE_URL}"
