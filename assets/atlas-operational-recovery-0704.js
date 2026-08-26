@@ -1,7 +1,7 @@
 'use strict';
 /* ATLAS AML · Active runtime route authority 0.80 · freeze-safe
  * Autoridad final y única para rutas superiores críticas.
- * No muta window.navigate y no usa MutationObserver.
+ * No muta window.navigate y no instala observadores del DOM.
  */
 (function atlasOperationalRecovery0800(){
   if(window.AtlasOperationalRecovery0800)return;
