@@ -1,0 +1,63 @@
+name: Validate Universo SO 0800
+
+on:
+  pull_request:
+    paths:
+      - 'assets/atlas-universo-so-intelligence-0800.js'
+      - 'assets/atlas-universo-so-intelligence-0800.css'
+      - 'assets/atlas-operational-recovery-0704.js'
+      - 'assets/atlas-universo-so-workbench-0700.js'
+      - 'index.html'
+      - '.github/workflows/validate-universo-so-0800.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Sintaxis 0.80
+        run: |
+          node --check assets/atlas-universo-so-intelligence-0800.js
+          node --check assets/atlas-operational-recovery-0704.js
+          node --check assets/atlas-universo-so-workbench-0700.js
+      - name: Autoridad e integración
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const ix=fs.readFileSync('index.html','utf8');
+          const mod=fs.readFileSync('assets/atlas-universo-so-intelligence-0800.js','utf8');
+          const route=fs.readFileSync('assets/atlas-operational-recovery-0704.js','utf8');
+          const compat=fs.readFileSync('assets/atlas-universo-so-workbench-0700.js','utf8');
+          const css=fs.readFileSync('assets/atlas-universo-so-intelligence-0800.css','utf8');
+          const req=(ok,msg)=>{if(!ok){console.error('FAIL:',msg);process.exitCode=1}else console.log('OK:',msg)};
+          req(ix.includes('atlas-universo-so-intelligence-0800.js?v=0800-1'),'index carga 0.80 directamente');
+          req(ix.includes('atlas-operational-recovery-0704.js?v=0800-1'),'route authority tiene cache bust 0.80');
+          req(mod.includes("reporting:'aml_v_uaf_entity_reporting_behavior_0620'"),'contrato reportabilidad por RUT');
+          req(mod.includes("mp:'aml_entity_mp_summary_v0680'"),'contrato Mercado Público');
+          req(mod.includes("lifecycle:'aml_entity_lifecycle_v0680'"),'línea de vida multifuente');
+          req(mod.includes('PRESS_FEED'),'contexto prensa integrado');
+          req(mod.includes('No se interpreta como cero'),'missingness explícita');
+          req(mod.includes('Nunca equivale a sospecha de LA/FT'),'semántica AML segura');
+          req(route.includes("window.AtlasUniversoSO0800"),'ruta Universo SO prioriza 0.80');
+          req(route.includes("fn('v019LoadTerritory')"),'Territorio conserva loader canónico');
+          req(!route.includes('MutationObserver'),'route authority sin observer');
+          req(!route.includes('window.navigate='),'route authority no sobrescribe navigate');
+          req(compat.includes('DELEGATE_ONLY_NO_ROUTE_MUTATION'),'compatibilidad 0700 solo delega');
+          req(css.includes('height:auto')&&css.includes('overflow:visible'),'secciones analíticas no recortan contenido');
+          NODE
+      - name: Semántica de fuentes
+        run: |
+          node <<'NODE'
+          const s=require('fs').readFileSync('assets/atlas-universo-so-intelligence-0800.js','utf8');
+          for(const phrase of ['Situación tributaria y actividad','Reportabilidad UAF','Supervisión y prioridad fiscalizadora','Estructura, Estado y trayectoria','Prensa y contexto abierto','LECTURA INTER-RADAR']){
+            if(!s.includes(phrase)) throw new Error('Falta dimensión: '+phrase);
+          }
+          console.log('OK: perfil 360 multiradar completo');
+          NODE
