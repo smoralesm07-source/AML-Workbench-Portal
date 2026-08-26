@@ -3,21 +3,15 @@
 
   const RELEASE=document.documentElement.getAttribute('data-atlas-release')||'current';
   const BUILD=document.documentElement.getAttribute('data-aml-build')||'current';
-  const FAST_PATH_DELAY=350;
-  const HARD_WATCHDOG=3200;
+  const FAST_PATH_DELAY=250;
+  const HARD_WATCHDOG=2600;
+  const SDK_SESSION_TIMEOUT=700;
   const DIRECT_TIMEOUT=1800;
+  const STORAGE_KEY=window.__ATLAS_AUTH_STORAGE_KEY__||'atlas-aml-auth-session-v2';
 
   function now(){return new Date().toISOString();}
   function status(stage,extra={}){
-    window.__ATLAS_AUTH_BOOT__={
-      release:RELEASE,
-      build:BUILD,
-      stage,
-      authMutation:false,
-      refreshTokenReplay:false,
-      checkedAt:now(),
-      ...extra
-    };
+    window.__ATLAS_AUTH_BOOT__={release:RELEASE,build:BUILD,stage,authMutation:false,refreshTokenReplay:false,checkedAt:now(),...extra};
   }
   function host(){return document.querySelector('#app');}
   function title(){return host()?.querySelector('.auth-card h1')?.textContent?.trim()||'';}
@@ -28,10 +22,43 @@
     const t=title();
     return t==='Iniciando sesión segura…'||t==='Validando acceso seguro…'||t==='No fue posible abrir el Workbench'||t==='No fue posible completar el inicio seguro'||t==='La sesión no respondió'||t==='La validación está tardando más de lo habitual';
   }
-  function setDetail(text){
-    const p=host()?.querySelector('.auth-card p');
-    if(p)p.textContent=text;
+  function setDetail(text){const p=host()?.querySelector('.auth-card p');if(p)p.textContent=text;}
+  function withTimeout(promise,ms,label){
+    let timer;
+    return Promise.race([
+      Promise.resolve(promise).finally(()=>clearTimeout(timer)),
+      new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(`${label||'operación'} excedió ${ms} ms`)),ms);})
+    ]);
   }
+
+  function persistedSession(){
+    try{
+      const raw=localStorage.getItem(STORAGE_KEY);
+      if(!raw)return null;
+      const parsed=JSON.parse(raw);
+      const candidates=[parsed,parsed?.currentSession,parsed?.session,parsed?.data?.session];
+      for(const candidate of candidates){
+        if(candidate?.access_token&&candidate?.user?.id)return candidate;
+      }
+    }catch(error){console.warn('[ATLAS] persisted auth session could not be read',error);}
+    return null;
+  }
+
+  function installRenderGuards(){
+    try{
+      if(typeof renderPending==='function'&&!renderPending.__atlasGuarded){
+        const originalPending=renderPending;
+        renderPending=function(){if(hasShell())return;return originalPending.apply(this,arguments);};
+        renderPending.__atlasGuarded=true;
+      }
+      if(typeof renderError==='function'&&!renderError.__atlasGuarded){
+        const originalError=renderError;
+        renderError=function(){if(hasShell())return;return originalError.apply(this,arguments);};
+        renderError.__atlasGuarded=true;
+      }
+    }catch(error){console.warn('[ATLAS] render guard unavailable',error);}
+  }
+  installRenderGuards();
 
   function installReconciliationCircuitBreaker(){
     if(typeof sb==='undefined'||!sb?.from||sb.__atlasReconCircuitBreaker)return;
@@ -53,28 +80,14 @@
       builder.select=function(columns,options){
         const exact=options&&options.count==='exact';
         if(!exact)return originalSelect(columns,options);
-        if(options.head===true){
-          window.__ATLAS_RECONCILIATION_CIRCUIT_BREAKER__.blockedHeadCounts++;
-          return noopQuery();
-        }
+        if(options.head===true){window.__ATLAS_RECONCILIATION_CIRCUIT_BREAKER__.blockedHeadCounts++;return noopQuery();}
         window.__ATLAS_RECONCILIATION_CIRCUIT_BREAKER__.downgradedExactCounts++;
-        const safe={...options};
-        delete safe.count;
-        safe.head=false;
-        return originalSelect(columns,safe);
+        const safe={...options};delete safe.count;safe.head=false;return originalSelect(columns,safe);
       };
       return builder;
     };
     sb.__atlasReconCircuitBreaker=true;
-    window.__ATLAS_RECONCILIATION_CIRCUIT_BREAKER__={
-      active:true,
-      release:RELEASE,
-      build:BUILD,
-      tables:[...guarded],
-      blockedHeadCounts:0,
-      downgradedExactCounts:0,
-      installedAt:now()
-    };
+    window.__ATLAS_RECONCILIATION_CIRCUIT_BREAKER__={active:true,release:RELEASE,build:BUILD,tables:[...guarded],blockedHeadCounts:0,downgradedExactCounts:0,installedAt:now()};
   }
   try{installReconciliationCircuitBreaker();}catch(error){console.warn('[ATLAS] reconciliation circuit breaker unavailable',error);}
 
@@ -108,17 +121,30 @@
     }
   }
 
+  async function resolveSession(){
+    let sdkError=null;
+    try{
+      if(typeof sb!=='undefined'&&sb?.auth?.getSession){
+        const result=await withTimeout(sb.auth.getSession(),SDK_SESSION_TIMEOUT,'Supabase getSession');
+        if(result?.error)throw result.error;
+        if(result?.data?.session)return {session:result.data.session,source:'sdk'};
+      }
+    }catch(error){sdkError=error;}
+    const stored=persistedSession();
+    if(stored)return {session:stored,source:'storage',sdkError};
+    return {session:null,source:'none',sdkError};
+  }
+
   async function recoverAccess(options={}){
     const force=options?.force===true;
     if(hasShell()&&!force)return status('rendered');
     if(!hasShell())setDetail('Autenticación correcta. Verificando autorización…');
     try{
-      if(typeof sb==='undefined'||!sb?.auth)throw new Error('Cliente de autenticación no disponible.');
-      const sessionResult=await sb.auth.getSession();
-      if(sessionResult?.error)throw sessionResult.error;
-      const session=sessionResult?.data?.session||null;
+      const resolved=await resolveSession();
+      const session=resolved.session;
       if(!session){
-        status('no-session');
+        status('session-unresolved',{source:resolved.source,error:String(resolved.sdkError?.message||'')});
+        if(!resolved.sdkError&&typeof renderLogin==='function')renderLogin();
         return;
       }
       if(typeof state!=='undefined')state.user=session.user;
@@ -129,48 +155,47 @@
 
       if(access&&access.enabled){
         if(typeof state!=='undefined')state.access=access;
-        status('authorized',{role:access.role||'viewer'});
+        status('authorized',{role:access.role||'viewer',sessionSource:resolved.source});
         if(!hasShell()&&typeof loadOverview==='function'){
           Promise.resolve(loadOverview()).catch(error=>console.warn('[ATLAS] overview hydration failed',error));
         }
-        if(typeof auditSession==='function')Promise.resolve().then(()=>auditSession()).catch(()=>{});
+        if(typeof auditSession==='function')setTimeout(()=>Promise.resolve(auditSession()).catch(()=>{}),0);
         return;
       }
       if(access&&access.enabled===false){
-        status('access-pending');
+        status('access-pending',{sessionSource:resolved.source});
         if(typeof renderPending==='function')return renderPending();
         return;
       }
       if(!access&&!lastError){
-        status('access-pending');
+        status('access-pending',{sessionSource:resolved.source});
         if(typeof renderPending==='function')return renderPending();
         return;
       }
 
       if(hasShell()){
         window.__ATLAS_DEGRADED_AUTH__={active:true,reason:String(lastError?.message||lastError||'backend-timeout'),at:now()};
-        status('protected-degraded-shell-retained',{reason:window.__ATLAS_DEGRADED_AUTH__.reason});
+        status('protected-degraded-shell-retained',{reason:window.__ATLAS_DEGRADED_AUTH__.reason,sessionSource:resolved.source});
         return;
       }
       openProtectedDegraded(session,lastError);
     }catch(error){
       status('bootstrap-error',{error:String(error?.message||error)});
+      setDetail('El inicio seguro encontró una demora inesperada. Reintentando…');
     }
   }
 
   async function watchdog(){
     if(hasShell())return status('rendered');
     if(hasLogin())return status('login-required');
-    if(isPending()||isRecoverable())await recoverAccess();
+    if(isPending()||isRecoverable())await recoverAccess({force:true});
   }
 
   window.addEventListener('error',event=>{window.__ATLAS_LAST_RUNTIME_ERROR__={message:event.message||String(event.error||'error'),at:now()};});
   window.addEventListener('unhandledrejection',event=>{window.__ATLAS_LAST_RUNTIME_ERROR__={message:String(event.reason?.message||event.reason||'unhandled rejection'),at:now()};});
 
-  status('fast-path-scheduled',{fastPathMs:FAST_PATH_DELAY,watchdogMs:HARD_WATCHDOG,directTimeoutMs:DIRECT_TIMEOUT});
-  window.setTimeout(()=>{
-    if(!hasShell()&&!hasLogin()&&isRecoverable())void recoverAccess();
-  },FAST_PATH_DELAY);
+  status('fast-path-scheduled',{fastPathMs:FAST_PATH_DELAY,watchdogMs:HARD_WATCHDOG,sdkSessionTimeoutMs:SDK_SESSION_TIMEOUT,directTimeoutMs:DIRECT_TIMEOUT,storageKey:STORAGE_KEY});
+  window.setTimeout(()=>{if(!hasShell()&&!hasLogin()&&isRecoverable())void recoverAccess();},FAST_PATH_DELAY);
   window.setTimeout(()=>void watchdog(),HARD_WATCHDOG);
   window.AtlasAuthBootstrap={release:RELEASE,build:BUILD,retry:()=>recoverAccess({force:true}),status:()=>window.__ATLAS_AUTH_BOOT__};
 })();
