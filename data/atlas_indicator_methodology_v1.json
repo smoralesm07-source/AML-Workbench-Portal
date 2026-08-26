@@ -1,0 +1,84 @@
+{
+  "schema": "ATLAS_INDICATOR_METHODOLOGY_V1",
+  "version": "1.0.0",
+  "effective_date": "2026-08-26",
+  "presentation_policy": {
+    "ipa_display_name": "IPA",
+    "ipa_technical_aliases": ["IPA3", "ipa3", "ipa3_*"],
+    "technical_alias_policy": "KEEP_FOR_BACKWARD_COMPATIBILITY_NEVER_USE_AS_VISIBLE_PRIMARY_LABEL",
+    "missing_is_not_zero": true,
+    "score_is_not_laft_probability": true
+  },
+  "indicators": {
+    "IRAR_E": {
+      "label": "IRAR-E",
+      "name": "Riesgo inherente sectorial",
+      "domain": "sector",
+      "status": "GOVERNED_FORMULA_INPUTS_REQUIRE_MATERIALIZATION",
+      "formula": "0.40 * vulnerabilidad_estructural + 0.30 * materialidad + 0.30 * amenaza_laft_fp",
+      "weights": {"vulnerabilidad_estructural": 0.40, "materialidad": 0.30, "amenaza_laft_fp": 0.30},
+      "methodology": "Mide exposición inherente de la actividad. Vulnerabilidad considera rasgos estructurales del negocio; materialidad, escala/relevancia sectorial normalizada; amenaza, exposición demostrada a amenazas LA/FT/FP usando ENR Chile, estándares/evaluaciones GAFI-GAFILAT, tipologías y evidencia LA/FT. Criminalidad general aislada no basta.",
+      "guardrails": ["NOT_ENTITY_RISK", "NOT_COMPLIANCE", "NO_GENERAL_CRIME_AS_SOLE_THREAT", "ALL_COMPONENTS_REQUIRED"]
+    },
+    "IGR": {
+      "label": "IGR",
+      "name": "Índice de Riesgo Geográfico",
+      "domain": "territory",
+      "status": "ACTIVE_BETA_GOVERNED",
+      "methodology": "Mide exposición territorial relativa. Mantiene separadas vulnerabilidad/exposición, densidad de sujetos obligados, brecha territorial y amenaza. Es contexto geográfico y no atribuye riesgo o conducta a una entidad por su domicilio.",
+      "guardrails": ["TERRITORIAL_CONTEXT_NOT_ENTITY_ATTRIBUTION", "MISSING_IS_NOT_ZERO", "CEAD_IS_CONTEXT_NOT_LAFT_EVIDENCE"]
+    },
+    "IPA": {
+      "label": "IPA",
+      "name": "Índice de Prioridad Analítica",
+      "domain": "entity",
+      "status": "ACTIVE_SHADOW",
+      "technical_alias": "IPA3",
+      "methodology": "Ordena entidades para revisión mediante marcas registrales, económicas y sancionatorias gobernadas, con topes, recencia, absorción de señales correlacionadas y comparación entre pares cuando corresponde. No estima probabilidad de LA/FT ni acredita irregularidad.",
+      "guardrails": ["PRIORITY_NOT_LAFT_PROBABILITY", "SANCTION_IS_CONTEXT_NOT_CRIME", "ZERO_MEANS_NO_ACTIVE_MARKS", "MISSING_IS_NOT_ZERO"]
+    },
+    "IVO": {
+      "label": "IVO",
+      "name": "Índice de Verosimilitud de Obligación",
+      "domain": "potential_subject",
+      "status": "ACTIVE_SCREENING",
+      "methodology": "Estima qué tan verosímil es que una entidad corresponda a una actividad obligada a partir de evidencia registral y patrones del padrón observado. Sirve para screening de potenciales SO; no mide riesgo LA/FT, incumplimiento ni sustituye una determinación jurídica. La materialidad de incorporación se mantiene separada.",
+      "guardrails": ["SCREENING_NOT_LAFT_RISK", "NOT_LEGAL_DETERMINATION", "MATERIALITY_SEPARATE"]
+    },
+    "IRAR": {
+      "label": "IRAR",
+      "name": "Índice de Rendimiento Analítico de ROS",
+      "domain": "reportability",
+      "status": "ACTIVE_DISTINCT_FROM_IRAR_E",
+      "methodology": "Indicador de rendimiento analítico de la reportabilidad ROS. Se conserva separado de IRAR-E: IRAR describe desempeño/conversión analítica agregada de ROS y no es un score de riesgo sectorial o individual.",
+      "guardrails": ["IRAR_IS_NOT_IRAR_E", "REPORTABILITY_NOT_LAFT_PROBABILITY"]
+    },
+    "MITIGACION": {
+      "label": "Mitigación / Cumplimiento",
+      "name": "Capacidad mitigadora y de cumplimiento",
+      "domain": "supervision",
+      "status": "CREATED_GOVERNED_SHADOW_NO_SCORE_UNTIL_COVERAGE",
+      "methodology": "Evalúa fortaleza/debilidad mitigadora con evidencia de fiscalización, calidad y oportunidad de reporte, madurez preventiva y recurrencia/corrección de hallazgos. Se mantiene separada del riesgo inherente. No se calcula un valor cuando la cobertura de controles no es suficiente.",
+      "guardrails": ["CONTROLS_SEPARATE_FROM_INHERENT_RISK", "NO_SCORE_WITH_INSUFFICIENT_COVERAGE", "SANCTIONS_NOT_SOLE_DRIVER"]
+    },
+    "BCR": {
+      "label": "BCR",
+      "name": "Brecha de Cobertura Regulatoria",
+      "domain": "sector",
+      "status": "CREATED_DERIVED",
+      "formula": "100 * potenciales_plausibles / (so_inscritos + potenciales_plausibles)",
+      "methodology": "Señal sectorial derivada que compara SO inscritos con potenciales SO plausibles. Usa IVO y materialidad como apoyo de screening, pero no afirma obligación, incumplimiento ni riesgo LA/FT. Debe mostrarse con universo, corte y cobertura.",
+      "guardrails": ["COVERAGE_SIGNAL_NOT_NONCOMPLIANCE", "IVO_IS_SCREENING", "SHOW_DENOMINATOR_AND_CUTOFF"]
+    },
+    "PRIORIDAD_FISCALIZACION": {
+      "label": "Prioridad de Fiscalización",
+      "name": "Prioridad de Fiscalización",
+      "domain": "supervision",
+      "status": "CREATED_GOVERNED_GATED",
+      "inputs": ["IRAR_E", "IGR", "IPA", "MITIGACION"],
+      "excluded_inputs": ["IVO"],
+      "methodology": "Síntesis supervisora de riesgo sectorial, contexto territorial, prioridad individual y debilidad mitigadora. IVO queda fuera y opera en el carril de incorporación de potenciales SO. No hay ponderadores por defecto: sólo puede puntuarse con pesos aprobados, cobertura suficiente y trazabilidad de cada componente.",
+      "guardrails": ["NO_DEFAULT_WEIGHTS", "IVO_EXCLUDED", "NOT_LAFT_PROBABILITY", "REQUIRE_COMPONENT_COVERAGE"]
+    }
+  }
+}
