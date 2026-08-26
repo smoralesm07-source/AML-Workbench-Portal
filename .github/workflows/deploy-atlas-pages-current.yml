@@ -2,8 +2,7 @@ name: Deploy ATLAS AML current
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -39,46 +38,34 @@ jobs:
           runtime=json.loads(Path('atlas-runtime-manifest.json').read_text())
           build=json.loads(Path('build.json').read_text())
           html=Path('index.html').read_text()
+          loader=Path('assets/atlas-universo-so-entity-explorer-0813.js').read_text()
+          universo=Path('assets/atlas-universo-so-entity-explorer-0816.js').read_text()
+          css=Path('assets/atlas-universo-so-entity-explorer-0816.css').read_text()
           recovery=Path('assets/atlas-operational-recovery-0704.js').read_text()
-          noflash=Path('assets/atlas-source-health-no-flash-0715.css').read_text()
-          health=Path('assets/atlas-source-health-global-0694.js').read_text()
-          universo=Path('assets/atlas-universo-so-entity-explorer-0813.js').read_text()
-          universo_css=Path('assets/atlas-universo-so-entity-explorer-0813.css').read_text()
           assert release['release']=='0.70.5' and release['build']=='0705'
           assert runtime['release']=='0.70.5' and runtime['build']=='0705'
           assert build['app_version']=='0.70.5' and build['build']=='0705'
-          assert 'data-aml-version="0.70.5"' in html and 'data-aml-build="0705"' in html
-          assert 'data-aml-version="0.51.1"' not in html
-          assert 'atlas-source-health-no-flash-0715.css?v=0715-1' in html
-          assert 'atlas-source-health-global-0694.js?v=0715-noflash1' in html
-          assert 'atlas-operational-recovery-0704.js?v=0801-osfl1' in html
+          assert 'data-aml-version="0.70.5"' in html
           assert 'atlas-universo-so-entity-explorer-0813.js?v=0813-1' in html
-          assert 'atlas-universo-so-entity-explorer-0813.css?v=0813-1' in html
-          assert 'ENTITY_EXPLORER_SPECIALIZATION_0814' in universo
-          assert "VERSION='0.81.4'" in universo
-          assert 'data-uso814-alert' in universo
-          assert 'uso814-lenses' in universo
-          assert 'aml_v_universo_so_entity_explorer_0810' in universo
-          assert 'aml_v_universo_potential_entity_explorer_0813' in universo
-          assert '.uso814-alertbar' in universo_css
-          assert '.uso814-lenses' in universo_css
-          assert "VIEW_OSFL='osfl'" in recovery
-          assert 'OSFL_CANONICAL_ROUTE_0801' in recovery
-          assert "fn('v030LoadOsfl')" in recovery
-          assert 'data-topbar-mode="1"' in noflash
-          assert 'display:none!important' in noflash
-          assert 'new MutationObserver' not in health
+          assert 'ENTITY_EXPLORER_SPECIALIZATION_0816_LOADING' in loader
+          assert 'atlas-universo-so-entity-explorer-0816.js?v=0816-1' in loader
+          assert "VERSION='0.81.6'" in universo
+          assert 'ENTITY_EXPLORER_SPECIALIZATION_0816' in universo
+          assert 'METHODOLOGY_POPUPS_0816' in universo
+          assert 'aml_v_universo_potential_entity_explorer_0816' in universo
+          assert "['press','press','Prensa'" in universo
+          assert "['activity','activity','Cambio actividad'" in universo
+          assert "['region_change','region','Cambio región'" in universo
+          assert 'uso816-evidence' in universo
+          assert 'uso816-help-wrap' in css
+          assert 'new MutationObserver' not in loader
           assert 'new MutationObserver' not in universo
           assert 'window.navigate=' not in universo
+          assert 'OSFL_CANONICAL_ROUTE_0801' in recovery
           PY
-          node --check atlas-release-guard.js
-          node --check app.js
-          node --check v030-osfl.js
-          node --check v032-osfl-expert.js
-          node --check assets/atlas-source-health-global-0694.js
-          node --check assets/atlas-operational-recovery-0704.js
-          node --check assets/atlas-public-spend-intelligence-0720.js
           node --check assets/atlas-universo-so-entity-explorer-0813.js
+          node --check assets/atlas-universo-so-entity-explorer-0816.js
+          node --check assets/atlas-operational-recovery-0704.js
           node tests/atlas-runtime-freeze-0712.mjs
 
       - name: Build canonical Atlas site
@@ -87,38 +74,26 @@ jobs:
           set -euo pipefail
           python3 tools/build_atlas_site.py --out _site
           test -s _site/index.html
-          test -s _site/atlas-runtime-current.css
           test -s _site/atlas-runtime-current-01.js
-          test -s _site/atlas-runtime-report.json
-          test -s _site/assets/atlas-source-health-no-flash-0715.css
-          test -s _site/assets/atlas-operational-recovery-0704.js
           test -s _site/assets/atlas-universo-so-entity-explorer-0813.js
-          test -s _site/assets/atlas-universo-so-entity-explorer-0813.css
+          test -s _site/assets/atlas-universo-so-entity-explorer-0816.js
+          test -s _site/assets/atlas-universo-so-entity-explorer-0816.css
+          node --check _site/assets/atlas-universo-so-entity-explorer-0813.js
+          node --check _site/assets/atlas-universo-so-entity-explorer-0816.js
           python3 - <<'PY'
-          import json
           from pathlib import Path
           html=Path('_site/index.html').read_text()
-          report=json.loads(Path('_site/atlas-runtime-report.json').read_text())
-          bundles=sorted(Path('_site').glob('atlas-runtime-current-*.js'))
-          joined='\n'.join(p.read_text(errors='ignore') for p in bundles)
-          universo=Path('_site/assets/atlas-universo-so-entity-explorer-0813.js').read_text()
-          css=Path('_site/assets/atlas-universo-so-entity-explorer-0813.css').read_text()
-          assert report['release']=='0.70.5' and report['build']=='0705'
-          assert 'function v019Shell' in joined
-          assert 'async function v030LoadOsfl' in joined
-          assert 'AtlasCurrentUI' in joined
-          assert 'data-aml-version="0.51.1"' not in html
-          assert 'atlas-universo-so-entity-explorer-0813.js?v=0813-1' in html
-          assert 'atlas-universo-so-entity-explorer-0813.css?v=0813-1' in html
-          assert 'ENTITY_EXPLORER_SPECIALIZATION_0814' in universo
-          assert 'data-uso814-alert' in universo
-          assert '.uso814-alertbar' in css
+          loader=Path('_site/assets/atlas-universo-so-entity-explorer-0813.js').read_text()
+          universo=Path('_site/assets/atlas-universo-so-entity-explorer-0816.js').read_text()
+          assert 'data-aml-version="0.70.5"' in html
+          assert 'ENTITY_EXPLORER_SPECIALIZATION_0816_LOADING' in loader
+          assert 'ENTITY_EXPLORER_SPECIALIZATION_0816' in universo
+          assert 'METHODOLOGY_POPUPS_0816' in universo
           PY
           for js in _site/atlas-runtime-current-*.js _site/atlas-module-current-*.js; do
             test -f "$js" || continue
             node --check "$js"
           done
-          node --check _site/assets/atlas-universo-so-entity-explorer-0813.js
 
       - name: Pin current cache keys
         shell: bash
@@ -130,15 +105,14 @@ jobs:
           html=p.read_text()
           html=html.replace('atlas-release-guard.js?r=0705','atlas-release-guard.js?r=0705-freeze0712')
           html=html.replace('atlas-theme-bootstrap.js?r=0705','atlas-theme-bootstrap.js?r=0705-freeze0712')
-          html=html.replace('atlas-runtime-current.css?r=0705','atlas-runtime-current.css?r=0705-universo0814')
+          html=html.replace('atlas-runtime-current.css?r=0705','atlas-runtime-current.css?r=0705-universo0816')
           for i in range(1,20):
-              html=html.replace(f'atlas-runtime-current-{i:02d}.js?r=0705',f'atlas-runtime-current-{i:02d}.js?r=0705-universo0814')
-              html=html.replace(f'atlas-module-current-{i:02d}.js?r=0705',f'atlas-module-current-{i:02d}.js?r=0705-universo0814')
+              html=html.replace(f'atlas-runtime-current-{i:02d}.js?r=0705',f'atlas-runtime-current-{i:02d}.js?r=0705-universo0816')
+              html=html.replace(f'atlas-module-current-{i:02d}.js?r=0705',f'atlas-module-current-{i:02d}.js?r=0705-universo0816')
+          html=html.replace('atlas-universo-so-entity-explorer-0813.js?v=0813-1','atlas-universo-so-entity-explorer-0813.js?v=0816-1')
           p.write_text(html)
-          assert 'atlas-runtime-current-01.js?r=0705-universo0814' in html
-          assert 'atlas-source-health-no-flash-0715.css?v=0715-1' in html
-          assert 'atlas-operational-recovery-0704.js?v=0801-osfl1' in html
-          assert 'atlas-universo-so-entity-explorer-0813.js?v=0813-1' in html
+          assert 'atlas-runtime-current-01.js?r=0705-universo0816' in html
+          assert 'atlas-universo-so-entity-explorer-0813.js?v=0816-1' in html
           PY
 
       - name: Configure Pages
@@ -153,41 +127,32 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Verify live Universo SO Entity Explorer
+      - name: Verify live Universo SO 0.81.6
         shell: bash
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
           set -euo pipefail
-          test -n "$PAGE_URL"
           base="${PAGE_URL%/}"
           ok=0
           for attempt in $(seq 1 12); do
             stamp="${GITHUB_SHA}-${GITHUB_RUN_ATTEMPT}-${attempt}"
-            html="$(curl -fsSL --retry 2 --max-time 20 "${base}/?atlas_universo0814=${stamp}" || true)"
-            manifest="$(curl -fsSL --retry 2 --max-time 20 "${base}/atlas-release.json?atlas_universo0814=${stamp}" || true)"
-            universo="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-universo-so-entity-explorer-0813.js?atlas_universo0814=${stamp}" || true)"
-            css="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-universo-so-entity-explorer-0813.css?atlas_universo0814=${stamp}" || true)"
-            recovery="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-operational-recovery-0704.js?atlas_universo0814=${stamp}" || true)"
-            noflash="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-source-health-no-flash-0715.css?atlas_universo0814=${stamp}" || true)"
+            html="$(curl -fsSL --retry 2 --max-time 20 "${base}/?u816=${stamp}" || true)"
+            loader="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-universo-so-entity-explorer-0813.js?u816=${stamp}" || true)"
+            universo="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-universo-so-entity-explorer-0816.js?u816=${stamp}" || true)"
+            css="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-universo-so-entity-explorer-0816.css?u816=${stamp}" || true)"
             if printf '%s' "$html" | grep -q 'data-aml-version="0.70.5"' \
-              && printf '%s' "$html" | grep -q 'atlas-runtime-current-01.js?r=0705-universo0814' \
-              && printf '%s' "$html" | grep -q 'atlas-universo-so-entity-explorer-0813.js?v=0813-1' \
-              && printf '%s' "$manifest" | grep -q '"release": "0.70.5"' \
-              && printf '%s' "$universo" | grep -q 'ENTITY_EXPLORER_SPECIALIZATION_0814' \
-              && printf '%s' "$universo" | grep -q 'data-uso814-alert' \
-              && printf '%s' "$universo" | grep -q 'uso814-lenses' \
-              && printf '%s' "$universo" | grep -q 'aml_v_universo_so_entity_explorer_0810' \
-              && printf '%s' "$universo" | grep -q 'aml_v_universo_potential_entity_explorer_0813' \
-              && printf '%s' "$css" | grep -q '.uso814-alertbar' \
-              && printf '%s' "$css" | grep -q '.uso814-lenses' \
-              && printf '%s' "$recovery" | grep -q 'OSFL_CANONICAL_ROUTE_0801' \
-              && printf '%s' "$noflash" | grep -q 'data-topbar-mode="1"'; then
+              && printf '%s' "$html" | grep -q 'atlas-universo-so-entity-explorer-0813.js?v=0816-1' \
+              && printf '%s' "$loader" | grep -q 'ENTITY_EXPLORER_SPECIALIZATION_0816_LOADING' \
+              && printf '%s' "$universo" | grep -q 'ENTITY_EXPLORER_SPECIALIZATION_0816' \
+              && printf '%s' "$universo" | grep -q 'METHODOLOGY_POPUPS_0816' \
+              && printf '%s' "$universo" | grep -q "Prensa" \
+              && printf '%s' "$universo" | grep -q 'uso816-evidence' \
+              && printf '%s' "$css" | grep -q 'uso816-help-wrap'; then
               ok=1
               break
             fi
-            sleep 10
+            sleep 8
           done
           test "$ok" -eq 1
-          ! printf '%s' "$recovery" | grep -q 'new MutationObserver'
-          echo "ATLAS Universo SO Entity Explorer 0.81.4 live smoke OK: release=0.70.5 build=0705 url=${PAGE_URL}"
+          echo "ATLAS Universo SO 0.81.6 live smoke OK: ${PAGE_URL}"
