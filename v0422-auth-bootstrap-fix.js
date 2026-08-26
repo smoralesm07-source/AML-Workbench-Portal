@@ -3,8 +3,9 @@
 
   const RELEASE=document.documentElement.getAttribute('data-atlas-release')||'current';
   const BUILD=document.documentElement.getAttribute('data-aml-build')||'current';
-  const HARD_WATCHDOG=10000;
-  const DIRECT_TIMEOUT=4500;
+  const FAST_PATH_DELAY=350;
+  const HARD_WATCHDOG=3200;
+  const DIRECT_TIMEOUT=1800;
 
   function now(){return new Date().toISOString();}
   function status(stage,extra={}){
@@ -32,8 +33,6 @@
     if(p)p.textContent=text;
   }
 
-  /* Startup circuit breaker: never allow legacy exact reconciliation counts to
-     participate in authentication/bootstrap. RLS and governed views are unchanged. */
   function installReconciliationCircuitBreaker(){
     if(typeof sb==='undefined'||!sb?.from||sb.__atlasReconCircuitBreaker)return;
     const guarded=new Set(['aml_v0205_uaf_sii_reconciliation','aml_v0210_uaf_sii_reconciliation']);
@@ -156,8 +155,6 @@
       openProtectedDegraded(session,lastError);
     }catch(error){
       status('bootstrap-error',{error:String(error?.message||error)});
-      /* Deliberately do not render login or mutate auth state here. The canonical
-         Supabase auth event flow owns session end; this layer only rescues startup. */
     }
   }
 
@@ -170,7 +167,10 @@
   window.addEventListener('error',event=>{window.__ATLAS_LAST_RUNTIME_ERROR__={message:event.message||String(event.error||'error'),at:now()};});
   window.addEventListener('unhandledrejection',event=>{window.__ATLAS_LAST_RUNTIME_ERROR__={message:String(event.reason?.message||event.reason||'unhandled rejection'),at:now()};});
 
-  status('watchdog-scheduled',{watchdogMs:HARD_WATCHDOG});
+  status('fast-path-scheduled',{fastPathMs:FAST_PATH_DELAY,watchdogMs:HARD_WATCHDOG,directTimeoutMs:DIRECT_TIMEOUT});
+  window.setTimeout(()=>{
+    if(!hasShell()&&!hasLogin()&&isRecoverable())void recoverAccess();
+  },FAST_PATH_DELAY);
   window.setTimeout(()=>void watchdog(),HARD_WATCHDOG);
   window.AtlasAuthBootstrap={release:RELEASE,build:BUILD,retry:()=>recoverAccess({force:true}),status:()=>window.__ATLAS_AUTH_BOOT__};
 })();
