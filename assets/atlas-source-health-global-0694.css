@@ -1,15 +1,11 @@
-/* ATLAS AML 0.70.5 · auditoría global estable en topbar */
-[data-atlas-global-audit-host="0705"]{position:relative!important}
-[data-atlas-global-audit-host="0705"]>.ash-audit,[data-atlas-global-audit-host="0705"]>.a57-data-audit{
+/* ATLAS AML 0.71.3 · auditoría global estable en topbar */
+[data-atlas-global-audit-host="0713"]{position:relative!important}
+[data-atlas-global-audit-host="0713"]>.ash-audit,[data-atlas-global-audit-host="0713"]>.a57-data-audit{
   position:absolute!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;
   width:min(330px,32vw)!important;max-width:330px!important;z-index:1201!important;margin:0!important
 }
-[data-atlas-global-audit-fallback="1"]{
-  position:fixed!important;top:8px!important;left:50%!important;transform:translateX(-50%)!important;
-  width:230px!important;height:30px!important;z-index:1200!important;pointer-events:none!important
-}
-[data-atlas-global-audit-fallback="1"]>.ash-audit,[data-atlas-global-audit-fallback="1"]>.a57-data-audit{pointer-events:auto!important}
-.ash-audit[data-global-audit="0705"],.a57-data-audit[data-global-audit="0705"]{z-index:1201!important}
-.ash-audit[data-global-audit="0705"] .ash-detail:not([hidden]),.a57-data-audit[data-global-audit="0705"] .ash-detail:not([hidden]){z-index:1202!important}
-@media(max-width:900px){[data-atlas-global-audit-host="0705"]>.ash-audit,[data-atlas-global-audit-host="0705"]>.a57-data-audit{width:min(250px,36vw)!important}[data-atlas-global-audit-fallback="1"]{width:198px!important}}
-@media(max-width:640px){[data-atlas-global-audit-host="0705"]>.ash-audit,[data-atlas-global-audit-host="0705"]>.a57-data-audit{position:static!important;transform:none!important;width:100%!important;max-width:none!important}[data-atlas-global-audit-fallback="1"]{top:7px!important;width:168px!important}}
+[data-atlas-global-audit-fallback="1"]{display:none!important}
+.ash-audit[data-global-audit="0713"],.a57-data-audit[data-global-audit="0713"]{z-index:1201!important}
+.ash-audit[data-global-audit="0713"] .ash-detail:not([hidden]),.a57-data-audit[data-global-audit="0713"] .ash-detail:not([hidden]){z-index:1202!important}
+@media(max-width:900px){[data-atlas-global-audit-host="0713"]>.ash-audit,[data-atlas-global-audit-host="0713"]>.a57-data-audit{width:min(250px,36vw)!important}}
+@media(max-width:640px){[data-atlas-global-audit-host="0713"]>.ash-audit,[data-atlas-global-audit-host="0713"]>.a57-data-audit{position:static!important;transform:none!important;width:100%!important;max-width:none!important}}
