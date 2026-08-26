@@ -9,6 +9,8 @@
  *   materializada; NO afirma que sea el último timbraje absoluto del contribuyente
  *   cuando la cobertura de documentos es parcial.
  * - Ausencia de observaciones no equivale a ausencia de timbraje.
+ * - MISSING_IS_NOT_NO_TIMBRAJE: dato no materializado nunca se interpreta como
+ *   inexistencia de timbraje o de documentos autorizados.
  *
  * Seguridad: sólo lectura bajo la sesión/RLS existente. No toca Auth, Entra,
  * refresh tokens ni crea inferencias AML.
@@ -112,6 +114,7 @@
     window.__ATLAS_SII_DOCUMENT_AUTHORIZATION__={
       active:true,release:RELEASE,build:BUILD,entityId,hasObservation:!!value?.row,
       semantic:'LATEST_OBSERVED_AUTHORIZATION_NOT_ABSOLUTE_LAST_TIMBRAJE',
+      missingSemantic:'MISSING_IS_NOT_NO_TIMBRAJE',
       authMutation:false,renderedAt:new Date().toISOString()
     };
     return true;
@@ -136,6 +139,7 @@
 
   window.AtlasSiiDocumentAuthorization={
     release:RELEASE,build:BUILD,view:VIEW,load,decorate,
-    semantic:'LATEST_OBSERVED_AUTHORIZATION_NOT_ABSOLUTE_LAST_TIMBRAJE'
+    semantic:'LATEST_OBSERVED_AUTHORIZATION_NOT_ABSOLUTE_LAST_TIMBRAJE',
+    missingSemantic:'MISSING_IS_NOT_NO_TIMBRAJE'
   };
 })();
