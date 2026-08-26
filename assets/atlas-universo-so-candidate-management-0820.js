@@ -1,123 +1,79 @@
 'use strict';
-/* ATLAS AML · Universo SO Candidate Management 0.82.0
- * Vista de candidatos seleccionados + reversa de marca + ficha de contacto OSINT.
- * Los contactos OSINT son hallazgos no verificados hasta validación explícita.
+/* ATLAS AML · Universo SO Candidate Management 0.83.0
+ * Gestión de candidatos + enriquecimiento automático de contacto OSINT.
+ * Los hallazgos automáticos nunca se promueven a VERIFICADO sin acción analista.
  */
-(function atlasCandidateManagement0820(){
-  const VERSION='0.82.0';
-  const VIEW='sujetos-obligados';
+(function atlasCandidateManagement0830(){
+  const VERSION='0.83.0',VIEW='sujetos-obligados';
   const CANDIDATES='aml_v_uaf_candidate_selected_v0803';
   const REVIEWS='aml_uaf_potential_review';
   const CONTACTS='aml_uaf_candidate_contact_osint';
-  const ADDRESSES='aml_res_address_history';
-  const ENRICH='aml_entity_external_enrichment_snapshot';
-  const S={rows:[],loading:false,error:null,q:'',active:null};
+  const JOBS='aml_uaf_candidate_enrichment_job';
+  const FUNCTION='atlas-candidate-contact-enrichment';
+  const S={rows:[],jobs:new Map(),loading:false,error:null,q:'',active:null,contactData:null};
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmtDate=v=>{if(!v)return'—';try{return new Intl.DateTimeFormat('es-CL',{dateStyle:'medium',timeStyle:'short'}).format(new Date(v))}catch{return String(v)}};
-  const rutKey=v=>String(v||'').toUpperCase().replace(/[^0-9K]/g,'');
+  const fmtScore=v=>v===null||v===undefined||v===''?'—':`${Math.round(Number(v))}%`;
   const db=()=>{try{return typeof sb!=='undefined'?sb:(window.sb||null)}catch{return window.sb||null}};
   const host=()=>{try{return typeof v019Content==='function'?v019Content():document.querySelector('#content')}catch{return document.querySelector('#content')}};
   const entry=()=>window.__ATLAS_ENTITY_ENTRY__;
   const currentView=()=>{try{return window.state?.view}catch{return null}};
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
+  function candidateApi(){return window.AtlasUniversoSO0816||window.AtlasUniversoSO0814||window.AtlasUniversoSO0813||null;}
   function ensureButton(){
     if(currentView()!==VIEW&&!document.querySelector('.uso81'))return;
-    const tabs=document.querySelector('.uso81-tabs');
-    if(!tabs||tabs.querySelector('[data-uso820-candidates]'))return;
-    const b=document.createElement('button');
-    b.type='button';b.dataset.uso820Candidates='1';b.className='uso820-management-tab';
-    b.innerHTML='<b>Gestión candidatos</b><small>seleccionados · contacto y seguimiento</small>';
-    tabs.appendChild(b);
+    const tabs=document.querySelector('.uso81-tabs');if(!tabs||tabs.querySelector('[data-uso830-candidates]'))return;
+    const b=document.createElement('button');b.type='button';b.dataset.uso830Candidates='1';b.className='uso820-management-tab';
+    b.innerHTML='<b>Gestión candidatos</b><small>contacto OSINT · seguimiento</small>';tabs.appendChild(b);
   }
-  function scheduleEnsure(){setTimeout(ensureButton,0);setTimeout(ensureButton,180);setTimeout(ensureButton,650);}
   function patchApi(){
-    const api=window.AtlasUniversoSO0814||window.AtlasUniversoSO0813;
-    if(!api||api.__candidate0820)return;
-    const original=api.open;
-    api.open=async function(){const r=await original.apply(this,arguments);scheduleEnsure();return r;};
-    api.__candidate0820=true;
-    window.AtlasUniversoSO0814=api;window.AtlasUniversoSO0813=api;
+    ['AtlasUniversoSO0816','AtlasUniversoSO0814','AtlasUniversoSO0813'].forEach(name=>{
+      const api=window[name];if(!api||api.__candidate0830||typeof api.open!=='function')return;
+      const original=api.open.bind(api);api.open=async function(){const r=await original(...arguments);ensureButton();return r};api.__candidate0830=true;
+    });
   }
+  function bootstrap(){patchApi();ensureButton()}
+  setTimeout(bootstrap,0);setTimeout(bootstrap,300);setTimeout(bootstrap,1000);window.addEventListener('load',bootstrap,{once:true});
 
   async function load(){
-    const c=db();if(!c)return;
-    S.loading=true;S.error=null;render();
-    let q=c.from(CANDIDATES).select('*').order('reviewed_at',{ascending:false});
-    const txt=String(S.q||'').replace(/[%,()]/g,' ').trim();
-    if(txt.length>=2)q=q.or(`entity_name.ilike.%${txt}%,rut.ilike.%${txt}%,implied_sector.ilike.%${txt}%`);
-    const {data,error}=await q.limit(500);
-    S.loading=false;S.error=error?.message||null;S.rows=data||[];render();
+    const c=db();if(!c)return;S.loading=true;S.error=null;render();
+    let cq=c.from(CANDIDATES).select('*').order('reviewed_at',{ascending:false});
+    const txt=String(S.q||'').replace(/[%,()]/g,' ').trim();if(txt.length>=2)cq=cq.or(`entity_name.ilike.%${txt}%,rut.ilike.%${txt}%,implied_sector.ilike.%${txt}%`);
+    const [cands,jobs]=await Promise.all([cq.limit(500),c.from(JOBS).select('*').order('created_at',{ascending:false}).limit(1000)]);
+    S.loading=false;S.error=cands.error?.message||jobs.error?.message||null;S.rows=cands.data||[];S.jobs=new Map();
+    for(const j of jobs.data||[])if(!S.jobs.has(j.rut))S.jobs.set(j.rut,j);render();
   }
+  function jobBadge(rut){const j=S.jobs.get(rut);if(!j)return'<span class="uso830-job none">OSINT sin ejecutar</span>';const label=j.status==='COMPLETED'?`OSINT · ${j.findings_count||0} hallazgos`:j.status==='RUNNING'?'OSINT ejecutando':j.status==='FAILED'?'OSINT con error':'OSINT en cola';return `<span class="uso830-job ${String(j.status||'').toLowerCase()}">${esc(label)}</span>`}
+  function card(r){return `<article class="uso820-card"><div class="uso820-card-main"><span class="uso820-kicker">CANDIDATO SELECCIONADO</span><h3>${esc(r.entity_name||r.rut)}</h3><p>${esc(r.rut)} · ${esc(r.entity_type||'—')} · ${esc(r.implied_sector||'—')}</p><div class="uso820-tags"><span>${esc(r.region||'sin región')}</span>${r.commune?`<span>${esc(r.commune)}</span>`:''}<span>IVO ${esc(r.ivo_score??'—')}</span>${jobBadge(r.rut)}</div></div><dl class="uso820-audit"><div><dt>Marcado por</dt><dd>${esc(r.reviewed_by_email||r.reviewed_by_user_id||'—')}</dd></div><div><dt>Justificación</dt><dd>${esc(r.review_rationale||'Sin justificación registrada')}</dd></div><div><dt>Fecha gestión</dt><dd>${esc(fmtDate(r.reviewed_at))}</dd></div></dl><div class="uso820-actions"><button data-uso830-contact="${esc(r.rut)}">Contacto OSINT</button><button data-uso830-open="${esc(r.entity_id||'')}" ${r.entity_id?'':'disabled'}>Expediente 360</button><button class="danger" data-uso830-undo="${esc(r.rut)}">Deshacer marca</button></div></article>`}
+  function markup(){const body=S.error?`<div class="uso820-state error">${esc(S.error)}</div>`:S.loading?'<div class="uso820-state">Cargando candidatos…</div>':S.rows.length?S.rows.map(card).join(''):'<div class="uso820-state"><b>No hay candidatos seleccionados con este filtro.</b></div>';return `<div class="uso820"><header class="uso820-head"><div><span>UNIVERSO SO · GESTIÓN</span><h2>Gestión candidatos</h2><p>Candidatos seleccionados, trazabilidad de la decisión y contacto OSINT automatizado.</p></div><button id="uso830-back">Volver a Potenciales SO</button></header><section class="uso820-toolbar"><div><b>${S.rows.length}</b><span>candidatos visibles</span></div><label><span>Buscar</span><input id="uso830-q" value="${esc(S.q)}" placeholder="Razón social, RUT o sector"></label><button id="uso830-run">Buscar</button></section><section class="uso820-list">${body}</section><div class="uso820-scrim" id="uso830-scrim"></div><aside class="uso820-sheet" id="uso830-sheet" aria-hidden="true"></aside></div>`}
+  function render(){const h=host();if(!h)return;h.innerHTML=markup();bind();window.AtlasCurrentUI?.refresh?.()}
+  async function open(){try{if(window.state)window.state.view=VIEW}catch{};if(typeof shell==='function')shell('Universo SO','Gestión de candidatos seleccionados y contacto OSINT.');await load();return true}
 
-  function card(r){
-    return `<article class="uso820-card" data-rut="${esc(r.rut)}">
-      <div class="uso820-card-main"><span class="uso820-kicker">CANDIDATO SELECCIONADO</span><h3>${esc(r.entity_name||r.rut)}</h3><p>${esc(r.rut)} · ${esc(r.entity_type||'—')} · ${esc(r.implied_sector||'—')}</p><div class="uso820-tags"><span>${esc(r.region||'sin región')}</span>${r.commune?`<span>${esc(r.commune)}</span>`:''}<span>IVO ${esc(r.ivo_score??'—')}</span></div></div>
-      <dl class="uso820-audit"><div><dt>Marcado por</dt><dd>${esc(r.reviewed_by_email||r.reviewed_by_user_id||'—')}</dd></div><div><dt>Justificación</dt><dd>${esc(r.review_rationale||'Sin justificación registrada')}</dd></div><div><dt>Fecha gestión</dt><dd>${esc(fmtDate(r.reviewed_at))}</dd></div></dl>
-      <div class="uso820-actions"><button type="button" data-uso820-contact="${esc(r.rut)}">Contacto OSINT</button><button type="button" data-uso820-open="${esc(r.entity_id||'')}" ${r.entity_id?'':'disabled'}>Expediente 360</button><button type="button" class="danger" data-uso820-undo="${esc(r.rut)}">Deshacer marca</button></div>
-    </article>`;
-  }
-  function markup(){
-    const body=S.error?`<div class="uso820-state error">${esc(S.error)}</div>`:S.loading?'<div class="uso820-state">Cargando candidatos seleccionados…</div>':S.rows.length?S.rows.map(card).join(''):'<div class="uso820-state"><b>No hay candidatos seleccionados con este filtro.</b></div>';
-    return `<div class="uso820"><header class="uso820-head"><div><span>UNIVERSO SO · GESTIÓN</span><h2>Gestión candidatos</h2><p>Entidades marcadas como candidatas para revisión y eventual gestión de contacto.</p></div><button type="button" id="uso820-back">Volver a Potenciales SO</button></header><section class="uso820-toolbar"><div><b>${S.rows.length}</b><span>candidatos visibles</span></div><label><span>Buscar</span><input id="uso820-q" value="${esc(S.q)}" placeholder="Razón social, RUT o sector"></label><button type="button" id="uso820-run">Buscar</button></section><section class="uso820-list">${body}</section><div class="uso820-scrim" id="uso820-scrim"></div><aside class="uso820-sheet" id="uso820-sheet" aria-hidden="true"></aside></div>`;
-  }
-  function render(){const h=host();if(!h)return;h.innerHTML=markup();bind();window.AtlasCurrentUI?.refresh?.();}
-  async function open(){try{if(window.state)window.state.view=VIEW}catch{};if(typeof shell==='function')shell('Universo SO','Gestión de candidatos seleccionados y contacto OSINT.');await load();return true;}
+  async function undo(rut){const row=S.rows.find(x=>String(x.rut)===String(rut)),c=db();if(!row||!c)return;const note=(prompt('Motivo para deshacer la marca de candidato','Reevaluación de candidatura')||'').trim();if(!note)return;if(!confirm(`¿Deshacer la marca de candidato para ${row.entity_name||row.rut}?`))return;const u=await c.auth.getUser(),uid=u?.data?.user?.id;if(!uid)return alert('No fue posible identificar al usuario.');const {error}=await c.from(REVIEWS).insert({rut:row.rut,entity_id:row.entity_id||null,user_id:uid,review_state:'REVISADO',reason_code:null,rationale:`Marca de candidato deshecha: ${note}`,ivo_at_decision:Number(row.ivo_score)||null,materiality_at_decision:Number(row.materiality_score)||null,sector_at_decision:row.implied_sector||null,evidence_class_at_decision:row.evidence_class||null,index_version:'UNIVERSO_SO_CANDIDATE_MANAGEMENT_0830',release:VERSION});if(error)return alert(`No fue posible deshacer la marca: ${error.message}`);await load()}
 
-  async function undo(rut){
-    const row=S.rows.find(x=>String(x.rut)===String(rut)),c=db();if(!row||!c)return;
-    const note=prompt('Motivo para deshacer la marca de candidato','Reevaluación de candidatura')||'';if(!note.trim())return;
-    if(!confirm(`¿Deshacer la marca de candidato para ${row.entity_name||row.rut}?`))return;
-    const u=await c.auth.getUser();const uid=u?.data?.user?.id;if(!uid){alert('No fue posible identificar al usuario autenticado.');return;}
-    const payload={rut:row.rut,entity_id:row.entity_id||null,user_id:uid,review_state:'REVISADO',reason_code:null,rationale:`Marca de candidato deshecha: ${note.trim()}`,ivo_at_decision:Number(row.ivo_score)||null,materiality_at_decision:Number(row.materiality_score)||null,sector_at_decision:row.implied_sector||null,evidence_class_at_decision:row.evidence_class||null,index_version:'UNIVERSO_SO_CANDIDATE_MANAGEMENT_0820',release:VERSION};
-    const {error}=await c.from(REVIEWS).insert(payload);if(error){alert(`No fue posible deshacer la marca: ${error.message}`);return;}await load();
-  }
+  async function runEnrichment(row,trigger='MANUAL_RERUN',quiet=false){const c=db();if(!c||!row)return null;if(!quiet)setContactMessage('Ejecutando enriquecimiento OSINT…');const {data,error}=await c.functions.invoke(FUNCTION,{body:{rut:row.rut,entity_id:row.entity_id||null,entity_name:row.entity_name||null,trigger_source:trigger}});if(error){if(!quiet)alert(`No fue posible ejecutar el enriquecimiento: ${error.message}`);return null}return data}
+  async function waitAndAutoEnrich(rut){const c=db();if(!c||!rut)return;for(let i=0;i<8;i++){await sleep(i?600:350);const {data}=await c.from(CANDIDATES).select('rut,entity_id,entity_name').eq('rut',rut).maybeSingle();if(data){await runEnrichment(data,'CANDIDATE_SELECTION',true);return}}}
+  function rutFromSheet(){const s=document.querySelector('#u816-sub')?.textContent||document.querySelector('#uso81-sheet-sub')?.textContent||'';const m=s.match(/\b\d{7,8}-[0-9Kk]\b/);return m?m[0]:null}
 
-  function extractContacts(records){
-    const emails=new Set(),phones=new Set();
-    for(const r of records||[]){const text=[r.title,r.summary,JSON.stringify(r.evidence||{})].filter(Boolean).join(' ');(text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi)||[]).forEach(x=>emails.add(x.toLowerCase()));(text.match(/(?:\+?56\s?)?(?:2\s?\d{4}\s?\d{4}|9\s?\d{4}\s?\d{4})/g)||[]).forEach(x=>phones.add(x.replace(/\s+/g,' ').trim()));}
-    return {emails:[...emails],phones:[...phones]};
-  }
-  async function loadContact(row){
-    const c=db(),key=rutKey(row.rut);if(!c)return {stored:[],addresses:[],emails:[],phones:[]};
-    const [storedQ,addressQ,enrichQ]=await Promise.all([
-      c.from(CONTACTS).select('*').eq('rut',row.rut).order('created_at',{ascending:false}),
-      c.from(ADDRESSES).select('address_text,commune,region,address_status,confidence,valid_from,valid_to,refreshed_at').eq('company_rut',row.rut).order('refreshed_at',{ascending:false}).limit(20),
-      c.from(ENRICH).select('title,summary,evidence,source_code,source_url,match_confidence,observed_at').or(`rut.eq.${row.rut},entity_id.eq.${row.entity_id||'__none__'}`).limit(100)
-    ]);
-    let addresses=addressQ.data||[];
-    if(!addresses.length&&key){const alt=await c.from(ADDRESSES).select('address_text,commune,region,address_status,confidence,valid_from,valid_to,refreshed_at').ilike('company_rut',`%${key.slice(0,-1)}%`).limit(20);addresses=alt.data||[];}
-    const ext=extractContacts(enrichQ.data||[]);
-    return {stored:storedQ.data||[],addresses,emails:ext.emails,phones:ext.phones,enrich:enrichQ.data||[]};
-  }
-  function contactLine(type,value,meta=''){return `<div class="uso820-contact-line"><span>${esc(type)}</span><b>${esc(value)}</b>${meta?`<small>${esc(meta)}</small>`:''}</div>`;}
-  function webQuery(row,kind){const q=`"${row.entity_name||''}" "${row.rut||''}" ${kind}`.trim();return `https://www.google.com/search?q=${encodeURIComponent(q)}`;}
-  async function contact(rut){
-    const row=S.rows.find(x=>String(x.rut)===String(rut)),sheet=document.querySelector('#uso820-sheet');if(!row||!sheet)return;S.active=row;sheet.classList.add('open');sheet.setAttribute('aria-hidden','false');document.querySelector('#uso820-scrim')?.classList.add('open');sheet.innerHTML='<div class="uso820-loading">Buscando antecedentes de contacto en fuentes abiertas ya materializadas…</div>';
-    const d=await loadContact(row);
-    const stored=d.stored.map(x=>contactLine(x.contact_type,x.contact_value,`${x.source_label||'fuente registrada'} · ${x.verification_status}`)).join('');
-    const addresses=d.addresses.map(x=>contactLine('Dirección',x.address_text||[x.commune,x.region].filter(Boolean).join(', '),`${x.address_status||'estado no informado'} · confianza ${x.confidence??'—'}`)).join('');
-    const emails=d.emails.map(x=>contactLine('Email posible',x,'extraído de evidencia OSINT; no verificado')).join('');
-    const phones=d.phones.map(x=>contactLine('Teléfono posible',x,'extraído de evidencia OSINT; no verificado')).join('');
-    sheet.innerHTML=`<header><div><span>FICHA DE CONTACTO OSINT</span><h3>${esc(row.entity_name||row.rut)}</h3><p>${esc(row.rut)} · ${esc(row.implied_sector||'—')}</p></div><button type="button" id="uso820-close">×</button></header><section class="uso820-warning">Los datos de esta ficha son hallazgos para gestión y deben verificarse antes de contactar. No se incorporan como dato oficial por mera coincidencia.</section><section class="uso820-contact-grid"><article><h4>Contactos registrados</h4>${stored||'<p>Sin contactos persistidos.</p>'}</article><article><h4>Direcciones observadas</h4>${addresses||'<p>Sin dirección abierta materializada para este RUT.</p>'}</article><article><h4>Correos posibles</h4>${emails||'<p>Sin correo extraíble en la evidencia disponible.</p>'}</article><article><h4>Teléfonos posibles</h4>${phones||'<p>Sin teléfono extraíble en la evidencia disponible.</p>'}</article></section><section class="uso820-web"><h4>Búsqueda web dirigida</h4><p>Abre consultas exactas para complementar la ficha; los resultados no se validan automáticamente.</p><a target="_blank" rel="noopener noreferrer" href="${esc(webQuery(row,'correo email contacto'))}">Buscar correo</a><a target="_blank" rel="noopener noreferrer" href="${esc(webQuery(row,'telefono contacto'))}">Buscar teléfono</a><a target="_blank" rel="noopener noreferrer" href="${esc(webQuery(row,'direccion domicilio contacto'))}">Buscar dirección</a><button type="button" id="uso820-add-contact">Registrar hallazgo</button></section>`;
-    document.querySelector('#uso820-close')?.addEventListener('click',closeContact);document.querySelector('#uso820-add-contact')?.addEventListener('click',addContact);
-  }
-  function closeContact(){document.querySelector('#uso820-sheet')?.classList.remove('open');document.querySelector('#uso820-sheet')?.setAttribute('aria-hidden','true');document.querySelector('#uso820-scrim')?.classList.remove('open');S.active=null;}
-  async function addContact(){
-    const row=S.active,c=db();if(!row||!c)return;let type=(prompt('Tipo: DIRECCION, TELEFONO, EMAIL, WEB u OTRO','EMAIL')||'').trim().toUpperCase();if(!['DIRECCION','TELEFONO','EMAIL','WEB','OTRO'].includes(type))type='OTRO';const value=(prompt('Dato de contacto','')||'').trim();if(!value)return;const source=(prompt('Fuente o URL donde fue observado','')||'').trim();const u=await c.auth.getUser();const uid=u?.data?.user?.id;if(!uid)return alert('No fue posible identificar al usuario.');const {error}=await c.from(CONTACTS).insert({rut:row.rut,entity_id:row.entity_id||null,contact_type:type,contact_value:value,source_label:source?'Fuente abierta':'Registro analista',source_url:/^https?:\/\//i.test(source)?source:null,confidence_pct:null,verification_status:'NO_VERIFICADO',evidence_note:source&&!/^https?:\/\//i.test(source)?source:null,captured_by:uid});if(error)return alert(`No fue posible registrar el hallazgo: ${error.message}`);await contact(row.rut);
-  }
+  async function loadContact(row){const c=db();if(!c)return{contacts:[],job:null};const [contacts,jobs]=await Promise.all([c.from(CONTACTS).select('*').eq('rut',row.rut).order('verification_status',{ascending:true}).order('confidence_pct',{ascending:false,nullsFirst:false}),c.from(JOBS).select('*').eq('rut',row.rut).order('created_at',{ascending:false}).limit(1)]);return{contacts:contacts.data||[],job:(jobs.data||[])[0]||null,error:contacts.error||jobs.error}}
+  const statusLabel=s=>({VERIFICADO:'Verificado',PROBABLE:'Probable',NO_VERIFICADO:'No verificado',DESCARTADO:'Descartado'}[s]||s||'No verificado');
+  function contactRow(x){const src=x.source_url?`<a href="${esc(x.source_url)}" target="_blank" rel="noopener noreferrer">${esc(x.source_label||'Fuente abierta')}</a>`:esc(x.source_label||'Fuente registrada');const actions=x.verification_status==='VERIFICADO'?`<button data-uso830-status="PROBABLE" data-id="${x.contact_id}">Reabrir</button><button class="danger" data-uso830-status="DESCARTADO" data-id="${x.contact_id}">Descartar</button>`:x.verification_status==='DESCARTADO'?`<button data-uso830-status="PROBABLE" data-id="${x.contact_id}">Restaurar</button>`:`<button class="ok" data-uso830-status="VERIFICADO" data-id="${x.contact_id}">Verificar</button><button class="danger" data-uso830-status="DESCARTADO" data-id="${x.contact_id}">Descartar</button>`;return `<div class="uso830-contact ${String(x.verification_status||'').toLowerCase()}"><div class="uso830-contact-main"><span>${esc(x.contact_type)}</span><b>${esc(x.contact_value)}</b><small>${src} · confianza ${fmtScore(x.confidence_pct)} · ${x.evidence_count||1} evidencia(s)</small></div><div class="uso830-contact-state"><strong>${esc(statusLabel(x.verification_status))}</strong>${actions}</div></div>`}
+  function grouped(contacts,type){const a=contacts.filter(x=>x.contact_type===type);return a.length?a.map(contactRow).join(''):'<p>Sin hallazgos materializados.</p>'}
+  function setContactMessage(text){const e=document.querySelector('#uso830-sheet .uso830-run-state');if(e)e.textContent=text}
+  async function contact(rut){const row=S.rows.find(x=>String(x.rut)===String(rut)),sheet=document.querySelector('#uso830-sheet');if(!row||!sheet)return;S.active=row;sheet.classList.add('open');sheet.setAttribute('aria-hidden','false');document.querySelector('#uso830-scrim')?.classList.add('open');sheet.innerHTML='<div class="uso820-loading">Cargando ficha de contacto…</div>';const d=await loadContact(row);S.contactData=d;const j=d.job;sheet.innerHTML=`<header><div><span>FICHA DE CONTACTO OSINT · 0.83</span><h3>${esc(row.entity_name||row.rut)}</h3><p>${esc(row.rut)} · ${esc(row.implied_sector||'—')}</p></div><button id="uso830-close">×</button></header><section class="uso820-warning">Los hallazgos automáticos se clasifican como Probable o No verificado. Solo una acción analista puede promoverlos a Verificado. La coincidencia OSINT no modifica datos oficiales de la entidad.</section><section class="uso830-job-panel"><div><span>Última ejecución</span><b>${j?esc(statusLabel(j.status)): 'Sin ejecución'}</b><small>${j?`${fmtDate(j.created_at)} · ${j.sources_scanned||0} fuentes/recursos · ${j.findings_count||0} hallazgos`:'Aún no se ha ejecutado el motor automático.'}</small></div><button id="uso830-rerun">Reejecutar enriquecimiento</button><em class="uso830-run-state"></em></section><section class="uso820-contact-grid"><article><h4>Direcciones</h4>${grouped(d.contacts,'DIRECCION')}</article><article><h4>Correos electrónicos</h4>${grouped(d.contacts,'EMAIL')}</article><article><h4>Teléfonos</h4>${grouped(d.contacts,'TELEFONO')}</article><article><h4>Web / otros</h4>${grouped(d.contacts,'WEB')}${grouped(d.contacts,'OTRO')}</article></section><section class="uso820-web"><h4>Complemento manual</h4><p>Permite registrar una fuente abierta adicional cuando el motor no la haya observado.</p><button id="uso830-add">Registrar hallazgo</button></section>`;bindContact()}
+  function closeContact(){document.querySelector('#uso830-sheet')?.classList.remove('open');document.querySelector('#uso830-sheet')?.setAttribute('aria-hidden','true');document.querySelector('#uso830-scrim')?.classList.remove('open');S.active=null;S.contactData=null}
+  async function setStatus(id,status){const c=db();if(!c)return;let note='';if(status==='DESCARTADO')note=(prompt('Motivo para descartar este dato de contacto','No corresponde a la entidad')||'').trim();else if(status==='VERIFICADO')note=(prompt('Nota de verificación (opcional)','')||'').trim();const {error}=await c.rpc('aml_candidate_contact_set_status',{p_contact_id:id,p_status:status,p_note:note||null});if(error)return alert(`No fue posible actualizar el estado: ${error.message}`);if(S.active)await contact(S.active.rut)}
+  async function addContact(){const row=S.active,c=db();if(!row||!c)return;let type=(prompt('Tipo: DIRECCION, TELEFONO, EMAIL, WEB u OTRO','EMAIL')||'').trim().toUpperCase();if(!['DIRECCION','TELEFONO','EMAIL','WEB','OTRO'].includes(type))type='OTRO';const value=(prompt('Dato de contacto','')||'').trim();if(!value)return;const source=(prompt('Fuente o URL donde fue observado','')||'').trim();const u=await c.auth.getUser(),uid=u?.data?.user?.id;if(!uid)return;const normalized=type==='EMAIL'?value.toLowerCase():type==='TELEFONO'?value.replace(/[^0-9+]/g,''):value.toUpperCase().replace(/\s+/g,' ').trim();const {error}=await c.from(CONTACTS).insert({rut:row.rut,entity_id:row.entity_id||null,contact_type:type,contact_value:value,normalized_value:normalized,source_label:source?'Fuente abierta · analista':'Registro analista',source_url:/^https?:\/\//i.test(source)?source:null,verification_status:'NO_VERIFICADO',evidence_note:source&&!/^https?:\/\//i.test(source)?source:null,captured_by:uid,evidence_count:1,source_domains:[]});if(error)return alert(`No fue posible registrar el hallazgo: ${error.message}`);await contact(row.rut)}
+  function bindContact(){document.querySelector('#uso830-close')?.addEventListener('click',closeContact);document.querySelector('#uso830-rerun')?.addEventListener('click',async()=>{const row=S.active;if(!row)return;const r=await runEnrichment(row,'MANUAL_RERUN');if(r){setContactMessage(`${r.findings||0} hallazgos · ${r.sources_scanned||0} recursos revisados`);await sleep(350);await contact(row.rut)}});document.querySelector('#uso830-add')?.addEventListener('click',addContact);document.querySelectorAll('[data-uso830-status]').forEach(b=>b.addEventListener('click',()=>setStatus(b.dataset.id,b.dataset.uso830Status)))}
 
-  function bind(){
-    document.querySelector('#uso820-back')?.addEventListener('click',()=>window.AtlasUniversoSO0814?.open?.('potenciales'));
-    const q=document.querySelector('#uso820-q');q?.addEventListener('input',()=>S.q=q.value);q?.addEventListener('keydown',e=>{if(e.key==='Enter')load();});document.querySelector('#uso820-run')?.addEventListener('click',load);
-    document.querySelectorAll('[data-uso820-contact]').forEach(b=>b.addEventListener('click',()=>contact(b.dataset.uso820Contact)));
-    document.querySelectorAll('[data-uso820-undo]').forEach(b=>b.addEventListener('click',()=>undo(b.dataset.uso820Undo)));
-    document.querySelectorAll('[data-uso820-open]').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.uso820Open;if(id)entry()?.explorer?.open?.(id);}));
-    document.querySelector('#uso820-scrim')?.addEventListener('click',closeContact);
-  }
+  function bind(){document.querySelector('#uso830-back')?.addEventListener('click',()=>candidateApi()?.open?.('potenciales'));const q=document.querySelector('#uso830-q');q?.addEventListener('input',()=>S.q=q.value);q?.addEventListener('keydown',e=>{if(e.key==='Enter')load()});document.querySelector('#uso830-run')?.addEventListener('click',load);document.querySelectorAll('[data-uso830-contact]').forEach(b=>b.addEventListener('click',()=>contact(b.dataset.uso830Contact)));document.querySelectorAll('[data-uso830-undo]').forEach(b=>b.addEventListener('click',()=>undo(b.dataset.uso830Undo)));document.querySelectorAll('[data-uso830-open]').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.uso830Open;if(id)entry()?.explorer?.open?.(id)}));document.querySelector('#uso830-scrim')?.addEventListener('click',closeContact)}
 
-  document.addEventListener('click',e=>{const b=e.target.closest?.('[data-uso820-candidates]');if(b){e.preventDefault();e.stopPropagation();open();return;}if(e.target.closest?.('.uso81'))scheduleEnsure();},true);
-  document.addEventListener('change',e=>{if(e.target.closest?.('.uso81'))scheduleEnsure();},true);
-  window.addEventListener('load',()=>{patchApi();scheduleEnsure();});
-  patchApi();scheduleEnsure();
-  window.AtlasCandidateManagement0820={version:VERSION,open,ensureButton,authority:'CANDIDATE_MANAGEMENT_0820',contactSemantics:'OSINT_UNVERIFIED_UNTIL_VALIDATED'};
+  document.addEventListener('click',e=>{
+    const management=e.target.closest?.('[data-uso830-candidates]');if(management){e.preventDefault();e.stopPropagation();open();return}
+    const candidate=e.target.closest?.('[data-u816-review="CANDIDATO_SELECCIONADO"],[data-uso81-review="CANDIDATO_SELECCIONADO"]');if(candidate){const rut=rutFromSheet();if(rut)void waitAndAutoEnrich(rut)}
+    if(e.target.closest?.('.uso81'))setTimeout(ensureButton,0);
+  },true);
+  window.AtlasCandidateManagement0830={version:VERSION,open,runEnrichment,state:()=>({...S,jobs:S.jobs.size}),semantics:'OSINT_CONTACT_ENRICHMENT_ANALYST_VERIFICATION_REQUIRED'};
+  window.AtlasCandidateManagement0820=window.AtlasCandidateManagement0830;
 })();

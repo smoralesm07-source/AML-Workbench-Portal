@@ -41,12 +41,15 @@ jobs:
           loader=Path('assets/atlas-universo-so-entity-explorer-0813.js').read_text()
           universo=Path('assets/atlas-universo-so-entity-explorer-0816.js').read_text()
           css=Path('assets/atlas-universo-so-entity-explorer-0816.css').read_text()
+          candidates=Path('assets/atlas-universo-so-candidate-management-0820.js').read_text()
+          candidates_css=Path('assets/atlas-universo-so-candidate-management-0820.css').read_text()
           recovery=Path('assets/atlas-operational-recovery-0704.js').read_text()
           assert release['release']=='0.70.5' and release['build']=='0705'
           assert runtime['release']=='0.70.5' and runtime['build']=='0705'
           assert build['app_version']=='0.70.5' and build['build']=='0705'
           assert 'data-aml-version="0.70.5"' in html
           assert 'atlas-universo-so-entity-explorer-0813.js?v=0813-1' in html
+          assert 'atlas-universo-so-candidate-management-0820.js?v=0820-1' in html
           assert 'ENTITY_EXPLORER_SPECIALIZATION_0816_LOADING' in loader
           assert 'atlas-universo-so-entity-explorer-0816.js?v=0816-1' in loader
           assert "VERSION='0.81.6'" in universo
@@ -58,13 +61,21 @@ jobs:
           assert "['region_change','region','Cambio región'" in universo
           assert 'uso816-evidence' in universo
           assert 'uso816-help-wrap' in css
+          assert "VERSION='0.83.0'" in candidates
+          assert 'atlas-candidate-contact-enrichment' in candidates
+          assert 'CANDIDATE_SELECTION' in candidates
+          assert 'VERIFICADO' in candidates and 'PROBABLE' in candidates and 'DESCARTADO' in candidates
+          assert 'uso830-contact' in candidates_css
           assert 'new MutationObserver' not in loader
           assert 'new MutationObserver' not in universo
+          assert 'new MutationObserver' not in candidates
           assert 'window.navigate=' not in universo
+          assert 'window.navigate=' not in candidates
           assert 'OSFL_CANONICAL_ROUTE_0801' in recovery
           PY
           node --check assets/atlas-universo-so-entity-explorer-0813.js
           node --check assets/atlas-universo-so-entity-explorer-0816.js
+          node --check assets/atlas-universo-so-candidate-management-0820.js
           node --check assets/atlas-operational-recovery-0704.js
           node tests/atlas-runtime-freeze-0712.mjs
 
@@ -78,17 +89,23 @@ jobs:
           test -s _site/assets/atlas-universo-so-entity-explorer-0813.js
           test -s _site/assets/atlas-universo-so-entity-explorer-0816.js
           test -s _site/assets/atlas-universo-so-entity-explorer-0816.css
+          test -s _site/assets/atlas-universo-so-candidate-management-0820.js
+          test -s _site/assets/atlas-universo-so-candidate-management-0820.css
           node --check _site/assets/atlas-universo-so-entity-explorer-0813.js
           node --check _site/assets/atlas-universo-so-entity-explorer-0816.js
+          node --check _site/assets/atlas-universo-so-candidate-management-0820.js
           python3 - <<'PY'
           from pathlib import Path
           html=Path('_site/index.html').read_text()
           loader=Path('_site/assets/atlas-universo-so-entity-explorer-0813.js').read_text()
           universo=Path('_site/assets/atlas-universo-so-entity-explorer-0816.js').read_text()
+          candidates=Path('_site/assets/atlas-universo-so-candidate-management-0820.js').read_text()
           assert 'data-aml-version="0.70.5"' in html
           assert 'ENTITY_EXPLORER_SPECIALIZATION_0816_LOADING' in loader
           assert 'ENTITY_EXPLORER_SPECIALIZATION_0816' in universo
           assert 'METHODOLOGY_POPUPS_0816' in universo
+          assert "VERSION='0.83.0'" in candidates
+          assert 'atlas-candidate-contact-enrichment' in candidates
           PY
           for js in _site/atlas-runtime-current-*.js _site/atlas-module-current-*.js; do
             test -f "$js" || continue
@@ -110,9 +127,13 @@ jobs:
               html=html.replace(f'atlas-runtime-current-{i:02d}.js?r=0705',f'atlas-runtime-current-{i:02d}.js?r=0705-universo0816')
               html=html.replace(f'atlas-module-current-{i:02d}.js?r=0705',f'atlas-module-current-{i:02d}.js?r=0705-universo0816')
           html=html.replace('atlas-universo-so-entity-explorer-0813.js?v=0813-1','atlas-universo-so-entity-explorer-0813.js?v=0816-1')
+          html=html.replace('atlas-universo-so-candidate-management-0820.js?v=0820-1','atlas-universo-so-candidate-management-0820.js?v=0830-1')
+          html=html.replace('atlas-universo-so-candidate-management-0820.css?v=0820-1','atlas-universo-so-candidate-management-0820.css?v=0830-1')
           p.write_text(html)
           assert 'atlas-runtime-current-01.js?r=0705-universo0816' in html
           assert 'atlas-universo-so-entity-explorer-0813.js?v=0816-1' in html
+          assert 'atlas-universo-so-candidate-management-0820.js?v=0830-1' in html
+          assert 'atlas-universo-so-candidate-management-0820.css?v=0830-1' in html
           PY
 
       - name: Configure Pages
@@ -127,7 +148,7 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Verify live Universo SO 0.81.6
+      - name: Verify live Universo SO 0.83.0
         shell: bash
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
@@ -137,22 +158,27 @@ jobs:
           ok=0
           for attempt in $(seq 1 12); do
             stamp="${GITHUB_SHA}-${GITHUB_RUN_ATTEMPT}-${attempt}"
-            html="$(curl -fsSL --retry 2 --max-time 20 "${base}/?u816=${stamp}" || true)"
-            loader="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-universo-so-entity-explorer-0813.js?u816=${stamp}" || true)"
-            universo="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-universo-so-entity-explorer-0816.js?u816=${stamp}" || true)"
-            css="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-universo-so-entity-explorer-0816.css?u816=${stamp}" || true)"
+            html="$(curl -fsSL --retry 2 --max-time 20 "${base}/?u830=${stamp}" || true)"
+            loader="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-universo-so-entity-explorer-0813.js?u830=${stamp}" || true)"
+            universo="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-universo-so-entity-explorer-0816.js?u830=${stamp}" || true)"
+            css="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-universo-so-entity-explorer-0816.css?u830=${stamp}" || true)"
+            candidates="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-universo-so-candidate-management-0820.js?u830=${stamp}" || true)"
+            candidates_css="$(curl -fsSL --retry 2 --max-time 20 "${base}/assets/atlas-universo-so-candidate-management-0820.css?u830=${stamp}" || true)"
             if printf '%s' "$html" | grep -q 'data-aml-version="0.70.5"' \
               && printf '%s' "$html" | grep -q 'atlas-universo-so-entity-explorer-0813.js?v=0816-1' \
+              && printf '%s' "$html" | grep -q 'atlas-universo-so-candidate-management-0820.js?v=0830-1' \
               && printf '%s' "$loader" | grep -q 'ENTITY_EXPLORER_SPECIALIZATION_0816_LOADING' \
               && printf '%s' "$universo" | grep -q 'ENTITY_EXPLORER_SPECIALIZATION_0816' \
               && printf '%s' "$universo" | grep -q 'METHODOLOGY_POPUPS_0816' \
-              && printf '%s' "$universo" | grep -q "Prensa" \
               && printf '%s' "$universo" | grep -q 'uso816-evidence' \
-              && printf '%s' "$css" | grep -q 'uso816-help-wrap'; then
+              && printf '%s' "$css" | grep -q 'uso816-help-wrap' \
+              && printf '%s' "$candidates" | grep -q "VERSION='0.83.0'" \
+              && printf '%s' "$candidates" | grep -q 'atlas-candidate-contact-enrichment' \
+              && printf '%s' "$candidates_css" | grep -q 'uso830-contact'; then
               ok=1
               break
             fi
             sleep 8
           done
           test "$ok" -eq 1
-          echo "ATLAS Universo SO 0.81.6 live smoke OK: ${PAGE_URL}"
+          echo "ATLAS Universo SO 0.83.0 live smoke OK: ${PAGE_URL}"
