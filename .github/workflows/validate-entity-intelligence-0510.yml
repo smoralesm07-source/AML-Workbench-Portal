@@ -65,23 +65,27 @@ jobs:
           python -m json.tool build.json >/dev/null
       - name: Build exact Pages candidate
         run: python tools/build_atlas_site.py --out _site-entity-0510
-      - name: Verify entity intelligence in compiled artifact
+      - name: Verify current Entity 0510 extension in Pages artifact
         shell: bash
         run: |
           set -euo pipefail
           test -s _site-entity-0510/atlas-runtime-current.css
           test -s _site-entity-0510/atlas-runtime-current-01.js
-          cat _site-entity-0510/atlas-runtime-current-*.js _site-entity-0510/atlas-module-current-*.js > /tmp/atlas-compiled-js
-          # La politica de Pages es bundles compilados: los fragmentos fuente no deben publicarse.
-          test ! -e _site-entity-0510/assets/atlas-entity-explorer-0510.js
-          test ! -e _site-entity-0510/assets/atlas-entity-explorer-0510.css
-          test ! -e _site-entity-0510/assets/atlas-entity-dossier-0510.js
-          test ! -e _site-entity-0510/assets/atlas-entity-dossier-0510.css
-          # La logica vigente debe estar incorporada dentro de los bundles compilados.
-          grep -q 'aml_ipa3_mark_scores_snapshot_v0_4' /tmp/atlas-compiled-js
-          grep -q 'aml_sii_entity_year' /tmp/atlas-compiled-js
-          grep -q 'aml_entity_peer_position_snapshot' /tmp/atlas-compiled-js
-          grep -q 'aml_entity_identity_link_snapshot' /tmp/atlas-compiled-js
-          ! grep -q 'aml_v_ipa3_mark_scores_v0_4' /tmp/atlas-compiled-js
-          ! grep -q 'aml_v_ipa3_entity_score_v0_4' /tmp/atlas-compiled-js
-          ! grep -q 'aml_v_ipa3_sii_peer_benchmark' /tmp/atlas-compiled-js
+          # Entity 0510 sigue siendo una extensión standalone vigente fuera del manifiesto compilado.
+          for f in \
+            assets/atlas-entity-explorer-0510.js \
+            assets/atlas-entity-explorer-0510.css \
+            assets/atlas-entity-dossier-0510.js \
+            assets/atlas-entity-dossier-0510.css; do
+            test -s "_site-entity-0510/$f"
+            grep -q "./$f" _site-entity-0510/index.html
+          done
+          cat _site-entity-0510/assets/atlas-entity-explorer-0510.js \
+              _site-entity-0510/assets/atlas-entity-dossier-0510.js > /tmp/atlas-entity-0510-js
+          grep -q 'aml_ipa3_mark_scores_snapshot_v0_4' /tmp/atlas-entity-0510-js
+          grep -q 'aml_sii_entity_year' /tmp/atlas-entity-0510-js
+          grep -q 'aml_entity_peer_position_snapshot' /tmp/atlas-entity-0510-js
+          grep -q 'aml_entity_identity_link_snapshot' /tmp/atlas-entity-0510-js
+          ! grep -q 'aml_v_ipa3_mark_scores_v0_4' /tmp/atlas-entity-0510-js
+          ! grep -q 'aml_v_ipa3_entity_score_v0_4' /tmp/atlas-entity-0510-js
+          ! grep -q 'aml_v_ipa3_sii_peer_benchmark' /tmp/atlas-entity-0510-js
