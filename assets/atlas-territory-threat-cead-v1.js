@@ -1,15 +1,15 @@
 'use strict';
-/* ATLAS AML · IGR v2A production authority 0.91.6
+/* ATLAS AML · IGR v2A production authority 0.91.7
  * Legacy filename retained only as the synchronous production load point.
  * Visible indicator: IGR. Current score: 100% CEAD-LA territorial threat.
- * Presentation: compact-demo standalone HTML is the visual authority; ATLAS mounts it full-bleed.
+ * Presentation: compact-demo standalone HTML is the visual authority; ATLAS mounts it as a true workspace.
  */
-(function atlasIgrV2AAuthority0916(){
+(function atlasIgrV2AAuthority0917(){
   if(window.AtlasIGRV2A)return;
   const VERSION='IGR-2A-1.0.0';
   const SOURCE='https://raw.githubusercontent.com/smoralesm07-source/Radar_delictual/radar-data/data/processed/cead_geographic_score_v1.json';
   const VIEW='territory';
-  const IFRAME='./assets/territorio-aml-beta.html?v=0916-layout1';
+  const IFRAME='./assets/territorio-aml-beta.html?v=0917-workspace1';
   const state={status:'idle',rows:[],computed:{regions:[],communes:[]},loadedAt:null,error:null};
   let loadPromise=null;
   let activeFrame=null;
@@ -60,19 +60,21 @@
   function byCommune(value){const k=norm(value);return state.computed.communes.find(r=>norm(r.commune_code)===k||norm(r.name)===k)||null;}
   function byRegion(value){const k=norm(value);return state.computed.regions.find(r=>norm(r.region)===k||norm(r.name)===k)||null;}
   function scoreFor({commune,commune_code,region}={}){const r=commune_code?byCommune(commune_code):(commune?byCommune(commune):byRegion(region));return r?.irg??null;}
-  function exportRows(level='all'){const rows=level==='region'?state.computed.regions:level==='commune'?state.computed.communes:[...state.computed.regions,...state.computed.communes];return rows.map(r=>({territory_id:r.territory_id,territory_level:r.level,region:r.region,territory_name:r.name,indicator:'IGR',method_version:VERSION,igr:r.irg,risk_band:r.risk_band,cead_la:r.parts?.cead_la??null,confidence_score:r.confidence?.score??null,guardrail:r.guardrail}));}
+  function exportRows(level='all'){const rows=level==='region'?state.computed.regions:level==='commune'?state.computed.communes:[...state.computed.regions,...state.computed.communes];return rows.map(r=>({territory_id:r.territory_id,territory_level:r.level,region:r.region,territory_name:r.name,indicator:'IGR',method_version:VERSION,irg:r.irg,risk_band:r.risk_band,cead_la:r.parts?.cead_la??null,confidence_score:r.confidence?.score??null,guardrail:r.guardrail}));}
 
   function ensureHostStyle(){
     let s=document.querySelector('style[data-atlas-igr-v2a-host]');
     if(!s){s=document.createElement('style');s.dataset.atlasIgrV2aHost='1';document.head.appendChild(s);}
-    /* Reescribir siempre: evita que una navegación SPA conserve el CSS enmarcado de una versión anterior. */
     s.textContent=`
-      #content[data-atlas-territory-fullscreen="1"],.v019-content[data-atlas-territory-fullscreen="1"]{box-sizing:border-box!important;min-width:0!important;width:100%!important;max-width:none!important;margin:0!important;padding-left:0!important;padding-right:0!important;border:0!important;outline:0!important;border-radius:0!important;box-shadow:none!important;background:var(--atlas-bg,#07111f)!important;grid-column:1/-1!important;justify-self:stretch!important;align-self:stretch!important;flex:1 1 auto!important;overflow:visible!important}
-      [data-atlas-igr-v2a-host]{display:block!important;width:100%!important;max-width:none!important;height:auto!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;outline:0!important;border-radius:0!important;overflow:visible!important;background:var(--atlas-bg,#07111f)!important;box-shadow:none!important}
-      [data-atlas-igr-v2a-host] iframe{display:block!important;width:100%!important;max-width:none!important;height:1200px!important;margin:0!important;padding:0!important;border:0!important;outline:0!important;border-radius:0!important;overflow:hidden!important;background:var(--atlas-bg,#07111f)!important;box-shadow:none!important;color-scheme:dark!important}
+      #content[data-atlas-territory-fullscreen="1"],.v019-content[data-atlas-territory-fullscreen="1"]{box-sizing:border-box!important;min-width:0!important;max-width:none!important;margin:0!important;border:0!important;outline:0!important;border-radius:0!important;box-shadow:none!important;background:var(--atlas-bg,#07111f)!important;grid-column:1/-1!important;justify-self:stretch!important;align-self:stretch!important;flex:none!important}
+      [data-atlas-igr-v2a-host]{display:block!important;width:100%!important;max-width:none!important;min-width:0!important;height:auto!important;margin:0!important;padding:0!important;border:0!important;outline:0!important;border-radius:0!important;overflow:visible!important;background:var(--atlas-bg,#07111f)!important;box-shadow:none!important}
+      [data-atlas-igr-v2a-host] iframe{display:block!important;width:100%!important;max-width:none!important;min-width:0!important;height:1200px!important;margin:0!important;padding:0!important;border:0!important;outline:0!important;border-radius:0!important;overflow:hidden!important;background:var(--atlas-bg,#07111f)!important;box-shadow:none!important;color-scheme:dark!important}
+      @media(min-width:768px){
+        #content[data-atlas-territory-fullscreen="1"],.v019-content[data-atlas-territory-fullscreen="1"]{overscroll-behavior:contain!important;scrollbar-gutter:stable!important}
+      }
       @media(max-width:767.98px){
         #content[data-atlas-territory-fullscreen="1"],.v019-content[data-atlas-territory-fullscreen="1"]{
-          position:relative!important;left:50%!important;width:100vw!important;max-width:100vw!important;
+          position:relative!important;left:50%!important;right:auto!important;top:auto!important;bottom:auto!important;width:100vw!important;height:auto!important;max-width:100vw!important;
           margin-left:-50vw!important;margin-right:-50vw!important;padding:0!important;
           border:0!important;outline:0!important;border-radius:0!important;box-shadow:none!important;
           overflow:visible!important;background:var(--atlas-bg,#07111f)!important;
@@ -99,14 +101,22 @@
       r.dataset.atlasEmbedded='true';d.body.dataset.atlasEmbedded='true';
       r.style.setProperty('--bg',t.bg);r.style.setProperty('--panel',t.panel);r.style.setProperty('--panel2',t.panel2);r.style.setProperty('--line',t.line);r.style.setProperty('--line-strong',t.lineStrong);r.style.setProperty('--text',t.text);r.style.setProperty('--muted',t.muted);r.style.setProperty('--accent',t.accent);r.style.setProperty('--cyan',t.accent);r.style.setProperty('--radius',t.radius);r.style.setProperty('--radius-sm',t.radiusSm);
       r.style.background=t.bg;d.body.style.background=t.bg;frame.style.background=t.bg;
+      frame.style.setProperty('width','100%','important');frame.style.setProperty('max-width','none','important');frame.style.setProperty('min-width','0','important');
       frame.style.border='0';frame.style.outline='0';frame.style.boxShadow='none';frame.style.margin='0';frame.style.padding='0';
       let style=d.querySelector('style[data-atlas-territory-seamless]');
       if(!style){style=d.createElement('style');style.dataset.atlasTerritorySeamless='1';d.head.appendChild(style);}
       style.textContent=`
         html,body{width:100%!important;height:auto!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;outline:0!important;overflow-x:hidden!important;overflow-y:hidden!important;background:var(--bg,#07111f)!important}
-        body>.shell{width:100%!important;max-width:none!important;margin:0!important;border:0!important;outline:0!important;box-shadow:none!important;background:var(--bg,#07111f)!important}
+        body>.shell{display:block!important;width:100%!important;max-width:none!important;min-width:0!important;margin:0!important;padding:0 14px 24px!important;border:0!important;outline:0!important;box-shadow:none!important;background:var(--bg,#07111f)!important}
         body>.shell>.header{display:none!important}
+        .territory-toolbar,.territory-stage,.analysis-grid,.governance-grid,.section-label{width:100%!important;max-width:none!important;min-width:0!important}
+        .territory-stage{grid-template-columns:minmax(0,1fr) minmax(350px,420px)!important}
+        .territory-brief{display:grid!important;min-width:0!important}
+        .analysis-grid{grid-template-columns:minmax(0,1.35fr) minmax(330px,.65fr)!important}
+        .governance-grid{grid-template-columns:minmax(0,1.3fr) minmax(280px,.7fr) minmax(280px,.7fr)!important}
         .card{box-shadow:none!important}
+        @media(max-width:1100px){body>.shell{padding-inline:8px!important}}
+        @media(max-width:700px){body>.shell{padding-inline:0!important}.territory-stage{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr)!important}.analysis-grid,.governance-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
       `;
       if(frame.__atlasTerritoryRO)try{frame.__atlasTerritoryRO.disconnect();}catch{}
       if(typeof ResizeObserver==='function'){
@@ -120,22 +130,44 @@
   function activateWideRoot(root){
     if(hostCleanup){try{hostCleanup();}catch{}hostCleanup=null;}
     root.dataset.atlasTerritoryFullscreen='1';
+    const initial=root.getBoundingClientRect();
+    const anchorLeft=Math.max(0,Math.round(initial.left));
+    const anchorTop=Math.max(0,Math.round(initial.top));
     const fit=()=>{
       if(!root.isConnected||!root.querySelector('[data-atlas-igr-v2a-host]'))return;
-      const rect=root.getBoundingClientRect();
       const viewport=document.documentElement.clientWidth||window.innerWidth||0;
-      const rightGap=viewport>=900?16:0;
-      const available=Math.max(320,viewport-Math.max(0,rect.left)-rightGap);
-      root.style.setProperty('width',`${available}px`,'important');
-      root.style.setProperty('max-width','none','important');
-      root.style.setProperty('min-width','0','important');
+      if(viewport>=768){
+        root.style.setProperty('position','fixed','important');
+        root.style.setProperty('left',`${anchorLeft}px`,'important');
+        root.style.setProperty('right','0','important');
+        root.style.setProperty('top',`${anchorTop}px`,'important');
+        root.style.setProperty('bottom','0','important');
+        root.style.setProperty('width','auto','important');
+        root.style.setProperty('height','auto','important');
+        root.style.setProperty('max-width','none','important');
+        root.style.setProperty('min-width','0','important');
+        root.style.setProperty('padding','0 14px 18px 14px','important');
+        root.style.setProperty('overflow-x','hidden','important');
+        root.style.setProperty('overflow-y','auto','important');
+        root.style.setProperty('z-index','4','important');
+        root.style.setProperty('background','var(--atlas-bg,#07111f)','important');
+      }else{
+        ['position','left','right','top','bottom','height','z-index','overflow-x','overflow-y','padding'].forEach(p=>root.style.removeProperty(p));
+        root.style.setProperty('width','100%','important');
+        root.style.setProperty('max-width','none','important');
+        root.style.setProperty('min-width','0','important');
+      }
       root.style.setProperty('grid-column','1 / -1','important');
       root.style.setProperty('justify-self','stretch','important');
       root.style.setProperty('align-self','stretch','important');
-      root.style.setProperty('flex','1 1 auto','important');
-      root.style.setProperty('overflow','visible','important');
+      const host=root.querySelector('[data-atlas-igr-v2a-host]');
+      const frame=host?.querySelector('iframe');
+      host?.style.setProperty('width','100%','important');
+      host?.style.setProperty('max-width','none','important');
+      frame?.style.setProperty('width','100%','important');
+      frame?.style.setProperty('max-width','none','important');
     };
-    fit();requestAnimationFrame(fit);setTimeout(fit,80);
+    fit();requestAnimationFrame(fit);setTimeout(fit,80);setTimeout(fit,450);
     const onResize=()=>requestAnimationFrame(fit);
     window.addEventListener('resize',onResize,{passive:true});
     const observer=new MutationObserver(()=>{if(!root.querySelector('[data-atlas-igr-v2a-host]'))cleanup();});
@@ -143,7 +175,7 @@
     function cleanup(){
       window.removeEventListener('resize',onResize);observer.disconnect();
       delete root.dataset.atlasTerritoryFullscreen;
-      ['width','max-width','min-width','grid-column','justify-self','align-self','flex','overflow','margin','padding-left','padding-right','border','outline','border-radius','box-shadow','background'].forEach(p=>root.style.removeProperty(p));
+      ['position','left','right','top','bottom','width','height','max-width','min-width','grid-column','justify-self','align-self','flex','overflow','overflow-x','overflow-y','z-index','margin','padding','padding-left','padding-right','border','outline','border-radius','box-shadow','background'].forEach(p=>root.style.removeProperty(p));
       if(hostCleanup===cleanup)hostCleanup=null;
     }
     hostCleanup=cleanup;
@@ -154,7 +186,7 @@
     ensureHostStyle();
     const root=document.querySelector('#content,.v019-content');if(!root)throw new Error('Contenedor Territorio no disponible');
     root.innerHTML=`<section data-atlas-igr-v2a-host="1" aria-label="Territorio IGR"><iframe title="ATLAS Territorio · IGR" src="${IFRAME}" loading="eager" scrolling="no" referrerpolicy="no-referrer" frameborder="0"></iframe></section>`;
-    root.style.margin='0';root.style.paddingLeft='0';root.style.paddingRight='0';root.style.border='0';root.style.outline='0';root.style.borderRadius='0';root.style.boxShadow='none';root.style.background='var(--atlas-bg,#07111f)';
+    root.style.margin='0';root.style.border='0';root.style.outline='0';root.style.borderRadius='0';root.style.boxShadow='none';root.style.background='var(--atlas-bg,#07111f)';
     activateWideRoot(root);
     activeFrame=root.querySelector('iframe');
     activeFrame?.addEventListener('load',()=>{applySeamlessFrame(activeFrame);requestAnimationFrame(()=>activateWideRoot(root));},{once:true});
@@ -162,7 +194,7 @@
   }
   const API={version:VERSION,state,load,open,byCommune,byRegion,scoreFor,exportRows,patchMethodology,syncFramePresentation,method:{formula:'1.00*CEAD_LA',weights:{cead_la:1}}};
   window.AtlasIGRV2A=API;window.v019LoadTerritory=open;window.loadTerritory=open;
-  window.ATLAS_TERRITORY_THREAT_CEAD_V1={source:SOURCE,scoreVersion:'1.0.0',topLevelWeight:1,aggregation:'IGR_V2A_CEAD_LA_AUTHORITY',replacedLegacy15Percent:true,seamlessAtlasHost:true,fullWidthAtlasLayout:true,standaloneHtmlAuthority:true,compactDemoLayout:true,mobileFullBleed:true,desktopWorkspaceFit:true};
+  window.ATLAS_TERRITORY_THREAT_CEAD_V1={source:SOURCE,scoreVersion:'1.0.0',topLevelWeight:1,aggregation:'IGR_V2A_CEAD_LA_AUTHORITY',replacedLegacy15Percent:true,seamlessAtlasHost:true,fullWidthAtlasLayout:true,standaloneHtmlAuthority:true,compactDemoLayout:true,mobileFullBleed:true,desktopWorkspaceFit:true,viewportWorkspace:true};
   window.addEventListener('atlas:nav-refresh',()=>{patchMethodology();syncFramePresentation();});
   window.addEventListener('atlas:theme-change',syncFramePresentation);window.addEventListener('atlas:appearance-change',syncFramePresentation);window.addEventListener('pageshow',()=>{patchMethodology();syncFramePresentation();});window.addEventListener('resize',()=>resizeFrame(activeFrame));
   setTimeout(()=>{void load().catch(()=>{});patchMethodology();},0);setTimeout(patchMethodology,700);setTimeout(patchMethodology,2500);
