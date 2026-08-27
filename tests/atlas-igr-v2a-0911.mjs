@@ -52,6 +52,15 @@ assert.match(authority,/CONFIDENCE_WEIGHTED_COMMUNE_MEAN/);
 assert.match(authority,/topLevelWeight:1/);
 assert.doesNotMatch(authority,/topLevelWeight:0\.15/);
 
+// Territorio must behave as a native ATLAS surface, not as a framed mini-app.
+assert.match(authority,/seamlessAtlasHost:true/);
+assert.match(authority,/body>\.shell>\.header\{display:none!important\}/);
+assert.match(authority,/ResizeObserver/);
+assert.match(authority,/scrolling=\"no\"/);
+assert.match(authority,/border:0!important/);
+assert.match(authority,/max-width:none!important/);
+assert.doesNotMatch(authority,/height:calc\(100vh\s*-\s*86px\)/);
+
 // Historical v032 must be a compatibility delegate, never a second calculator.
 assert.match(v032,/0\.32\.0-retired/);
 assert.match(v032,/retired:true/);
