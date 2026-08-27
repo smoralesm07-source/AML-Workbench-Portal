@@ -1,12 +1,12 @@
 'use strict';
 
-/* ATLAS OSFL Intelligence 0.92.1
+/* ATLAS OSFL Intelligence 0.92.2
  * Additive decision layer over the governed OSFL runtime.
  * Design principle: OSFL status, public-registration exposure and FATF R.8 screening are context,
  * not adverse signals by themselves. Priority, evidence sufficiency and peer context are separated.
  */
-(function atlasOsflIntelligence0921(){
-  const BUILD='0921';
+(function atlasOsflIntelligence0922(){
+  const BUILD='0922';
   const ENTITY_VIEW='aml_osfl_entity_runtime_snapshot';
   const COVERAGE_OK=70;
   const HIGH_BANDS=['MUY_ALTA','ALTA'];
@@ -88,19 +88,13 @@
     const active=n(all?.ipa3_positive_count)||n(q.ipa3_positive);
     const so=n(all?.uaf_so_count)||n(q.uaf_so);
     const r8=n(all?.r8_count)||n(src.r8_candidates);
-    return `<section class="v030-hero v032-hero atlas-osfl-hero" data-atlas-osfl-build="${BUILD}">
-      <div class="v030-hero-copy">
-        <span class="v030-kicker">OSFL · INTELIGENCIA DE PRIORIDAD</span>
-        <h2>Priorizar con evidencia, no por condición jurídica</h2>
-        <p>Atlas separa señales analíticas, suficiencia de evidencia y contexto para identificar qué revisar primero. IPA ordena trabajo; no representa probabilidad de LA/FT ni convierte la pertenencia al universo OSFL en una marca adversa.</p>
-        <div class="v030-hero-tags atlas-osfl-method-tags"><span>IPA explicable</span><span>evidencia independiente</span><span>cobertura</span><span>comparables</span><span>contexto no aditivo</span></div>
-      </div>
-      <div class="v030-hero-score atlas-osfl-hero-score"><span>IPA activo</span><b>${fmt(active)}</b><small>${total?`${pct(100*active/total)} del universo`:'universo en carga'}</small><em>prioridad analítica</em></div>
-      <div class="v030-hero-metrics v032-hero-metrics atlas-osfl-hero-metrics">
-        <div><span>Universo OSFL</span><b>${fmt(total)}</b><small>Entity Hub + Radar_OSFL</small></div>
-        <div class="uaf"><span>También son SO UAF</span><b>${fmt(so)}</b><small>cruce exacto por identidad</small></div>
-        <div><span>R.8 candidatas</span><b>${fmt(r8)}</b><small>cribado funcional · no puntúa</small></div>
-        <div><span>Lectura actual</span><b id="v030ScopeCount">—</b><small><span id="v030UpdatedAt">actualizando corte…</span></small></div>
+    return `<section class="v030-hero v032-hero atlas-osfl-hero atlas-osfl-hero-compact" data-atlas-osfl-build="${BUILD}" style="padding:12px 14px;grid-template-columns:170px minmax(0,1fr);gap:10px;align-items:stretch">
+      <div class="v030-hero-score atlas-osfl-hero-score" style="padding:10px 13px;border-radius:13px;box-shadow:none"><span>IPA activo</span><b style="font-size:31px;margin:4px 0 2px">${fmt(active)}</b><small>${total?`${pct(100*active/total)} del universo`:'universo en carga'}</small><em style="margin-top:4px">prioridad analítica</em></div>
+      <div class="v030-hero-metrics v032-hero-metrics atlas-osfl-hero-metrics" style="grid-column:auto;grid-template-columns:repeat(4,minmax(0,1fr));border-radius:12px">
+        <div style="padding:9px 11px"><span>Universo OSFL</span><b>${fmt(total)}</b><small>Entity Hub + Radar_OSFL</small></div>
+        <div class="uaf" style="padding:9px 11px"><span>También son SO UAF</span><b>${fmt(so)}</b><small>cruce exacto por identidad</small></div>
+        <div style="padding:9px 11px"><span>R.8 candidatas</span><b>${fmt(r8)}</b><small>cribado funcional · no puntúa</small></div>
+        <div style="padding:9px 11px"><span>Lectura actual</span><b id="v030ScopeCount">—</b><small><span id="v030UpdatedAt">actualizando corte…</span></small></div>
       </div>
     </section>`;
   }
