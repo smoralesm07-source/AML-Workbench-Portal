@@ -7,6 +7,7 @@ const core=read('assets/atlas-territory-igr-v2a-core-0911.js');
 const history=read('assets/atlas-territory-igr-v2a-history-0911.js');
 const ui=read('assets/atlas-territory-igr-v2a-ui-0911.js');
 const authority=read('assets/atlas-territory-threat-cead-v1.js');
+const v032=read('v032-irg-territory.js');
 const ve=read('assets/atlas-irg-ve-v2.module.js');
 const irarAdapter=read('assets/atlas-irg-irar-adapter.module.js');
 const refinement=read('assets/atlas-irg-refinement.js');
@@ -50,6 +51,17 @@ assert.match(authority,/V032_STATE\.computed=state\.computed/);
 assert.match(authority,/CONFIDENCE_WEIGHTED_COMMUNE_MEAN/);
 assert.match(authority,/topLevelWeight:1/);
 assert.doesNotMatch(authority,/topLevelWeight:0\.15/);
+
+// Historical v032 must be a compatibility delegate, never a second calculator.
+assert.match(v032,/0\.32\.0-retired/);
+assert.match(v032,/retired:true/);
+assert.match(v032,/contributesToIgr:false/);
+assert.match(v032,/delegatesTo:'AtlasIGRV2A'/);
+assert.match(v032,/weights:\{cead_la:1\}/);
+assert.doesNotMatch(v032,/0\.45\s*\*/);
+assert.doesNotMatch(v032,/V032_WEIGHTS/);
+assert.doesNotMatch(v032,/IRG-LAFT-0\.32\.0'\s*;/);
+assert.doesNotMatch(v032,/v032StrictIRG/);
 
 // Retired paths cannot reintroduce old IGR.
 assert.match(ve,/retired:true/);assert.match(ve,/contributesToIgr:false/);
