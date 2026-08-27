@@ -5,10 +5,11 @@ on:
     paths:
       - 'assets/territorio-aml-beta.html'
       - 'assets/atlas-territory-igr-v2a-0911.css'
+      - 'assets/atlas-territory-igr-v2a-0914.css'
       - 'assets/atlas-territory-igr-v2a-core-0911.js'
       - 'assets/atlas-territory-igr-v2a-history-0911.js'
       - 'assets/atlas-territory-igr-v2a-ui-0911.js'
-      - 'assets/atlas-igr-v2a-authority-0911.js'
+      - 'assets/atlas-irg-v2a-authority-0911.js'
       - 'assets/atlas-territory-threat-cead-v1.js'
       - 'assets/atlas-irg-refinement.js'
       - 'assets/atlas-irg-ve-v2.module.js'
@@ -30,10 +31,11 @@ on:
     paths:
       - 'assets/territorio-aml-beta.html'
       - 'assets/atlas-territory-igr-v2a-0911.css'
+      - 'assets/atlas-territory-igr-v2a-0914.css'
       - 'assets/atlas-territory-igr-v2a-core-0911.js'
       - 'assets/atlas-territory-igr-v2a-history-0911.js'
       - 'assets/atlas-territory-igr-v2a-ui-0911.js'
-      - 'assets/atlas-igr-v2a-authority-0911.js'
+      - 'assets/atlas-irg-v2a-authority-0911.js'
       - 'assets/atlas-territory-threat-cead-v1.js'
       - 'assets/atlas-irg-refinement.js'
       - 'assets/atlas-irg-ve-v2.module.js'
@@ -83,12 +85,16 @@ jobs:
         run: |
           python tools/build_atlas_site.py --out /tmp/atlas-site
           test -f /tmp/atlas-site/assets/territorio-aml-beta.html
+          test -f /tmp/atlas-site/assets/atlas-territory-igr-v2a-0914.css
           test -f /tmp/atlas-site/assets/atlas-territory-igr-v2a-core-0911.js
           test -f /tmp/atlas-site/assets/atlas-territory-igr-v2a-history-0911.js
           test -f /tmp/atlas-site/assets/atlas-territory-igr-v2a-ui-0911.js
           test -f /tmp/atlas-site/assets/atlas-territory-threat-cead-v1.js
           grep -q 'IGR · v2A operativo' /tmp/atlas-site/assets/territorio-aml-beta.html
+          grep -q 'atlas-territory-igr-v2a-0914.css' /tmp/atlas-site/assets/territorio-aml-beta.html
           grep -q 'IGR-2A-1.0.0' /tmp/atlas-site/assets/atlas-territory-threat-cead-v1.js
+          grep -q 'standaloneHtmlAuthority:true' /tmp/atlas-site/assets/atlas-territory-threat-cead-v1.js
+          ! grep -q 'background:transparent!important' /tmp/atlas-site/assets/atlas-territory-threat-cead-v1.js
           grep -q 'contributesToIgr:false' /tmp/atlas-site/assets/atlas-irg-ve-v2.module.js
           grep -q 'contributesToIgr:false' /tmp/atlas-site/assets/atlas-irg-irar-adapter.module.js
           ! grep -q '45% V/E' /tmp/atlas-site/assets/atlas-irg-refinement.js
