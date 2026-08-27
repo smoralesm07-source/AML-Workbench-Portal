@@ -28,11 +28,12 @@ assert.match(html,/IGR · v2A operativo/);
 assert.match(html,/Amenazas precedentes LA/);
 assert.match(html,/pipeline en construcción/);
 for(const asset of ['atlas-territory-igr-v2a-0911.css','atlas-territory-igr-v2a-0914.css','atlas-territory-igr-v2a-core-0911.js','atlas-territory-igr-v2a-history-0911.js','atlas-territory-igr-v2a-ui-0911.js'])assert.ok(html.includes(asset),`missing ${asset}`);
+assert.match(html,/data-atlas-territory-layout="compact-demo"/);
 assert.match(html,/territory-stage/);
 assert.match(html,/analysis-grid/);
 assert.match(html,/governance-grid/);
 assert.match(html,/viewport-fit=cover/);
-assert.match(html,/0914-html1/);
+assert.match(html,/0915-demo1/);
 assert.doesNotMatch(html,/0913-atlas1/);
 assert.doesNotMatch(html,/45\s*%\s*V\/E/i);
 assert.doesNotMatch(html,/Densidad SO/);
@@ -52,15 +53,17 @@ assert.doesNotMatch(territoryCss,/max-width:1560px/);
 assert.doesNotMatch(territoryCss,/--cyan:#54bfd1/i);
 assert.doesNotMatch(territoryCss,/background:#071019/i);
 
-// Standalone HTML is the mobile visual authority. No transparent iframe canvas or horizontal overflow.
-assert.match(responsiveCss,/HTML responsive authority 0\.91\.4/);
+// Compact demo is the mobile visual authority: full-bleed canvas + map with nearby information cards.
+assert.match(responsiveCss,/HTML responsive authority 0\.91\.5/);
 assert.match(responsiveCss,/html\[data-atlas-embedded\]/);
 assert.match(responsiveCss,/background:var\(--territory-page-bg\)!important/);
 assert.match(responsiveCss,/@media \(max-width:700px\)/);
 assert.match(responsiveCss,/grid-template-columns:minmax\(0,\.72fr\) minmax\(0,1\.28fr\)/);
-assert.match(responsiveCss,/white-space:normal!important/);
-assert.match(responsiveCss,/overflow-wrap:anywhere!important/);
-assert.match(responsiveCss,/#map\{[\s\S]*height:min\(58vh,560px\)!important/);
+assert.match(responsiveCss,/\.territory-stage\{[\s\S]*grid-template-columns:minmax\(0,1\.08fr\) minmax\(0,\.92fr\)!important/);
+assert.match(responsiveCss,/\.territory-brief\{[\s\S]*grid-column:2!important/);
+assert.match(responsiveCss,/\.analysis-grid,\.governance-grid\{[\s\S]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/);
+assert.match(responsiveCss,/#map\{[\s\S]*height:520px!important/);
+assert.match(responsiveCss,/@media \(max-width:350px\)/);
 assert.match(responsiveCss,/@supports \(-webkit-touch-callout:none\)/);
 assert.doesNotMatch(responsiveCss,/background:transparent!important/);
 
@@ -87,20 +90,27 @@ assert.match(authority,/CONFIDENCE_WEIGHTED_COMMUNE_MEAN/);
 assert.match(authority,/topLevelWeight:1/);
 assert.doesNotMatch(authority,/topLevelWeight:0\.15/);
 
-// Territorio behaves as a mounted standalone HTML, not as a transparent framed mini-app.
+// Territorio behaves as a full-bleed mounted standalone HTML, never as a framed mini-app.
 assert.match(authority,/seamlessAtlasHost:true/);
 assert.match(authority,/fullWidthAtlasLayout:true/);
 assert.match(authority,/standaloneHtmlAuthority:true/);
+assert.match(authority,/compactDemoLayout:true/);
+assert.match(authority,/mobileFullBleed:true/);
 assert.match(authority,/body>\.shell>\.header\{display:none!important\}/);
 assert.match(authority,/ResizeObserver/);
 assert.match(authority,/scrolling=\"no\"/);
+assert.match(authority,/frameborder=\"0\"/);
 assert.match(authority,/border:0!important/);
+assert.match(authority,/outline:0!important/);
 assert.match(authority,/max-width:none!important/);
 assert.match(authority,/root\.style\.maxWidth='none'/);
-assert.match(authority,/0914-html1/);
+assert.match(authority,/0915-demo1/);
 assert.match(authority,/--atlas-accent/);
 assert.match(authority,/background:var\(--atlas-bg,#07111f\)!important/);
-assert.match(authority,/\.v019-content\[data-atlas-territory-fullscreen="1"\]\{padding-left:0!important;padding-right:0!important\}/);
+assert.match(authority,/width:100vw!important/);
+assert.match(authority,/margin-left:-50vw!important/);
+assert.match(authority,/Reescribir siempre/);
+assert.doesNotMatch(authority,/if\(document\.querySelector\('style\[data-atlas-igr-v2a-host\]'\)\)return/);
 assert.doesNotMatch(authority,/background:transparent!important/);
 assert.doesNotMatch(authority,/0913-atlas1/);
 assert.doesNotMatch(authority,/height:calc\(100vh\s*-\s*86px\)/);

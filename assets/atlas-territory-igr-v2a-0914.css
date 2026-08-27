@@ -1,17 +1,21 @@
-/* ATLAS Territorio · IGR v2A · HTML responsive authority 0.91.4
- * El HTML standalone es la autoridad visual. Esta capa corrige embedding iOS/Safari,
- * overflow horizontal y composición mobile sin alterar datos ni metodología.
+/* ATLAS Territorio · IGR v2A · HTML responsive authority 0.91.5
+ * Autoridad visual: demo compacto aprobado. Corrige full-bleed iOS/Safari y conserva
+ * mapa + fichas en composición espacial, sin alterar datos ni metodología.
  */
 :root{
   --territory-page-bg:var(--bg,#07111f);
   color-scheme:dark;
   background:#07111f;
 }
+*{box-sizing:border-box}
 html,body{
   width:100%!important;
   max-width:100%!important;
   min-width:0!important;
   margin:0!important;
+  padding:0!important;
+  border:0!important;
+  outline:0!important;
   background:var(--territory-page-bg)!important;
   overflow-x:hidden!important;
 }
@@ -22,10 +26,13 @@ html[data-atlas-embedded] .shell{
 }
 body>.shell{
   width:100%!important;
-  max-width:100%!important;
+  max-width:none!important;
   min-width:0!important;
   margin:0!important;
   padding-inline:0!important;
+  border:0!important;
+  outline:0!important;
+  box-shadow:none!important;
   overflow-x:hidden!important;
 }
 .territory-toolbar,.controls,.segment,.igr-status-strip,.territory-stage,.territory-brief,
@@ -36,26 +43,41 @@ body>.shell{
 .territory-stage,.analysis-grid,.governance-grid{width:100%!important}
 #map{width:100%!important;max-width:100%!important}
 
-/* Móvil: la vista debe comportarse como el HTML aprobado, no como un dashboard desktop reducido. */
+/* Tablet: conservar el mapa como pieza dominante y las fichas como contexto cercano. */
+@media (min-width:701px) and (max-width:1100px){
+  .territory-stage{grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr)!important}
+  .analysis-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .analysis-wide{grid-column:1/-1!important}
+  .governance-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .governance-wide{grid-column:1/-1!important}
+}
+
+/* Móvil: reproducir la lógica del demo compacto: mapa acompañado por fichas,
+ * no un dashboard convertido a una lista vertical interminable. */
 @media (max-width:700px){
   html,body{background:var(--territory-page-bg)!important}
   body>.shell{
+    width:100%!important;
+    max-width:none!important;
     padding:0 0 calc(92px + env(safe-area-inset-bottom,0px))!important;
   }
   body>.shell>.header{display:none!important}
 
   .territory-toolbar{
     display:grid!important;
-    gap:10px!important;
-    margin:0!important;
-    padding:0 12px 10px!important;
+    gap:8px!important;
+    width:100%!important;
+    margin:0 0 8px!important;
+    padding:0!important;
+    border:0!important;
     background:var(--territory-page-bg)!important;
   }
   .controls{
     display:grid!important;
     grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
-    gap:8px!important;
+    gap:7px!important;
     width:100%!important;
+    padding:0!important;
     align-items:stretch!important;
   }
   .control-spacer{display:none!important}
@@ -65,17 +87,20 @@ body>.shell{
     grid-template-columns:minmax(0,.72fr) minmax(0,1.28fr)!important;
     width:100%!important;
     overflow:hidden!important;
-    border-radius:12px!important;
+    border-radius:0!important;
+    border-left:0!important;
+    border-right:0!important;
   }
   .segment button{
     width:100%!important;
     min-width:0!important;
-    min-height:48px!important;
-    padding:8px 7px!important;
+    min-height:45px!important;
+    padding:7px 6px!important;
     white-space:normal!important;
     overflow-wrap:anywhere!important;
-    line-height:1.18!important;
+    line-height:1.16!important;
     text-align:center!important;
+    font-size:11px!important;
     border-right:1px solid var(--line)!important;
     border-bottom:1px solid var(--line)!important;
   }
@@ -86,87 +111,154 @@ body>.shell{
     width:100%!important;
     max-width:none!important;
     min-width:0!important;
-    height:46px!important;
-    font-size:14px!important;
+    height:43px!important;
+    border-radius:9px!important;
+    font-size:13px!important;
   }
+  .controls select{margin-left:7px!important;width:calc(100% - 7px)!important}
+  .controls input{margin-right:7px!important;width:calc(100% - 7px)!important}
 
   .igr-status-strip{
     display:grid!important;
-    grid-template-columns:minmax(0,1fr) 112px 34px!important;
-    gap:8px!important;
-    width:100%!important;
-    margin:0!important;
-    padding:10px!important;
+    grid-template-columns:minmax(0,1fr) 94px 30px!important;
+    gap:7px!important;
+    width:calc(100% - 14px)!important;
+    margin:0 7px!important;
+    padding:9px!important;
+    border-radius:12px!important;
     background:var(--panel)!important;
   }
   .igr-arrow,.igr-stage.building{display:none!important}
   .igr-status-main{min-width:0!important}
+  .igr-status-main b{font-size:10px!important}
   .igr-status-main small{
     white-space:normal!important;
     overflow:visible!important;
     text-overflow:clip!important;
-    line-height:1.3!important;
+    line-height:1.25!important;
+    font-size:8px!important;
   }
-  .igr-stage.active{width:100%!important;min-width:0!important}
-  .method-help{justify-self:end!important;align-self:center!important}
+  .igr-stage.active{width:100%!important;min-width:0!important;padding:6px!important}
+  .method-help{justify-self:end!important;align-self:center!important;width:28px!important;height:28px!important}
 
+  /* Núcleo del demo: Chile a la izquierda; diagnóstico/comparación/descomposición al lado. */
   .territory-stage{
     display:grid!important;
-    grid-template-columns:minmax(0,1fr)!important;
-    gap:10px!important;
-    padding:0 12px!important;
-  }
-  .map-card,.territory-brief{width:100%!important}
-  .map-head{
-    display:grid!important;
-    grid-template-columns:minmax(0,1fr)!important;
-    gap:10px!important;
+    grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr)!important;
+    gap:7px!important;
+    width:100%!important;
+    padding:0 7px!important;
     align-items:start!important;
-    padding:13px 14px!important;
   }
-  .map-head h2{font-size:19px!important}
-  .map-head p{font-size:12px!important;line-height:1.45!important}
+  .map-card{width:100%!important;grid-column:1!important;border-radius:12px!important}
+  .territory-brief{
+    display:grid!important;
+    grid-column:2!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:7px!important;
+    width:100%!important;
+    align-content:start!important;
+  }
+  .map-head{
+    display:block!important;
+    padding:9px 9px 8px!important;
+    background:var(--panel2)!important;
+  }
+  .map-head .kicker{font-size:8px!important;letter-spacing:.1em!important}
+  .map-head h2{font-size:14px!important;margin:3px 0!important;line-height:1.15!important}
+  .map-head p{font-size:8px!important;line-height:1.32!important;margin:0!important}
   .legend{
     display:flex!important;
     flex-wrap:wrap!important;
-    gap:5px!important;
+    gap:3px!important;
     width:100%!important;
+    margin-top:7px!important;
   }
-  .legend small{font-size:11px!important}
+  .legend .box{width:12px!important;height:6px!important}
+  .legend small{font-size:8px!important;margin-left:2px!important}
   #map{
-    height:min(58vh,560px)!important;
-    min-height:430px!important;
-    max-height:560px!important;
+    height:520px!important;
+    min-height:520px!important;
+    max-height:520px!important;
     background:var(--territory-page-bg)!important;
   }
 
-  .territory-brief{display:grid!important;grid-template-columns:1fr!important;gap:10px!important}
+  /* Fichas compactas junto al mapa, siguiendo el HTML demo. */
+  .territory-brief>.card{border-radius:11px!important}
+  .panel{padding:8px!important}
+  .panel h2{font-size:14px!important;line-height:1.12!important}
+  .panel h3{font-size:10px!important;line-height:1.2!important}
+  .meta{font-size:7px!important;line-height:1.28!important}
+  .score-row{grid-template-columns:minmax(0,1fr) auto!important;gap:5px!important}
+  .score{font-size:24px!important}
+  .igr-score-block>small{font-size:6px!important}
+  .level{font-size:7px!important}
+  .pills{gap:3px!important;margin-top:5px!important}
+  .pill{padding:3px 4px!important;font-size:6.5px!important}
+  .hero-note{margin-top:5px!important;padding:4px 5px!important;font-size:6.5px!important;line-height:1.3!important}
+  .readout-head{gap:4px!important}
+  .readout-state{padding:3px 4px!important;font-size:6px!important}
+  .readout-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:3px!important;margin-top:5px!important}
+  .readout-grid>div{padding:4px!important;border-radius:6px!important}
+  .readout-grid span,.readout-grid small{font-size:5.7px!important}
+  .readout-grid b{font-size:6.4px!important;margin-top:1px!important}
+  .comparison{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:3px!important;margin-top:5px!important}
+  .comp{padding:4px!important;border-radius:6px!important}
+  .comp span,.comp small{font-size:5.8px!important}
+  .comp b{font-size:10px!important}
+  .breakdown{gap:4px!important;margin-top:5px!important}
+  .br{grid-template-columns:minmax(0,1fr) 28px 31px!important;gap:3px!important;font-size:6.5px!important}
+  .bar{height:4px!important;margin-top:2px!important}
+
+  /* La segunda lectura continúa en mosaico, no en una sola columna. */
   .section-label{
-    margin:16px 14px 8px!important;
+    margin:12px 8px 6px!important;
     padding:0!important;
     display:flex!important;
     flex-wrap:wrap!important;
-    gap:5px 8px!important;
+    gap:4px 7px!important;
   }
+  .section-label span{font-size:8px!important}
+  .section-label small{font-size:7px!important}
   .analysis-grid,.governance-grid{
     display:grid!important;
-    grid-template-columns:minmax(0,1fr)!important;
-    gap:10px!important;
-    padding:0 12px!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:7px!important;
+    width:100%!important;
+    padding:0 7px!important;
   }
-  .analysis-grid>.card,.governance-grid>.card{grid-column:auto!important;width:100%!important}
-  .panel{padding:12px!important}
-  .comparison,.trend-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-  .readout-grid{grid-template-columns:1fr!important}
-  .roadmap{grid-template-columns:1fr!important;gap:6px!important}
-  .road-line{height:12px!important;width:1px!important;justify-self:center!important}
-  .trend-actions{width:100%!important}
-  .trend-select{width:100%!important;max-width:none!important}
-  .method-pop{padding:12px!important}
-  .method-pop-card{width:100%!important;max-width:calc(100vw - 24px)!important}
+  .analysis-grid>.card,.governance-grid>.card{width:100%!important;min-width:0!important}
+  #trend,.analysis-wide{grid-column:1/-1!important}
+  #explain{grid-column:1/-1!important}
+  #roadmap,.governance-wide{grid-column:1/-1!important}
+  .driver{gap:4px!important;padding:5px 0!important}
+  .driver b,.driver strong{font-size:8px!important}
+  .driver small{font-size:6.5px!important}
+  .explain{font-size:8px!important;line-height:1.4!important}
+  .trace{font-size:7px!important;gap:4px!important}
+  .rankrow{grid-template-columns:18px minmax(0,1fr) auto!important;gap:4px!important;padding:4px!important}
+  .rankrow em,.rankrow strong{font-size:7px!important}
+  .rankrow b{font-size:7px!important}.rankrow small{font-size:6px!important}
+  .matrix{gap:4px!important}.quad{min-height:70px!important;padding:5px!important}.quad b{font-size:8px!important}.quad small{font-size:6px!important}
+  .trend-wrap{padding:6px!important}.trend-svg{height:150px!important}
+  .trend-stats{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:4px!important}
+  .trend-stat{padding:5px!important}.trend-stat span{font-size:6px!important}.trend-stat b{font-size:9px!important}
+  .trend-actions{width:100%!important}.trend-select{width:100%!important;max-width:none!important}
+  .roadmap{grid-template-columns:1fr 10px 1fr 10px 1fr!important;gap:0!important}
+  .road-step{padding:5px!important;min-height:58px!important}.road-step span,.road-step small{font-size:6px!important}.road-step b{font-size:7px!important}
+  .road-line{height:1px!important;width:auto!important;justify-self:stretch!important}
+  .method-pop{padding:10px!important}.method-pop-card{width:100%!important;max-width:calc(100vw - 20px)!important}
 }
 
-/* iOS Safari: no permitir que un iframe transparente vuelva a pintar un canvas blanco. */
+/* Sólo en pantallas extremadamente angostas priorizamos legibilidad sobre la composición dual. */
+@media (max-width:350px){
+  .territory-stage{grid-template-columns:1fr!important}
+  .map-card,.territory-brief{grid-column:1!important}
+  .territory-brief{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  #map{height:430px!important;min-height:430px!important;max-height:430px!important}
+}
+
+/* iOS Safari: impedir canvas blanco del documento/iframe. */
 @supports (-webkit-touch-callout:none){
   html,body,body>.shell{background:var(--territory-page-bg)!important}
 }
