@@ -17,6 +17,7 @@ on:
       - 'assets/atlas-territory-copy-cleanup.js'
       - 'assets/territorio-igr-real-beta-v4.html'
       - 'assets/atlas-indicator-methodology-0910.js'
+      - 'v032-irg-territory.js'
       - 'data/atlas_igr_v2a_contract.json'
       - 'data/atlas_indicator_methodology_v1.json'
       - 'docs/atlas-indicator-architecture-v1.md'
@@ -41,6 +42,7 @@ on:
       - 'assets/atlas-territory-copy-cleanup.js'
       - 'assets/territorio-igr-real-beta-v4.html'
       - 'assets/atlas-indicator-methodology-0910.js'
+      - 'v032-irg-territory.js'
       - 'data/atlas_igr_v2a_contract.json'
       - 'data/atlas_indicator_methodology_v1.json'
       - 'docs/atlas-indicator-architecture-v1.md'
@@ -72,6 +74,7 @@ jobs:
           node --check assets/atlas-territory-threat-analytics-v2.js
           node --check assets/atlas-territory-copy-cleanup.js
           node --check assets/atlas-indicator-methodology-0910.js
+          node --check v032-irg-territory.js
       - name: IGR v2A contract
         run: |
           node tests/atlas-igr-v2a-0911.mjs
@@ -89,3 +92,5 @@ jobs:
           grep -q 'contributesToIgr:false' /tmp/atlas-site/assets/atlas-irg-ve-v2.module.js
           grep -q 'contributesToIgr:false' /tmp/atlas-site/assets/atlas-irg-irar-adapter.module.js
           ! grep -q '45% V/E' /tmp/atlas-site/assets/atlas-irg-refinement.js
+          grep -R -q 'ATLAS_V032_IRG_COMPAT' /tmp/atlas-site/atlas-module-current-*.js
+          ! grep -R -q 'IRG-LAFT-0.32.0.*0.45' /tmp/atlas-site/atlas-module-current-*.js
