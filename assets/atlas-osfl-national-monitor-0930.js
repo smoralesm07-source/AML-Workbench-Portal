@@ -1,14 +1,14 @@
 'use strict';
 
-/* ATLAS OSFL National Monitor 0.93.0
+/* ATLAS OSFL National Monitor 0.93.1
  * National legal universe -> Atlas observability -> Law 19.913 bridge.
- * Semantics: legal status, FATF R.8 context and Law 19.913 proximity are not adverse findings by themselves.
+ * Legal status, FATF R.8 context and Law 19.913 proximity are not adverse findings by themselves.
  */
-(function atlasOsflNationalMonitor0930(){
-  if(window.__ATLAS_OSFL_NATIONAL_MONITOR_0930__) return;
-  window.__ATLAS_OSFL_NATIONAL_MONITOR_0930__=true;
+(function atlasOsflNationalMonitor0931(){
+  if(window.__ATLAS_OSFL_NATIONAL_MONITOR_0931__) return;
+  window.__ATLAS_OSFL_NATIONAL_MONITOR_0931__=true;
 
-  const BUILD='0930';
+  const BUILD='0931';
   const SUMMARY_VIEW='aml_v_osfl_national_monitor_current';
   const BRIDGE_VIEW='aml_v_osfl_law19913_bridge_current';
   const nf=new Intl.NumberFormat('es-CL');
@@ -30,7 +30,7 @@
         <div class="osfln-head-copy">
           <div class="osfln-kicker">MONITOR NACIONAL OSFL · CHILE</div>
           <h2>Del universo jurídico al perímetro 19.913</h2>
-          <p>Primero medimos cuántas OSFL existen y cuánto observa Atlas. Después distinguimos enriquecimiento, señales analíticas y relación registral o potencial con actividades sujetas a la Ley 19.913.</p>
+          <p>Primero medimos cuántas OSFL existen y cuánto observa Atlas. Después separamos enriquecimiento, compatibilidad con actividades reguladas, condición de sujeto obligado y señales analíticas.</p>
         </div>
         <div class="osfln-source-state" data-osfln-state><b>Fuente nacional</b><span>Consultando estado del padrón…</span><small>Registro Civil · RNPJSFL</small></div>
       </header>
@@ -39,7 +39,7 @@
         ${stage('Universo jurídico','—','vigentes en Chile','legal')}
         ${stage('Observables Atlas','—','identidad tributaria / fuentes Atlas','observed')}
         ${stage('Enriquecidas','—','≥2 fuentes disponibles','enriched')}
-        ${stage('Puente 19.913','—','SO directo + potencial SO','bridge')}
+        ${stage('Núcleo 19.913','—','SO directo + potencial alta compatibilidad','bridge')}
         ${stage('SO UAF directos','—','coincidencia registral exacta','direct')}
       </div>
 
@@ -50,7 +50,7 @@
         </article>
 
         <article class="osfln-card osfln-bridge-card" data-osfln-bridge>
-          <div class="osfln-card-head"><span>PUENTE LEY 19.913</span><h3>De contexto a aplicabilidad</h3></div>
+          <div class="osfln-card-head"><span>PUENTE LEY 19.913</span><h3>Compatibilidad antes que sospecha</h3></div>
           <div class="osfln-loading">Clasificando relación…</div>
         </article>
 
@@ -67,7 +67,7 @@
       </div>
 
       <footer class="osfln-method">
-        <div><b>Regla de interpretación</b><span>“Puente 19.913” describe relación con universos regulatorios o analíticos. No equivale a riesgo, sospecha, incumplimiento ni actividad ilícita.</span></div>
+        <div><b>Regla de interpretación</b><span>El núcleo 19.913 usa condición registral o actividad principal característica con tier alto/medio. No equivale a riesgo, sospecha, incumplimiento ni actividad ilícita.</span></div>
         <div><b>Vacío de información ≠ bajo riesgo</b><span>La cobertura se muestra separada de la prioridad para que una OSFL poco observable no sea clasificada artificialmente como de bajo interés.</span></div>
       </footer>
     </section>`;
@@ -91,7 +91,7 @@
     const hero=document.querySelector('.v030-hero');
     if(!hero)return false;
     relabelLegacyHero();
-    if(!document.querySelector('[data-osfln-root]')) hero.insertAdjacentHTML('afterend',shell());
+    if(!document.querySelector('[data-osfln-root]'))hero.insertAdjacentHTML('afterend',shell());
     bindFilters();
     return true;
   }
@@ -107,14 +107,14 @@
     const legal=n(s.legal_universe_count);
     const observed=n(s.atlas_observed);
     const enriched=n(s.enriched_2plus);
-    const bridge=n(s.law19913_bridge_total);
+    const core=n(s.law19913_core_total);
     const direct=n(s.direct_obligated);
     const funnel=document.querySelector('[data-osfln-funnel]');
     if(funnel)funnel.innerHTML=[
       stage('Universo jurídico',legal,`vigentes · corte ${dateCL(s.legal_snapshot_date)}`,'legal'),
       stage('Observables Atlas',observed,`${pct(s.atlas_legal_coverage_pct)} del universo legal`,'observed'),
       stage('Enriquecidas',enriched,`${pct(s.enriched_pct_observed)} de las observables`,'enriched'),
-      stage('Puente 19.913',bridge,`${pct(s.law19913_bridge_pct_observed)} de las observables`,'bridge'),
+      stage('Núcleo 19.913',core,`${fmt(n(s.potential_high))} potencial alta + ${fmt(direct)} SO directos`,'bridge'),
       stage('SO UAF directos',direct,'identidad exacta en registro UAF','direct')
     ].join('');
 
@@ -134,17 +134,18 @@
         <div><b>${fmt(n(s.evidence_coverage_70plus))}</b><span>con cobertura de evidencia ≥70%</span></div>
         <div><b>${fmt(Math.max(0,legal-observed))}</b><span>brecha jurídica aún no observable</span></div>
       </div>
-      <p>${String(s.ingestion_status)==='COMPLETE'?'Cobertura calculada contra el padrón nacional cargado.':'La cifra nacional proviene de referencia oficial; Atlas distingue explícitamente este total de los registros fila a fila aún no incorporados.'}</p>`;
+      <p>${String(s.ingestion_status)==='COMPLETE'?'Cobertura calculada contra el padrón nacional cargado.':'La cifra nacional proviene de referencia oficial; Atlas distingue este total de los registros fila a fila aún no incorporados.'}</p>`;
 
-    const max=Math.max(1,n(s.general_osfl),n(s.fatf_r8_context),n(s.potential_subject),n(s.aml_analytic_signal),direct);
+    const max=Math.max(1,n(s.fatf_r8_context),n(s.potential_exploratory),n(s.potential_medium),n(s.potential_high),direct);
     const bridgeEl=document.querySelector('[data-osfln-bridge]');
     if(bridgeEl)bridgeEl.innerHTML=`
-      <div class="osfln-card-head"><span>PUENTE LEY 19.913</span><h3>De contexto a aplicabilidad</h3></div>
+      <div class="osfln-card-head"><span>PUENTE LEY 19.913</span><h3>Compatibilidad antes que sospecha</h3></div>
+      <div class="osfln-bridge-summary"><b>${fmt(core)}</b><span>núcleo fuerte</span><small>${fmt(n(s.law19913_review_total))} incluyendo revisión media · ${fmt(n(s.law19913_bridge_total))} coincidencias amplias</small></div>
       ${bridgeRow('SO UAF registrado',direct,max,'Coincidencia exacta; condición registral, no riesgo.','direct')}
-      ${bridgeRow('Potencial sujeto 19.913',n(s.potential_subject),max,'Actividad/evidencia compatible; requiere revisión.','potential')}
-      ${bridgeRow('Señal analítica AML',n(s.aml_analytic_signal),max,'Señal Atlas sin condición regulatoria inferida.','signal')}
-      ${bridgeRow('Contexto FATF R.8',n(s.fatf_r8_context),max,'Cribado funcional; no puntúa por sí solo.','r8')}
-      ${bridgeRow('OSFL general',n(s.general_osfl),max,'Sin relación directa observada en fuentes actuales.','general')}`;
+      ${bridgeRow('Potencial · alta compatibilidad',n(s.potential_high),max,'Giro principal característico + detección A/B.','potential')}
+      ${bridgeRow('Potencial · revisión media',n(s.potential_medium),max,'Detección A/B con evidencia menos directa.','review')}
+      ${bridgeRow('Potencial · exploratorio',n(s.potential_exploratory),max,'Coincidencia amplia; no priorizar sin corroboración.','exploratory')}
+      ${bridgeRow('Contexto FATF R.8',n(s.fatf_r8_context),max,'Cribado funcional; no puntúa por sí solo.','r8')}`;
   }
 
   function bridgeRow(label,value,max,note,kind){
@@ -152,20 +153,26 @@
   }
 
   async function loadQueue(kind){
-    activeBridge=kind;
-    const fields='entity_id,rut,name,region,commune,activity_group,bridge_class,bridge_label,bridge_semantics,direct_uaf_sector,potential_uaf_sector,potential_evidence_class,potential_detection_tier,potential_is_actionable,potential_ivo_score,potential_materiality_score,ipa3_score,priority_band_shadow,coverage_index_pct';
+    const fields='entity_id,rut,name,region,commune,activity_group,bridge_class,bridge_label,bridge_semantics,direct_uaf_sector,potential_uaf_sector,potential_evidence_class,potential_detection_tier,potential_is_actionable,potential_ivo_score,potential_materiality_score,potential_relevance_tier,potential_relevance_rank,potential_matched_activity,potential_type_coherence_class,potential_ivo_credibility_pct,ipa3_score,priority_band_shadow,coverage_index_pct';
     let q=sb.from(BRIDGE_VIEW).select(fields).eq('bridge_class',kind);
-    if(kind==='POTENTIAL_SUBJECT') q=q.order('potential_is_actionable',{ascending:false,nullsFirst:false}).order('potential_ivo_score',{ascending:false,nullsFirst:false}).order('potential_materiality_score',{ascending:false,nullsFirst:false});
-    else if(kind==='AML_ANALYTIC_SIGNAL') q=q.order('ipa3_score',{ascending:false,nullsFirst:false});
+    if(kind==='POTENTIAL_SUBJECT')q=q.order('potential_relevance_rank',{ascending:true,nullsFirst:false}).order('potential_is_actionable',{ascending:false,nullsFirst:false}).order('potential_ivo_score',{ascending:false,nullsFirst:false}).order('potential_materiality_score',{ascending:false,nullsFirst:false});
+    else if(kind==='AML_ANALYTIC_SIGNAL')q=q.order('ipa3_score',{ascending:false,nullsFirst:false});
     else q=q.order('coverage_index_pct',{ascending:false,nullsFirst:false});
     const {data,error}=await q.limit(7);
     if(error)throw error;
     return data||[];
   }
 
+  function relevanceLabel(tier){
+    if(tier==='HIGH')return 'Compatibilidad alta';
+    if(tier==='MEDIUM')return 'Revisión media';
+    if(tier==='EXPLORATORY')return 'Exploratorio';
+    return 'SO registrado';
+  }
+
   function queueMeta(r){
     if(r.bridge_class==='DIRECT_OBLIGATED')return [r.direct_uaf_sector||'Sector UAF no informado','SO registrado'];
-    if(r.bridge_class==='POTENTIAL_SUBJECT')return [r.potential_uaf_sector||'Sector potencial no informado',r.potential_is_actionable?'Accionable en Universo SO':'Requiere corroboración'];
+    if(r.bridge_class==='POTENTIAL_SUBJECT')return [r.potential_matched_activity||r.potential_uaf_sector||'Actividad compatible',relevanceLabel(r.potential_relevance_tier)];
     if(r.bridge_class==='AML_ANALYTIC_SIGNAL')return [`IPA ${n(r.ipa3_score).toLocaleString('es-CL',{maximumFractionDigits:1})}`,r.priority_band_shadow||'señal activa'];
     if(r.bridge_class==='FATF_R8_CONTEXT')return ['FATF R.8','contexto funcional'];
     return ['OSFL general','contexto'];
@@ -183,11 +190,12 @@
       </button>`;
     }).join('');
     root.querySelectorAll('[data-osfln-entity]').forEach(btn=>btn.addEventListener('click',()=>{
-      if(typeof v030OpenEntity==='function') void v030OpenEntity(btn.dataset.osflnEntity);
+      if(typeof v030OpenEntity==='function')void v030OpenEntity(btn.dataset.osflnEntity);
     }));
   }
 
   async function hydrateQueue(kind){
+    activeBridge=kind;
     const root=document.querySelector('[data-osfln-queue]');
     if(root)root.innerHTML='<div class="osfln-loading">Consultando subconjunto…</div>';
     try{renderQueue(await loadQueue(kind));}
@@ -217,7 +225,7 @@
 
   function bootCurrent(){if(install())void hydrate();}
 
-  if(typeof v030LoadOsfl==='function'&&!v030LoadOsfl.__osflNational0930){
+  if(typeof v030LoadOsfl==='function'&&!v030LoadOsfl.__osflNational0931){
     const base=v030LoadOsfl;
     const wrapped=async function(){
       const out=await base.apply(this,arguments);
@@ -225,7 +233,7 @@
       await hydrate();
       return out;
     };
-    wrapped.__osflNational0930=true;
+    wrapped.__osflNational0931=true;
     v030LoadOsfl=wrapped;
   }
 
