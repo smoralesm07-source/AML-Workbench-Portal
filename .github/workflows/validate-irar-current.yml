@@ -22,7 +22,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Validate IRAR methodology and adapters
+      - name: Validate IRAR methodology and separation from IGR
         run: |
           node --check assets/atlas-irar-current.js
           node --check assets/atlas-reportability-irar.js
@@ -49,7 +49,9 @@ jobs:
           grep -q 'MONITOREO_ESTABLE' assets/atlas-reportability-irar.js
           grep -q 'MONITOREO_ORDINARIO' assets/atlas-reportability-irar.js
           grep -q 'Índice de Confianza de Evidencia' data/irar_methodology_v1.json
-          grep -q 'IRG-LAFT-0.34.0' assets/atlas-irg-irar-adapter.module.js
+          grep -q 'retired:true' assets/atlas-irg-irar-adapter.module.js
+          grep -q 'contributesToIgr:false' assets/atlas-irg-irar-adapter.module.js
+          ! grep -q 'IRG-LAFT-0.34.0' assets/atlas-irg-irar-adapter.module.js
       - name: Build canonical ATLAS candidate
         run: |
           python tools/build_atlas_site.py --out _site-irar
@@ -60,3 +62,4 @@ jobs:
           grep -q 'atlas-reportability-irar.js?v=0468-6' _site-irar/index.html
           grep -q 'atlas-irg-irar-adapter.module.js' _site-irar/index.html
           grep -q 'IRAR-UI-1.7' _site-irar/assets/atlas-reportability-irar.js
+          grep -q 'contributesToIgr:false' _site-irar/assets/atlas-irg-irar-adapter.module.js

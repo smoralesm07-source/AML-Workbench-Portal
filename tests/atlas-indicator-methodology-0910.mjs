@@ -5,7 +5,9 @@ const read=p=>fs.readFileSync(new URL(`../${p}`,import.meta.url),'utf8');
 const js=read('assets/atlas-indicator-methodology-0910.js');
 const css=read('assets/atlas-indicator-methodology-0910.css');
 const route=read('assets/atlas-operational-recovery-0704.js');
-const territory=read('assets/territorio-igr-real-beta-v4.html');
+const territoryLegacy=read('assets/territorio-igr-real-beta-v4.html');
+const territoryCurrent=read('assets/territorio-aml-beta.html');
+const territoryUi=read('assets/atlas-territory-igr-v2a-ui-0911.js');
 const doc=read('docs/atlas-indicator-architecture-v1.md');
 const registry=JSON.parse(read('data/atlas_indicator_methodology_v1.json'));
 
@@ -20,6 +22,8 @@ assert.deepEqual(registry.indicators.PRIORIDAD_FISCALIZACION.excluded_inputs,['I
 assert.match(registry.indicators.IPA.methodology,/No estima probabilidad de LA\/FT/i);
 assert.match(registry.indicators.IVO.methodology,/no mide riesgo LA\/FT/i);
 assert.match(registry.indicators.MITIGACION.status,/NO_SCORE_UNTIL_COVERAGE/);
+assert.equal(registry.indicators.IGR.method_version,'IGR-2A-1.0.0');
+assert.deepEqual(registry.indicators.IGR.weights,{amenaza_territorial_cead_la:1});
 
 assert.match(js,/replace\(\/\\bIPA3\\b\/g,'IPA'\)/);
 assert.match(js,/technicalAliases:\{IPA:\['IPA3','ipa3','ipa3_\*'\]\}/);
@@ -29,13 +33,17 @@ assert.match(js,/Math\.abs\(total-1\)>\.0001/);
 assert.doesNotMatch(js,/new\s+MutationObserver\s*\(/);
 assert.doesNotMatch(js,/\.createTreeWalker\s*\(/);
 assert.match(js,/noBodyTreeWalk:true/);
+assert.match(js,/IGR v2A mide actualmente amenaza territorial LA con CEAD-LA/);
 
 assert.match(route,/ensureIndicatorMethodology/);
 assert.match(route,/atlas-indicator-methodology-0910\.js/);
 assert.match(route,/AtlasIndicatorMethodologyV1\?\.refresh/);
-assert.match(territory,/atlas-indicator-methodology-0910\.css/);
-assert.match(territory,/atlas-indicator-methodology-0910\.js/);
-assert.match(territory,/AtlasIndicatorMethodologyV1\?\.refresh/);
+assert.match(territoryLegacy,/territorio-aml-beta\.html\?v=0911-1/);
+assert.match(territoryCurrent,/Territorio · Índice de Riesgo Geográfico/);
+assert.match(territoryCurrent,/IGR · v2A operativo/);
+assert.match(territoryUi,/METHOD_HELP/);
+assert.match(territoryUi,/Versión v2A:/);
+assert.match(territoryUi,/No incluye vulnerabilidad sectorial, densidad de SO, IPA, IVO ni reportabilidad/i);
 assert.match(css,/\[data-atlas-indicator-key\]::after/);
 assert.match(css,/atlas-indicator-methodology-tip/);
 assert.match(doc,/IRAR-E = 0,40/);

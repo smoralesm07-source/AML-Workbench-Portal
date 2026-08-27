@@ -1,0 +1,96 @@
+name: Validate Territory IGR v2A 0911
+
+on:
+  pull_request:
+    paths:
+      - 'assets/territorio-aml-beta.html'
+      - 'assets/atlas-territory-igr-v2a-0911.css'
+      - 'assets/atlas-territory-igr-v2a-core-0911.js'
+      - 'assets/atlas-territory-igr-v2a-history-0911.js'
+      - 'assets/atlas-territory-igr-v2a-ui-0911.js'
+      - 'assets/atlas-igr-v2a-authority-0911.js'
+      - 'assets/atlas-territory-threat-cead-v1.js'
+      - 'assets/atlas-irg-refinement.js'
+      - 'assets/atlas-irg-ve-v2.module.js'
+      - 'assets/atlas-irg-irar-adapter.module.js'
+      - 'assets/atlas-territory-threat-analytics-v2.js'
+      - 'assets/atlas-territory-copy-cleanup.js'
+      - 'assets/territorio-igr-real-beta-v4.html'
+      - 'assets/atlas-indicator-methodology-0910.js'
+      - 'v032-irg-territory.js'
+      - 'data/atlas_igr_v2a_contract.json'
+      - 'data/atlas_indicator_methodology_v1.json'
+      - 'docs/atlas-indicator-architecture-v1.md'
+      - 'docs/geographic-risk-methodology-v4-irg-ve2.md'
+      - 'tests/atlas-igr-v2a-0911.mjs'
+      - 'tests/atlas-indicator-methodology-0910.mjs'
+      - '.github/workflows/validate-territory-igr-v2a-0911.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'assets/territorio-aml-beta.html'
+      - 'assets/atlas-territory-igr-v2a-0911.css'
+      - 'assets/atlas-territory-igr-v2a-core-0911.js'
+      - 'assets/atlas-territory-igr-v2a-history-0911.js'
+      - 'assets/atlas-territory-igr-v2a-ui-0911.js'
+      - 'assets/atlas-igr-v2a-authority-0911.js'
+      - 'assets/atlas-territory-threat-cead-v1.js'
+      - 'assets/atlas-irg-refinement.js'
+      - 'assets/atlas-irg-ve-v2.module.js'
+      - 'assets/atlas-irg-irar-adapter.module.js'
+      - 'assets/atlas-territory-threat-analytics-v2.js'
+      - 'assets/atlas-territory-copy-cleanup.js'
+      - 'assets/territorio-igr-real-beta-v4.html'
+      - 'assets/atlas-indicator-methodology-0910.js'
+      - 'v032-irg-territory.js'
+      - 'data/atlas_igr_v2a_contract.json'
+      - 'data/atlas_indicator_methodology_v1.json'
+      - 'docs/atlas-indicator-architecture-v1.md'
+      - 'docs/geographic-risk-methodology-v4-irg-ve2.md'
+      - 'tests/atlas-igr-v2a-0911.mjs'
+      - 'tests/atlas-indicator-methodology-0910.mjs'
+      - '.github/workflows/validate-territory-igr-v2a-0911.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax
+        run: |
+          node --check assets/atlas-territory-igr-v2a-core-0911.js
+          node --check assets/atlas-territory-igr-v2a-history-0911.js
+          node --check assets/atlas-territory-igr-v2a-ui-0911.js
+          node --check assets/atlas-territory-threat-cead-v1.js
+          node --check assets/atlas-irg-refinement.js
+          node --check assets/atlas-irg-ve-v2.module.js
+          node --check assets/atlas-irg-irar-adapter.module.js
+          node --check assets/atlas-territory-threat-analytics-v2.js
+          node --check assets/atlas-territory-copy-cleanup.js
+          node --check assets/atlas-indicator-methodology-0910.js
+          node --check v032-irg-territory.js
+      - name: IGR v2A contract
+        run: |
+          node tests/atlas-igr-v2a-0911.mjs
+          node tests/atlas-indicator-methodology-0910.mjs
+      - name: Build deployable site
+        run: |
+          python tools/build_atlas_site.py --out /tmp/atlas-site
+          test -f /tmp/atlas-site/assets/territorio-aml-beta.html
+          test -f /tmp/atlas-site/assets/atlas-territory-igr-v2a-core-0911.js
+          test -f /tmp/atlas-site/assets/atlas-territory-igr-v2a-history-0911.js
+          test -f /tmp/atlas-site/assets/atlas-territory-igr-v2a-ui-0911.js
+          test -f /tmp/atlas-site/assets/atlas-territory-threat-cead-v1.js
+          grep -q 'IGR · v2A operativo' /tmp/atlas-site/assets/territorio-aml-beta.html
+          grep -q 'IGR-2A-1.0.0' /tmp/atlas-site/assets/atlas-territory-threat-cead-v1.js
+          grep -q 'contributesToIgr:false' /tmp/atlas-site/assets/atlas-irg-ve-v2.module.js
+          grep -q 'contributesToIgr:false' /tmp/atlas-site/assets/atlas-irg-irar-adapter.module.js
+          ! grep -q '45% V/E' /tmp/atlas-site/assets/atlas-irg-refinement.js
+          grep -R -q 'ATLAS_V032_IRG_COMPAT' /tmp/atlas-site/atlas-module-current-*.js
+          ! grep -R -q 'IRG-LAFT-0.32.0.*0.45' /tmp/atlas-site/atlas-module-current-*.js

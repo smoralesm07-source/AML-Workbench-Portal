@@ -1,15 +1,26 @@
-name: Validate IRG V/E v2
+name: Validate IGR legacy retirement
 
 on:
   push:
     branches: [main]
     paths:
       - 'assets/atlas-irg-ve-v2.module.js'
-      - 'assets/atlas-irg-ve-v2.css'
+      - 'assets/atlas-irg-irar-adapter.module.js'
       - 'assets/atlas-irg-refinement.js'
-      - 'data/irg_ve_enrichment_v2.json'
-      - 'docs/geographic-risk-methodology-v4-irg-ve2.md'
-      - 'index.html'
+      - 'assets/atlas-territory-threat-analytics-v2.js'
+      - 'assets/atlas-territory-threat-cead-v1.js'
+      - 'data/atlas_igr_v2a_contract.json'
+      - 'data/atlas_indicator_methodology_v1.json'
+      - '.github/workflows/validate-irg-ve-v2.yml'
+  pull_request:
+    paths:
+      - 'assets/atlas-irg-ve-v2.module.js'
+      - 'assets/atlas-irg-irar-adapter.module.js'
+      - 'assets/atlas-irg-refinement.js'
+      - 'assets/atlas-territory-threat-analytics-v2.js'
+      - 'assets/atlas-territory-threat-cead-v1.js'
+      - 'data/atlas_igr_v2a_contract.json'
+      - 'data/atlas_indicator_methodology_v1.json'
       - '.github/workflows/validate-irg-ve-v2.yml'
   workflow_dispatch:
 
@@ -21,19 +32,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate runtime syntax and governed methodology
+      - name: Validate IGR v2A authority and retired legacy adapters
         shell: bash
         run: |
           set -euo pipefail
           node --check assets/atlas-irg-ve-v2.module.js
+          node --check assets/atlas-irg-irar-adapter.module.js
           node --check assets/atlas-irg-refinement.js
-          python -m json.tool data/irg_ve_enrichment_v2.json >/dev/null
-          grep -q 'IRG-LAFT-0.33.0' assets/atlas-irg-ve-v2.module.js
-          grep -q 'base_structural_vulnerability' data/irg_ve_enrichment_v2.json
-          grep -q 'enr_chile_exposure' data/irg_ve_enrichment_v2.json
-          grep -q 'icr_ros_convertibility' data/irg_ve_enrichment_v2.json
-          grep -q 'gafilat_sector_materiality' data/irg_ve_enrichment_v2.json
-          grep -q 'economic_materiality_sii' data/irg_ve_enrichment_v2.json
-          grep -q 'atlas-irg-ve-v2.css?v=0459-1' index.html
-          grep -q 'type="module" src="./assets/atlas-irg-ve-v2.module.js?v=0459-1"' index.html
-          grep -q 'TOP_LEVEL_IRG_WEIGHTS_UNCHANGED_45_20_20_15' data/irg_ve_enrichment_v2.json
+          node --check assets/atlas-territory-threat-analytics-v2.js
+          node --check assets/atlas-territory-threat-cead-v1.js
+          python -m json.tool data/atlas_igr_v2a_contract.json >/dev/null
+          python -m json.tool data/atlas_indicator_methodology_v1.json >/dev/null
+          grep -q "IGR-2A-1.0.0" assets/atlas-territory-threat-cead-v1.js
+          grep -q "weights:{cead_la:1}" assets/atlas-territory-threat-cead-v1.js
+          grep -q "contributesToIgr:false" assets/atlas-irg-ve-v2.module.js
+          grep -q "contributesToIgr:false" assets/atlas-irg-irar-adapter.module.js
+          grep -q "retired:true" assets/atlas-irg-refinement.js
+          grep -q "retired:true" assets/atlas-territory-threat-analytics-v2.js
+          ! grep -q "45% V/E" assets/atlas-irg-refinement.js
+          ! grep -q "\.45\*Number(p.vulnerability)" assets/atlas-irg-irar-adapter.module.js
+          node -e "const c=require('./data/atlas_igr_v2a_contract.json'); if(c.formula.cead_la!==1) process.exit(1); if(!c.excluded_inputs.includes('irar')) process.exit(1)"

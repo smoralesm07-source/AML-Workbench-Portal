@@ -1,56 +1,86 @@
 <!doctype html>
 <html lang="es" data-atlas-theme="dark">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="robots" content="noindex,nofollow,noarchive" />
-  <meta name="referrer" content="no-referrer" />
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src 'self' https://raw.githubusercontent.com; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'" />
-  <title>ATLAS · Territorio AML comunal · Beta aislada</title>
-  <link rel="stylesheet" href="./atlas-territory-communal-beta-0900.css?v=0900-1" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net; connect-src 'self' https://raw.githubusercontent.com https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://server.arcgisonline.com https://*.arcgisonline.com; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>ATLAS · Territorio · IGR</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="./atlas-territory-igr-v2a-0911.css?v=0911-1">
 </head>
 <body>
-  <main id="territory-beta-root" class="territory-beta-shell">
-    <header class="territory-beta-topbar">
-      <div>
-        <span class="beta-kicker">ATLAS · TERRITORIO</span>
-        <h1>Inteligencia geográfica AML comunal <em>BETA AISLADA</em></h1>
-        <p>Prototipo funcional con datos CEAD comunales reales. No modifica la sección Territorio vigente ni sus indicadores.</p>
+<div class="shell">
+  <div class="header">
+    <div>
+      <div class="kicker">ATLAS · TERRITORIO</div>
+      <h1>Territorio · Índice de Riesgo Geográfico</h1>
+      <p class="sub">Amenaza territorial LA explicada · mapa comunal · historia real 2020–2025 · trazabilidad metodológica.</p>
+    </div>
+    <div class="badge">IGR · v2A operativo</div>
+  </div>
+
+  <div class="controls">
+    <div class="segment" id="layers">
+      <button class="active" data-layer="score">IGR</button>
+      <button data-layer="predicate_direct">Amenazas precedentes LA</button>
+      <button data-layer="criminal_economy">Economía criminal</button>
+      <button data-layer="criminogenic_context">Contexto criminógeno</button>
+    </div>
+    <select id="region"><option value="ALL">Todo Chile</option></select>
+    <input id="search" placeholder="Buscar comuna…" />
+  </div>
+
+  <section class="igr-status-strip">
+    <div class="igr-status-main"><span class="status-dot ok"></span><div><b>IGR activo</b><small>100% Amenaza territorial CEAD-LA en esta etapa</small></div></div>
+    <div class="igr-stage active"><span>ACTUAL</span><b>CEAD-LA</b><small>100%</small></div>
+    <div class="igr-arrow">→</div>
+    <div class="igr-stage building"><span>SIGUIENTE</span><b>Transfronteriza</b><small>pipeline en construcción</small></div>
+    <div class="igr-arrow">→</div>
+    <div class="igr-stage building"><span>SIGUIENTE</span><b>Evidencia LA</b><small>pipeline en construcción</small></div>
+    <button class="method-help" type="button" id="igrHelp" aria-label="Ayuda metodológica IGR">i</button>
+  </section>
+
+  <div class="layout">
+    <section class="card">
+      <div class="map-head">
+        <div class="kicker">LECTURA TERRITORIAL</div>
+        <h2>Mapa comunal IGR</h2>
+        <p>Selecciona una comuna para abrir su IGR, drivers territoriales y evolución real 2020–2025.</p>
+        <div class="legend">
+          <span class="box" style="background:var(--low)"></span>
+          <span class="box" style="background:var(--mod)"></span>
+          <span class="box" style="background:var(--mid)"></span>
+          <span class="box" style="background:var(--high)"></span>
+          <span class="box" style="background:var(--vhigh)"></span>
+          <small>Bajo → Muy alto</small>
+        </div>
       </div>
-      <a class="beta-return" href="../">← Volver a ATLAS</a>
-    </header>
-    <section class="beta-safety">
-      <b>Modo evaluación reversible</b>
-      <span>Esta página es independiente. Nada de lo que ves aquí altera Territorio actual, IRG, navegación ni scoring productivo.</span>
+      <div id="map"></div>
     </section>
-    <section class="beta-controls" aria-label="Controles del prototipo">
-      <div class="beta-segment" id="beta-layer-switch">
-        <button class="active" data-layer="score">Score CEAD</button>
-        <button data-layer="predicate_direct">Delito base</button>
-        <button data-layer="criminal_economy">Economía criminal</button>
-        <button data-layer="criminogenic_context">Contexto</button>
-      </div>
-      <label>Región<select id="beta-region"><option value="ALL">Todo Chile</option></select></label>
-      <label>Buscar comuna<input id="beta-search" type="search" placeholder="Ej. San Bernardo" autocomplete="off" /></label>
+
+    <section class="right">
+      <div class="card panel hero-panel" id="summary"></div>
+      <div class="card panel" id="readout"></div>
+      <div class="card panel" id="compare"></div>
+      <div class="card panel" id="trend"></div>
+      <div class="card panel" id="matrix"></div>
+      <div class="card panel" id="breakdown"></div>
+      <div class="card panel" id="drivers"></div>
+      <div class="card panel" id="explain"></div>
+      <div class="card panel" id="roadmap"></div>
+      <div class="card panel" id="trace"></div>
+      <div class="card panel" id="ranking"></div>
     </section>
-    <section class="beta-kpis" id="beta-kpis"></section>
-    <section class="beta-main-grid">
-      <article class="beta-map-card">
-        <header>
-          <div><span>LECTURA TERRITORIAL</span><h2>Mapa comunal AML · esquema norte–sur</h2><p>Representación exploratoria por posición regional norte–sur. Los puntos son comunas reales; el tamaño y tono reflejan la capa seleccionada. La geometría cartográfica final no se activa en esta beta.</p></div>
-          <div class="beta-legend"><span>Bajo</span><i></i><i></i><i></i><i></i><i></i><span>Muy alto</span></div>
-        </header>
-        <div id="beta-map" class="beta-map" role="list"></div>
-      </article>
-      <aside class="beta-priority-card"><header><span>QUÉ REQUIERE ATENCIÓN</span><h2>Prioridad comunal</h2></header><div id="beta-ranking" class="beta-ranking"></div></aside>
-    </section>
-    <section class="beta-detail-grid">
-      <article class="beta-profile" id="beta-profile"><div class="beta-empty">Selecciona una comuna para abrir su ficha 360 territorial.</div></article>
-      <article class="beta-explain" id="beta-explain"><header><span>LECTURA EXPLICABLE</span><h2>¿Por qué esta comuna?</h2></header><p>Selecciona una comuna. ATLAS resumirá qué capa explica la señal, su intensidad, persistencia, tendencia y anomalía sin atribuir conductas a personas o empresas.</p></article>
-    </section>
-    <section class="beta-method"><details><summary>Ayuda metodológica</summary><p>El score CEAD del prototipo usa la estructura vigente 55% delito base directo, 35% economía criminal/facilitadores y 10% contexto criminógeno. La vista no modifica pesos, no recalcula IRG y conserva la interpretación territorial: presión criminógena no equivale a probabilidad de lavado de activos.</p></details></section>
-  </main>
-  <script src="./atlas-territory-communal-beta-0900.js?v=0900-1"></script>
+  </div>
+</div>
+<div class="method-pop" id="methodPop" aria-hidden="true"><div class="method-pop-card"><button id="methodClose" class="method-close" type="button">×</button><div class="kicker">AYUDA METODOLÓGICA</div><h3 id="methodTitle">IGR</h3><div id="methodBody"></div></div></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="./atlas-territory-igr-v2a-core-0911.js?v=0911-1"></script>
+<script src="./atlas-territory-igr-v2a-history-0911.js?v=0911-1"></script>
+<script src="./atlas-territory-igr-v2a-ui-0911.js?v=0911-1"></script>
 </body>
 </html>
