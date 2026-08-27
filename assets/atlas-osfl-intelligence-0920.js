@@ -48,7 +48,9 @@
       const after=before
         .replace(/\bIPA\s*3\.0\b/gi,'IPA')
         .replace(/\bIPA\s*3\b/gi,'IPA')
-        .replace(/\bIPA3\b/gi,'IPA');
+        .replace(/\bIPA3\b/gi,'IPA')
+        .replace(/\bIPA\s*·\s*SHADOW\b/gi,'IPA')
+        .replace(/\bIPA\s+SHADOW\b/gi,'IPA');
       if(after!==before)textNode.nodeValue=after;
     }
   }
