@@ -1,15 +1,16 @@
 'use strict';
 
-/* ATLAS OSFL Intelligence 0.92.0
+/* ATLAS OSFL Intelligence 0.92.1
  * Additive decision layer over the governed OSFL runtime.
  * Design principle: OSFL status, public-registration exposure and FATF R.8 screening are context,
  * not adverse signals by themselves. Priority, evidence sufficiency and peer context are separated.
  */
-(function atlasOsflIntelligence0920(){
-  const BUILD='0920';
+(function atlasOsflIntelligence0921(){
+  const BUILD='0921';
   const ENTITY_VIEW='aml_osfl_entity_runtime_snapshot';
   const COVERAGE_OK=70;
   const HIGH_BANDS=['MUY_ALTA','ALTA'];
+  const POLISH_STYLE='./assets/atlas-osfl-polish-0921.css?v=0921-1';
   const nf=new Intl.NumberFormat('es-CL');
 
   function n(v){const x=Number(v);return Number.isFinite(x)?x:0;}
@@ -29,6 +30,30 @@
     if(typeof V030_STATE!=='undefined'&&V030_STATE.activity)q=q.eq('activity_group',V030_STATE.activity);
     return q;
   }
+  function ensurePolishStyle(){
+    if(document.querySelector('link[data-atlas-osfl-polish="0921"]'))return;
+    const link=document.createElement('link');
+    link.rel='stylesheet';
+    link.href=POLISH_STYLE;
+    link.dataset.atlasOsflPolish='0921';
+    document.head.appendChild(link);
+  }
+  function normalizeIpaLabels(root){
+    if(!root||typeof document.createTreeWalker!=='function')return;
+    const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+    const nodes=[];let node;
+    while((node=walker.nextNode()))nodes.push(node);
+    for(const textNode of nodes){
+      const before=textNode.nodeValue||'';
+      const after=before
+        .replace(/\bIPA\s*3\.0\b/gi,'IPA')
+        .replace(/\bIPA\s*3\b/gi,'IPA')
+        .replace(/\bIPA3\b/gi,'IPA')
+        .replace(/\bIPA\s*·\s*SHADOW\b/gi,'IPA')
+        .replace(/\bIPA\s+SHADOW\b/gi,'IPA');
+      if(after!==before)textNode.nodeValue=after;
+    }
+  }
   async function count(mutator){
     let q=sb.from(ENTITY_VIEW).select('entity_id',{count:'exact',head:true});
     q=scoped(q);
@@ -44,8 +69,8 @@
     if(high&&cov<COVERAGE_OK)return {key:'complete',label:'Completar evidencia',note:'prioridad alta con cobertura insuficiente'};
     if(high&&indep>=2)return {key:'review',label:'Revisar primero',note:'prioridad alta y convergencia independiente'};
     if(high)return {key:'prioritize',label:'Priorizar',note:'prioridad analítica alta'};
-    if(n(r?.ipa3_score)>0)return {key:'observe',label:'Observar',note:'señales IPA3 activas'};
-    return {key:'context',label:'Contexto',note:'sin prioridad IPA3 activa'};
+    if(n(r?.ipa3_score)>0)return {key:'observe',label:'Observar',note:'señales IPA activas'};
+    return {key:'context',label:'Contexto',note:'sin prioridad IPA activa'};
   }
   function reasons(r){
     const out=[];
@@ -67,10 +92,10 @@
       <div class="v030-hero-copy">
         <span class="v030-kicker">OSFL · INTELIGENCIA DE PRIORIDAD</span>
         <h2>Priorizar con evidencia, no por condición jurídica</h2>
-        <p>Atlas separa señales analíticas, suficiencia de evidencia y contexto para identificar qué revisar primero. IPA3 ordena trabajo; no representa probabilidad de LA/FT ni convierte la pertenencia al universo OSFL en una marca adversa.</p>
-        <div class="v030-hero-tags atlas-osfl-method-tags"><span>IPA3 explicable</span><span>evidencia independiente</span><span>cobertura</span><span>comparables</span><span>contexto no aditivo</span></div>
+        <p>Atlas separa señales analíticas, suficiencia de evidencia y contexto para identificar qué revisar primero. IPA ordena trabajo; no representa probabilidad de LA/FT ni convierte la pertenencia al universo OSFL en una marca adversa.</p>
+        <div class="v030-hero-tags atlas-osfl-method-tags"><span>IPA explicable</span><span>evidencia independiente</span><span>cobertura</span><span>comparables</span><span>contexto no aditivo</span></div>
       </div>
-      <div class="v030-hero-score atlas-osfl-hero-score"><span>IPA3 activo</span><b>${fmt(active)}</b><small>${total?`${pct(100*active/total)} del universo`:'universo en carga'}</small><em>prioridad analítica</em></div>
+      <div class="v030-hero-score atlas-osfl-hero-score"><span>IPA activo</span><b>${fmt(active)}</b><small>${total?`${pct(100*active/total)} del universo`:'universo en carga'}</small><em>prioridad analítica</em></div>
       <div class="v030-hero-metrics v032-hero-metrics atlas-osfl-hero-metrics">
         <div><span>Universo OSFL</span><b>${fmt(total)}</b><small>Entity Hub + Radar_OSFL</small></div>
         <div class="uaf"><span>También son SO UAF</span><b>${fmt(so)}</b><small>cruce exacto por identidad</small></div>
@@ -88,7 +113,7 @@
       <div class="atlas-osfl-kpis" data-v092-kpis>${loadingCards(4)}</div>
       <div class="atlas-osfl-decision-grid">
         <article class="atlas-osfl-matrix-card"><div class="atlas-osfl-subhead"><span>MATRIZ DE TRATAMIENTO</span><h4>Prioridad × cobertura</h4><small>Umbral operativo de cobertura: ${COVERAGE_OK}%.</small></div><div class="atlas-osfl-matrix" data-v092-matrix>${loadingCards(4)}</div><p class="atlas-osfl-matrix-note">La cobertura insuficiente no reduce la prioridad: cambia el tratamiento a “completar evidencia”.</p></article>
-        <article class="atlas-osfl-queue-card"><div class="atlas-osfl-subhead"><span>COLA ANALÍTICA</span><h4>Entidades para revisión</h4><small>Ordenadas por IPA3, convergencia independiente y cobertura.</small></div><div class="atlas-osfl-queue" data-v092-queue><div class="atlas-osfl-loading">Calculando cola analítica…</div></div></article>
+        <article class="atlas-osfl-queue-card"><div class="atlas-osfl-subhead"><span>COLA ANALÍTICA</span><h4>Entidades para revisión</h4><small>Ordenadas por IPA, convergencia independiente y cobertura.</small></div><div class="atlas-osfl-queue" data-v092-queue><div class="atlas-osfl-loading">Calculando cola analítica…</div></div></article>
       </div>
       <div class="atlas-osfl-legend"><div><b>Señal</b><span>Marcas gobernadas y evidencia independiente que sustentan priorización.</span></div><div><b>Contexto</b><span>R.8, registros públicos, UAF y Presupuesto Abierto enriquecen la lectura sin puntuar por sí solos.</span></div><div><b>Calidad</b><span>Cobertura y confianza indican cuánto sabemos antes de decidir tratamiento.</span></div></div>
     </section>`;
@@ -142,12 +167,12 @@
   }
   function renderQueue(rows){
     const el=document.querySelector('[data-v092-queue]');if(!el)return;
-    if(!rows.length){el.innerHTML='<div class="atlas-osfl-empty">Sin entidades con IPA3 activo en el ámbito seleccionado.</div>';return;}
+    if(!rows.length){el.innerHTML='<div class="atlas-osfl-empty">Sin entidades con IPA activo en el ámbito seleccionado.</div>';return;}
     el.innerHTML=rows.map((r,i)=>{
       const t=treatment(r),why=reasons(r);
       return `<button type="button" class="atlas-osfl-queue-row" data-v092-entity="${e(r.entity_id)}">
         <em>${String(i+1).padStart(2,'0')}</em>
-        <span class="atlas-osfl-queue-main"><b>${e(r.name||'Entidad')}</b><small>${e(r.rut||'RUT no informado')} · ${e(r.activity_group||'actividad no clasificada')}</small><i>${e(why.join(' · ')||'IPA3 activo sin señal resumida')}</i></span>
+        <span class="atlas-osfl-queue-main"><b>${e(r.name||'Entidad')}</b><small>${e(r.rut||'RUT no informado')} · ${e(r.activity_group||'actividad no clasificada')}</small><i>${e(why.join(' · ')||'IPA activo sin señal resumida')}</i></span>
         <span class="atlas-osfl-queue-score ${e(bandClass(r.priority_band_shadow))}"><b>${n(r.ipa3_score).toLocaleString('es-CL',{maximumFractionDigits:1})}</b><small>${e(bandLabel(r.priority_band_shadow))}</small></span>
         <span class="atlas-osfl-queue-coverage"><b>${pct(r.coverage_index_pct)}</b><small>cobertura</small></span>
         <span class="atlas-osfl-treatment ${e(t.key)}"><b>${e(t.label)}</b><small>${e(t.note)}</small></span>
@@ -185,12 +210,13 @@
       document.querySelector('#v019-drawer-body .atlas-osfl-peer-card')?.remove();
       score.insertAdjacentHTML('afterend',`<section class="atlas-osfl-peer-card">
         <div class="atlas-osfl-peer-title"><span>COMPARABLES · MISMA ACTIVIDAD</span><b>${e(base.activity_group)}</b><small>${fmt(total)} entidades en el grupo de comparación.</small></div>
-        <div class="atlas-osfl-peer-stats"><div><span>IPA3 relativo</span><b>${scorePct==null?'—':`P${Math.round(scorePct)}`}</b><small>posición operativa dentro del grupo</small></div><div><span>Cobertura relativa</span><b>${covPct==null?'—':`P${Math.round(covPct)}`}</b><small>posición por evidencia disponible</small></div><div><span>Tratamiento</span><b>${e(t.label)}</b><small>${e(why.join(' · ')||t.note)}</small></div></div>
+        <div class="atlas-osfl-peer-stats"><div><span>IPA relativo</span><b>${scorePct==null?'—':`P${Math.round(scorePct)}`}</b><small>posición operativa dentro del grupo</small></div><div><span>Cobertura relativa</span><b>${covPct==null?'—':`P${Math.round(covPct)}`}</b><small>posición por evidencia disponible</small></div><div><span>Tratamiento</span><b>${e(t.label)}</b><small>${e(why.join(' · ')||t.note)}</small></div></div>
         <p>Los percentiles son comparaciones operativas, no percentiles de riesgo ni estimaciones de probabilidad. Sirven para evitar comparar organizaciones con perfiles económicos distintos.</p>
       </section>`);
     }catch(_err){/* peer context is additive; never break OSFL 360 */}
   }
 
+  ensurePolishStyle();
   if(typeof v030Hero==='function')v030Hero=hero;
   if(typeof v030LoadOsfl==='function'){
     const baseLoad=v030LoadOsfl;
@@ -198,12 +224,27 @@
       const out=await baseLoad.apply(this,arguments);
       installDeck();
       await hydrate();
+      normalizeIpaLabels(document.querySelector('.v030-osfl'));
+      return out;
+    };
+  }
+  if(typeof v030SyncMapAndCharts==='function'){
+    const baseSync=v030SyncMapAndCharts;
+    v030SyncMapAndCharts=async function(){
+      const out=await baseSync.apply(this,arguments);
+      normalizeIpaLabels(document.querySelector('.v030-osfl'));
       return out;
     };
   }
   if(typeof v030OpenEntity==='function'){
     const baseOpen=v030OpenEntity;
-    v030OpenEntity=async function(id){const out=await baseOpen.apply(this,arguments);void peerCard(id);return out;};
+    v030OpenEntity=async function(id){
+      const out=await baseOpen.apply(this,arguments);
+      normalizeIpaLabels(document.querySelector('#v019-drawer-body'));
+      await peerCard(id);
+      normalizeIpaLabels(document.querySelector('#v019-drawer-body'));
+      return out;
+    };
   }
-  window.ATLAS_OSFL_INTELLIGENCE={build:BUILD,coverageThreshold:COVERAGE_OK,refresh:hydrate};
+  window.ATLAS_OSFL_INTELLIGENCE={build:BUILD,coverageThreshold:COVERAGE_OK,refresh:hydrate,normalizeIpaLabels};
 })();
