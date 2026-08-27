@@ -88,9 +88,10 @@
     const active=n(all?.ipa3_positive_count)||n(q.ipa3_positive);
     const so=n(all?.uaf_so_count)||n(q.uaf_so);
     const r8=n(all?.r8_count)||n(src.r8_candidates);
-    return `<section class="v030-hero v032-hero atlas-osfl-hero atlas-osfl-hero-compact" data-atlas-osfl-build="${BUILD}" style="padding:12px 14px;grid-template-columns:170px minmax(0,1fr);gap:10px;align-items:stretch">
+    return `<section class="v030-hero v032-hero atlas-osfl-hero atlas-osfl-hero-compact" data-atlas-osfl-build="${BUILD}" style="padding:14px 18px;gap:12px">
+      <div class="v030-hero-copy" style="display:flex;align-items:center;min-height:0"><span class="v030-kicker">OSFL · INTELIGENCIA DE PRIORIDAD</span></div>
       <div class="v030-hero-score atlas-osfl-hero-score" style="padding:10px 13px;border-radius:13px;box-shadow:none"><span>IPA activo</span><b style="font-size:31px;margin:4px 0 2px">${fmt(active)}</b><small>${total?`${pct(100*active/total)} del universo`:'universo en carga'}</small><em style="margin-top:4px">prioridad analítica</em></div>
-      <div class="v030-hero-metrics v032-hero-metrics atlas-osfl-hero-metrics" style="grid-column:auto;grid-template-columns:repeat(4,minmax(0,1fr));border-radius:12px">
+      <div class="v030-hero-metrics v032-hero-metrics atlas-osfl-hero-metrics">
         <div style="padding:9px 11px"><span>Universo OSFL</span><b>${fmt(total)}</b><small>Entity Hub + Radar_OSFL</small></div>
         <div class="uaf" style="padding:9px 11px"><span>También son SO UAF</span><b>${fmt(so)}</b><small>cruce exacto por identidad</small></div>
         <div style="padding:9px 11px"><span>R.8 candidatas</span><b>${fmt(r8)}</b><small>cribado funcional · no puntúa</small></div>
