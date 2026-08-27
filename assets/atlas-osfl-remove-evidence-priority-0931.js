@@ -5,19 +5,28 @@
  */
 (function atlasOsflRemoveEvidencePriority0931(){
   if(window.AtlasOsflRemoveEvidencePriority0931)return;
-  const VERSION='0931.1';
+  const VERSION='0931.2';
   const TITLE='priorizar con evidencia';
   const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toLowerCase();
+  const isBox=node=>node&&(node.tagName==='ARTICLE'||node.tagName==='SECTION'||node.tagName==='DIV');
 
   function findCard(root,label){
-    const direct=label.closest('article,[class*="card" i],[class*="panel" i],[class*="module" i],[class*="box" i]');
-    if(direct&&direct!==root&&root.contains(direct))return direct;
+    const ancestors=[];
     let node=label.parentElement;
     while(node&&node!==root){
-      if((node.tagName==='ARTICLE'||node.tagName==='SECTION'||node.tagName==='DIV')&&norm(node.textContent).includes(TITLE))return node;
+      if(isBox(node)&&norm(node.textContent).includes(TITLE))ancestors.push(node);
       node=node.parentElement;
     }
-    return null;
+    if(!ancestors.length)return null;
+
+    const explicit=ancestors.find(el=>el.tagName==='ARTICLE'||/(^|[-_\s])(card|panel|module|box)([-_\s]|$)/i.test(el.className||''));
+    if(explicit)return explicit;
+
+    const complete=ancestors.find(el=>{
+      const text=norm(el.textContent);
+      return text.includes('completad')&&/\b\d+\s+de\s+\d+\b/.test(text);
+    });
+    return complete||ancestors[0];
   }
 
   function removeCard(){
@@ -30,7 +39,7 @@
     if(!card)return false;
     const parent=card.parentElement;
     card.remove();
-    if(parent&&parent.children.length===0&&parent!==root&&norm(parent.textContent)==='')parent.remove();
+    if(parent&&parent!==root&&parent.children.length===0&&!norm(parent.textContent))parent.remove();
     root.dataset.atlasEvidencePriorityCard='removed';
     return true;
   }
