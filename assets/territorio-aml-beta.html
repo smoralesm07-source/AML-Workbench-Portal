@@ -9,7 +9,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net; connect-src 'self' https://raw.githubusercontent.com https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://server.arcgisonline.com https://*.arcgisonline.com; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>ATLAS · Territorio · IGR</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="./atlas-territory-igr-v2a-0911.css?v=0911-1">
+<link rel="stylesheet" href="./atlas-territory-igr-v2a-0911.css?v=0913-atlas1">
 </head>
 <body>
 <div class="shell">
@@ -22,34 +22,39 @@
     <div class="badge">IGR · v2A operativo</div>
   </div>
 
-  <div class="controls">
-    <div class="segment" id="layers">
-      <button class="active" data-layer="score">IGR</button>
-      <button data-layer="predicate_direct">Amenazas precedentes LA</button>
-      <button data-layer="criminal_economy">Economía criminal</button>
-      <button data-layer="criminogenic_context">Contexto criminógeno</button>
+  <section class="territory-toolbar" aria-label="Controles territoriales">
+    <div class="controls">
+      <div class="segment" id="layers">
+        <button class="active" data-layer="score">IGR</button>
+        <button data-layer="predicate_direct">Amenazas precedentes LA</button>
+        <button data-layer="criminal_economy">Economía criminal</button>
+        <button data-layer="criminogenic_context">Contexto criminógeno</button>
+      </div>
+      <div class="control-spacer"></div>
+      <select id="region" aria-label="Filtrar por región"><option value="ALL">Todo Chile</option></select>
+      <input id="search" placeholder="Buscar comuna…" aria-label="Buscar comuna" />
     </div>
-    <select id="region"><option value="ALL">Todo Chile</option></select>
-    <input id="search" placeholder="Buscar comuna…" />
-  </div>
 
-  <section class="igr-status-strip">
-    <div class="igr-status-main"><span class="status-dot ok"></span><div><b>IGR activo</b><small>100% Amenaza territorial CEAD-LA en esta etapa</small></div></div>
-    <div class="igr-stage active"><span>ACTUAL</span><b>CEAD-LA</b><small>100%</small></div>
-    <div class="igr-arrow">→</div>
-    <div class="igr-stage building"><span>SIGUIENTE</span><b>Transfronteriza</b><small>pipeline en construcción</small></div>
-    <div class="igr-arrow">→</div>
-    <div class="igr-stage building"><span>SIGUIENTE</span><b>Evidencia LA</b><small>pipeline en construcción</small></div>
-    <button class="method-help" type="button" id="igrHelp" aria-label="Ayuda metodológica IGR">i</button>
+    <section class="igr-status-strip">
+      <div class="igr-status-main"><span class="status-dot ok"></span><div><b>IGR activo</b><small>100% Amenaza territorial CEAD-LA en esta etapa</small></div></div>
+      <div class="igr-stage active"><span>ACTUAL</span><b>CEAD-LA</b><small>100%</small></div>
+      <div class="igr-arrow">→</div>
+      <div class="igr-stage building"><span>SIGUIENTE</span><b>Transfronteriza</b><small>pipeline en construcción</small></div>
+      <div class="igr-arrow">→</div>
+      <div class="igr-stage building"><span>SIGUIENTE</span><b>Evidencia LA</b><small>pipeline en construcción</small></div>
+      <button class="method-help" type="button" id="igrHelp" aria-label="Ayuda metodológica IGR">i</button>
+    </section>
   </section>
 
-  <div class="layout">
-    <section class="card">
+  <main class="territory-stage">
+    <section class="card map-card">
       <div class="map-head">
-        <div class="kicker">LECTURA TERRITORIAL</div>
-        <h2>Mapa comunal IGR</h2>
-        <p>Selecciona una comuna para abrir su IGR, drivers territoriales y evolución real 2020–2025.</p>
-        <div class="legend">
+        <div>
+          <div class="kicker">LECTURA TERRITORIAL</div>
+          <h2>Mapa comunal IGR</h2>
+          <p>Selecciona una comuna para abrir su IGR, drivers territoriales y evolución real 2020–2025.</p>
+        </div>
+        <div class="legend" aria-label="Escala de riesgo">
           <span class="box" style="background:var(--low)"></span>
           <span class="box" style="background:var(--mod)"></span>
           <span class="box" style="background:var(--mid)"></span>
@@ -61,26 +66,34 @@
       <div id="map"></div>
     </section>
 
-    <section class="right">
+    <aside class="territory-brief" aria-label="Ficha territorial">
       <div class="card panel hero-panel" id="summary"></div>
       <div class="card panel" id="readout"></div>
       <div class="card panel" id="compare"></div>
-      <div class="card panel" id="trend"></div>
-      <div class="card panel" id="matrix"></div>
       <div class="card panel" id="breakdown"></div>
-      <div class="card panel" id="drivers"></div>
-      <div class="card panel" id="explain"></div>
-      <div class="card panel" id="roadmap"></div>
-      <div class="card panel" id="trace"></div>
-      <div class="card panel" id="ranking"></div>
-    </section>
-  </div>
+    </aside>
+  </main>
+
+  <section class="section-label"><span>ANÁLISIS TERRITORIAL</span><small>Historia, dinámica y explicación del score seleccionado</small></section>
+  <section class="analysis-grid">
+    <div class="card panel analysis-wide" id="trend"></div>
+    <div class="card panel" id="matrix"></div>
+    <div class="card panel" id="drivers"></div>
+    <div class="card panel" id="explain"></div>
+  </section>
+
+  <section class="section-label"><span>GOBERNANZA Y TRAZABILIDAD</span><small>Metodología vigente, evolución planificada y ranking territorial</small></section>
+  <section class="governance-grid">
+    <div class="card panel governance-wide" id="roadmap"></div>
+    <div class="card panel" id="trace"></div>
+    <div class="card panel" id="ranking"></div>
+  </section>
 </div>
 <div class="method-pop" id="methodPop" aria-hidden="true"><div class="method-pop-card"><button id="methodClose" class="method-close" type="button">×</button><div class="kicker">AYUDA METODOLÓGICA</div><h3 id="methodTitle">IGR</h3><div id="methodBody"></div></div></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="./atlas-territory-igr-v2a-core-0911.js?v=0911-1"></script>
-<script src="./atlas-territory-igr-v2a-history-0911.js?v=0911-1"></script>
-<script src="./atlas-territory-igr-v2a-ui-0911.js?v=0911-1"></script>
+<script src="./atlas-territory-igr-v2a-core-0911.js?v=0913-atlas1"></script>
+<script src="./atlas-territory-igr-v2a-history-0911.js?v=0913-atlas1"></script>
+<script src="./atlas-territory-igr-v2a-ui-0911.js?v=0913-atlas1"></script>
 </body>
 </html>
