@@ -36,10 +36,15 @@ jobs:
           grep -q 'atlas-reportability-irar.js' index.html
           grep -q 'atlas-irg-irar-adapter.module.js' index.html
           ! grep -q 'atlas-reportability-icr.js' index.html
-          grep -q 'IRAR_E_ADJUSTED' assets/atlas-reportability-irar.js
-          grep -q 'IRAR-UI-1.7' assets/atlas-reportability-irar.js
+          grep -q 'IRAR_ADJUSTED' assets/atlas-reportability-irar.js
+          grep -q 'IRAR-UI-1.8' assets/atlas-reportability-irar.js
+          grep -q 'IIR_X_IRAR_X_ICE' assets/atlas-reportability-irar.js
+          grep -q 'REPORTABILITY_REVIEW_SIGNAL' assets/atlas-reportability-irar.js
           grep -q 'Intensidad, rendimiento y evidencia' assets/atlas-reportability-irar.js
-          grep -q 'Derecha = mayor intensidad · Arriba = mayor rendimiento' assets/atlas-reportability-irar.js
+          grep -q 'Derecha = mayor intensidad relativa (IIR) · Arriba = mayor rendimiento relativo (IRAR)' assets/atlas-reportability-irar.js
+          grep -q 'este mapa usa sólo IIR × IRAR × ICE' assets/atlas-reportability-irar.js
+          grep -q 'IRAR-E (riesgo sectorial), IGR (territorio) e IPA (entidad)' assets/atlas-reportability-irar.js
+          grep -q 'IVO queda fuera' assets/atlas-reportability-irar.js
           grep -q '<circle class="atlas-irar-dot' assets/atlas-reportability-irar.js
           grep -q 'buildColorLegend' assets/atlas-reportability-irar.js
           grep -q 'EVIDENCIA_BAJA' assets/atlas-reportability-irar.js
@@ -61,5 +66,6 @@ jobs:
           test -f _site-irar/assets/atlas-irg-irar-adapter.module.js
           grep -q 'atlas-reportability-irar.js?v=0468-6' _site-irar/index.html
           grep -q 'atlas-irg-irar-adapter.module.js' _site-irar/index.html
-          grep -q 'IRAR-UI-1.7' _site-irar/assets/atlas-reportability-irar.js
+          grep -q 'IRAR-UI-1.8' _site-irar/assets/atlas-reportability-irar.js
+          grep -q 'IIR_X_IRAR_X_ICE' _site-irar/assets/atlas-reportability-irar.js
           grep -q 'contributesToIgr:false' _site-irar/assets/atlas-irg-irar-adapter.module.js
