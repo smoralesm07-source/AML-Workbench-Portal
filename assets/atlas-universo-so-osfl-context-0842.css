@@ -1,0 +1,8 @@
+/* ATLAS AML · Universo SO · contexto OSFL 0.84.2 */
+.uso816 .uso81-alert.osfl{border-color:rgba(126,225,248,.28);background:rgba(76,191,222,.09);color:#8ee7ff;font-weight:850;letter-spacing:.045em;box-shadow:inset 0 0 0 1px rgba(255,255,255,.015)}
+.uso816 .uso81-alert.osfl:before{content:'●';font-size:7px;margin-right:4px;color:#78dbf5}
+.uso816 .uso814-chip.osfl{border-color:rgba(126,225,248,.24);background:rgba(76,191,222,.07);color:#8ee7ff}
+.uso816 .uso814-chip.osfl:hover,.uso816 .uso814-chip.osfl.active{border-color:rgba(142,231,255,.46);background:rgba(76,191,222,.16);color:#dff8ff}
+.uso816 .uso814-chip.osfl b{color:inherit}
+html[data-atlas-theme='light'] .uso816 .uso81-alert.osfl,html[data-atlas-theme='light'] .uso816 .uso814-chip.osfl{border-color:#cce7ee;background:#f1fafc;color:#137a96}
+html[data-atlas-theme='light'] .uso816 .uso814-chip.osfl.active{background:#e6f7fa;border-color:#9ed6e1;color:#0c6d86}
