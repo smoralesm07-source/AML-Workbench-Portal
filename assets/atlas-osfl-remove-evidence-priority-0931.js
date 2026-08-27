@@ -5,7 +5,7 @@
  */
 (function atlasOsflRemoveEvidencePriority0931(){
   if(window.AtlasOsflRemoveEvidencePriority0931)return;
-  const VERSION='0931.3';
+  const VERSION='0931.4';
   const TITLE='priorizar con evidencia';
   const ASSOCIATED_COPY=[
     'universo nacional de organizaciones sin fines de lucro',
@@ -20,11 +20,17 @@
   };
 
   function ensureNoFlashStyle(){
-    if(document.querySelector('style[data-atlas-osfl-presentation-cleanup="0931"]'))return;
-    const style=document.createElement('style');
-    style.dataset.atlasOsflPresentationCleanup='0931';
-    style.textContent='.v030-osfl .v030-hero,.v030-osfl .atlas-osfl-hero{display:none!important}';
-    document.head.appendChild(style);
+    let style=document.querySelector('style[data-atlas-osfl-presentation-cleanup="0931"]');
+    if(!style){
+      style=document.createElement('style');
+      style.dataset.atlasOsflPresentationCleanup='0931';
+      document.head.appendChild(style);
+    }
+    style.textContent=[
+      '.atlas-osfl-hero{display:none!important}',
+      '.v030-hero.atlas-osfl-hero{display:none!important}',
+      '[data-atlas-osfl-build].atlas-osfl-hero{display:none!important}'
+    ].join('');
   }
 
   function findCard(root,label){
@@ -47,36 +53,35 @@
   }
 
   function removeCard(){
-    const root=document.querySelector('.v030-osfl');
-    if(!root)return false;
+    const root=document.querySelector('.v030-osfl')||document;
     const labels=[...root.querySelectorAll('h1,h2,h3,h4,h5,h6,strong,b,span,p')];
     const label=labels.find(el=>norm(el.textContent).includes(TITLE));
     if(!label)return false;
-    const card=findCard(root,label);
+    const boundary=document.querySelector('.v030-osfl')||document.body;
+    const card=findCard(boundary,label);
     if(!card)return false;
     const parent=card.parentElement;
     card.remove();
-    if(parent&&parent!==root&&parent.children.length===0&&!norm(parent.textContent))parent.remove();
-    root.dataset.atlasEvidencePriorityCard='removed';
+    if(parent&&parent!==boundary&&parent.children.length===0&&!norm(parent.textContent))parent.remove();
+    if(boundary.dataset)boundary.dataset.atlasEvidencePriorityCard='removed';
     return true;
   }
 
   function removeOverviewHero(){
-    const root=document.querySelector('.v030-osfl');
-    if(!root)return false;
     let changed=false;
-    root.querySelectorAll('.v030-hero,.atlas-osfl-hero').forEach(hero=>{
+    document.querySelectorAll('.atlas-osfl-hero,.v030-hero.atlas-osfl-hero,[data-atlas-osfl-build].atlas-osfl-hero').forEach(hero=>{
       hero.remove();
       changed=true;
     });
-    if(changed)root.dataset.atlasOverviewHero='removed';
+    const root=document.querySelector('.v030-osfl');
+    if(changed&&root)root.dataset.atlasOverviewHero='removed';
     return changed;
   }
 
   function removeAssociatedCopy(){
     const root=document.querySelector('.v030-osfl');
-    if(!root)return false;
-    const scope=root.closest('#content,.v019-content,main')||document.querySelector('#content,.v019-content')||document.body;
+    if(!root&&!document.querySelector('.atlas-osfl-national,[data-v092-decision]'))return false;
+    const scope=document.querySelector('#content,.v019-content,main')||document.body;
     const candidates=[...scope.querySelectorAll('p,small,span,div')]
       .filter(copyMatch)
       .filter(el=>![...el.children].some(copyMatch));
@@ -94,7 +99,7 @@
         node=next;
       }
     }
-    if(changed)root.dataset.atlasAssociatedCopy='removed';
+    if(changed&&root)root.dataset.atlasAssociatedCopy='removed';
     return changed;
   }
 
@@ -105,11 +110,29 @@
     removeAssociatedCopy();
   }
 
+  let queued=false;
+  function queueCleanup(){
+    if(queued)return;
+    queued=true;
+    requestAnimationFrame(()=>{
+      queued=false;
+      runCleanup();
+    });
+  }
+
   function cleanup(){
     runCleanup();
     requestAnimationFrame(runCleanup);
     setTimeout(runCleanup,80);
     setTimeout(runCleanup,300);
+    setTimeout(runCleanup,900);
+  }
+
+  function observeReinsertion(){
+    const target=document.querySelector('#app')||document.body||document.documentElement;
+    if(!target||window.__ATLAS_OSFL_PRESENTATION_OBSERVER_0931__)return;
+    window.__ATLAS_OSFL_PRESENTATION_OBSERVER_0931__=new MutationObserver(queueCleanup);
+    window.__ATLAS_OSFL_PRESENTATION_OBSERVER_0931__.observe(target,{childList:true,subtree:true});
   }
 
   ensureNoFlashStyle();
@@ -131,6 +154,8 @@
   }
   window.addEventListener('atlas:nav-refresh',cleanup);
   window.addEventListener('pageshow',cleanup);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{observeReinsertion();cleanup();},{once:true});
+  else observeReinsertion();
   cleanup();
   window.AtlasOsflRemoveEvidencePriority0931={version:VERSION,cleanup,removeCard,removeOverviewHero,removeAssociatedCopy};
 })();
