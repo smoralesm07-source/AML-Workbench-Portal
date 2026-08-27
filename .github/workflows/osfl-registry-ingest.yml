@@ -1,0 +1,112 @@
+name: OSFL Registro Civil → National Master 0940
+
+on:
+  schedule:
+    - cron: '15 13 1,16 * *'
+  workflow_dispatch:
+    inputs:
+      source_url:
+        description: 'URL HTTPS directa al archivo oficial vigente de Registro Civil (.rar/.zip/.xlsx/.xls/.csv). Vacío = solo probe.'
+        required: false
+        type: string
+      snapshot_date:
+        description: 'Fecha de corte del archivo oficial (YYYY-MM-DD). Obligatoria si se carga source_url.'
+        required: false
+        type: string
+      expected_active_total:
+        description: 'Total vigente esperado si está informado oficialmente; activa control ±8%.'
+        required: false
+        type: string
+  push:
+    branches: [main]
+    paths:
+      - 'ops/osfl_registry/**'
+      - '.github/workflows/osfl-registry-ingest.yml'
+      - 'supabase/functions/aml-osfl-registry-ingest/**'
+      - 'supabase/migrations/osfl_registry_ingest_0940.sql'
+  pull_request:
+    paths:
+      - 'ops/osfl_registry/**'
+      - '.github/workflows/osfl-registry-ingest.yml'
+      - 'supabase/functions/aml-osfl-registry-ingest/**'
+      - 'supabase/migrations/osfl_registry_ingest_0940.sql'
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: atlas-osfl-registry-ingest
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install parser dependencies
+        run: python -m pip install --disable-pip-version-check 'openpyxl==3.1.5' 'xlrd==2.0.2' 'rarfile==4.2'
+      - name: Validate loader and probe
+        run: |
+          python -m py_compile ops/osfl_registry/ingest.py ops/osfl_registry/probe.py
+          python ops/osfl_registry/ingest.py --self-test
+          grep -q '250000' supabase/migrations/osfl_registry_ingest_0940.sql
+          grep -q 'RUT_VALIDATED_EXACT' supabase/migrations/osfl_registry_ingest_0940.sql
+          grep -q 'security_invoker=true' supabase/migrations/osfl_registry_ingest_0940.sql
+
+  ingest_or_probe:
+    if: github.event_name != 'pull_request'
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install loader dependencies
+        run: |
+          python -m pip install --disable-pip-version-check 'openpyxl==3.1.5' 'xlrd==2.0.2' 'rarfile==4.2'
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq unar
+      - name: Probe protected official portal
+        if: ${{ inputs.source_url == '' || inputs.source_url == null }}
+        run: python ops/osfl_registry/probe.py
+      - name: Validate direct official source input
+        if: ${{ inputs.source_url != '' && inputs.source_url != null }}
+        env:
+          SOURCE_URL: ${{ inputs.source_url }}
+          SNAPSHOT_DATE: ${{ inputs.snapshot_date }}
+        run: |
+          set -euo pipefail
+          test -n "$SNAPSHOT_DATE" || { echo 'snapshot_date is required'; exit 2; }
+          python - <<'PY'
+          import os,urllib.parse,pathlib,re
+          u=urllib.parse.urlparse(os.environ['SOURCE_URL'])
+          host=(u.hostname or '').lower()
+          if u.scheme!='https' or not (host=='registrocivil.cl' or host.endswith('.registrocivil.cl')):
+              raise SystemExit('source_url must be an HTTPS Registro Civil host')
+          name=pathlib.Path(u.path).name
+          if pathlib.Path(name).suffix.lower() not in {'.rar','.zip','.xlsx','.xls','.csv'}:
+              raise SystemExit('source_url must point to an allowed registry file format')
+          with open(os.environ['GITHUB_ENV'],'a') as f:f.write(f'SOURCE_PATH=/tmp/{name}\n')
+          PY
+      - name: Download official file
+        if: ${{ inputs.source_url != '' && inputs.source_url != null }}
+        env:
+          SOURCE_URL: ${{ inputs.source_url }}
+        run: curl --fail --location --proto '=https' --tlsv1.2 --retry 2 --max-time 900 --output "$SOURCE_PATH" "$SOURCE_URL"
+      - name: Stage, validate, promote and reconcile official national registry
+        if: ${{ inputs.source_url != '' && inputs.source_url != null }}
+        env:
+          SOURCE_URL: ${{ inputs.source_url }}
+          SNAPSHOT_DATE: ${{ inputs.snapshot_date }}
+          EXPECTED: ${{ inputs.expected_active_total }}
+        run: |
+          set -euo pipefail
+          args=(--source-file "$SOURCE_PATH" --source-url "$SOURCE_URL" --snapshot-date "$SNAPSHOT_DATE")
+          if [ -n "${EXPECTED:-}" ]; then args+=(--expected-active-total "$EXPECTED"); fi
+          python ops/osfl_registry/ingest.py "${args[@]}"
