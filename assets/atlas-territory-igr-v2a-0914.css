@@ -1,0 +1,172 @@
+/* ATLAS Territorio · IGR v2A · HTML responsive authority 0.91.4
+ * El HTML standalone es la autoridad visual. Esta capa corrige embedding iOS/Safari,
+ * overflow horizontal y composición mobile sin alterar datos ni metodología.
+ */
+:root{
+  --territory-page-bg:var(--bg,#07111f);
+  color-scheme:dark;
+  background:#07111f;
+}
+html,body{
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+  background:var(--territory-page-bg)!important;
+  overflow-x:hidden!important;
+}
+html[data-atlas-embedded],
+html[data-atlas-embedded] body,
+html[data-atlas-embedded] .shell{
+  background:var(--territory-page-bg)!important;
+}
+body>.shell{
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+  padding-inline:0!important;
+  overflow-x:hidden!important;
+}
+.territory-toolbar,.controls,.segment,.igr-status-strip,.territory-stage,.territory-brief,
+.analysis-grid,.governance-grid,.card,.panel,.map-card,.map-head,.section-label{
+  min-width:0!important;
+  max-width:100%!important;
+}
+.territory-stage,.analysis-grid,.governance-grid{width:100%!important}
+#map{width:100%!important;max-width:100%!important}
+
+/* Móvil: la vista debe comportarse como el HTML aprobado, no como un dashboard desktop reducido. */
+@media (max-width:700px){
+  html,body{background:var(--territory-page-bg)!important}
+  body>.shell{
+    padding:0 0 calc(92px + env(safe-area-inset-bottom,0px))!important;
+  }
+  body>.shell>.header{display:none!important}
+
+  .territory-toolbar{
+    display:grid!important;
+    gap:10px!important;
+    margin:0!important;
+    padding:0 12px 10px!important;
+    background:var(--territory-page-bg)!important;
+  }
+  .controls{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    gap:8px!important;
+    width:100%!important;
+    align-items:stretch!important;
+  }
+  .control-spacer{display:none!important}
+  .segment{
+    grid-column:1/-1!important;
+    display:grid!important;
+    grid-template-columns:minmax(0,.72fr) minmax(0,1.28fr)!important;
+    width:100%!important;
+    overflow:hidden!important;
+    border-radius:12px!important;
+  }
+  .segment button{
+    width:100%!important;
+    min-width:0!important;
+    min-height:48px!important;
+    padding:8px 7px!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+    line-height:1.18!important;
+    text-align:center!important;
+    border-right:1px solid var(--line)!important;
+    border-bottom:1px solid var(--line)!important;
+  }
+  .segment button:nth-child(2n){border-right:0!important}
+  .segment button:nth-last-child(-n+2){border-bottom:0!important}
+  .controls select,.controls input{
+    display:block!important;
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    height:46px!important;
+    font-size:14px!important;
+  }
+
+  .igr-status-strip{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr) 112px 34px!important;
+    gap:8px!important;
+    width:100%!important;
+    margin:0!important;
+    padding:10px!important;
+    background:var(--panel)!important;
+  }
+  .igr-arrow,.igr-stage.building{display:none!important}
+  .igr-status-main{min-width:0!important}
+  .igr-status-main small{
+    white-space:normal!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    line-height:1.3!important;
+  }
+  .igr-stage.active{width:100%!important;min-width:0!important}
+  .method-help{justify-self:end!important;align-self:center!important}
+
+  .territory-stage{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:10px!important;
+    padding:0 12px!important;
+  }
+  .map-card,.territory-brief{width:100%!important}
+  .map-head{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:10px!important;
+    align-items:start!important;
+    padding:13px 14px!important;
+  }
+  .map-head h2{font-size:19px!important}
+  .map-head p{font-size:12px!important;line-height:1.45!important}
+  .legend{
+    display:flex!important;
+    flex-wrap:wrap!important;
+    gap:5px!important;
+    width:100%!important;
+  }
+  .legend small{font-size:11px!important}
+  #map{
+    height:min(58vh,560px)!important;
+    min-height:430px!important;
+    max-height:560px!important;
+    background:var(--territory-page-bg)!important;
+  }
+
+  .territory-brief{display:grid!important;grid-template-columns:1fr!important;gap:10px!important}
+  .section-label{
+    margin:16px 14px 8px!important;
+    padding:0!important;
+    display:flex!important;
+    flex-wrap:wrap!important;
+    gap:5px 8px!important;
+  }
+  .analysis-grid,.governance-grid{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:10px!important;
+    padding:0 12px!important;
+  }
+  .analysis-grid>.card,.governance-grid>.card{grid-column:auto!important;width:100%!important}
+  .panel{padding:12px!important}
+  .comparison,.trend-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .readout-grid{grid-template-columns:1fr!important}
+  .roadmap{grid-template-columns:1fr!important;gap:6px!important}
+  .road-line{height:12px!important;width:1px!important;justify-self:center!important}
+  .trend-actions{width:100%!important}
+  .trend-select{width:100%!important;max-width:none!important}
+  .method-pop{padding:12px!important}
+  .method-pop-card{width:100%!important;max-width:calc(100vw - 24px)!important}
+}
+
+/* iOS Safari: no permitir que un iframe transparente vuelva a pintar un canvas blanco. */
+@supports (-webkit-touch-callout:none){
+  html,body,body>.shell{background:var(--territory-page-bg)!important}
+}
