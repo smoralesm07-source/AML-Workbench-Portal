@@ -3,6 +3,7 @@
  * Mantiene el path histórico cargado por index.html, pero delega toda la
  * autoridad de Universo SO a la implementación 0.81.6. Sin observers globales.
  * Contexto SII se carga sólo como enriquecimiento de la Ficha 360.
+ * La señal OSFL 0.84.1 se integra como enriquecimiento canónico por identidad.
  */
 (function atlasUniversoSOCanonicalLoader0816(){
   if(window.AtlasUniversoSO0816)return;
@@ -12,6 +13,7 @@
   const dialogJs='./assets/atlas-branded-review-dialog-0832.js?v=0832-1';
   const siiCss='./assets/atlas-universo-so-sii-context-0833.css?v=0833-2';
   const siiJs='./assets/atlas-universo-so-sii-context-0833.js?v=0833-2';
+  const osflSignalJs='./assets/atlas-universo-so-osfl-signal-0841.js?v=0841-1';
   if(!document.querySelector('link[data-atlas-universo-0816]')){
     const link=document.createElement('link');link.rel='stylesheet';link.href=css;link.dataset.atlasUniverso0816='1';document.head.appendChild(link);
   }
@@ -34,6 +36,9 @@
       }
       if(!document.querySelector('script[data-atlas-sii-0833]')){
         const patch=document.createElement('script');patch.src=siiJs;patch.async=false;patch.dataset.atlasSii0833='1';document.head.appendChild(patch);
+      }
+      if(!document.querySelector('script[data-atlas-universo-osfl-signal-0841]')){
+        const patch=document.createElement('script');patch.src=osflSignalJs;patch.async=false;patch.dataset.atlasUniversoOsflSignal0841='1';document.head.appendChild(patch);
       }
       resolveReady(api);
     }else rejectReady(new Error('Autoridad Universo SO 0.81.6 no instalada'));
