@@ -2,9 +2,10 @@
 /* ATLAS AML 0.64.1 · limpieza Radar Integrado
  * 0.70.4: la auditoría de fuentes ya NO se reubica desde este módulo.
  * La única autoridad de ubicación es atlas-source-health-global-0694.js.
+ * 0.70.5: elimina por completo el bloque 04 · Convergencia entre radares.
  */
 (function atlasRadarIntegratedCleanup0641(){
-  const VERSION='0641.5';
+  const VERSION='0641.6';
   let raf=0;
 
   const norm=s=>String(s||'').replace(/\s+/g,' ').trim().toLowerCase();
@@ -41,9 +42,19 @@
     });
   }
 
+  function removeConvergencePanel(){
+    [...document.querySelectorAll('.v036-deck h2')]
+      .filter(h=>norm(h.textContent)==='convergencia entre radares')
+      .forEach(h=>{
+        const deck=h.closest('section.v036-deck,.v036-deck');
+        if(deck) deck.remove();
+      });
+  }
+
   function apply(){
     raf=0;
     removePointFive();
+    removeConvergencePanel();
     /* Never reparent the audit here. A second placement authority caused the
        audit card to oscillate between Radar Integrado and the global topbar. */
     try{window.AtlasGlobalSourceHealth?.refresh?.();}catch(_e){}
