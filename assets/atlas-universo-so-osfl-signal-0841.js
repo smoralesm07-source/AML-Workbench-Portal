@@ -56,8 +56,10 @@
     const state=api()?.state?.()||{};
     const rows=visibleRows();
     for(const {el,id} of rows){
-      el.querySelectorAll('.atlas-uaf-osfl-badge').forEach(x=>x.remove());
-      if(state.mode!=='inscritos'||CACHE.get(id)!==true)continue;
+      const existing=el.querySelector('.uso81-row-meta > .atlas-uaf-osfl-badge');
+      const shouldShow=state.mode==='inscritos'&&CACHE.get(id)===true;
+      if(!shouldShow){existing?.remove();continue;}
+      if(existing)continue;
       const meta=el.querySelector('.uso81-row-meta');
       if(!meta)continue;
       const mark=badge();
@@ -70,10 +72,11 @@
   function renderSheetBadge(state){
     const sheet=document.querySelector('#u816-sheet.open');
     if(!sheet)return;
-    sheet.querySelectorAll('.atlas-uaf-osfl-badge').forEach(x=>x.remove());
-    if(state.mode!=='inscritos')return;
+    const existing=sheet.querySelector('header .atlas-uaf-osfl-badge');
     const id=String(state.sheet?.entity_id||'').trim();
-    if(!id||CACHE.get(id)!==true)return;
+    const shouldShow=state.mode==='inscritos'&&id&&CACHE.get(id)===true;
+    if(!shouldShow){existing?.remove();return;}
+    if(existing)return;
     const title=sheet.querySelector('header h3');
     if(title)title.insertAdjacentElement('afterend',badge());
   }
