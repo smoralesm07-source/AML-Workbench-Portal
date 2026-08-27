@@ -1,15 +1,15 @@
 'use strict';
-/* ATLAS AML · IGR v2A production authority 0.91.3
+/* ATLAS AML · IGR v2A production authority 0.91.4
  * Legacy filename retained only as the synchronous production load point.
  * Visible indicator: IGR. Current score: 100% CEAD-LA territorial threat.
- * Presentation: full-width ATLAS host; no nested app/window chrome.
+ * Presentation: standalone HTML is the visual authority; ATLAS only mounts and resizes it.
  */
-(function atlasIgrV2AAuthority0913(){
+(function atlasIgrV2AAuthority0914(){
   if(window.AtlasIGRV2A)return;
   const VERSION='IGR-2A-1.0.0';
   const SOURCE='https://raw.githubusercontent.com/smoralesm07-source/Radar_delictual/radar-data/data/processed/cead_geographic_score_v1.json';
   const VIEW='territory';
-  const IFRAME='./assets/territorio-aml-beta.html?v=0913-atlas1';
+  const IFRAME='./assets/territorio-aml-beta.html?v=0914-html1';
   const state={status:'idle',rows:[],computed:{regions:[],communes:[]},loadedAt:null,error:null};
   let loadPromise=null;
   let activeFrame=null;
@@ -65,8 +65,13 @@
     if(document.querySelector('style[data-atlas-igr-v2a-host]'))return;
     const s=document.createElement('style');s.dataset.atlasIgrV2aHost='1';
     s.textContent=`
-      [data-atlas-igr-v2a-host]{display:block!important;width:100%!important;max-width:none!important;height:auto!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;overflow:visible!important;background:transparent!important;box-shadow:none!important}
-      [data-atlas-igr-v2a-host] iframe{display:block!important;width:100%!important;max-width:none!important;height:1200px;border:0!important;border-radius:0!important;overflow:hidden!important;background:transparent!important;box-shadow:none!important}
+      [data-atlas-territory-fullscreen="1"]{width:100%!important;max-width:none!important;background:var(--atlas-bg,#07111f)!important}
+      [data-atlas-igr-v2a-host]{display:block!important;width:100%!important;max-width:none!important;height:auto!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;overflow:visible!important;background:var(--atlas-bg,#07111f)!important;box-shadow:none!important}
+      [data-atlas-igr-v2a-host] iframe{display:block!important;width:100%!important;max-width:100%!important;height:1200px;border:0!important;border-radius:0!important;overflow:hidden!important;background:var(--atlas-bg,#07111f)!important;box-shadow:none!important}
+      @media(max-width:767.98px){
+        .v019-content[data-atlas-territory-fullscreen="1"]{padding-left:0!important;padding-right:0!important}
+        [data-atlas-igr-v2a-host],[data-atlas-igr-v2a-host] iframe{width:100%!important;max-width:100%!important;min-width:0!important}
+      }
     `;
     document.head.appendChild(s);
   }
@@ -84,15 +89,15 @@
     try{
       const d=frame.contentDocument;if(!d?.documentElement||!d.body)return;
       const t=outerTokens(),r=d.documentElement;
-      r.dataset.atlasEmbedded='true';
+      r.dataset.atlasEmbedded='true';d.body.dataset.atlasEmbedded='true';
       r.style.setProperty('--bg',t.bg);r.style.setProperty('--panel',t.panel);r.style.setProperty('--panel2',t.panel2);r.style.setProperty('--line',t.line);r.style.setProperty('--line-strong',t.lineStrong);r.style.setProperty('--text',t.text);r.style.setProperty('--muted',t.muted);r.style.setProperty('--accent',t.accent);r.style.setProperty('--cyan',t.accent);r.style.setProperty('--radius',t.radius);r.style.setProperty('--radius-sm',t.radiusSm);
+      r.style.background=t.bg;d.body.style.background=t.bg;frame.style.background=t.bg;
       let style=d.querySelector('style[data-atlas-territory-seamless]');
       if(!style){style=d.createElement('style');style.dataset.atlasTerritorySeamless='1';d.head.appendChild(style);}
       style.textContent=`
-        html,body{width:100%!important;height:auto!important;min-height:0!important;overflow:hidden!important;background:transparent!important}
-        body>.shell{width:100%!important;max-width:none!important;margin:0!important;padding:0 2px 24px!important}
+        html,body{width:100%!important;height:auto!important;min-height:0!important;overflow-x:hidden!important;overflow-y:hidden!important;background:var(--bg,#07111f)!important}
+        body>.shell{width:100%!important;max-width:100%!important;margin:0!important;background:var(--bg,#07111f)!important}
         body>.shell>.header{display:none!important}
-        .territory-toolbar{margin-top:0!important}
         .card{box-shadow:none!important}
       `;
       if(frame.__atlasTerritoryRO)try{frame.__atlasTerritoryRO.disconnect();}catch{}
@@ -109,7 +114,7 @@
     try{if(typeof shell==='function')shell('Territorio','IGR · amenaza territorial LA · historia real 2020–2025');}catch{}
     ensureHostStyle();
     const root=document.querySelector('#content,.v019-content');if(!root)throw new Error('Contenedor Territorio no disponible');
-    root.dataset.atlasTerritoryFullscreen='1';root.style.width='100%';root.style.maxWidth='none';
+    root.dataset.atlasTerritoryFullscreen='1';root.style.width='100%';root.style.maxWidth='none';root.style.background='var(--atlas-bg,#07111f)';
     root.innerHTML=`<section data-atlas-igr-v2a-host="1" aria-label="Territorio IGR"><iframe title="ATLAS Territorio · IGR" src="${IFRAME}" loading="eager" scrolling="no" referrerpolicy="no-referrer"></iframe></section>`;
     activeFrame=root.querySelector('iframe');
     activeFrame?.addEventListener('load',()=>applySeamlessFrame(activeFrame),{once:true});
@@ -117,7 +122,7 @@
   }
   const API={version:VERSION,state,load,open,byCommune,byRegion,scoreFor,exportRows,patchMethodology,syncFramePresentation,method:{formula:'1.00*CEAD_LA',weights:{cead_la:1}}};
   window.AtlasIGRV2A=API;window.v019LoadTerritory=open;window.loadTerritory=open;
-  window.ATLAS_TERRITORY_THREAT_CEAD_V1={source:SOURCE,scoreVersion:'1.0.0',topLevelWeight:1,aggregation:'IGR_V2A_CEAD_LA_AUTHORITY',replacedLegacy15Percent:true,seamlessAtlasHost:true,fullWidthAtlasLayout:true};
+  window.ATLAS_TERRITORY_THREAT_CEAD_V1={source:SOURCE,scoreVersion:'1.0.0',topLevelWeight:1,aggregation:'IGR_V2A_CEAD_LA_AUTHORITY',replacedLegacy15Percent:true,seamlessAtlasHost:true,fullWidthAtlasLayout:true,standaloneHtmlAuthority:true};
   window.addEventListener('atlas:nav-refresh',()=>{patchMethodology();syncFramePresentation();});
   window.addEventListener('atlas:theme-change',syncFramePresentation);window.addEventListener('atlas:appearance-change',syncFramePresentation);window.addEventListener('pageshow',()=>{patchMethodology();syncFramePresentation();});window.addEventListener('resize',()=>resizeFrame(activeFrame));
   setTimeout(()=>{void load().catch(()=>{});patchMethodology();},0);setTimeout(patchMethodology,700);setTimeout(patchMethodology,2500);

@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 const read=p=>fs.readFileSync(new URL(`../${p}`,import.meta.url),'utf8');
 const html=read('assets/territorio-aml-beta.html');
 const territoryCss=read('assets/atlas-territory-igr-v2a-0911.css');
+const responsiveCss=read('assets/atlas-territory-igr-v2a-0914.css');
 const core=read('assets/atlas-territory-igr-v2a-core-0911.js');
 const history=read('assets/atlas-territory-igr-v2a-history-0911.js');
 const ui=read('assets/atlas-territory-igr-v2a-ui-0911.js');
@@ -26,11 +27,13 @@ assert.match(html,/Territorio · Índice de Riesgo Geográfico/);
 assert.match(html,/IGR · v2A operativo/);
 assert.match(html,/Amenazas precedentes LA/);
 assert.match(html,/pipeline en construcción/);
-for(const asset of ['atlas-territory-igr-v2a-0911.css','atlas-territory-igr-v2a-core-0911.js','atlas-territory-igr-v2a-history-0911.js','atlas-territory-igr-v2a-ui-0911.js'])assert.ok(html.includes(asset),`missing ${asset}`);
+for(const asset of ['atlas-territory-igr-v2a-0911.css','atlas-territory-igr-v2a-0914.css','atlas-territory-igr-v2a-core-0911.js','atlas-territory-igr-v2a-history-0911.js','atlas-territory-igr-v2a-ui-0911.js'])assert.ok(html.includes(asset),`missing ${asset}`);
 assert.match(html,/territory-stage/);
 assert.match(html,/analysis-grid/);
 assert.match(html,/governance-grid/);
-assert.match(html,/0913-atlas1/);
+assert.match(html,/viewport-fit=cover/);
+assert.match(html,/0914-html1/);
+assert.doesNotMatch(html,/0913-atlas1/);
 assert.doesNotMatch(html,/45\s*%\s*V\/E/i);
 assert.doesNotMatch(html,/Densidad SO/);
 
@@ -48,6 +51,18 @@ assert.match(territoryCss,/#map\{height:clamp\(/);
 assert.doesNotMatch(territoryCss,/max-width:1560px/);
 assert.doesNotMatch(territoryCss,/--cyan:#54bfd1/i);
 assert.doesNotMatch(territoryCss,/background:#071019/i);
+
+// Standalone HTML is the mobile visual authority. No transparent iframe canvas or horizontal overflow.
+assert.match(responsiveCss,/HTML responsive authority 0\.91\.4/);
+assert.match(responsiveCss,/html\[data-atlas-embedded\]/);
+assert.match(responsiveCss,/background:var\(--territory-page-bg\)!important/);
+assert.match(responsiveCss,/@media \(max-width:700px\)/);
+assert.match(responsiveCss,/grid-template-columns:minmax\(0,\.72fr\) minmax\(0,1\.28fr\)/);
+assert.match(responsiveCss,/white-space:normal!important/);
+assert.match(responsiveCss,/overflow-wrap:anywhere!important/);
+assert.match(responsiveCss,/#map\{[\s\S]*height:min\(58vh,560px\)!important/);
+assert.match(responsiveCss,/@supports \(-webkit-touch-callout:none\)/);
+assert.doesNotMatch(responsiveCss,/background:transparent!important/);
 
 // CEAD-LA methodology and real history.
 assert.match(core,/layerWeights:\{predicate_direct:\.55,criminal_economy:\.35,criminogenic_context:\.10\}/);
@@ -72,18 +87,24 @@ assert.match(authority,/CONFIDENCE_WEIGHTED_COMMUNE_MEAN/);
 assert.match(authority,/topLevelWeight:1/);
 assert.doesNotMatch(authority,/topLevelWeight:0\.15/);
 
-// Territorio must behave as a native ATLAS surface, not as a framed mini-app.
+// Territorio behaves as a mounted standalone HTML, not as a transparent framed mini-app.
 assert.match(authority,/seamlessAtlasHost:true/);
 assert.match(authority,/fullWidthAtlasLayout:true/);
+assert.match(authority,/standaloneHtmlAuthority:true/);
 assert.match(authority,/body>\.shell>\.header\{display:none!important\}/);
 assert.match(authority,/ResizeObserver/);
 assert.match(authority,/scrolling=\"no\"/);
 assert.match(authority,/border:0!important/);
 assert.match(authority,/max-width:none!important/);
 assert.match(authority,/root\.style\.maxWidth='none'/);
-assert.match(authority,/0913-atlas1/);
+assert.match(authority,/0914-html1/);
 assert.match(authority,/--atlas-accent/);
+assert.match(authority,/background:var\(--atlas-bg,#07111f\)!important/);
+assert.match(authority,/\.v019-content\[data-atlas-territory-fullscreen="1"\]\{padding-left:0!important;padding-right:0!important\}/);
+assert.doesNotMatch(authority,/background:transparent!important/);
+assert.doesNotMatch(authority,/0913-atlas1/);
 assert.doesNotMatch(authority,/height:calc\(100vh\s*-\s*86px\)/);
+assert.doesNotMatch(authority,/#map\{min-height:620px\}/);
 
 // Historical v032 must be a compatibility delegate, never a second calculator.
 assert.match(v032,/0\.32\.0-retired/);
@@ -104,7 +125,8 @@ assert.match(threatAnalytics,/retired:true/);
 assert.match(copyCleanup,/retired:true/);
 assert.doesNotMatch(refinement,/45% V\/E/);
 assert.doesNotMatch(irarAdapter,/\.45\*Number\(p\.vulnerability\)/);
-assert.match(oldBeta,/territorio-aml-beta\.html\?v=0913-atlas1/);
+assert.match(oldBeta,/territorio-aml-beta\.html\?v=0914-html1/);
+assert.doesNotMatch(oldBeta,/0913-atlas1/);
 
 // Machine contracts.
 assert.equal(contract.schema,'ATLAS_IGR_V2A');
