@@ -1,10 +1,11 @@
-name: Validate current Sanciones v12 route
+name: Validate current Sanciones route
 
 on:
   pull_request:
     branches: [main]
     paths:
       - 'atlas-runtime-manifest.json'
+      - 'assets/atlas-sanctions-spectrum-0940.js'
       - 'atlas-sanctions-v12-approved-*.js'
       - 'atlas-sanctions-v12-route.js'
       - 'v019-live.js'
@@ -13,6 +14,7 @@ on:
     branches: [main]
     paths:
       - 'atlas-runtime-manifest.json'
+      - 'assets/atlas-sanctions-spectrum-0940.js'
       - 'atlas-sanctions-v12-approved-*.js'
       - 'atlas-sanctions-v12-route.js'
       - 'v019-live.js'
@@ -34,17 +36,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node --check assets/atlas-sanctions-spectrum-0940.js
           node --check atlas-sanctions-v12-route.js
-          grep -q 'legacyFrozenRouteBypassed:true' atlas-sanctions-v12-route.js
-          grep -q 'AML_SANCTIONS_V12_APPROVED' atlas-sanctions-v12-route.js
+          grep -q 'currentSpectrumPinned:true' atlas-sanctions-v12-route.js
+          grep -q 'ATLAS_SANCTIONS_CURRENT.load' atlas-sanctions-v12-route.js
+          grep -q 'AML_SANCTIONS_V12_APPROVED.reload' atlas-sanctions-v12-route.js
           python - <<'PY'
           import json
           m=json.load(open('atlas-runtime-manifest.json',encoding='utf-8'))
           s=[x['path'] for x in m['scripts']]
-          approved=[f'atlas-sanctions-v12-approved-{i:02d}.js' for i in range(1,7)]
-          assert all(x in s for x in approved),approved
-          assert s.index('atlas-sanctions-v12-route.js')==s.index('atlas-current-ui.js')-1,s[-12:]
-          assert s.index('atlas-sanctions-v12-approved-06.js')==s.index('atlas-sanctions-v12-route.js')-1,s[-12:]
+          current='assets/atlas-sanctions-spectrum-0940.js'
+          route='atlas-sanctions-v12-route.js'
+          fallback='atlas-sanctions-v12-approved-06.js'
+          assert current in s
+          assert s.index(fallback)<s.index(current)<s.index(route)<s.index('atlas-current-ui.js'),s[-16:]
+          assert s.index(route)==s.index('atlas-current-ui.js')-1,s[-16:]
           PY
       - name: Validate compiled route is last sanctions navigation authority
         shell: bash
@@ -55,6 +61,7 @@ jobs:
             test -e "$f" || continue
             node --check "$f"
           done
+          grep -R -q 'ATLAS_SANCTIONS_CURRENT.load' _site-route-test/atlas-runtime-current-*.js
+          grep -R -q 'currentSpectrumPinned:true' _site-route-test/atlas-runtime-current-*.js
           grep -R -q 'AML_SANCTIONS_V12_APPROVED.reload' _site-route-test/atlas-runtime-current-*.js
-          grep -R -q 'legacyFrozenRouteBypassed:true' _site-route-test/atlas-runtime-current-*.js
-          grep -R -q 'Consulta directa de entidad' _site-route-test/atlas-runtime-current-*.js
+          grep -R -q 'SANCTIONS_SPECTRUM_CURRENT_0940' _site-route-test/atlas-runtime-current-*.js
