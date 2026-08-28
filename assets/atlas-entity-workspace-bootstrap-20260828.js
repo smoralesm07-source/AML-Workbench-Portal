@@ -1,13 +1,7 @@
 'use strict';
 
 /* ATLAS · Entity workspace bootstrap · 2026-08-28
- * Fixes two production failure modes without changing identity governance:
- * 1) v0447 used to execute once and exit forever when __ATLAS_ENTITY_ENTRY__
- *    was not ready yet.
- * 2) Monitor's current press bridge exports article fields as
- *    id/date/title/media/url, while the v0447 consumer still expects
- *    article_id/published_at/headline/source/source_url.
- *
+ * Fixes production timing/schema compatibility without changing identity governance.
  * The compatibility layer is intentionally scoped to the Atlas press feed.
  * PRESS_ONLY observations remain non-reconciled and receive no inferred RUT.
  */
@@ -16,8 +10,10 @@
   const LOADING_FLAG='__ATLAS_ENTITY_WORKSPACE_LOADING_20260828__';
   const LOADED_FLAG='__ATLAS_ENTITY_WORKSPACE_LOADED_20260828__';
   const PRESS_COMPAT_FLAG='__ATLAS_PRESS_SCHEMA_COMPAT_20260828__';
+  const BRIDGE_LOADING_FLAG='__ATLAS_ENTITY_PRESS_SEARCH_BRIDGE_LOADING_20260828__';
   const PRESS_FEED_URL='https://raw.githubusercontent.com/smoralesm07-source/Monitor/atlas-press-state/atlas_prensa.json';
   const WORKSPACE_SRC='./v0447-entity-workspace.js?v=20260828-fodich4';
+  const PRESS_SEARCH_BRIDGE_SRC='./assets/atlas-entity-press-search-bridge-20260828.js?v=20260828-fodich5';
 
   if(window[BOOT_FLAG])return;
   window[BOOT_FLAG]=true;
@@ -37,10 +33,11 @@
         const articles=(Array.isArray(raw?.articles)?raw.articles:[]).map((article,index)=>({
           ...article,
           article_id:String(article?.article_id||article?.id||`PRESS-ARTICLE-${index}`),
-          published_at:article?.published_at||article?.observed_at||article?.date||'',
-          headline:article?.headline||article?.title||'',
-          source:article?.source||article?.media||'',
-          source_url:article?.source_url||article?.canonical_url||article?.url||''
+          published_at:article?.published_at||article?.observed_at||article?.date||article?.fecha||'',
+          headline:article?.headline||article?.title||article?.titular||'',
+          summary:article?.summary||article?.bajada||article?.description||article?.excerpt||article?.lead||'',
+          source:article?.source||article?.source_name||article?.media||article?.medio||'',
+          source_url:article?.source_url||article?.canonical_url||article?.url||article?.link||''
         }));
         const normalized={...raw,articles};
         const headers=new Headers(response.headers);
@@ -54,6 +51,38 @@
         return response;
       }
     };
+  }
+
+  function dispatchReady(){
+    document.dispatchEvent(new CustomEvent('atlas:entity-workspace-ready'));
+  }
+
+  function loadPressSearchBridge(){
+    if(window.__ATLAS_ENTITY_PRESS_SEARCH_BRIDGE_20260828__){
+      dispatchReady();
+      return;
+    }
+    if(window[BRIDGE_LOADING_FLAG])return;
+    window[BRIDGE_LOADING_FLAG]=true;
+    const bridge=document.createElement('script');
+    bridge.src=PRESS_SEARCH_BRIDGE_SRC;
+    bridge.async=false;
+    bridge.dataset.atlasEntityPressSearchBridge='1';
+    bridge.onload=()=>{
+      window[BRIDGE_LOADING_FLAG]=false;
+      if(window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__){
+        window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__.pressSearchBridge=true;
+      }
+      dispatchReady();
+    };
+    bridge.onerror=()=>{
+      window[BRIDGE_LOADING_FLAG]=false;
+      if(window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__){
+        window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__.pressSearchBridge=false;
+      }
+      dispatchReady();
+    };
+    document.body.appendChild(bridge);
   }
 
   function loadWorkspaceWhenReady(){
@@ -72,19 +101,21 @@
       window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__={
         ready:true,
         pressSchemaCompatible:true,
+        pressSearchBridge:false,
         loadedAt:new Date().toISOString(),
-        build:'20260828-fodich4'
+        build:'20260828-fodich5'
       };
-      document.dispatchEvent(new CustomEvent('atlas:entity-workspace-ready'));
+      loadPressSearchBridge();
     };
     script.onerror=()=>{
       window[LOADING_FLAG]=false;
       window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__={
         ready:false,
         pressSchemaCompatible:true,
+        pressSearchBridge:false,
         error:'workspace-load-failed',
         failedAt:new Date().toISOString(),
-        build:'20260828-fodich4'
+        build:'20260828-fodich5'
       };
     };
     document.body.appendChild(script);
