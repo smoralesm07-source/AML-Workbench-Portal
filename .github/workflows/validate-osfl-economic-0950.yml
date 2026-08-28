@@ -1,0 +1,77 @@
+name: Validate OSFL economic 0950
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'assets/atlas-osfl-economic-0950.js'
+      - 'assets/atlas-osfl-economic-0950.css'
+      - 'sql/atlas_osfl_economic_public_funds_v0950.sql'
+      - 'atlas-runtime-manifest.json'
+      - 'build.json'
+      - 'tools/build_atlas_site.py'
+      - '.github/workflows/validate-osfl-economic-0950.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout triggering revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Validate OSFL 0.95 contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check assets/atlas-osfl-economic-0950.js
+          test -s assets/atlas-osfl-economic-0950.css
+          test -s sql/atlas_osfl_economic_public_funds_v0950.sql
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          runtime=json.loads(Path('atlas-runtime-manifest.json').read_text())
+          build=json.loads(Path('build.json').read_text())
+          styles=runtime['styles']
+          scripts=runtime['scripts']
+          paths=[x['path'] for x in scripts]
+          roles={x['path']:x.get('role') for x in scripts}
+          assert 'assets/atlas-osfl-economic-0950.css' in styles
+          assert 'assets/atlas-osfl-economic-0950.js' in paths
+          assert roles['assets/atlas-osfl-economic-0950.js']=='osfl-economic-public-funds-current-0950'
+          assert build['osfl_public_funds_contract'].startswith('REGISTRO19862_CONTEXT_NOT_RECEIPT')
+          assert 'SCALE_NOT_WORKING_CAPITAL' in build['osfl_economic_contract']
+          assert 'DESCRIPTIVE_NOT_AML_RISK' in build['osfl_concentration_contract']
+          assert 'ATLAS_OSFL_ECONOMIC_SIGNALS_0950' in build['osfl_signal_contract']
+          PY
+
+          grep -q '__ATLAS_OSFL_ECONOMIC_0950__' assets/atlas-osfl-economic-0950.js
+          grep -q 'atlas:osfl-economic:ready' assets/atlas-osfl-economic-0950.js
+          grep -q 'REGISTRO_19862_SIN_TRANSFERENCIA_FILA_A_FILA' sql/atlas_osfl_economic_public_funds_v0950.sql
+          grep -q 'SCHEMA_READY_PENDING_ROW_LEVEL_INGEST' sql/atlas_osfl_economic_public_funds_v0950.sql
+          grep -q 'low_staff_high_sales_context' sql/atlas_osfl_economic_public_funds_v0950.sql
+          grep -q 'security_invoker = true' sql/atlas_osfl_economic_public_funds_v0950.sql
+          grep -q 'aml_v_osfl_economic_profile_current_v0950' sql/atlas_osfl_economic_public_funds_v0950.sql
+          grep -q 'aml_v_osfl_activity_distribution_current_v0950' sql/atlas_osfl_economic_public_funds_v0950.sql
+          grep -q 'aml_v_osfl_public_funds_current_v0950' sql/atlas_osfl_economic_public_funds_v0950.sql
+          grep -q 'aml_v_osfl_economic_concentration_current_v0950' sql/atlas_osfl_economic_public_funds_v0950.sql
+          grep -q 'aml_v_osfl_economic_distribution_current_v0950' sql/atlas_osfl_economic_public_funds_v0950.sql
+
+      - name: Validate compiled runtime inclusion
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/build_atlas_site.py --out _site-osfl0950
+          cat _site-osfl0950/atlas-runtime-current-*.js > /tmp/atlas-runtime-osfl0950.js
+          grep -q '__ATLAS_OSFL_ECONOMIC_0950__' /tmp/atlas-runtime-osfl0950.js
+          grep -q 'aml_v_osfl_economic_concentration_current_v0950' /tmp/atlas-runtime-osfl0950.js
+          grep -q 'assets/atlas-osfl-economic-0950.css' atlas-runtime-manifest.json
+          test -s _site-osfl0950/atlas-runtime-current.css
+          grep -q 'osfl95-card' _site-osfl0950/atlas-runtime-current.css
