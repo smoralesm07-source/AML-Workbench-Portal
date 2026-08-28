@@ -117,7 +117,9 @@ def main():
         "['evidence','06','Evidencia y decisión']",
         'ENTITY360_INLINE_AUTOCOMPLETE_0447',
         'SINGLE_DARK_DOSSIER_NO_SEPARATE_SEARCH_LANDING',
-        'DEBOUNCED_AUTOCOMPLETE_RLS_NAME_RUT_ENTITY_ID_NO_FUZZY_JOIN',
+        'FEDERATED_AML_ENTITIES_PLUS_PRESS_UNRECONCILED_NO_AUTOMATIC_IDENTITY_JOIN',
+        'unreconciledPressVisible:true',
+        'automaticPressReconciliation:false',
         'selectionScopesAllEntityGraphics:true',
         'a47-entity-q',
         'ENTITY360_ROUTE_AUTHORITY_0448',
@@ -156,7 +158,8 @@ def main():
         f'ATLAS compiled runtime authority OK: {len(files)} bundle/module asset(s); '
         'atlas-release-guard.js remains the sole version authority; '
         f'{final_module.name} owns passive final session/Entity 360 authority; '
-        'Entity 360 uses the six-lens dossier with persistent RLS autocomplete; '
+        'Entity 360 uses the six-lens dossier with persistent federated canonical + unreconciled-press autocomplete; '
+        'press discovery remains explicitly non-reconciliating and never fabricates canonical identity; '
         'the Entidades route bypasses the historical captured legacy loader; '
         'SII document authorization is read-only and explicitly latest-observed, not absolute last timbraje; '
         'reconciliation bubble matrix is removed and reversible cross-filters are active; '
