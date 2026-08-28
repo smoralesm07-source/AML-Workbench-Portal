@@ -1,4 +1,4 @@
-name: Validate approved Sanciones v12 current
+name: Validate current Sanciones spectrum
 
 on:
   pull_request:
@@ -9,7 +9,10 @@ on:
       - 'atlas-runtime-manifest.json'
       - 'atlas-sanctions-v12-approved-*.js'
       - 'atlas-sanctions-v12-approved-*.css'
+      - 'assets/atlas-sanctions-spectrum-0940.js'
+      - 'assets/atlas-sanctions-spectrum-0940.css'
       - 'atlas-sanctions-v12-route.js'
+      - 'sql/atlas_v0940_sanctions_spectrum_current.sql'
       - 'tools/build_atlas_site.py'
       - '.github/workflows/validate-sanctions-v12-current.yml'
   push:
@@ -20,7 +23,10 @@ on:
       - 'atlas-runtime-manifest.json'
       - 'atlas-sanctions-v12-approved-*.js'
       - 'atlas-sanctions-v12-approved-*.css'
+      - 'assets/atlas-sanctions-spectrum-0940.js'
+      - 'assets/atlas-sanctions-spectrum-0940.css'
       - 'atlas-sanctions-v12-route.js'
+      - 'sql/atlas_v0940_sanctions_spectrum_current.sql'
       - 'tools/build_atlas_site.py'
       - '.github/workflows/validate-sanctions-v12-current.yml'
   workflow_dispatch:
@@ -39,7 +45,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: Validate canonical Sanciones source contract
+      - name: Validate current Sanciones source contract
         shell: bash
         run: |
           set -euo pipefail
@@ -51,55 +57,54 @@ jobs:
           manifest=json.load(open('atlas-runtime-manifest.json',encoding='utf-8'))
           assert release['release']==build['app_version']==manifest['release']
           assert release['build']==build['build']==manifest['build']
-          assert build['sanctions_ui_contract']=='APPROVED_V12_ATLAS_THEME_NATIVE'
-          assert build['sanctions_data_contract']=='RADAR_SANCTIONS+ENTITY_HUB_V1+WORKBENCH_IDENTITY+UAF_RECONCILIATION'
-          assert build['sanctions_route_authority']=='atlas-sanctions-v12-route.js'
-          assert build['sanctions_route_policy']=='BYPASS_V019_FROZEN_LEGACY_LOADER'
+          assert 'SANCTIONS_SPECTRUM_0940' in build['sanctions_ui_contract']
+          assert 'CURRENT_UAF_STATUS_0812' in build['sanctions_data_contract']
+          assert 'NO_HEURISTIC_UAF_STATUS' in build['sanctions_data_contract']
+          assert 'NO_INFERRED_TERRITORY' in build['sanctions_data_contract']
+          assert 'ENTITY+REGION+SECTOR_REUSABLE_CURRENT_V0940' in build['sanctions_signal_contract']
+          assert 'ENTITY360_CANONICAL_PLUS_PRESS_UNRECONCILED' in build['sanctions_search_contract']
           scripts=[x['path'] for x in manifest['scripts']]
           styles=list(manifest['styles'])
-          approved_js=[f'atlas-sanctions-v12-approved-{i:02d}.js' for i in range(1,7)]
-          approved_css=[f'atlas-sanctions-v12-approved-{i:02d}.css' for i in range(1,5)]
-          assert all(x in scripts for x in approved_js),scripts
-          assert all(x in styles for x in approved_css),styles
-          old_js={'v034-sanctions-v12-core.js','v034-sanctions-v12-ui.js','v034-sanctions-v12-charts.js','v0341-sanctions-hardening.js'}
-          assert not old_js.intersection(scripts),old_js.intersection(scripts)
-          assert 'v034-sanctions-v12.css' not in styles
-          route_pos=scripts.index('atlas-sanctions-v12-route.js')
-          assert scripts[route_pos-6:route_pos]==approved_js,scripts[route_pos-8:route_pos+2]
-          assert scripts[route_pos+1]=='atlas-current-ui.js',scripts[route_pos-2:route_pos+4]
-          for path in approved_js+approved_css+['atlas-sanctions-v12-route.js']:
+          current='assets/atlas-sanctions-spectrum-0940.js'
+          current_css='assets/atlas-sanctions-spectrum-0940.css'
+          route='atlas-sanctions-v12-route.js'
+          assert current in scripts,scripts
+          assert current_css in styles,styles
+          assert scripts.index(current)<scripts.index(route)<scripts.index('atlas-current-ui.js')
+          assert manifest['scripts'][scripts.index(current)]['role']=='sanctions-spectrum-current-authority'
+          assert manifest['scripts'][scripts.index(route)]['role']=='sanctions-spectrum-route-authority'
+          approved=[f'atlas-sanctions-v12-approved-{i:02d}.js' for i in range(1,7)]
+          assert all(x in scripts for x in approved),approved
+          assert all(manifest['scripts'][scripts.index(x)]['role']=='sanctions-v12-approved-fallback' for x in approved)
+          for path in [current,current_css,route,'sql/atlas_v0940_sanctions_spectrum_current.sql']:
               assert Path(path).is_file(),path
           PY
 
-      - name: Validate approved source syntax and semantic markers
+      - name: Validate source syntax and semantic guardrails
         shell: bash
         run: |
           set -euo pipefail
-          cat \
-            atlas-sanctions-v12-approved-01.js \
-            atlas-sanctions-v12-approved-02.js \
-            atlas-sanctions-v12-approved-03.js \
-            atlas-sanctions-v12-approved-04.js \
-            atlas-sanctions-v12-approved-05.js \
-            atlas-sanctions-v12-approved-06.js > /tmp/atlas-sanctions-v12-approved.js
-          node --check /tmp/atlas-sanctions-v12-approved.js
+          node --check assets/atlas-sanctions-spectrum-0940.js
           node --check atlas-sanctions-v12-route.js
-          grep -q 'AML_SANCTIONS_V12_APPROVED' atlas-sanctions-v12-approved-06.js
-          grep -q 'sv12LoadSanctionsApproved' atlas-sanctions-v12-approved-06.js
-          grep -q 'legacyFrozenRouteBypassed:true' atlas-sanctions-v12-route.js
-          grep -q 'AML_SANCTIONS_V12_APPROVED' atlas-sanctions-v12-route.js
-          grep -q 'RADAR_SANCTIONS+ENTITY_HUB_V1+WORKBENCH_IDENTITY+UAF_RECONCILIATION' build.json
-          grep -q 'Consulta directa de entidad' atlas-sanctions-v12-approved-01.js
-          grep -q 'Últimas sanciones · Top 5' atlas-sanctions-v12-approved-01.js
-          grep -q 'Concentración regional de sanciones' atlas-sanctions-v12-approved-01.js
-          grep -q 'Materias sancionatorias' atlas-sanctions-v12-approved-01.js
-          grep -q 'Sanciones por supervisor' atlas-sanctions-v12-approved-01.js
-          grep -q 'Entidades sancionadas' atlas-sanctions-v12-approved-01.js
-          grep -q 'Potenciales SO' atlas-sanctions-v12-approved-01.js
-          grep -q 'IER' atlas-sanctions-v12-approved-01.js
-          grep -q -- '--atlas-panel' atlas-sanctions-v12-approved-01.css
-          grep -q -- '--atlas-accent' atlas-sanctions-v12-approved-01.css
-          grep -q -- '--atlas-uaf' atlas-sanctions-v12-approved-01.css
+          grep -q 'SANCTIONS_SPECTRUM_CURRENT_0940' assets/atlas-sanctions-spectrum-0940.js
+          grep -q 'aml_v_sanctions_spectrum_current_v0940' assets/atlas-sanctions-spectrum-0940.js
+          grep -q 'aml_v_sanction_entity_signal_current_v0940' assets/atlas-sanctions-spectrum-0940.js
+          grep -q 'aml_v_sanction_region_signal_current_v0940' assets/atlas-sanctions-spectrum-0940.js
+          grep -q 'aml_v_sanction_sector_signal_current_v0940' assets/atlas-sanctions-spectrum-0940.js
+          grep -q 'openPressObservation' assets/atlas-sanctions-spectrum-0940.js
+          grep -q 'UNRESOLVED_IDENTITY' assets/atlas-sanctions-spectrum-0940.js
+          grep -q 'SO_REGISTERED' assets/atlas-sanctions-spectrum-0940.js
+          grep -q 'POTENTIAL_SO_CURRENT' assets/atlas-sanctions-spectrum-0940.js
+          grep -q 'atlas:sanctions:signals-ready' assets/atlas-sanctions-spectrum-0940.js
+          grep -q 'ATLAS_SANCTIONS_CURRENT.load' atlas-sanctions-v12-route.js
+          grep -q 'currentSpectrumPinned:true' atlas-sanctions-v12-route.js
+          grep -q 'AML_SANCTIONS_V12_APPROVED.reload' atlas-sanctions-v12-route.js
+          grep -q 'security_invoker = true' sql/atlas_v0940_sanctions_spectrum_current.sql
+          grep -q 'aml_v_entity_uaf_status_current_v0812' sql/atlas_v0940_sanctions_spectrum_current.sql
+          grep -q 'aml_osfl_entity_runtime_snapshot' sql/atlas_v0940_sanctions_spectrum_current.sql
+          grep -q 'aml_res_entity_bridge' sql/atlas_v0940_sanctions_spectrum_current.sql
+          ! grep -q 'REGION_DEFAULT_BY_SUP' assets/atlas-sanctions-spectrum-0940.js
+          ! grep -q 'sv12Potential' assets/atlas-sanctions-spectrum-0940.js
 
       - name: Build exact canonical Pages candidate
         shell: bash
@@ -110,33 +115,23 @@ jobs:
             test -e "$f" || continue
             node --check "$f"
           done
-          grep -R -q 'AML_SANCTIONS_V12_APPROVED' _site-sanctions/atlas-runtime-current-*.js
-          grep -R -q 'legacyFrozenRouteBypassed:true' _site-sanctions/atlas-runtime-current-*.js
-          grep -R -q 'Consulta directa de entidad' _site-sanctions/atlas-runtime-current-*.js
-          grep -R -q 'Últimas sanciones · Top 5' _site-sanctions/atlas-runtime-current-*.js
-          grep -R -q 'Concentración regional de sanciones' _site-sanctions/atlas-runtime-current-*.js
-          grep -R -q 'Materias sancionatorias' _site-sanctions/atlas-runtime-current-*.js
-          grep -R -q 'Sanciones por supervisor' _site-sanctions/atlas-runtime-current-*.js
-          grep -R -q 'Entidades sancionadas' _site-sanctions/atlas-runtime-current-*.js
-          grep -q '.sv12-approved' _site-sanctions/atlas-runtime-current.css
-          ! grep -R -q 'v0341-sanctions-hardening.js' _site-sanctions/index.html
+          grep -R -q 'SANCTIONS_SPECTRUM_CURRENT_0940' _site-sanctions/atlas-runtime-current-*.js
+          grep -R -q 'ATLAS_SANCTIONS_CURRENT.load' _site-sanctions/atlas-runtime-current-*.js
+          grep -R -q 'aml_v_sanctions_spectrum_current_v0940' _site-sanctions/atlas-runtime-current-*.js
+          grep -R -q 'atlas:sanctions:signals-ready' _site-sanctions/atlas-runtime-current-*.js
+          grep -q '.san94' _site-sanctions/atlas-runtime-current.css
+          grep -q 'assets/atlas-sanctions-spectrum-0940.js' atlas-runtime-manifest.json
 
-      - name: Verify live Radar Sanciones upstream contract
+      - name: Verify live Radar Sanciones upstream remains populated
         shell: bash
         run: |
           set -euo pipefail
           curl -fsSL --retry 3 --connect-timeout 10 https://raw.githubusercontent.com/smoralesm07-source/Radar_sanciones/main/docs/data/metadata.json -o /tmp/sanctions-meta.json
-          curl -fsSL --retry 3 --connect-timeout 10 https://raw.githubusercontent.com/smoralesm07-source/Radar_sanciones/main/docs/data/entity_hub_v1.json -o /tmp/sanctions-hub.json
           python - <<'PY'
           import json
           meta=json.load(open('/tmp/sanctions-meta.json',encoding='utf-8'))
-          hub=json.load(open('/tmp/sanctions-hub.json',encoding='utf-8'))
           assert meta.get('bootstrap_pending') is False,meta
           assert int(meta.get('current_data_from_year',9999))<=2020,meta
           assert int(meta.get('event_count',0))>0,meta
-          assert isinstance(hub,list) and hub, 'Entity Hub vacío'
-          sample=next(x for x in hub if x.get('rut'))
-          for k in ('entity_id','rut','canonical_name','identity_status','identity_method','identity_confidence'):
-              assert k in sample,k
-          print(f"Radar Sanciones OK · {meta.get('event_count')} eventos · corte {meta.get('latest_event_date')} · {len(hub)} identidades")
+          print(f"Radar Sanciones upstream OK · {meta.get('event_count')} eventos · corte {meta.get('latest_event_date')}")
           PY
