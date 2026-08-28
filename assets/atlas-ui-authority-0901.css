@@ -1,8 +1,8 @@
-/* ATLAS AML · 0.90.1 · final visual authority
-   Loaded last by atlas-ui-authority-0901.js. This layer deliberately overrides
+/* ATLAS AML · 0.95.0 · final visual authority
+   Loaded last by the current UI authority. This layer deliberately overrides
    historical presentation fragments while preserving their functional DOM. */
 
-html[data-atlas-release="0.90.1"] {
+html[data-atlas-release="0.95.0"] {
   --atlas-bg: #07111f;
   --atlas-surface: #0c1728;
   --atlas-surface-2: #101d30;
@@ -17,33 +17,31 @@ html[data-atlas-release="0.90.1"] {
   color-scheme: dark;
 }
 
-html[data-atlas-release="0.90.1"] body {
+html[data-atlas-release="0.95.0"] body {
   background: var(--atlas-bg);
   color: var(--atlas-text);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-/* One current visual language for shared shells, cards and controls. */
-html[data-atlas-release="0.90.1"] :where(.card,.panel,.metric-card,.kpi-card,.drawer,.sheet,.modal-content,.auth-card) {
+html[data-atlas-release="0.95.0"] :where(.card,.panel,.metric-card,.kpi-card,.drawer,.sheet,.modal-content,.auth-card) {
   border-color: var(--atlas-border) !important;
   border-radius: var(--atlas-radius) !important;
 }
 
-html[data-atlas-release="0.90.1"] :where(button,.btn,[role="button"],select,input,textarea) {
+html[data-atlas-release="0.95.0"] :where(button,.btn,[role="button"],select,input,textarea) {
   font-family: inherit;
 }
 
-html[data-atlas-release="0.90.1"] :where(button,.btn,[role="button"]) {
+html[data-atlas-release="0.95.0"] :where(button,.btn,[role="button"]) {
   border-radius: var(--atlas-radius-sm) !important;
 }
 
-html[data-atlas-release="0.90.1"] :where(.topbar,.app-topbar,.atlas-topbar) {
+html[data-atlas-release="0.95.0"] :where(.topbar,.app-topbar,.atlas-topbar) {
   border-bottom-color: var(--atlas-border) !important;
 }
 
-/* Current-version labels: old branded/version-specific treatments must not survive. */
-html[data-atlas-release="0.90.1"] :where(.atlas-version,.version-badge,.app-version,.v019-brand small,[data-atlas-version-label]) {
+html[data-atlas-release="0.95.0"] :where(.atlas-version,.version-badge,.app-version,.v019-brand small,[data-atlas-version-label]) {
   background: rgba(148,163,184,.08) !important;
   border: 1px solid var(--atlas-border) !important;
   border-radius: 999px !important;
@@ -56,14 +54,13 @@ html[data-atlas-release="0.90.1"] :where(.atlas-version,.version-badge,.app-vers
   padding: 5px 8px !important;
 }
 
-html[data-atlas-release="0.90.1"] :where(.atlas-version,.version-badge,.app-version,.v019-brand small,[data-atlas-version-label])::before,
-html[data-atlas-release="0.90.1"] :where(.atlas-version,.version-badge,.app-version,.v019-brand small,[data-atlas-version-label])::after {
+html[data-atlas-release="0.95.0"] :where(.atlas-version,.version-badge,.app-version,.v019-brand small,[data-atlas-version-label])::before,
+html[data-atlas-release="0.95.0"] :where(.atlas-version,.version-badge,.app-version,.v019-brand small,[data-atlas-version-label])::after {
   content: none !important;
   display: none !important;
 }
 
-/* Sidebar brand owns a dedicated, always-visible release label directly below AIE. */
-html[data-atlas-release="0.90.1"] .v019-brand small[data-atlas-version-label] {
+html[data-atlas-release="0.95.0"] .v019-brand small[data-atlas-version-label] {
   display: block !important;
   width: min(196px,100%) !important;
   margin: 1px 0 0 !important;
@@ -83,32 +80,29 @@ html[data-atlas-release="0.90.1"] .v019-brand small[data-atlas-version-label] {
   overflow: visible !important;
 }
 
-/* Eliminate known obsolete visual identity fragments without deleting functional nodes. */
-html[data-atlas-release="0.90.1"] :where(.operational-radar-brand,.legacy-version-ribbon,.legacy-release-ribbon,.old-version-badge,.prerelease-banner[data-legacy="true"]) {
+html[data-atlas-release="0.95.0"] :where(.operational-radar-brand,.legacy-version-ribbon,.legacy-release-ribbon,.old-version-badge,.prerelease-banner[data-legacy="true"]) {
   display: none !important;
 }
 
-/* Retire only the old dashboard audit. The governed source-health control remains visible in the top bar. */
-html[data-atlas-release="0.90.1"] :where(
+html[data-atlas-release="0.95.0"] :where(
   .v024-audit:not(.ash-audit):not([data-ash0536]):not([data-atlas-audit-seed]),
   .a57-data-audit:not(.ash-audit):not([data-ash0536]):not([data-atlas-audit-seed])
 ) {
   display: none !important;
 }
 
-html[data-atlas-release="0.90.1"] [data-atlas-global-audit-host] > :where(.ash-audit,.a57-data-audit)[data-topbar-mode="1"] {
+html[data-atlas-release="0.95.0"] [data-atlas-global-audit-host] > :where(.ash-audit,.a57-data-audit)[data-topbar-mode="1"] {
   display: block !important;
 }
 
-/* Reduce paint/layout work on content that is not currently visible. */
-html[data-atlas-release="0.90.1"] :where([hidden],.is-hidden,.hidden,.view[aria-hidden="true"],.route[aria-hidden="true"]) {
+html[data-atlas-release="0.95.0"] :where([hidden],.is-hidden,.hidden,.view[aria-hidden="true"],.route[aria-hidden="true"]) {
   display: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html[data-atlas-release="0.90.1"] *,
-  html[data-atlas-release="0.90.1"] *::before,
-  html[data-atlas-release="0.90.1"] *::after {
+  html[data-atlas-release="0.95.0"] *,
+  html[data-atlas-release="0.95.0"] *::before,
+  html[data-atlas-release="0.95.0"] *::after {
     scroll-behavior: auto !important;
     animation-duration: .001ms !important;
     animation-iteration-count: 1 !important;
