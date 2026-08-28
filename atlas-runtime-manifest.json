@@ -1,10 +1,10 @@
 {
   "schema": "ATLAS_RUNTIME_MANIFEST_V1",
-  "release": "0.90.1",
-  "build": "0901",
+  "release": "0.95.0",
+  "build": "0950",
   "policy": "CANONICAL_SOURCE_MANIFEST_FOR_COMPILED_RUNTIME",
   "publish_mode": "COMPILED_BUNDLES_ONLY",
-  "notes": "0.90.1 production hardening. Historical fragments remain build-time source only for functional compatibility; atlas-ui-authority-0901 is the final presentation authority and release identity is exclusively owned by atlas-release-guard.js. OSFL 0.95 adds governed economic and row-level public-transfer contracts without changing release identity.",
+  "notes": "0.95.0 current production runtime. Historical fragments remain build-time source only for functional compatibility; the final UI authority is aligned to release 0.95.0 and release identity is exclusively owned by atlas-release-guard.js. OSFL economic/public-funds 0.95 and Sanciones spectrum 0.94 are active current capabilities.",
   "styles": [
     "styles.css",
     "v016.css",
