@@ -10,6 +10,8 @@
   const RES_JS='./assets/atlas-res-intelligence-0952.js?v=0952-1';
   const RES_REFINEMENT_CSS='./assets/atlas-res-refinement-0953.css?v=0953-1';
   const RES_REFINEMENT_JS='./assets/atlas-res-refinement-0953.js?v=0953-1';
+  const RES_CARTOGRAM_CSS='./assets/atlas-res-cartogram-fix-0954.css?v=0954-1';
+  const RES_CARTOGRAM_JS='./assets/atlas-res-cartogram-fix-0954.js?v=0954-1';
   const VERSION_RE=/\bv?(?:0\.)?(?:16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|40|41|42|43|44|45|46|49|50|51|52|53|54|56|57|58|64|69|70|71|72|80|81|82|83|84|90|91|92|93|94|95)(?:\.\d+){0,2}\b/gi;
   const VERSION_SELECTORS='.atlas-version,.version-badge,.app-version,.v019-brand small,[data-atlas-version-label]';
   const AUDIT_SELECTORS='.v024-audit,.a57-data-audit';
@@ -47,11 +49,13 @@
     document.querySelectorAll('link[data-atlas-res-intelligence="0950"]').forEach(el=>el.remove());
     ensureCss('link[data-atlas-res-intelligence="0952"]',RES_CSS,'atlasResIntelligence','0952');
     ensureCss('link[data-atlas-res-refinement="0953"]',RES_REFINEMENT_CSS,'atlasResRefinement','0953');
+    ensureCss('link[data-atlas-res-cartogram="0954"]',RES_CARTOGRAM_CSS,'atlasResCartogram','0954');
   }
 
   function installResRuntime(){
     ensureScript('script[data-atlas-res-intelligence="0952"]',RES_JS,'atlasResIntelligence','0952');
     ensureScript('script[data-atlas-res-refinement="0953"]',RES_REFINEMENT_JS,'atlasResRefinement','0953');
+    ensureScript('script[data-atlas-res-cartogram="0954"]',RES_CARTOGRAM_JS,'atlasResCartogram','0954');
   }
 
   function ensureBrandVersion(label){
@@ -106,7 +110,7 @@
   }
 
   function markHealth(){
-    window.__ATLAS_UI_AUTHORITY__={release:RELEASE,build:BUILD,status:'ready',css:CSS,lightCss:LIGHT_CSS,lightModulesCss:LIGHT_MODULE_CSS,lightTheme:'NEUTRAL_GREY_WHITE_ORANGE',mainDataAudit:'retired',globalSourceHealth:'preserved',osflEconomic:'0950-current',sanctionsRadiography:'0960-current',sanctionsSpectrum:'0940-fallback',resCompanies:'0953-current',resRefinement:'0953-executive-aml',analyticsNavigation:'RES0953+OSFL+SANCTIONS0960+PUBLIC_SPEND',checkedAt:new Date().toISOString()};
+    window.__ATLAS_UI_AUTHORITY__={release:RELEASE,build:BUILD,status:'ready',css:CSS,lightCss:LIGHT_CSS,lightModulesCss:LIGHT_MODULE_CSS,lightTheme:'NEUTRAL_GREY_WHITE_ORANGE',mainDataAudit:'retired',globalSourceHealth:'preserved',osflEconomic:'0950-current',sanctionsRadiography:'0960-current',sanctionsSpectrum:'0940-fallback',resCompanies:'0954-current',resRefinement:'0953-executive-aml',resCartogram:'0954-scaled-bars',analyticsNavigation:'RES0954+OSFL+SANCTIONS0960+PUBLIC_SPEND',checkedAt:new Date().toISOString()};
   }
 
   function apply(){
