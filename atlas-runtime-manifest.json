@@ -163,7 +163,8 @@
     {"path":"v0449-entity-tax-docauth.js","type":"classic","role":"entity360-sii-document-authorization-current"},
     {"path":"v0442-session-stability.module.js","type":"module","role":"auth-session-passive-stability-and-entity-final-pin"},
     {"path":"assets/atlas-ui-authority-0901.js","type":"classic","role":"final-ui-runtime-authority"},
-    {"path":"assets/atlas-osfl-economic-0950.js","type":"classic","role":"osfl-economic-public-funds-current-0950"}
+    {"path":"assets/atlas-osfl-economic-0950.js","type":"classic","role":"osfl-economic-public-funds-current-0950"},
+    {"path":"assets/atlas-osfl-route-authority-0950.js","type":"classic","role":"osfl-route-install-current-authority-0950"}
   ],
   "forbidden_runtime_assets": [
     "v0272-runtime-version.css",
