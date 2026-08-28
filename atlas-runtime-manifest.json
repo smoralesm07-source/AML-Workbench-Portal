@@ -4,7 +4,7 @@
   "build": "0901",
   "policy": "CANONICAL_SOURCE_MANIFEST_FOR_COMPILED_RUNTIME",
   "publish_mode": "COMPILED_BUNDLES_ONLY",
-  "notes": "0.90.1 production hardening. Historical fragments remain build-time source only for functional compatibility; atlas-ui-authority-0901 is the final presentation authority and release identity is exclusively owned by atlas-release-guard.js.",
+  "notes": "0.90.1 production hardening. Historical fragments remain build-time source only for functional compatibility; atlas-ui-authority-0901 is the final presentation authority and release identity is exclusively owned by atlas-release-guard.js. OSFL 0.95 adds governed economic and row-level public-transfer contracts without changing release identity.",
   "styles": [
     "styles.css",
     "v016.css",
@@ -65,7 +65,8 @@
     "atlas-sanctions-v12-approved-04.css",
     "assets/atlas-sanctions-spectrum-0940.css",
     "v0434-reconciliation-command.css",
-    "v0435-reconciliation-fix.css"
+    "v0435-reconciliation-fix.css",
+    "assets/atlas-osfl-economic-0950.css"
   ],
   "scripts": [
     {"path":"v0333-auth-preflight.js","type":"classic","role":"auth-preflight"},
@@ -161,7 +162,8 @@
     {"path":"v0448-entity-route-authority.js","type":"classic","role":"entity360-route-current-authority"},
     {"path":"v0449-entity-tax-docauth.js","type":"classic","role":"entity360-sii-document-authorization-current"},
     {"path":"v0442-session-stability.module.js","type":"module","role":"auth-session-passive-stability-and-entity-final-pin"},
-    {"path":"assets/atlas-ui-authority-0901.js","type":"classic","role":"final-ui-runtime-authority"}
+    {"path":"assets/atlas-ui-authority-0901.js","type":"classic","role":"final-ui-runtime-authority"},
+    {"path":"assets/atlas-osfl-economic-0950.js","type":"classic","role":"osfl-economic-public-funds-current-0950"}
   ],
   "forbidden_runtime_assets": [
     "v0272-runtime-version.css",
