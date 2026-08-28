@@ -24,6 +24,7 @@
   let bypassRun=false;
   let hostObserver=null;
   let observedHost=null;
+  let observedInput=null;
 
   const clean=v=>String(v??'').trim().replace(/[%_]/g,'').slice(0,120);
   const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9K]+/g,' ').replace(/\s+/g,' ').trim();
@@ -130,27 +131,18 @@
     return true;
   }
 
-  async function resolvePressOnlyAction(term,source){
+  async function resolvePressOnlyAction(term){
     const q=clean(term);
     if(norm(q).length<MIN)return false;
     const rows=(latest.term===q&&latest.rows.length)?latest.rows:await search(q);
     if(rows.length&&canonicalState()!=='match')return openRow(rows[0],q);
 
     /* No press-only hit: restore the normal 0512 Buscar path once. */
-    if(source==='run'){
-      const run=document.querySelector('.aex #aex-run');
-      if(run){
-        bypassRun=true;
-        run.click();
-        queueMicrotask(()=>{bypassRun=false;});
-      }
-    }else{
-      const run=document.querySelector('.aex #aex-run');
-      if(run){
-        bypassRun=true;
-        run.click();
-        queueMicrotask(()=>{bypassRun=false;});
-      }
+    const run=document.querySelector('.aex #aex-run');
+    if(run){
+      bypassRun=true;
+      run.click();
+      queueMicrotask(()=>{bypassRun=false;});
     }
     return false;
   }
@@ -199,7 +191,7 @@
     if(ready||coldOrEmpty){
       event.preventDefault();
       event.stopImmediatePropagation();
-      void resolvePressOnlyAction(q,'run');
+      void resolvePressOnlyAction(q);
     }
   },true);
 
@@ -216,14 +208,18 @@
     if(ready||coldOrEmpty){
       event.preventDefault();
       event.stopImmediatePropagation();
-      void resolvePressOnlyAction(q,'enter');
+      void resolvePressOnlyAction(q);
     }
   },true);
 
   document.addEventListener('atlas:entity-workspace-ready',warmForEntities);
 
   const rootObserver=new MutationObserver(()=>{
-    if(document.querySelector('.aex #aex-q'))warmForEntities();
+    const field=input();
+    if(!field){observedInput=null;return;}
+    if(field===observedInput)return;
+    observedInput=field;
+    warmForEntities();
   });
   rootObserver.observe(document.documentElement,{childList:true,subtree:true});
 
