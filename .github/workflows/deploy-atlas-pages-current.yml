@@ -27,7 +27,7 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 1
 
-      - name: Validate canonical 0.90.1 source
+      - name: Validate canonical 0.95.0 source
         shell: bash
         run: |
           set -euo pipefail
@@ -45,22 +45,27 @@ jobs:
           universo=Path('assets/atlas-universo-so-entity-explorer-0816.js').read_text()
           candidates=Path('assets/atlas-universo-so-candidate-management-0820.js').read_text()
           retired_audit=Path('assets/atlas-data-audit.js').read_text()
+          osfl=Path('assets/atlas-osfl-economic-0950.js').read_text()
+          sanctions=Path('assets/atlas-sanctions-spectrum-0940.js').read_text()
 
-          assert release['release']=='0.90.1' and release['build']=='0901'
-          assert runtime['release']=='0.90.1' and runtime['build']=='0901'
-          assert build['app_version']=='0.90.1' and build['build']=='0901'
-          assert "release:'0.90.1',build:'0901'" in guard
-          assert 'atlas-release-guard-0901-freeze-safe' in guard
+          assert release['release']=='0.95.0' and release['build']=='0950'
+          assert runtime['release']=='0.95.0' and runtime['build']=='0950'
+          assert build['app_version']=='0.95.0' and build['build']=='0950'
+          assert "release:'0.95.0',build:'0950'" in guard
+          assert 'atlas-release-guard-0950-freeze-safe' in guard
           assert 'assets/atlas-ui-authority-0901.js' in [x['path'] for x in runtime['scripts']]
-          assert "RELEASE='0.90.1'" in ui and "BUILD='0901'" in ui
+          assert "RELEASE='0.95.0'" in ui and "BUILD='0950'" in ui
           assert 'data-atlas-ui-authority' in ui
-          assert "CSS='./assets/atlas-ui-authority-0901.css?v=0901-" in ui
+          assert "CSS='./assets/atlas-ui-authority-0901.css?v=0950-" in ui
           assert 'ensureBrandVersion' in ui and 'data-atlas-version-label' in ui
           assert "globalSourceHealth:'preserved'" in ui and 'AtlasGlobalSourceHealth?.schedule?.()' in ui
-          assert 'html[data-atlas-release="0.90.1"]' in css
+          assert 'html[data-atlas-release="0.95.0"]' in css
           assert '.v019-brand small[data-atlas-version-label]' in css
           assert '[data-atlas-global-audit-host]' in css and '[data-topbar-mode="1"]' in css
           assert 'retired' in retired_audit.lower() and 'v024AuditHtml' in retired_audit
+          assert '__ATLAS_OSFL_ECONOMIC_0950__' in osfl
+          assert 'aml_v_osfl_economic_concentration_current_v0950' in osfl
+          assert 'SANCTIONS_SPECTRUM_CURRENT_0940' in sanctions
 
           assert 'atlas-universo-so-contact-osint-0840.css?v=0840-1' in html
           assert 'atlas-universo-so-contact-osint-0840.js?v=0840-1' in html
@@ -73,6 +78,8 @@ jobs:
           PY
           node --check atlas-release-guard.js
           node --check assets/atlas-ui-authority-0901.js
+          node --check assets/atlas-osfl-economic-0950.js
+          node --check assets/atlas-sanctions-spectrum-0940.js
           node --check assets/atlas-data-audit.js
           node --check assets/atlas-universo-so-entity-explorer-0813.js
           node --check assets/atlas-universo-so-entity-explorer-0816.js
@@ -108,13 +115,17 @@ jobs:
           test ! -e _site/assets/atlas-data-audit.js
           test ! -e _site/assets/atlas-data-audit.css
           cat _site/atlas-runtime-current-*.js > /tmp/atlas-runtime-current.js
-          grep -q "RELEASE='0.90.1'" /tmp/atlas-runtime-current.js
-          grep -q "BUILD='0901'" /tmp/atlas-runtime-current.js
+          grep -q "RELEASE='0.95.0'" /tmp/atlas-runtime-current.js
+          grep -q "BUILD='0950'" /tmp/atlas-runtime-current.js
           grep -q 'data-atlas-ui-authority' /tmp/atlas-runtime-current.js
-          grep -q "atlas-ui-authority-0901.css?v=0901-" /tmp/atlas-runtime-current.js
+          grep -q "atlas-ui-authority-0901.css?v=0950-" /tmp/atlas-runtime-current.js
           grep -q 'ensureBrandVersion' /tmp/atlas-runtime-current.js
           grep -q "globalSourceHealth:'preserved'" /tmp/atlas-runtime-current.js
-          grep -q 'html\[data-atlas-release="0.90.1"\]' _site/assets/atlas-ui-authority-0901.css
+          grep -q '__ATLAS_OSFL_ECONOMIC_0950__' /tmp/atlas-runtime-current.js
+          grep -q 'aml_v_osfl_economic_concentration_current_v0950' /tmp/atlas-runtime-current.js
+          grep -q 'SANCTIONS_SPECTRUM_CURRENT_0940' /tmp/atlas-runtime-current.js
+          grep -q 'osfl95-card' _site/atlas-runtime-current.css
+          grep -q 'html\[data-atlas-release="0.95.0"\]' _site/assets/atlas-ui-authority-0901.css
           grep -q 'v019-brand small\[data-atlas-version-label\]' _site/assets/atlas-ui-authority-0901.css
           grep -q 'data-atlas-global-audit-host' _site/assets/atlas-ui-authority-0901.css
           python3 - <<'PY'
@@ -122,15 +133,14 @@ jobs:
           import json
           html=Path('_site/index.html').read_text()
           release=json.loads(Path('_site/atlas-release.json').read_text())
-          assert release['release']=='0.90.1' and release['build']=='0901'
-          assert 'data-aml-version="0.90.1"' in html
-          assert 'data-aml-build="0901"' in html
-          assert 'data-atlas-release="0.90.1"' in html
-          assert '<title>ATLAS AML · v0.90.1</title>' in html
-          assert 'atlas-release-guard.js?r=0901' in html
-          assert 'atlas-runtime-current-01.js?r=0901' in html
-          assert 'ATLAS AML · v0.70.5' not in html
-          assert 'data-aml-version="0.70.5"' not in html
+          assert release['release']=='0.95.0' and release['build']=='0950'
+          assert 'data-aml-version="0.95.0"' in html
+          assert 'data-aml-build="0950"' in html
+          assert 'data-atlas-release="0.95.0"' in html
+          assert '<title>ATLAS AML · v0.95.0</title>' in html
+          assert 'atlas-release-guard.js?r=0950' in html
+          assert 'atlas-runtime-current-01.js?r=0950' in html
+          assert 'data-aml-version="0.90.1"' not in html
           assert 'atlas-data-audit.js' not in html
           assert 'atlas-data-audit.css' not in html
           assert 'atlas-ui-authority-0901.js' not in html
@@ -152,7 +162,7 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Verify live Atlas 0.90.1 and compiled UI authority
+      - name: Verify live Atlas 0.95.0 and current modules
         shell: bash
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
@@ -162,32 +172,34 @@ jobs:
           ok=0
           for attempt in $(seq 1 12); do
             stamp="${GITHUB_SHA}-${GITHUB_RUN_ATTEMPT}-${attempt}"
-            html="$(curl -fsSL --retry 2 --max-time 20 "${base}/?atlas0901=${stamp}" || true)"
-            release="$(curl -fsSL --retry 2 --max-time 20 "${base}/atlas-release.json?atlas0901=${stamp}" || true)"
-            runtime_css="$(curl -fsSL --retry 2 --max-time 20 "${base}/atlas-runtime-current.css?atlas0901=${stamp}" || true)"
+            html="$(curl -fsSL --retry 2 --max-time 20 "${base}/?atlas0950=${stamp}" || true)"
+            release="$(curl -fsSL --retry 2 --max-time 20 "${base}/atlas-release.json?atlas0950=${stamp}" || true)"
+            runtime_css="$(curl -fsSL --retry 2 --max-time 20 "${base}/atlas-runtime-current.css?atlas0950=${stamp}" || true)"
             runtime_js=""
             for seg in 01 02 03 04; do
-              part="$(curl -fsSL --retry 1 --max-time 15 "${base}/atlas-runtime-current-${seg}.js?atlas0901=${stamp}" || true)"
+              part="$(curl -fsSL --retry 1 --max-time 15 "${base}/atlas-runtime-current-${seg}.js?atlas0950=${stamp}" || true)"
               runtime_js="${runtime_js}${part}"
             done
-            standalone_ui="$(curl -fsSL --retry 1 --max-time 10 "${base}/assets/atlas-ui-authority-0901.js?atlas0901=${stamp}" || true)"
-            standalone_ui_css="$(curl -fsSL --retry 1 --max-time 10 "${base}/assets/atlas-ui-authority-0901.css?atlas0901=${stamp}" || true)"
-            retired_audit="$(curl -fsSL --retry 1 --max-time 10 "${base}/assets/atlas-data-audit.js?atlas0901=${stamp}" || true)"
-            if printf '%s' "$html" | grep -q 'data-aml-version="0.90.1"' \
-              && printf '%s' "$html" | grep -q '<title>ATLAS AML · v0.90.1</title>' \
-              && ! printf '%s' "$html" | grep -q 'data-aml-version="0.70.5"' \
+            standalone_ui="$(curl -fsSL --retry 1 --max-time 10 "${base}/assets/atlas-ui-authority-0901.js?atlas0950=${stamp}" || true)"
+            standalone_ui_css="$(curl -fsSL --retry 1 --max-time 10 "${base}/assets/atlas-ui-authority-0901.css?atlas0950=${stamp}" || true)"
+            retired_audit="$(curl -fsSL --retry 1 --max-time 10 "${base}/assets/atlas-data-audit.js?atlas0950=${stamp}" || true)"
+            if printf '%s' "$html" | grep -q 'data-aml-version="0.95.0"' \
+              && printf '%s' "$html" | grep -q '<title>ATLAS AML · v0.95.0</title>' \
+              && ! printf '%s' "$html" | grep -q 'data-aml-version="0.90.1"' \
               && ! printf '%s' "$html" | grep -q 'atlas-data-audit.js' \
               && ! printf '%s' "$html" | grep -q 'atlas-data-audit.css' \
               && ! printf '%s' "$html" | grep -q 'atlas-ui-authority-0901.js' \
-              && printf '%s' "$release" | grep -q '"release": "0.90.1"' \
-              && printf '%s' "$release" | grep -q '"build": "0901"' \
-              && printf '%s' "$runtime_js" | grep -q "RELEASE='0.90.1'" \
+              && printf '%s' "$release" | grep -q '"release": "0.95.0"' \
+              && printf '%s' "$release" | grep -q '"build": "0950"' \
+              && printf '%s' "$runtime_js" | grep -q "RELEASE='0.95.0'" \
+              && printf '%s' "$runtime_js" | grep -q '__ATLAS_OSFL_ECONOMIC_0950__' \
+              && printf '%s' "$runtime_js" | grep -q 'SANCTIONS_SPECTRUM_CURRENT_0940' \
               && printf '%s' "$runtime_js" | grep -q 'data-atlas-ui-authority' \
-              && printf '%s' "$runtime_js" | grep -q "atlas-ui-authority-0901.css?v=0901-" \
+              && printf '%s' "$runtime_js" | grep -q "atlas-ui-authority-0901.css?v=0950-" \
               && printf '%s' "$runtime_js" | grep -q 'ensureBrandVersion' \
               && printf '%s' "$runtime_js" | grep -q "globalSourceHealth:'preserved'" \
-              && test -n "$runtime_css" \
-              && printf '%s' "$standalone_ui_css" | grep -q 'html\[data-atlas-release="0.90.1"\]' \
+              && printf '%s' "$runtime_css" | grep -q 'osfl95-card' \
+              && printf '%s' "$standalone_ui_css" | grep -q 'html\[data-atlas-release="0.95.0"\]' \
               && printf '%s' "$standalone_ui_css" | grep -q 'v019-brand small\[data-atlas-version-label\]' \
               && printf '%s' "$standalone_ui_css" | grep -q 'data-atlas-global-audit-host' \
               && test -z "$standalone_ui" \
@@ -198,4 +210,4 @@ jobs:
             sleep 8
           done
           test "$ok" -eq 1
-          echo "ATLAS AML 0.90.1 live smoke OK with version label and global source monitor authority: ${PAGE_URL}"
+          echo "ATLAS AML 0.95.0 live smoke OK with current OSFL and Sanciones runtime: ${PAGE_URL}"
