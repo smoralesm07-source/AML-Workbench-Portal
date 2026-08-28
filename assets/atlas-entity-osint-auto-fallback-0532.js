@@ -1,14 +1,14 @@
 'use strict';
-/* ATLAS AML 0.53.9 · gated Entity Explorer search + calibrated OSINT name similarity.
- * Search path: Atlas internal -> external OSINT query -> classify before rendering.
- * Exact normalized name matches are shown immediately. Approximate candidates remain
+/* ATLAS AML 0.53.10 · governed Entity Explorer search + press-first fallback.
+ * Search path: Atlas canonical -> unreconciled press observation -> external OSINT.
+ * Exact normalized external name matches are shown immediately. Approximate candidates remain
  * behind an analyst action and never create/promote canonical identity or mutate IPA3.
- * External provider confidence is never presented as nominal similarity by itself:
- * Atlas recalculates lexical similarity against the queried name and caps the displayed
- * confidence by that local score, preventing unrelated names from appearing as 100%.
+ * Press observations remain explicitly unreconciled: no inferred RUT, no Entity ID promotion
+ * and no automatic identity join. This ordering prevents a false negative when an entity such
+ * as "Vinko Fodich" is already visible in the press suggestion layer but absent from aml_entities.
  */
-(function atlasEntityOsintSearchGate0539(){
-  const RELEASE='0.53.9';
+(function atlasEntityOsintSearchGate05310(){
+  const RELEASE='0.53.10';
   const MIN_LEN=3;
   const FN='aml-entity-global-watchlists-live';
   const MIN_APPROX_SCORE=0.18;
@@ -25,6 +25,8 @@
   const resultsHost=()=>document.querySelector('.aex-results')||document.querySelector('#content');
   const runButton=()=>document.querySelector('#aex-run');
   const input=()=>document.querySelector('#aex-q');
+  const entityEntry=()=>window.__ATLAS_ENTITY_ENTRY__||null;
+  const pressBridge=()=>window.__ATLAS_ENTITY_PRESS_SEARCH_BRIDGE__||null;
   const families=[['UN_SANCTIONS','ONU'],['OFAC','OFAC'],['EU_SANCTIONS','UE'],['UK_SANCTIONS','UK'],['WORLD_BANK','Banco Mundial'],['IDB_SANCTIONS','BID']];
 
   function sourceLabel(code){return code==='ICIJ_OFFSHORE'?'ICIJ Offshore Leaks':code==='UN_SANCTIONS'?'ONU':code==='EU_SANCTIONS'?'UE':code==='UK_SANCTIONS'?'UK':code==='WORLD_BANK'?'Banco Mundial':code==='IDB_SANCTIONS'?'BID':code==='OPENSANCTIONS'?'OpenSanctions':code;}
@@ -81,7 +83,11 @@
     if(btn){btn.disabled=true;btn.setAttribute('aria-busy','true');btn.dataset.originalLabel=btn.dataset.originalLabel||btn.textContent||'Buscar';btn.textContent='Buscando…';}
     const host=resultsHost();
     if(host){
-      const label=stage==='osint'?'Sin coincidencia interna. Verificando OSINT y listas internacionales…':'Buscando primero en el universo interno de Atlas…';
+      const label=stage==='press'
+        ?'Sin coincidencia canónica. Verificando observaciones de prensa…'
+        :stage==='osint'
+          ?'Sin coincidencia en Atlas ni prensa. Verificando OSINT y listas internacionales…'
+          :'Buscando primero en el universo interno de Atlas…';
       host.innerHTML=`<section class="agw-card"><div class="agw-loading"><b>${label}</b><br><small>${esc(q)} · Atlas responderá cuando finalice la ruta de búsqueda</small></div></section>`;
     }
   }
@@ -96,6 +102,23 @@
     else query=query.ilike('name',`%${safe}%`);
     const {data,error}=await query;if(error)throw error;
     return Array.isArray(data)&&data.length>0;
+  }
+
+  async function findPressObservation(q){
+    const api=pressBridge();
+    if(!api||typeof api.search!=='function')return null;
+    try{
+      const rows=await api.search(q);
+      if(!Array.isArray(rows)||!rows.length)return null;
+      return rows[0]||null;
+    }catch(_error){return null;}
+  }
+
+  async function openPressObservation(row,q){
+    const entry=entityEntry();
+    if(!row||typeof entry?.openPressObservation!=='function')return false;
+    await entry.openPressObservation(row,q);
+    return true;
   }
 
   async function queryOsint(q){
@@ -121,20 +144,20 @@
 
   function renderExact(q,data,rows){
     const host=resultsHost();if(!host)return;
-    host.innerHTML=`<section class="agw-card agw-external"><header class="agw-main-head"><div><span class="agw-eyebrow">OSINT EXTERNO · COINCIDENCIA NOMINAL EXACTA</span><h3>Coincidencia exacta encontrada</h3><p>Atlas no encontró una entidad interna para <b>${esc(q)}</b>, pero encontró ${rows.length===1?'una coincidencia':'coincidencias'} cuyo nombre normalizado es idéntico al consultado. Esto sigue siendo evidencia para revisión, no identidad confirmada.</p></div><div class="agw-kpis"><span><b>${rows.length}</b><small>exacta(s)</small></span><span><b>100%</b><small>igualdad nominal</small></span></div></header>${sourceRail(data,rows)}<section class="agw-evidence"><header><h4>Coincidencias exactas para revisión</h4><span>no crean entidad ni alteran IPA3</span></header>${rows.slice(0,24).map(findingMarkup).join('')}</section><div class="agw-rule"><b>Regla de lectura:</b> 100% se reserva exclusivamente para igualdad del nombre normalizado consultado. La identidad debe corroborarse con fecha de nacimiento, documento, nacionalidad u otros identificadores.</div></section>`;
+    host.innerHTML=`<section class="agw-card agw-external"><header class="agw-main-head"><div><span class="agw-eyebrow">OSINT EXTERNO · COINCIDENCIA NOMINAL EXACTA</span><h3>Coincidencia exacta encontrada</h3><p>Atlas no encontró una entidad interna ni una observación de prensa prioritaria para <b>${esc(q)}</b>, pero encontró ${rows.length===1?'una coincidencia':'coincidencias'} cuyo nombre normalizado es idéntico al consultado. Esto sigue siendo evidencia para revisión, no identidad confirmada.</p></div><div class="agw-kpis"><span><b>${rows.length}</b><small>exacta(s)</small></span><span><b>100%</b><small>igualdad nominal</small></span></div></header>${sourceRail(data,rows)}<section class="agw-evidence"><header><h4>Coincidencias exactas para revisión</h4><span>no crean entidad ni alteran IPA3</span></header>${rows.slice(0,24).map(findingMarkup).join('')}</section><div class="agw-rule"><b>Regla de lectura:</b> 100% se reserva exclusivamente para igualdad del nombre normalizado consultado. La identidad debe corroborarse con fecha de nacimiento, documento, nacionalidad u otros identificadores.</div></section>`;
   }
 
   function renderApproxGate(q,data,rows){
     const host=resultsHost();if(!host)return;
     const max=Math.max(0,...rows.map(r=>Number(r.atlas_match_confidence)||0));
     const bySource=[...new Set(rows.map(r=>sourceLabel(r.source_code)))];
-    host.innerHTML=`<section class="agw-card agw-external"><header class="agw-main-head"><div><span class="agw-eyebrow">OSINT EXTERNO · REVISIÓN OPCIONAL</span><h3>Sin coincidencia exacta</h3><p>No existe una entidad Atlas ni una coincidencia nominal 100% para <b>${esc(q)}</b>. Hay candidatos aproximados que pueden revisarse de forma opcional.</p></div><div class="agw-kpis"><span><b>${rows.length}</b><small>aproximados</small></span><span><b>${pct(max)}</b><small>máx. similitud nominal</small></span></div></header><div class="agw-rule"><b>No se muestran automáticamente</b> para evitar ruido y falsos positivos. Atlas recalcula la similitud por nombre y descarta candidatos sin parecido nominal suficiente. Fuentes con candidatos: ${esc(bySource.join(', ')||'—')}.</div><div style="display:flex;gap:10px;align-items:center;margin-top:14px"><button type="button" class="aex-osint-btn" data-agw-show-approx>Ver ${rows.length} coincidencia${rows.length===1?'':'s'} OSINT aproximada${rows.length===1?'':'s'}</button><span style="font-size:12px;color:#8fa3bd">Revisión analítica voluntaria · no promueve identidad</span></div><div data-agw-approx-results style="display:none;margin-top:16px"><section class="agw-evidence"><header><h4>Candidatos aproximados</h4><span>ordenados por similitud nominal Atlas</span></header>${rows.slice().sort((a,b)=>(Number(b.atlas_match_confidence)||0)-(Number(a.atlas_match_confidence)||0)).slice(0,24).map(findingMarkup).join('')}</section>${sourceRail(data,rows)}</div></section>`;
+    host.innerHTML=`<section class="agw-card agw-external"><header class="agw-main-head"><div><span class="agw-eyebrow">OSINT EXTERNO · REVISIÓN OPCIONAL</span><h3>Sin coincidencia exacta</h3><p>No existe una entidad Atlas, observación de prensa prioritaria ni una coincidencia nominal 100% para <b>${esc(q)}</b>. Hay candidatos aproximados que pueden revisarse de forma opcional.</p></div><div class="agw-kpis"><span><b>${rows.length}</b><small>aproximados</small></span><span><b>${pct(max)}</b><small>máx. similitud nominal</small></span></div></header><div class="agw-rule"><b>No se muestran automáticamente</b> para evitar ruido y falsos positivos. Atlas recalcula la similitud por nombre y descarta candidatos sin parecido nominal suficiente. Fuentes con candidatos: ${esc(bySource.join(', ')||'—')}.</div><div style="display:flex;gap:10px;align-items:center;margin-top:14px"><button type="button" class="aex-osint-btn" data-agw-show-approx>Ver ${rows.length} coincidencia${rows.length===1?'':'s'} OSINT aproximada${rows.length===1?'':'s'}</button><span style="font-size:12px;color:#8fa3bd">Revisión analítica voluntaria · no promueve identidad</span></div><div data-agw-approx-results style="display:none;margin-top:16px"><section class="agw-evidence"><header><h4>Candidatos aproximados</h4><span>ordenados por similitud nominal Atlas</span></header>${rows.slice().sort((a,b)=>(Number(b.atlas_match_confidence)||0)-(Number(a.atlas_match_confidence)||0)).slice(0,24).map(findingMarkup).join('')}</section>${sourceRail(data,rows)}</div></section>`;
     host.querySelector('[data-agw-show-approx]')?.addEventListener('click',e=>{const box=host.querySelector('[data-agw-approx-results]');if(!box)return;box.style.display=box.style.display==='none'?'block':'none';e.currentTarget.textContent=box.style.display==='none'?`Ver ${rows.length} coincidencia${rows.length===1?'':'s'} OSINT aproximada${rows.length===1?'':'s'}`:'Ocultar coincidencias aproximadas';});
   }
 
   function renderEmpty(q,data){
     const host=resultsHost();if(!host)return;
-    host.innerHTML=`<section class="agw-card agw-external"><header class="agw-main-head"><div><span class="agw-eyebrow">BÚSQUEDA INTEGRADA COMPLETADA</span><h3>Sin resultados</h3><p>No se encontraron entidades internas ni coincidencias OSINT con similitud nominal suficiente para <b>${esc(q)}</b> en las fuentes disponibles.</p></div></header>${sourceRail(data,[])}</section>`;
+    host.innerHTML=`<section class="agw-card agw-external"><header class="agw-main-head"><div><span class="agw-eyebrow">BÚSQUEDA INTEGRADA COMPLETADA</span><h3>Sin resultados</h3><p>No se encontraron entidades internas, observaciones de prensa ni coincidencias OSINT con similitud nominal suficiente para <b>${esc(q)}</b> en las fuentes disponibles.</p></div></header>${sourceRail(data,[])}</section>`;
   }
 
   function continueInternal(){const btn=runButton();if(!btn)return;bypass=true;try{btn.click();}finally{queueMicrotask(()=>{bypass=false;});}}
@@ -147,7 +170,20 @@
       try{
         setBusy(q,'atlas');
         const found=await hasInternalCandidate(q);if(token!==seq)return;
-        if(found){clearBusy();continueInternal();window.__ATLAS_ENTITY_OSINT_AUTO_FALLBACK_0532__={active:true,release:RELEASE,lastQuery:q,route:'internal',escalated:false,checkedAt:new Date().toISOString(),identityPromotion:false,scoreMutation:false};return;}
+        if(found){
+          clearBusy();
+          continueInternal();
+          window.__ATLAS_ENTITY_OSINT_AUTO_FALLBACK_0532__={active:true,release:RELEASE,lastQuery:q,route:'internal',escalated:false,checkedAt:new Date().toISOString(),identityPromotion:false,scoreMutation:false};
+          return;
+        }
+
+        setBusy(q,'press');
+        const pressRow=await findPressObservation(q);if(token!==seq)return;
+        if(pressRow&&await openPressObservation(pressRow,q)){
+          window.__ATLAS_ENTITY_OSINT_AUTO_FALLBACK_0532__={active:true,release:RELEASE,lastQuery:q,route:'press_unreconciled',escalated:false,pressEntityId:pressRow.press_entity_id||null,pressName:pressRow.name||null,checkedAt:new Date().toISOString(),canonicalEntityCreated:false,automaticIdentityJoin:false,inferredRut:false,identityPromotion:false,scoreMutation:false};
+          return;
+        }
+
         setBusy(q,'osint');
         const data=await queryOsint(q);if(token!==seq)return;
         const all=flatten(data),exact=exactRows(q,all),approx=approximateRows(q,all);
@@ -169,5 +205,5 @@
   const obs=new MutationObserver(()=>{const manual=document.querySelector('#aex-osint-run');if(manual)manual.style.display='none';const hint=document.querySelector('[data-osint-hint]');if(hint)hint.style.display='none';});
   obs.observe(document.documentElement,{subtree:true,childList:true});
 
-  window.__ATLAS_ENTITY_OSINT_AUTO_FALLBACK_0532__={active:true,release:RELEASE,automaticFallback:true,gatedSearch:true,exactAutoOpen:true,approximateRequiresReview:true,exactDefinition:'normalized_name_equality',duplicateSearchSuppression:true,whileTyping:false,identityPromotion:false,scoreMutation:false,similarityModel:'atlas_lexical_v1',minimumApproxSimilarity:MIN_APPROX_SCORE,installedAt:new Date().toISOString()};
+  window.__ATLAS_ENTITY_OSINT_AUTO_FALLBACK_0532__={active:true,release:RELEASE,automaticFallback:true,gatedSearch:true,searchOrder:['canonical','press_unreconciled','external_osint'],pressBeforeExternal:true,pressAutomaticIdentityJoin:false,pressInferredRut:false,exactAutoOpen:true,approximateRequiresReview:true,exactDefinition:'normalized_name_equality',duplicateSearchSuppression:true,whileTyping:false,identityPromotion:false,scoreMutation:false,similarityModel:'atlas_lexical_v1',minimumApproxSimilarity:MIN_APPROX_SCORE,installedAt:new Date().toISOString()};
 })();
