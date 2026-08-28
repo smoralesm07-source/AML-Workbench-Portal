@@ -7,11 +7,12 @@
 <meta name="robots" content="noindex,nofollow,noarchive">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com https://cdn.jsdelivr.net; connect-src 'self' https://raw.githubusercontent.com https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://server.arcgisonline.com https://*.arcgisonline.com; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net; connect-src 'self' https://raw.githubusercontent.com https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://server.arcgisonline.com https://*.arcgisonline.com; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>ATLAS · Territorio · IGR</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="./atlas-territory-igr-v2a-0911.css?v=0915-demo1">
 <link rel="stylesheet" href="./atlas-territory-igr-v2a-0914.css?v=0915-demo1">
+<link rel="stylesheet" href="./atlas-territory-so-0918.css?v=0918-2">
 </head>
 <body>
 <div class="shell" data-atlas-territory-layout="compact-demo">
@@ -19,7 +20,7 @@
     <div>
       <div class="kicker">ATLAS · TERRITORIO</div>
       <h1>Territorio · Índice de Riesgo Geográfico</h1>
-      <p class="sub">Amenaza territorial LA explicada · mapa comunal · historia real 2020–2025 · trazabilidad metodológica.</p>
+      <p class="sub">Amenaza territorial LA explicada · mapa comunal · historia real 2020–2025 · cobertura comunal de sujetos obligados.</p>
     </div>
     <div class="badge">IGR · v2A operativo</div>
   </div>
@@ -84,10 +85,11 @@
     <div class="card panel" id="explain"></div>
   </section>
 
-  <section class="section-label"><span>GOBERNANZA Y TRAZABILIDAD</span><small>Metodología vigente, evolución planificada y ranking territorial</small></section>
-  <section class="governance-grid">
-    <div class="card panel governance-wide" id="roadmap"></div>
-    <div class="card panel" id="trace"></div>
+  <section class="section-label"><span>SUJETOS OBLIGADOS EN EL TERRITORIO</span><small>Cobertura registral de la comuna seleccionada y sectores económicos involucrados</small></section>
+  <section class="governance-grid so-register-grid">
+    <div class="card panel governance-wide" id="roadmap" hidden aria-hidden="true"></div>
+    <div class="card panel" id="trace" hidden aria-hidden="true"></div>
+    <div class="card panel so-register-panel" id="subjects"><div class="loading"><b>Consultando padrón UAF…</b></div></div>
     <div class="card panel" id="ranking"></div>
   </section>
 </div>
@@ -97,5 +99,6 @@
 <script src="./atlas-territory-igr-v2a-core-0911.js?v=0915-demo1"></script>
 <script src="./atlas-territory-igr-v2a-history-0911.js?v=0915-demo1"></script>
 <script src="./atlas-territory-igr-v2a-ui-0911.js?v=0915-demo1"></script>
+<script src="./atlas-territory-so-0918.js?v=0918-2"></script>
 </body>
 </html>
