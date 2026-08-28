@@ -1,0 +1,50 @@
+name: OSFL Registro Civil national ingest
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/osfl-registry-ingest.yml"
+      - "ops/osfl_registry/**"
+  workflow_dispatch:
+  schedule:
+    # Registro Civil publica la Planilla RPJ cerca del día 15 con corte al mes anterior.
+    - cron: "20 10 16 * *"
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  ATLAS_SUPABASE_URL: https://ldmtlwzqaqmegedktlxr.supabase.co
+  PYTHONUNBUFFERED: "1"
+  OSFL_REGISTRY_LOOKBACK_MONTHS: "24"
+
+jobs:
+  ingest-registro-civil:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    concurrency:
+      group: atlas-osfl-registro-civil-national
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install archive and spreadsheet readers
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends unar
+          python -m pip install --upgrade pip
+          python -m pip install "pandas==2.2.3" "openpyxl==3.1.5" "xlrd==2.0.1" "requests==2.32.3"
+
+      - name: Ingest official Registro Civil Planilla RPJ
+        shell: bash
+        run: python ops/osfl_registry/ingest_registro_civil.py
