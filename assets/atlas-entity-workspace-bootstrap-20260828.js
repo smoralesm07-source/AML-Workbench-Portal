@@ -227,3 +227,17 @@
   window.addEventListener('load',loadWorkspaceWhenReady,{once:true});
   document.addEventListener('atlas:entity-entry-ready',loadWorkspaceWhenReady);
 })();
+
+/* ATLAS · Sanciones chart authority 0.96.2 loader.
+ * Kept here as a late production bootstrap so it can enhance Sanciones whether
+ * the section authority is loaded before or after the main portal runtime.
+ */
+(function atlasSanctionsChartsLoader0962(){
+  if(window.__ATLAS_SANCTIONS_CHARTS_0962_LOADER__)return;
+  window.__ATLAS_SANCTIONS_CHARTS_0962_LOADER__=true;
+  const script=document.createElement('script');
+  script.src='./assets/atlas-sanctions-charts-0962.js?v=0962-20260828';
+  script.async=false;
+  script.dataset.atlasSanctionsCharts='0962';
+  document.body.appendChild(script);
+})();
