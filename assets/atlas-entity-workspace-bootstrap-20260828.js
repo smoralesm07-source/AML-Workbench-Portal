@@ -1,6 +1,6 @@
 'use strict';
 
-/* ATLAS · Entity workspace bootstrap · 2026-08-28 · perf1+press0951
+/* ATLAS · Entity workspace bootstrap · 2026-08-28 · perf1+press0951+racefix1
  * Production-safe compatibility layer for Entidades.
  * The canonical Pages runtime already compiles v0447 before later standalone
  * explorer enhancers. If its press authority survived, reuse it instead of
@@ -14,6 +14,9 @@
  *
  * press0951 loads the Entidades press-observation presentation layer: compact
  * governed hierarchy, denser press evidence and an explicit return control.
+ * racefix1 keeps press-only suggestions stable across the 0512 canonical
+ * autocomplete rewrite and makes Enter wait only when canonical search is empty
+ * or the press-only search is already pending.
  */
 (function atlasEntityWorkspaceBootstrap20260828(){
   const BOOT_FLAG='__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_20260828__';
@@ -22,12 +25,14 @@
   const PRESS_COMPAT_FLAG='__ATLAS_PRESS_SCHEMA_COMPAT_20260828__';
   const BRIDGE_LOADING_FLAG='__ATLAS_ENTITY_PRESS_SEARCH_BRIDGE_LOADING_20260828__';
   const PRESS_VIEW_LOADING_FLAG='__ATLAS_ENTITY_PRESS_VIEW_LOADING_0951__';
+  const PRESS_RACEFIX_LOADING_FLAG='__ATLAS_ENTITY_PRESS_SEARCH_RACEFIX_LOADING_20260828__';
   const PRESS_FEED_URL='https://raw.githubusercontent.com/smoralesm07-source/Monitor/atlas-press-state/atlas_prensa.json';
   const WORKSPACE_SRC='./v0447-entity-workspace.js?v=20260828-fodich4';
   const PRESS_SEARCH_BRIDGE_SRC='./assets/atlas-entity-press-search-bridge-20260828.js?v=20260828-perf1';
+  const PRESS_SEARCH_RACEFIX_SRC='./assets/atlas-entity-press-search-racefix-20260828.js?v=20260828-racefix1';
   const PRESS_VIEW_JS_SRC='./assets/atlas-entity-press-view-0951.js?v=0951-1';
   const PRESS_VIEW_CSS_SRC='./assets/atlas-entity-press-view-0951.css?v=0951-1';
-  const BUILD='20260828-perf1+press0951';
+  const BUILD='20260828-perf1+press0951+racefix1';
 
   if(window[BOOT_FLAG])return;
   window[BOOT_FLAG]=true;
@@ -48,6 +53,24 @@
     script.dataset.atlasEntityPressView='0951';
     script.onload=()=>{window[PRESS_VIEW_LOADING_FLAG]=false;};
     script.onerror=()=>{window[PRESS_VIEW_LOADING_FLAG]=false;};
+    document.body.appendChild(script);
+  }
+
+  function installPressSearchRacefix(){
+    if(window.__ATLAS_ENTITY_PRESS_SEARCH_RACEFIX__||window[PRESS_RACEFIX_LOADING_FLAG])return;
+    window[PRESS_RACEFIX_LOADING_FLAG]=true;
+    const script=document.createElement('script');
+    script.src=PRESS_SEARCH_RACEFIX_SRC;
+    script.async=false;
+    script.dataset.atlasEntityPressSearchRacefix='1';
+    script.onload=()=>{
+      window[PRESS_RACEFIX_LOADING_FLAG]=false;
+      if(window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__)window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__.pressSearchRacefix=true;
+    };
+    script.onerror=()=>{
+      window[PRESS_RACEFIX_LOADING_FLAG]=false;
+      if(window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__)window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__.pressSearchRacefix=false;
+    };
     document.body.appendChild(script);
   }
 
@@ -96,6 +119,7 @@
       ready:true,
       pressSchemaCompatible:true,
       pressSearchBridge:false,
+      pressSearchRacefix:!!window.__ATLAS_ENTITY_PRESS_SEARCH_RACEFIX__,
       pressView0951:!!window.__ATLAS_ENTITY_PRESS_VIEW_0951__,
       build:BUILD,
       ...extra
@@ -106,6 +130,7 @@
     installPressView0951();
     if(window.__ATLAS_ENTITY_PRESS_SEARCH_BRIDGE_20260828__){
       if(window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__)window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__.pressSearchBridge=true;
+      installPressSearchRacefix();
       dispatchReady();
       return;
     }
@@ -118,11 +143,13 @@
     bridge.onload=()=>{
       window[BRIDGE_LOADING_FLAG]=false;
       if(window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__)window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__.pressSearchBridge=true;
+      installPressSearchRacefix();
       dispatchReady();
     };
     bridge.onerror=()=>{
       window[BRIDGE_LOADING_FLAG]=false;
       if(window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__)window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__.pressSearchBridge=false;
+      installPressSearchRacefix();
       dispatchReady();
     };
     document.body.appendChild(bridge);
@@ -172,6 +199,7 @@
         ready:false,
         pressSchemaCompatible:true,
         pressSearchBridge:false,
+        pressSearchRacefix:!!window.__ATLAS_ENTITY_PRESS_SEARCH_RACEFIX__,
         pressView0951:!!window.__ATLAS_ENTITY_PRESS_VIEW_0951__,
         reusedCompiledAuthority:false,
         fallbackReload:true,
