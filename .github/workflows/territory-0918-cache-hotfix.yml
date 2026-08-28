@@ -1,0 +1,65 @@
+name: Territory 0918 cache hotfix
+
+on:
+  push:
+    paths:
+      - '.github/workflows/territory-0918-cache-hotfix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-territory-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Patch production cache chain
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          loader = Path('assets/atlas-territory-threat-cead-v1.js')
+          text = loader.read_text(encoding='utf-8')
+          old_iframe = "const IFRAME='./assets/territorio-aml-beta.html?v=0917-workspace1';"
+          new_iframe = "const IFRAME='./assets/territorio-aml-beta.html?v=0918-so3';"
+          if old_iframe in text:
+              text = text.replace(old_iframe, new_iframe, 1)
+          elif new_iframe not in text:
+              raise SystemExit('Unexpected territory iframe cache key')
+
+          old_src = 'src="${IFRAME}" loading="eager"'
+          new_src = 'src="${IFRAME}&t=${Date.now()}" loading="eager"'
+          if old_src in text:
+              text = text.replace(old_src, new_src, 1)
+          elif new_src not in text:
+              raise SystemExit('Unexpected territory iframe mount expression')
+          loader.write_text(text, encoding='utf-8')
+
+          index = Path('index.html')
+          html = index.read_text(encoding='utf-8')
+          old_loader = './assets/atlas-territory-threat-cead-v1.js?v=0916-layout1'
+          new_loader = './assets/atlas-territory-threat-cead-v1.js?v=0918-so3'
+          if old_loader in html:
+              html = html.replace(old_loader, new_loader, 1)
+          elif new_loader not in html:
+              raise SystemExit('Unexpected territory loader cache key in index.html')
+          index.write_text(html, encoding='utf-8')
+          PY
+
+      - name: Commit hotfix
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'No changes needed.'
+            exit 0
+          fi
+          git config user.name 'atlas-automation'
+          git config user.email 'atlas-automation@users.noreply.github.com'
+          git add assets/atlas-territory-threat-cead-v1.js index.html
+          git commit -m 'fix territory production cache chain for 0.91.8'
+          git push origin HEAD:main
