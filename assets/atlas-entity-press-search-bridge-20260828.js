@@ -6,14 +6,16 @@
  *
  * Scope is deliberately narrow:
  * - does not replace ENTRY.load/open/explorer, routing, scoring or filters;
- * - leaves canonical aml_entities suggestions untouched;
+ * - leaves canonical aml_entities suggestions and activation untouched;
  * - appends press-only observations to the existing autocomplete;
+ * - intercepts Buscar/Enter only long enough to resolve whether a press-only
+ *   observation exists when there is no canonical match;
  * - press-only selections stay unreconciled and never receive an inferred RUT.
  */
 (function atlasEntityPressSearchBridge20260828(){
   const FLAG='__ATLAS_ENTITY_PRESS_SEARCH_BRIDGE_20260828__';
   const FEED_URL='https://raw.githubusercontent.com/smoralesm07-source/Monitor/atlas-press-state/atlas_prensa.json';
-  const BUILD='20260828-fodich5';
+  const BUILD='20260828-fodich6';
   const MIN_CHARS=2;
   const LIMIT=4;
   const TTL=5*60*1000;
@@ -25,6 +27,8 @@
   let timer=null;
   let seq=0;
   let latest={term:'',rows:[]};
+  let bypassRunOnce=false;
+  let resolvingRun=false;
 
   const clean=v=>String(v??'').trim().replace(/[%_]/g,'').slice(0,120);
   const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9K]+/g,' ').replace(/\s+/g,' ').trim();
@@ -32,6 +36,7 @@
   const entry=()=>window.__ATLAS_ENTITY_ENTRY__||null;
   const input=()=>document.querySelector('.aex #aex-q');
   const box=()=>document.querySelector('.aex #aex-suggest');
+  const client=()=>{try{return typeof sb!=='undefined'?sb:(window.sb||null);}catch(_error){return window.sb||null;}};
 
   function articleId(article,index){return String(article?.article_id||article?.id||`PRESS-ARTICLE-${index}`);}
   function articleDate(article){return String(article?.published_at||article?.observed_at||article?.date||article?.fecha||'').trim();}
@@ -135,6 +140,31 @@
     return [...found.values()].sort((a,b)=>Number(b.article_count||0)-Number(a.article_count||0)||String(a.name||'').localeCompare(String(b.name||''),'es')).slice(0,LIMIT);
   }
 
+  async function hasCanonicalMatch(term){
+    const q=clean(term);
+    if(!q)return false;
+    const db=client();
+    if(!db)return null;
+    try{
+      const safe=q.replace(/[%_,()*"']/g,' ').replace(/\s+/g,' ').trim().slice(0,80);
+      let query=db.from('aml_entities').select('entity_id').limit(1);
+      const compact=safe.replace(/[.\s-]/g,'');
+      if(/^ENT-/i.test(safe))query=query.ilike('entity_id',`${safe.toUpperCase()}%`);
+      else if(/^[0-9K]+$/i.test(compact))query=query.ilike('rut',`%${safe.replace(/[.\s]/g,'')}%`);
+      else query=query.ilike('name',`%${safe}%`);
+      const {data,error}=await query;
+      if(error)return null;
+      return Array.isArray(data)&&data.length>0;
+    }catch(_error){return null;}
+  }
+
+  function pressMarkup(rows){
+    return rows.map((row,index)=>`<button type="button" class="aex-suggest-item" data-aex-press-index="${index}">
+      <span><b>${esc(row.name||'Observación de prensa')}</b><small>Prensa · ${Number(row.article_count||0).toLocaleString('es-CL')} publicación(es) · sin RUT inferido</small></span>
+      <em>No conciliada</em>
+    </button>`).join('');
+  }
+
   function renderPressRows(term,rows){
     const host=box();
     const field=input();
@@ -143,13 +173,21 @@
     if(!rows.length)return;
     const group=document.createElement('div');
     group.dataset.aexPressBridge='1';
-    group.innerHTML=rows.map((row,index)=>`<button type="button" class="aex-suggest-item" data-aex-press-index="${index}">
-      <span><b>${esc(row.name||'Observación de prensa')}</b><small>Prensa · ${Number(row.article_count||0).toLocaleString('es-CL')} publicación(es) · sin RUT inferido</small></span>
-      <em>No conciliada</em>
-    </button>`).join('');
+    group.innerHTML=pressMarkup(rows);
     host.appendChild(group);
     host.classList.add('open');
     latest={term:clean(term),rows};
+  }
+
+  function preservePressRows(term,rows){
+    const restore=()=>{
+      const host=box();
+      const field=input();
+      if(!host||!field||clean(field.value)!==clean(term)||!rows.length)return;
+      if(!host.querySelector('[data-aex-press-bridge]'))renderPressRows(term,rows);
+    };
+    setTimeout(restore,320);
+    setTimeout(restore,900);
   }
 
   async function refresh(term){
@@ -159,9 +197,11 @@
     try{
       const rows=await searchPress(q);
       if(token!==seq)return;
+      latest={term:q,rows};
       renderPressRows(q,rows);
+      preservePressRows(q,rows);
     }catch(_error){
-      if(token===seq)box()?.querySelector('[data-aex-press-bridge]')?.remove();
+      if(token===seq){latest={term:q,rows:[]};box()?.querySelector('[data-aex-press-bridge]')?.remove();}
     }
   }
 
@@ -177,6 +217,37 @@
     const q=clean(input()?.value||'');
     if(!q||q!==latest.term||!latest.rows.length)return null;
     return latest.rows[0];
+  }
+
+  function replayCanonicalRun(run){
+    if(!run)return;
+    bypassRunOnce=true;
+    run.click();
+  }
+
+  async function resolveRun(run){
+    if(resolvingRun)return;
+    const field=input();
+    const q=clean(field?.value||'');
+    if(!q)return replayCanonicalRun(run);
+    if(/^ENT-/i.test(q)||/^[0-9kK.\-\s]+$/.test(q)||canonicalSuggestionExists())return replayCanonicalRun(run);
+    resolvingRun=true;
+    run?.setAttribute('aria-busy','true');
+    try{
+      const [canonical,rows]=await Promise.all([hasCanonicalMatch(q),searchPress(q)]);
+      if(clean(input()?.value||'')!==q)return;
+      latest={term:q,rows};
+      renderPressRows(q,rows);
+      preservePressRows(q,rows);
+      if(canonical===true||!rows.length)return replayCanonicalRun(run);
+      if(typeof entry()?.openPressObservation==='function')openPressRow(rows[0],q);
+      else replayCanonicalRun(run);
+    }catch(_error){
+      replayCanonicalRun(run);
+    }finally{
+      resolvingRun=false;
+      run?.removeAttribute('aria-busy');
+    }
   }
 
   document.addEventListener('input',event=>{
@@ -201,10 +272,17 @@
     }
     const run=event.target.closest?.('#aex-run');
     if(!run||!run.closest('.aex'))return;
+    if(bypassRunOnce){bypassRunOnce=false;return;}
     const row=currentPressRow();
     if(row&&!canonicalSuggestionExists()&&typeof entry()?.openPressObservation==='function'){
       event.preventDefault();event.stopImmediatePropagation();
       openPressRow(row,latest.term);
+      return;
+    }
+    const q=clean(input()?.value||'');
+    if(q&&!/^ENT-/i.test(q)&&!/^[0-9kK.\-\s]+$/.test(q)){
+      event.preventDefault();event.stopImmediatePropagation();
+      void resolveRun(run);
     }
   },true);
 
@@ -215,6 +293,12 @@
     if(row&&!canonicalSuggestionExists()&&typeof entry()?.openPressObservation==='function'){
       event.preventDefault();event.stopImmediatePropagation();
       openPressRow(row,latest.term);
+      return;
+    }
+    const q=clean(target.value);
+    if(q&&!/^ENT-/i.test(q)&&!/^[0-9kK.\-\s]+$/.test(q)){
+      event.preventDefault();event.stopImmediatePropagation();
+      void resolveRun(document.querySelector('.aex #aex-run'));
     }
   },true);
 
@@ -227,10 +311,11 @@
     active:true,
     build:BUILD,
     source:'Monitor/atlas-press-state/atlas_prensa.json',
-    policy:'APPEND_PRESS_ONLY_TO_0512_WITHOUT_REPLACING_CANONICAL_EXPLORER',
+    policy:'APPEND_PRESS_ONLY_TO_0512_AND_RESOLVE_PRESS_ONLY_ON_RUN_WITHOUT_REPLACING_CANONICAL_EXPLORER',
     automaticIdentityJoin:false,
     inferredRut:false,
     search:searchPress,
+    hasCanonicalMatch,
     installedAt:new Date().toISOString()
   };
 })();
