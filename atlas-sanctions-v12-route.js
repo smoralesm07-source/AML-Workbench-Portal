@@ -1,16 +1,18 @@
 'use strict';
 
-/* ATLAS AML · Sanciones route authority 0.94
- * La ruta conserva fallback v12 sólo como contingencia, pero la autoridad
- * funcional es ATLAS_SANCTIONS_CURRENT (Spectrum Cockpit 0.94).
+/* ATLAS AML · Sanciones route authority 0.96
+ * Autoridad funcional: ATLAS_SANCTIONS_CURRENT = Radiografía sancionatoria 0.96.
+ * Spectrum 0.94 y v12 quedan únicamente como fallback técnico histórico.
  */
 (function atlasSanctionsCurrentRouteAuthority(){
-  const ROUTE_VERSION='SANCTIONS_SPECTRUM_ROUTE_0940';
+  const ROUTE_VERSION='SANCTIONS_RADIOGRAPHY_ROUTE_0960';
   const priorNavigate=(typeof navigate==='function')?navigate:(typeof window.navigate==='function'?window.navigate:null);
 
   function currentLoader(){
     const current=window.ATLAS_SANCTIONS_CURRENT?.load;
-    if(typeof current==='function')return current;
+    if(typeof current==='function'&&window.ATLAS_SANCTIONS_CURRENT?.version==='0.96.0')return current;
+    const legacyCurrent=window.ATLAS_SANCTIONS_CURRENT?.load;
+    if(typeof legacyCurrent==='function')return legacyCurrent;
     const fallback=window.AML_SANCTIONS_V12_APPROVED?.reload;
     if(typeof fallback==='function')return fallback;
     throw new Error('Sanciones current no está disponible en el runtime canónico.');
@@ -46,7 +48,7 @@
     event.stopImmediatePropagation();
     pinCurrentGlobals();
     openCurrentSanctions().catch(error=>{
-      console.error('ATLAS Sanciones current route',error);
+      console.error('ATLAS Sanciones radiography route',error);
       const host=document.querySelector('#content');
       if(host)host.innerHTML=`<div class="flash error"><b>No fue posible abrir Sanciones.</b><br>${String(error?.message||error)}</div>`;
     });
@@ -54,15 +56,16 @@
 
   window.ATLAS_SANCTIONS_ROUTE={
     version:ROUTE_VERSION,
-    target:'ATLAS_SANCTIONS_CURRENT.load',
-    fallback:'AML_SANCTIONS_V12_APPROVED.reload',
+    target:'ATLAS_SANCTIONS_CURRENT.load@0.96.0',
+    fallback:'Spectrum 0.94 → AML_SANCTIONS_V12_APPROVED.reload',
     legacyFrozenRouteBypassed:true,
-    currentSpectrumPinned:true,
+    radiography0960Pinned:true,
     globalLoaderPinned:true,
     open:openCurrentSanctions,
     health:()=>({
       version:ROUTE_VERSION,
-      currentRuntime:!!window.ATLAS_SANCTIONS_CURRENT,
+      currentVersion:window.ATLAS_SANCTIONS_CURRENT?.version||null,
+      currentAuthority:window.ATLAS_SANCTIONS_CURRENT?.authority||null,
       currentLoad:typeof window.ATLAS_SANCTIONS_CURRENT?.load==='function',
       globalLoadPinned:window.loadSanctions===openCurrentSanctions,
       fallbackV12:typeof window.AML_SANCTIONS_V12_APPROVED?.reload==='function',
