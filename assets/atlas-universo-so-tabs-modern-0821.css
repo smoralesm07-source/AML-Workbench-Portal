@@ -1,1 +1,204 @@
-.uso81-tabs{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px!important;align-items:stretch!important;flex-wrap:nowrap!important;width:calc(100% + 36px)!important;max-width:none!important;margin:0 -36px 18px 0!important}.uso81-tabs>button,.uso820-management-tab{position:relative!important;display:grid!important;grid-template-columns:36px minmax(0,1fr) auto!important;grid-template-rows:auto auto!important;column-gap:9px!important;row-gap:2px!important;align-items:center!important;min-width:0!important;max-width:none!important;width:100%!important;min-height:76px!important;padding:12px 13px 11px!important;border:1px solid #243c52!important;border-radius:16px!important;background:linear-gradient(180deg,#0d1b2a 0%,#091522 100%)!important;color:#eaf4ff!important;text-align:left!important;overflow:hidden!important;box-shadow:0 7px 20px rgba(0,0,0,.12)!important;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease,background .16s ease!important}.uso81-tabs>button::after,.uso820-management-tab::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--uso-tab-accent,#2997ff);opacity:.78;transition:opacity .16s ease,box-shadow .16s ease}.uso81-tabs>button:hover,.uso820-management-tab:hover{transform:translateY(-1px)!important;border-color:var(--uso-tab-accent,#2997ff)!important;background:linear-gradient(180deg,#102236 0%,#0b1928 100%)!important;box-shadow:0 10px 26px rgba(0,0,0,.18)!important}.uso81-tabs>button:hover::after,.uso820-management-tab:hover::after,.uso81-tabs>button.active::after,.uso820-management-tab.active::after{opacity:1;box-shadow:0 0 12px var(--uso-tab-accent,#2997ff)}.uso81-tabs>button.active,.uso820-management-tab.active{border-color:var(--uso-tab-accent,#2997ff)!important;background:linear-gradient(180deg,#11273b 0%,#0b1b2b 100%)!important;box-shadow:0 0 0 1px rgba(52,168,255,.13),0 10px 28px rgba(0,0,0,.18)!important}.uso81-tabs>button:nth-child(1){--uso-tab-accent:#2c92ff;--uso-tab-soft:rgba(44,146,255,.14)}.uso81-tabs>button:nth-child(2){--uso-tab-accent:#24d1c5;--uso-tab-soft:rgba(36,209,197,.14)}.uso81-tabs>button:nth-child(3),.uso820-management-tab{--uso-tab-accent:#a66cff;--uso-tab-soft:rgba(166,108,255,.14)}.uso-tab-icon{grid-column:1!important;grid-row:1/3!important;width:34px!important;height:34px!important;border-radius:10px!important;display:grid!important;place-items:center!important;background:var(--uso-tab-soft)!important;color:var(--uso-tab-accent)!important;border:1px solid currentColor!important}.uso-tab-icon svg{width:19px;height:19px;display:block;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.uso-tab-copy{grid-column:2!important;grid-row:1/3!important;min-width:0!important;display:flex!important;flex-direction:column!important;justify-content:center!important;align-self:center!important;overflow:visible!important}.uso-tab-copy b{display:block!important;margin:0!important;font-size:.78rem!important;line-height:1.12!important;letter-spacing:-.01em!important;white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important}.uso-tab-copy small{display:block!important;margin-top:5px!important;color:#8fa5ba!important;font-size:.62rem!important;line-height:1.15!important;white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important}.uso-tab-badge{grid-column:3!important;grid-row:1/3!important;align-self:center!important;justify-self:end!important;min-width:48px!important;padding:5px 7px!important;border-radius:999px!important;background:rgba(255,255,255,.055)!important;border:1px solid rgba(255,255,255,.065)!important;color:var(--uso-tab-accent)!important;font-size:.61rem!important;line-height:1!important;font-weight:800!important;text-align:center!important;white-space:nowrap!important}.uso-tab-badge.muted{min-width:29px!important;padding-left:7px!important;padding-right:7px!important;color:#b49adf!important}.uso81-alert{font-size:.62rem!important;line-height:1.1!important;padding:3px 6px!important}.uso814-chip{font-size:.68rem!important}.uso816-signalbar>span,.uso816-screeningbar>span{font-size:.68rem!important}.uso81-row-meta .uso81-alert{transform:translateY(-1px)}@media(max-width:1150px){.uso81-tabs{width:100%!important;margin-right:0!important;gap:9px!important}.uso81-tabs>button,.uso820-management-tab{grid-template-columns:32px minmax(0,1fr) auto!important;column-gap:7px!important;padding:11px 10px!important}.uso-tab-icon{width:31px!important;height:31px!important}.uso-tab-icon svg{width:17px;height:17px}.uso-tab-copy b{font-size:.71rem!important}.uso-tab-copy small{font-size:.57rem!important}.uso-tab-badge{min-width:43px!important;padding:4px 6px!important;font-size:.56rem!important}}@media(max-width:760px){.uso81-tabs{display:flex!important;overflow-x:auto!important;scroll-snap-type:x mandatory;padding-bottom:3px}.uso81-tabs>button,.uso820-management-tab{flex:0 0 min(90vw,350px)!important;scroll-snap-align:start!important}.uso-tab-copy b{font-size:.78rem!important}.uso-tab-copy small{font-size:.62rem!important}.uso-tab-badge{font-size:.61rem!important}.uso81-tabs::-webkit-scrollbar{height:4px}.uso81-tabs::-webkit-scrollbar-thumb{background:#29445a;border-radius:999px}}
+/* ATLAS AML · Universo SO tabs — estilo Territorio · 2026-08-28
+   Mantiene la lógica y los contadores; transforma las tarjetas en un selector
+   segmentado compacto, consistente con la navegación de Territorio.
+*/
+.uso81-tabs{
+  --uso-territory-accent:#d9893b;
+  --uso-territory-accent-soft:rgba(217,137,59,.16);
+  --uso-territory-bg:#0d1926;
+  --uso-territory-bg-hover:#132235;
+  --uso-territory-border:#263b50;
+  display:inline-flex!important;
+  grid-template-columns:none!important;
+  align-items:stretch!important;
+  flex-wrap:nowrap!important;
+  gap:0!important;
+  width:max-content!important;
+  max-width:100%!important;
+  min-height:32px!important;
+  margin:0 0 18px 0!important;
+  padding:0!important;
+  border:1px solid var(--uso-territory-border)!important;
+  border-radius:9px!important;
+  background:var(--uso-territory-bg)!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  box-shadow:none!important;
+  scrollbar-width:thin;
+  scrollbar-color:#29445a transparent;
+}
+
+.uso81-tabs>button,
+.uso820-management-tab{
+  --uso-tab-accent:var(--uso-territory-accent);
+  --uso-tab-soft:var(--uso-territory-accent-soft);
+  position:relative!important;
+  display:inline-flex!important;
+  grid-template-columns:none!important;
+  grid-template-rows:none!important;
+  align-items:center!important;
+  justify-content:center!important;
+  flex:0 0 auto!important;
+  gap:7px!important;
+  width:auto!important;
+  min-width:max-content!important;
+  max-width:none!important;
+  min-height:31px!important;
+  height:31px!important;
+  padding:0 11px!important;
+  border:0!important;
+  border-right:1px solid var(--uso-territory-border)!important;
+  border-radius:0!important;
+  background:transparent!important;
+  color:#aebdcd!important;
+  text-align:center!important;
+  overflow:hidden!important;
+  box-shadow:none!important;
+  transform:none!important;
+  cursor:pointer!important;
+  transition:background .15s ease,color .15s ease!important;
+}
+
+.uso81-tabs>button:first-child{
+  border-radius:8px 0 0 8px!important;
+}
+
+.uso81-tabs>button:last-child,
+.uso820-management-tab:last-child{
+  border-right:0!important;
+  border-radius:0 8px 8px 0!important;
+}
+
+.uso81-tabs>button::after,
+.uso820-management-tab::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height:2px;
+  background:var(--uso-territory-accent);
+  opacity:0;
+  box-shadow:none;
+  transition:opacity .15s ease;
+}
+
+.uso81-tabs>button:hover,
+.uso820-management-tab:hover{
+  transform:none!important;
+  border-color:var(--uso-territory-border)!important;
+  background:var(--uso-territory-bg-hover)!important;
+  color:#e7eef6!important;
+  box-shadow:none!important;
+}
+
+.uso81-tabs>button:hover::after,
+.uso820-management-tab:hover::after{
+  opacity:.45;
+  box-shadow:none;
+}
+
+.uso81-tabs>button.active,
+.uso820-management-tab.active{
+  border-color:var(--uso-territory-border)!important;
+  background:linear-gradient(180deg,rgba(121,78,40,.34),rgba(70,49,33,.26))!important;
+  color:#f2f5f8!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025)!important;
+}
+
+.uso81-tabs>button.active::after,
+.uso820-management-tab.active::after{
+  opacity:1;
+  box-shadow:none;
+}
+
+/* En Territorio la navegación privilegia texto: se eliminan los íconos grandes
+   y subtítulos de tarjeta para recuperar densidad vertical. */
+.uso-tab-icon,
+.uso-tab-copy small{
+  display:none!important;
+}
+
+.uso-tab-copy{
+  display:block!important;
+  min-width:0!important;
+  overflow:visible!important;
+  grid-column:auto!important;
+  grid-row:auto!important;
+}
+
+.uso-tab-copy b{
+  display:block!important;
+  margin:0!important;
+  font-size:.66rem!important;
+  line-height:1!important;
+  font-weight:700!important;
+  letter-spacing:0!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+}
+
+/* Conservamos las cifras porque son información operativa de Universo SO,
+   pero con la misma densidad del selector segmentado. */
+.uso-tab-badge{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  grid-column:auto!important;
+  grid-row:auto!important;
+  align-self:center!important;
+  min-width:0!important;
+  height:18px!important;
+  padding:0 6px!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,.045)!important;
+  border:1px solid rgba(255,255,255,.075)!important;
+  color:#86a4bf!important;
+  font-size:.55rem!important;
+  line-height:1!important;
+  font-weight:750!important;
+  font-variant-numeric:tabular-nums!important;
+  text-align:center!important;
+  white-space:nowrap!important;
+}
+
+.uso81-tabs>button.active .uso-tab-badge,
+.uso820-management-tab.active .uso-tab-badge{
+  color:#e4b47d!important;
+  border-color:rgba(217,137,59,.20)!important;
+  background:rgba(217,137,59,.08)!important;
+}
+
+.uso-tab-badge.muted{
+  min-width:18px!important;
+  padding:0 5px!important;
+  color:#8798aa!important;
+}
+
+.uso81-alert{font-size:.62rem!important;line-height:1.1!important;padding:3px 6px!important}
+.uso814-chip{font-size:.68rem!important}
+.uso816-signalbar>span,.uso816-screeningbar>span{font-size:.68rem!important}
+.uso81-row-meta .uso81-alert{transform:translateY(-1px)}
+
+@media(max-width:760px){
+  .uso81-tabs{
+    display:flex!important;
+    width:100%!important;
+    max-width:100%!important;
+    margin-right:0!important;
+    scroll-snap-type:x proximity;
+    -webkit-overflow-scrolling:touch;
+  }
+  .uso81-tabs>button,
+  .uso820-management-tab{
+    flex:0 0 auto!important;
+    min-width:max-content!important;
+    scroll-snap-align:start;
+    padding:0 10px!important;
+  }
+  .uso-tab-copy b{font-size:.66rem!important}
+  .uso-tab-badge{font-size:.54rem!important}
+  .uso81-tabs::-webkit-scrollbar{height:3px}
+  .uso81-tabs::-webkit-scrollbar-thumb{background:#29445a;border-radius:999px}
+}
