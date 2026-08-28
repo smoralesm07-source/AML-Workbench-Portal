@@ -1,0 +1,45 @@
+/* ATLAS · Territorio · cobertura registral SO 0.91.8 */
+#roadmap[hidden],#trace[hidden]{display:none!important}
+.governance-grid.so-register-grid{grid-template-columns:minmax(0,1.45fr) minmax(300px,.55fr)!important;align-items:start!important}
+.so-register-panel{min-width:0!important}
+.so-register-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.so-register-head h3{margin:1px 0 0!important}
+.so-neutral-badge{display:inline-flex;align-items:center;flex:0 0 auto;border:1px solid var(--line);background:var(--panel2);color:var(--muted);border-radius:999px;padding:4px 7px;font-size:7px;font-weight:800;letter-spacing:.06em}
+.so-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:9px}
+.so-kpis>div{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 9px}
+.so-kpis span{display:block;color:var(--muted);font-size:8px}
+.so-kpis b{display:block;margin-top:2px;font-size:18px;line-height:1;color:var(--text)}
+.so-register-subtitle{margin:10px 0 5px;color:var(--muted);font-size:8px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+.so-sector-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:12px;row-gap:0}
+.so-sector-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+.so-sector-row b{display:block;min-width:0;font-size:9px;line-height:1.25;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.so-sector-row strong{font-size:10px;color:var(--text);font-variant-numeric:tabular-nums}
+.so-sector-bar{height:3px;margin-top:4px;background:color-mix(in srgb,var(--panel2) 78%,var(--text) 22%);border-radius:999px;overflow:hidden}
+.so-sector-bar i{display:block;height:100%;background:var(--accent);border-radius:999px}
+.so-register-note{margin-top:8px;padding-top:7px;border-top:1px solid var(--line);color:var(--muted);font-size:8px;line-height:1.45}
+.so-empty{margin-top:8px;padding:10px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;color:var(--muted);font-size:9px;line-height:1.4}
+@media(max-width:1100px){
+  .governance-grid.so-register-grid{grid-template-columns:minmax(0,1.25fr) minmax(250px,.75fr)!important}
+  .so-sector-list{grid-template-columns:1fr!important}
+}
+@media(max-width:700px){
+  .governance-grid.so-register-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  #subjects{grid-column:1/-1!important}
+  #ranking{grid-column:1/-1!important}
+  .so-register-head{gap:5px!important}
+  .so-neutral-badge{font-size:5.5px!important;padding:3px 4px!important}
+  .so-kpis{gap:4px!important;margin-top:6px!important}
+  .so-kpis>div{padding:5px!important}
+  .so-kpis span{font-size:6px!important}
+  .so-kpis b{font-size:12px!important}
+  .so-register-subtitle{font-size:6px!important;margin:7px 0 3px!important}
+  .so-sector-list{grid-template-columns:repeat(2,minmax(0,1fr))!important;column-gap:7px!important}
+  .so-sector-row{padding:4px 0!important;gap:5px!important}
+  .so-sector-row b{font-size:6.5px!important}
+  .so-sector-row strong{font-size:7px!important}
+  .so-register-note,.so-empty{font-size:6.5px!important}
+}
+@media(max-width:350px){
+  .governance-grid.so-register-grid{grid-template-columns:1fr!important}
+  .so-sector-list{grid-template-columns:1fr!important}
+}
