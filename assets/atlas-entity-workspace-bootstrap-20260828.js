@@ -13,7 +13,7 @@
   const BRIDGE_LOADING_FLAG='__ATLAS_ENTITY_PRESS_SEARCH_BRIDGE_LOADING_20260828__';
   const PRESS_FEED_URL='https://raw.githubusercontent.com/smoralesm07-source/Monitor/atlas-press-state/atlas_prensa.json';
   const WORKSPACE_SRC='./v0447-entity-workspace.js?v=20260828-fodich4';
-  const PRESS_SEARCH_BRIDGE_SRC='./assets/atlas-entity-press-search-bridge-20260828.js?v=20260828-fodich5';
+  const PRESS_SEARCH_BRIDGE_SRC='./assets/atlas-entity-press-search-bridge-20260828.js?v=20260828-fodich6';
 
   if(window[BOOT_FLAG])return;
   window[BOOT_FLAG]=true;
@@ -103,7 +103,7 @@
         pressSchemaCompatible:true,
         pressSearchBridge:false,
         loadedAt:new Date().toISOString(),
-        build:'20260828-fodich5'
+        build:'20260828-fodich6'
       };
       loadPressSearchBridge();
     };
@@ -115,7 +115,7 @@
         pressSearchBridge:false,
         error:'workspace-load-failed',
         failedAt:new Date().toISOString(),
-        build:'20260828-fodich5'
+        build:'20260828-fodich6'
       };
     };
     document.body.appendChild(script);
