@@ -4,7 +4,7 @@
   "build": "0950",
   "policy": "CANONICAL_SOURCE_MANIFEST_FOR_COMPILED_RUNTIME",
   "publish_mode": "COMPILED_BUNDLES_ONLY",
-  "notes": "0.95.0 current production runtime. Historical fragments remain build-time source only for functional compatibility; the final UI authority is aligned to release 0.95.0 and release identity is exclusively owned by atlas-release-guard.js. OSFL economic/public-funds 0.95 and Sanciones spectrum 0.94 are active current capabilities.",
+  "notes": "0.95.0 current production runtime. OSFL economic/public-funds 0.95 and Sanciones Radiography 0.96 are active current capabilities; sanctions Spectrum 0.94 remains build-time fallback only.",
   "styles": [
     "styles.css",
     "v016.css",
@@ -64,6 +64,7 @@
     "atlas-sanctions-v12-approved-03.css",
     "atlas-sanctions-v12-approved-04.css",
     "assets/atlas-sanctions-spectrum-0940.css",
+    "assets/atlas-sanctions-radiography-0960.css",
     "v0434-reconciliation-command.css",
     "v0435-reconciliation-fix.css",
     "assets/atlas-osfl-economic-0950.css"
@@ -148,8 +149,9 @@
     {"path":"atlas-sanctions-v12-approved-04.js","type":"classic","role":"sanctions-v12-approved-fallback"},
     {"path":"atlas-sanctions-v12-approved-05.js","type":"classic","role":"sanctions-v12-approved-fallback"},
     {"path":"atlas-sanctions-v12-approved-06.js","type":"classic","role":"sanctions-v12-approved-fallback"},
-    {"path":"assets/atlas-sanctions-spectrum-0940.js","type":"classic","role":"sanctions-spectrum-current-authority"},
-    {"path":"atlas-sanctions-v12-route.js","type":"classic","role":"sanctions-spectrum-route-authority"},
+    {"path":"assets/atlas-sanctions-spectrum-0940.js","type":"classic","role":"sanctions-spectrum-fallback-0940"},
+    {"path":"assets/atlas-sanctions-radiography-0960.js","type":"classic","role":"sanctions-radiography-current-authority-0960"},
+    {"path":"atlas-sanctions-v12-route.js","type":"classic","role":"sanctions-radiography-route-authority-0960"},
     {"path":"atlas-current-ui.js","type":"classic","role":"ui-authority"},
     {"path":"atlas-current-analytics.js","type":"classic","role":"analytics-visual-authority"},
     {"path":"v0434-reconciliation-command.js","type":"classic","role":"uaf-sii-reconciliation-command"},
