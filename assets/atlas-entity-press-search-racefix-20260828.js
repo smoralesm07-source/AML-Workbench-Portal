@@ -135,7 +135,7 @@
     const q=clean(term);
     if(norm(q).length<MIN)return false;
     const rows=(latest.term===q&&latest.rows.length)?latest.rows:await search(q);
-    if(rows.length&&canonicalState()!=='match')return openRow(rows[0],q);
+    if(rows.length&&canonicalState()==='empty')return openRow(rows[0],q);
 
     /* No press-only hit: restore the normal 0512 Buscar path once. */
     const run=document.querySelector('.aex #aex-run');
@@ -183,16 +183,11 @@
     if(bypassRun){bypassRun=false;return;}
     const q=clean(input()?.value||'');
     if(norm(q).length<MIN)return;
-    const state=canonicalState();
-    if(state==='match')return;
+    if(canonicalState()!=='empty')return;
 
-    const ready=latest.term===q&&latest.rows.length>0;
-    const coldOrEmpty=state==='empty'||(state==='unknown'&&(pending&&pendingTerm===q));
-    if(ready||coldOrEmpty){
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      void resolvePressOnlyAction(q);
-    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    void resolvePressOnlyAction(q);
   },true);
 
   document.addEventListener('keydown',event=>{
@@ -200,16 +195,11 @@
     if(!(target instanceof HTMLInputElement)||target.id!=='aex-q'||!target.closest('.aex')||event.key!=='Enter')return;
     const q=clean(target.value);
     if(norm(q).length<MIN)return;
-    const state=canonicalState();
-    if(state==='match')return;
+    if(canonicalState()!=='empty')return;
 
-    const ready=latest.term===q&&latest.rows.length>0;
-    const coldOrEmpty=state==='empty'||(state==='unknown'&&(pending&&pendingTerm===q));
-    if(ready||coldOrEmpty){
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      void resolvePressOnlyAction(q);
-    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    void resolvePressOnlyAction(q);
   },true);
 
   document.addEventListener('atlas:entity-workspace-ready',warmForEntities);
@@ -238,7 +228,7 @@
   window.__ATLAS_ENTITY_PRESS_SEARCH_RACEFIX__={
     active:true,
     build:BUILD,
-    policy:'PRESERVE_PRESS_ROWS_ACROSS_CANONICAL_DOM_REWRITES+ENTER_WAITS_ONLY_WHEN_CANONICAL_EMPTY_OR_PRESS_PENDING',
+    policy:'PRESERVE_PRESS_ROWS_ACROSS_CANONICAL_DOM_REWRITES+ENTER_WAITS_ONLY_AFTER_CANONICAL_EMPTY',
     automaticIdentityJoin:false,
     inferredRut:false,
     installedAt:new Date().toISOString()
