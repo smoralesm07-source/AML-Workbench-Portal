@@ -1,8 +1,10 @@
 'use strict';
 
 /* ATLAS · Entity workspace bootstrap · 2026-08-28
- * Fixes production timing/schema compatibility without changing identity governance.
- * The compatibility layer is intentionally scoped to the Atlas press feed.
+ * Production-safe compatibility layer for Entidades.
+ * The canonical Pages runtime already compiles v0447 before later standalone
+ * explorer enhancers. If its press authority survived, reuse it instead of
+ * attempting to reload a root source fragment that Pages does not publish.
  * PRESS_ONLY observations remain non-reconciled and receive no inferred RUT.
  */
 (function atlasEntityWorkspaceBootstrap20260828(){
@@ -13,7 +15,7 @@
   const BRIDGE_LOADING_FLAG='__ATLAS_ENTITY_PRESS_SEARCH_BRIDGE_LOADING_20260828__';
   const PRESS_FEED_URL='https://raw.githubusercontent.com/smoralesm07-source/Monitor/atlas-press-state/atlas_prensa.json';
   const WORKSPACE_SRC='./v0447-entity-workspace.js?v=20260828-fodich4';
-  const PRESS_SEARCH_BRIDGE_SRC='./assets/atlas-entity-press-search-bridge-20260828.js?v=20260828-fodich6';
+  const PRESS_SEARCH_BRIDGE_SRC='./assets/atlas-entity-press-search-bridge-20260828.js?v=20260828-fodich7';
 
   if(window[BOOT_FLAG])return;
   window[BOOT_FLAG]=true;
@@ -57,8 +59,19 @@
     document.dispatchEvent(new CustomEvent('atlas:entity-workspace-ready'));
   }
 
+  function setState(extra){
+    window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__={
+      ready:true,
+      pressSchemaCompatible:true,
+      pressSearchBridge:false,
+      build:'20260828-fodich7',
+      ...extra
+    };
+  }
+
   function loadPressSearchBridge(){
     if(window.__ATLAS_ENTITY_PRESS_SEARCH_BRIDGE_20260828__){
+      if(window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__)window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__.pressSearchBridge=true;
       dispatchReady();
       return;
     }
@@ -70,27 +83,40 @@
     bridge.dataset.atlasEntityPressSearchBridge='1';
     bridge.onload=()=>{
       window[BRIDGE_LOADING_FLAG]=false;
-      if(window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__){
-        window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__.pressSearchBridge=true;
-      }
+      if(window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__)window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__.pressSearchBridge=true;
       dispatchReady();
     };
     bridge.onerror=()=>{
       window[BRIDGE_LOADING_FLAG]=false;
-      if(window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__){
-        window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__.pressSearchBridge=false;
-      }
+      if(window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__)window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__.pressSearchBridge=false;
       dispatchReady();
     };
     document.body.appendChild(bridge);
   }
 
+  function reuseCompiledWorkspace(entry){
+    if(!entry||typeof entry.openPressObservation!=='function')return false;
+    window[LOADED_FLAG]=true;
+    setState({
+      reusedCompiledAuthority:true,
+      fallbackReload:false,
+      loadedAt:new Date().toISOString()
+    });
+    loadPressSearchBridge();
+    return true;
+  }
+
   function loadWorkspaceWhenReady(){
-    if(window[LOADED_FLAG]||window[LOADING_FLAG])return true;
+    if(window[LOADED_FLAG]){loadPressSearchBridge();return true;}
+    if(window[LOADING_FLAG])return true;
     const entry=window.__ATLAS_ENTITY_ENTRY__;
     if(!entry||typeof entry.open!=='function')return false;
 
     installPressSchemaCompatibility();
+    if(reuseCompiledWorkspace(entry))return true;
+
+    /* Development/source fallback only. Canonical Pages normally never enters
+       this branch because v0447 is already part of the compiled 0.90.1 runtime. */
     window[LOADING_FLAG]=true;
     const script=document.createElement('script');
     script.src=WORKSPACE_SRC;
@@ -98,13 +124,11 @@
     script.onload=()=>{
       window[LOADING_FLAG]=false;
       window[LOADED_FLAG]=true;
-      window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__={
-        ready:true,
-        pressSchemaCompatible:true,
-        pressSearchBridge:false,
-        loadedAt:new Date().toISOString(),
-        build:'20260828-fodich6'
-      };
+      setState({
+        reusedCompiledAuthority:false,
+        fallbackReload:true,
+        loadedAt:new Date().toISOString()
+      });
       loadPressSearchBridge();
     };
     script.onerror=()=>{
@@ -113,10 +137,14 @@
         ready:false,
         pressSchemaCompatible:true,
         pressSearchBridge:false,
+        reusedCompiledAuthority:false,
+        fallbackReload:true,
         error:'workspace-load-failed',
         failedAt:new Date().toISOString(),
-        build:'20260828-fodich6'
+        build:'20260828-fodich7'
       };
+      /* Do not alter the existing Entidades explorer when fallback is absent. */
+      loadPressSearchBridge();
     };
     document.body.appendChild(script);
     return true;
