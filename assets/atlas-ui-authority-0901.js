@@ -106,7 +106,7 @@
   }
 
   function markHealth(){
-    window.__ATLAS_UI_AUTHORITY__={release:RELEASE,build:BUILD,status:'ready',css:CSS,lightCss:LIGHT_CSS,lightModulesCss:LIGHT_MODULE_CSS,lightTheme:'NEUTRAL_GREY_WHITE_ORANGE',mainDataAudit:'retired',globalSourceHealth:'preserved',osflEconomic:'0950-current',sanctionsSpectrum:'0940-current',resCompanies:'0953-current',resRefinement:'0953-executive-aml',analyticsNavigation:'RES0953+OSFL+PUBLIC_SPEND',checkedAt:new Date().toISOString()};
+    window.__ATLAS_UI_AUTHORITY__={release:RELEASE,build:BUILD,status:'ready',css:CSS,lightCss:LIGHT_CSS,lightModulesCss:LIGHT_MODULE_CSS,lightTheme:'NEUTRAL_GREY_WHITE_ORANGE',mainDataAudit:'retired',globalSourceHealth:'preserved',osflEconomic:'0950-current',sanctionsRadiography:'0960-current',sanctionsSpectrum:'0940-fallback',resCompanies:'0953-current',resRefinement:'0953-executive-aml',analyticsNavigation:'RES0953+OSFL+SANCTIONS0960+PUBLIC_SPEND',checkedAt:new Date().toISOString()};
   }
 
   function apply(){
