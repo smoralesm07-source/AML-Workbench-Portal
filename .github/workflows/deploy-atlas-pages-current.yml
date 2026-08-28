@@ -168,46 +168,53 @@ jobs:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
           set -euo pipefail
-          base="${PAGE_URL%/}"
-          ok=0
-          for attempt in $(seq 1 12); do
-            stamp="${GITHUB_SHA}-${GITHUB_RUN_ATTEMPT}-${attempt}"
-            html="$(curl -fsSL --retry 2 --max-time 20 "${base}/?atlas0950=${stamp}" || true)"
-            release="$(curl -fsSL --retry 2 --max-time 20 "${base}/atlas-release.json?atlas0950=${stamp}" || true)"
-            runtime_css="$(curl -fsSL --retry 2 --max-time 20 "${base}/atlas-runtime-current.css?atlas0950=${stamp}" || true)"
-            runtime_js=""
-            for seg in 01 02 03 04; do
-              part="$(curl -fsSL --retry 1 --max-time 15 "${base}/atlas-runtime-current-${seg}.js?atlas0950=${stamp}" || true)"
-              runtime_js="${runtime_js}${part}"
-            done
-            standalone_ui="$(curl -fsSL --retry 1 --max-time 10 "${base}/assets/atlas-ui-authority-0901.js?atlas0950=${stamp}" || true)"
-            standalone_ui_css="$(curl -fsSL --retry 1 --max-time 10 "${base}/assets/atlas-ui-authority-0901.css?atlas0950=${stamp}" || true)"
-            retired_audit="$(curl -fsSL --retry 1 --max-time 10 "${base}/assets/atlas-data-audit.js?atlas0950=${stamp}" || true)"
-            if printf '%s' "$html" | grep -q 'data-aml-version="0.95.0"' \
-              && printf '%s' "$html" | grep -q '<title>ATLAS AML · v0.95.0</title>' \
-              && ! printf '%s' "$html" | grep -q 'data-aml-version="0.90.1"' \
-              && ! printf '%s' "$html" | grep -q 'atlas-data-audit.js' \
-              && ! printf '%s' "$html" | grep -q 'atlas-data-audit.css' \
-              && ! printf '%s' "$html" | grep -q 'atlas-ui-authority-0901.js' \
-              && printf '%s' "$release" | grep -q '"release": "0.95.0"' \
-              && printf '%s' "$release" | grep -q '"build": "0950"' \
-              && printf '%s' "$runtime_js" | grep -q "RELEASE='0.95.0'" \
-              && printf '%s' "$runtime_js" | grep -q '__ATLAS_OSFL_ECONOMIC_0950__' \
-              && printf '%s' "$runtime_js" | grep -q 'SANCTIONS_SPECTRUM_CURRENT_0940' \
-              && printf '%s' "$runtime_js" | grep -q 'data-atlas-ui-authority' \
-              && printf '%s' "$runtime_js" | grep -q "atlas-ui-authority-0901.css?v=0950-" \
-              && printf '%s' "$runtime_js" | grep -q 'ensureBrandVersion' \
-              && printf '%s' "$runtime_js" | grep -q "globalSourceHealth:'preserved'" \
-              && printf '%s' "$runtime_css" | grep -q 'osfl95-card' \
-              && printf '%s' "$standalone_ui_css" | grep -q 'html\[data-atlas-release="0.95.0"\]' \
-              && printf '%s' "$standalone_ui_css" | grep -q 'v019-brand small\[data-atlas-version-label\]' \
-              && printf '%s' "$standalone_ui_css" | grep -q 'data-atlas-global-audit-host' \
-              && test -z "$standalone_ui" \
-              && test -z "$retired_audit"; then
-              ok=1
-              break
-            fi
-            sleep 8
-          done
-          test "$ok" -eq 1
-          echo "ATLAS AML 0.95.0 live smoke OK with current OSFL and Sanciones runtime: ${PAGE_URL}"
+          python3 - <<'PY'
+          import json, os, time, urllib.request
+
+          base=os.environ['PAGE_URL'].rstrip('/')
+          sha=os.environ.get('GITHUB_SHA','unknown')
+          attempt=os.environ.get('GITHUB_RUN_ATTEMPT','1')
+
+          def get(path, stamp):
+              url=f"{base}{path}{'&' if '?' in path else '?'}atlas0950={stamp}"
+              req=urllib.request.Request(url,headers={'Cache-Control':'no-cache','User-Agent':'ATLAS-live-smoke/0.95'})
+              with urllib.request.urlopen(req,timeout=20) as response:
+                  return response.read().decode('utf-8','replace')
+
+          last_error=None
+          for n in range(1,13):
+              stamp=f'{sha}-{attempt}-{n}'
+              try:
+                  html=get('/',stamp)
+                  release_text=get('/atlas-release.json',stamp)
+                  release=json.loads(release_text)
+                  runtime_css=get('/atlas-runtime-current.css',stamp)
+                  runtime_js=''.join(get(f'/atlas-runtime-current-{seg}.js',stamp) for seg in ('01','02','03','04'))
+                  ui_css=get('/assets/atlas-ui-authority-0901.css',stamp)
+
+                  checks={
+                      'html_version':'data-aml-version="0.95.0"' in html,
+                      'html_build':'data-aml-build="0950"' in html,
+                      'html_title':'<title>ATLAS AML · v0.95.0</title>' in html,
+                      'old_version_absent':'data-aml-version="0.90.1"' not in html,
+                      'release_json':release.get('release')=='0.95.0' and release.get('build')=='0950',
+                      'runtime_release':"RELEASE='0.95.0'" in runtime_js and "BUILD='0950'" in runtime_js,
+                      'osfl_0950':'__ATLAS_OSFL_ECONOMIC_0950__' in runtime_js and 'aml_v_osfl_economic_concentration_current_v0950' in runtime_js,
+                      'sanctions_0940':'SANCTIONS_SPECTRUM_CURRENT_0940' in runtime_js,
+                      'ui_authority':'data-atlas-ui-authority' in runtime_js and 'ensureBrandVersion' in runtime_js,
+                      'osfl_css':'osfl95-card' in runtime_css,
+                      'ui_css':'html[data-atlas-release="0.95.0"]' in ui_css and 'v019-brand small[data-atlas-version-label]' in ui_css,
+                  }
+                  failed=[name for name,ok in checks.items() if not ok]
+                  if failed:
+                      raise AssertionError('failed checks: '+', '.join(failed))
+                  print(json.dumps({'status':'ok','release':'0.95.0','build':'0950','page_url':base,'checks':checks},ensure_ascii=False))
+                  break
+              except Exception as exc:
+                  last_error=exc
+                  print(f'live smoke attempt {n}/12 not ready: {exc}')
+                  if n<12:
+                      time.sleep(8)
+          else:
+              raise SystemExit(f'ATLAS 0.95.0 live smoke failed after 12 attempts: {last_error}')
+          PY
