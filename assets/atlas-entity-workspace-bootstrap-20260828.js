@@ -1,6 +1,6 @@
 'use strict';
 
-/* ATLAS · Entity workspace bootstrap · 2026-08-28 · perf1
+/* ATLAS · Entity workspace bootstrap · 2026-08-28 · perf1+press0951
  * Production-safe compatibility layer for Entidades.
  * The canonical Pages runtime already compiles v0447 before later standalone
  * explorer enhancers. If its press authority survived, reuse it instead of
@@ -11,6 +11,9 @@
  * press bridge. This prevents that bridge from paying the compatibility
  * parse+serialize cost a second time; v0447 continues using the normalized
  * compatibility response unchanged.
+ *
+ * press0951 loads the Entidades press-observation presentation layer: compact
+ * governed hierarchy, denser press evidence and an explicit return control.
  */
 (function atlasEntityWorkspaceBootstrap20260828(){
   const BOOT_FLAG='__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_20260828__';
@@ -18,13 +21,35 @@
   const LOADED_FLAG='__ATLAS_ENTITY_WORKSPACE_LOADED_20260828__';
   const PRESS_COMPAT_FLAG='__ATLAS_PRESS_SCHEMA_COMPAT_20260828__';
   const BRIDGE_LOADING_FLAG='__ATLAS_ENTITY_PRESS_SEARCH_BRIDGE_LOADING_20260828__';
+  const PRESS_VIEW_LOADING_FLAG='__ATLAS_ENTITY_PRESS_VIEW_LOADING_0951__';
   const PRESS_FEED_URL='https://raw.githubusercontent.com/smoralesm07-source/Monitor/atlas-press-state/atlas_prensa.json';
   const WORKSPACE_SRC='./v0447-entity-workspace.js?v=20260828-fodich4';
   const PRESS_SEARCH_BRIDGE_SRC='./assets/atlas-entity-press-search-bridge-20260828.js?v=20260828-perf1';
-  const BUILD='20260828-perf1';
+  const PRESS_VIEW_JS_SRC='./assets/atlas-entity-press-view-0951.js?v=0951-1';
+  const PRESS_VIEW_CSS_SRC='./assets/atlas-entity-press-view-0951.css?v=0951-1';
+  const BUILD='20260828-perf1+press0951';
 
   if(window[BOOT_FLAG])return;
   window[BOOT_FLAG]=true;
+
+  function installPressView0951(){
+    if(!document.querySelector('link[data-atlas-entity-press-view="0951"]')){
+      const css=document.createElement('link');
+      css.rel='stylesheet';
+      css.href=PRESS_VIEW_CSS_SRC;
+      css.dataset.atlasEntityPressView='0951';
+      document.head.appendChild(css);
+    }
+    if(window.__ATLAS_ENTITY_PRESS_VIEW_0951__||window[PRESS_VIEW_LOADING_FLAG])return;
+    window[PRESS_VIEW_LOADING_FLAG]=true;
+    const script=document.createElement('script');
+    script.src=PRESS_VIEW_JS_SRC;
+    script.async=false;
+    script.dataset.atlasEntityPressView='0951';
+    script.onload=()=>{window[PRESS_VIEW_LOADING_FLAG]=false;};
+    script.onerror=()=>{window[PRESS_VIEW_LOADING_FLAG]=false;};
+    document.body.appendChild(script);
+  }
 
   function installPressSchemaCompatibility(){
     if(window[PRESS_COMPAT_FLAG]||typeof window.fetch!=='function')return;
@@ -71,12 +96,14 @@
       ready:true,
       pressSchemaCompatible:true,
       pressSearchBridge:false,
+      pressView0951:!!window.__ATLAS_ENTITY_PRESS_VIEW_0951__,
       build:BUILD,
       ...extra
     };
   }
 
   function loadPressSearchBridge(){
+    installPressView0951();
     if(window.__ATLAS_ENTITY_PRESS_SEARCH_BRIDGE_20260828__){
       if(window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__)window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__.pressSearchBridge=true;
       dispatchReady();
@@ -114,6 +141,7 @@
   }
 
   function loadWorkspaceWhenReady(){
+    installPressView0951();
     if(window[LOADED_FLAG]){loadPressSearchBridge();return true;}
     if(window[LOADING_FLAG])return true;
     const entry=window.__ATLAS_ENTITY_ENTRY__;
@@ -144,6 +172,7 @@
         ready:false,
         pressSchemaCompatible:true,
         pressSearchBridge:false,
+        pressView0951:!!window.__ATLAS_ENTITY_PRESS_VIEW_0951__,
         reusedCompiledAuthority:false,
         fallbackReload:true,
         error:'workspace-load-failed',
@@ -157,6 +186,7 @@
     return true;
   }
 
+  installPressView0951();
   installPressSchemaCompatibility();
   if(loadWorkspaceWhenReady())return;
 
