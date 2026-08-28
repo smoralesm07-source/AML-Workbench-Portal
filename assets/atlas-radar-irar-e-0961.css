@@ -1,0 +1,15 @@
+/* ATLAS AML · Radar Integrado · IRAR-E 0.96.1 */
+#atlas-irar-profile-map{display:none!important}
+.atlas-irar-e{display:flex!important;align-items:center;justify-content:center;gap:4px;min-width:74px}
+.atlas-irar-e span{font-weight:800;letter-spacing:-.01em}
+.atlas-irar-e small{font-size:9px;line-height:1;color:var(--muted,#8fa2b6);text-transform:uppercase;letter-spacing:.05em}
+.atlas-irar-e.pending{opacity:.82}
+.atlas-irar-e.ready{box-shadow:inset 0 0 0 1px rgba(91,180,245,.18);border-radius:8px}
+.atlas-irar-e-status{display:grid;grid-template-columns:minmax(260px,.9fr) minmax(360px,1.4fr);gap:16px;align-items:center;margin:10px 0 0;padding:12px 14px;border:1px solid rgba(132,151,171,.18);border-radius:12px;background:rgba(17,28,39,.52)}
+.atlas-irar-e-status div{display:flex;flex-direction:column;gap:3px}.atlas-irar-e-status b{font-size:12px}.atlas-irar-e-status span,.atlas-irar-e-status p{font-size:11px;line-height:1.45;color:var(--muted,#94a5b7);margin:0}
+.atlas-irar-e-dossier{margin:0 0 14px;padding:14px;border:1px solid rgba(91,180,245,.2);border-radius:12px;background:rgba(20,35,49,.55)}
+.atlas-irar-e-dossier h4{margin:0 0 10px}.atlas-irar-e-dossier>p{margin:10px 0 0;color:var(--muted,#94a5b7);font-size:11px;line-height:1.5}
+.atlas-irar-e-dossier-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.atlas-irar-e-dossier-grid>div{padding:10px;border:1px solid rgba(132,151,171,.14);border-radius:9px;background:rgba(9,17,25,.28)}
+.atlas-irar-e-dossier-grid span{display:block;font-size:10px;color:var(--muted,#94a5b7)}.atlas-irar-e-dossier-grid b{display:block;margin-top:3px;font-size:18px}.atlas-irar-e-dossier-grid small{display:block;margin-top:3px;font-size:9px;color:var(--muted,#94a5b7)}
+@media(max-width:900px){.atlas-irar-e-status{grid-template-columns:1fr}.atlas-irar-e-dossier-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.atlas-irar-e-dossier-grid{grid-template-columns:1fr}}
