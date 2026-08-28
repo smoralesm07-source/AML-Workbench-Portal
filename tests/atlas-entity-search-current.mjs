@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
 
 const js=fs.readFileSync('v0447-entity-workspace.js','utf8');
 const route=fs.readFileSync('v0448-entity-route-authority.js','utf8');
@@ -40,16 +41,40 @@ for(const needle of [
   "const LIMIT=8",
   "FETCH_LIMIT=20",
   "CACHE_TTL=2*60*1000",
+  "PRESS_TTL=5*60*1000",
+  "atlas-press-state/atlas_prensa.json",
   "setTimeout(()=>void suggest(term),220)",
   "aria-autocomplete=\"list\"",
   "a47-suggestions",
   "a47-entity-q",
   "SINGLE_DARK_DOSSIER_NO_SEPARATE_SEARCH_LANDING",
-  "DEBOUNCED_AUTOCOMPLETE_RLS_NAME_RUT_ENTITY_ID_NO_FUZZY_JOIN",
+  "FEDERATED_AML_ENTITIES_PLUS_PRESS_UNRECONCILED_NO_AUTOMATIC_IDENTITY_JOIN",
+  "unreconciledPressVisible:true",
+  "automaticPressReconciliation:false",
+  "openPressObservation",
+  "NO CONCILIADA",
   "selectionScopesAllEntityGraphics:true",
   "window.loadEntities=loadWorkspace",
   "window.openEntity=openWorkspace"
 ]) assert.ok(js.includes(needle),`missing 0447 entity workspace contract: ${needle}`);
+
+// Regression: a press observation must stay discoverable even when the press
+// entity index has not materialized the person yet. Instrument only the test
+// copy so the private fallback extractor can be exercised without widening the
+// production API surface.
+const hookNeedle="ENTRY.version='0447';";
+assert.ok(js.includes(hookNeedle),'0447 test-hook insertion point missing');
+const instrumented=js.replace(hookNeedle,"window.__ATLAS_ENTITY_PRESS_DISCOVERY_TEST__={observedNameFromText,pressRank};\n  "+hookNeedle);
+const sandbox={window:{__ATLAS_ENTITY_ENTRY__:{open(){}}}};
+vm.createContext(sandbox);
+vm.runInContext(instrumented,sandbox,{filename:'v0447-entity-workspace.js'});
+const pressTest=sandbox.window.__ATLAS_ENTITY_PRESS_DISCOVERY_TEST__;
+assert.ok(pressTest?.observedNameFromText,'press fallback extractor unavailable in regression harness');
+const fodichSummary='Mientras Vinko Fodich, hijo de un condenado por megafraude tributario, fue formalizado por lavado de activos tras comprar seis propiedades y superar los $121 millones en gastos.';
+assert.equal(pressTest.observedNameFromText(fodichSummary,'fodich'),'Vinko Fodich');
+assert.equal(pressTest.observedNameFromText(fodichSummary,'Vinko Fodich'),'Vinko Fodich');
+assert.ok(js.includes("reconciled:false"),'press-only rows must remain explicitly unreconciled');
+assert.ok(!js.includes("rut:row.rut||row.name"),'press discovery must never fabricate a canonical RUT from a name');
 
 for(const needle of [
   "ENTITY360_ROUTE_AUTHORITY_0448",
@@ -95,4 +120,4 @@ assert.match(release.entity_search_policy,/ENTITY360_ROUTE_AUTHORITY_0448/);
 assert.match(release.entity360_document_authorization_policy,/SPECIFIC_DOCUMENT_VERIFICATION/);
 assert.match(release.entity360_document_authorization_policy,/MISSING_IS_NOT_NO_TIMBRAJE/);
 
-console.log(`ATLAS Entity 360 workspace + route + SII document authorization contract OK under release ${release.release}/${release.build}`);
+console.log(`ATLAS Entity 360 workspace + federated unreconciled press discovery + route + SII document authorization contract OK under release ${release.release}/${release.build}`);
