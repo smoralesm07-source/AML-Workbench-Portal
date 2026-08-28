@@ -1,11 +1,16 @@
 'use strict';
 
-/* ATLAS · Entity workspace bootstrap · 2026-08-28
+/* ATLAS · Entity workspace bootstrap · 2026-08-28 · perf1
  * Production-safe compatibility layer for Entidades.
  * The canonical Pages runtime already compiles v0447 before later standalone
  * explorer enhancers. If its press authority survived, reuse it instead of
  * attempting to reload a root source fragment that Pages does not publish.
  * PRESS_ONLY observations remain non-reconciled and receive no inferred RUT.
+ *
+ * perf1 exposes the original fetch implementation to the lightweight 0512
+ * press bridge. This prevents that bridge from paying the compatibility
+ * parse+serialize cost a second time; v0447 continues using the normalized
+ * compatibility response unchanged.
  */
 (function atlasEntityWorkspaceBootstrap20260828(){
   const BOOT_FLAG='__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_20260828__';
@@ -15,7 +20,8 @@
   const BRIDGE_LOADING_FLAG='__ATLAS_ENTITY_PRESS_SEARCH_BRIDGE_LOADING_20260828__';
   const PRESS_FEED_URL='https://raw.githubusercontent.com/smoralesm07-source/Monitor/atlas-press-state/atlas_prensa.json';
   const WORKSPACE_SRC='./v0447-entity-workspace.js?v=20260828-fodich4';
-  const PRESS_SEARCH_BRIDGE_SRC='./assets/atlas-entity-press-search-bridge-20260828.js?v=20260828-fodich7';
+  const PRESS_SEARCH_BRIDGE_SRC='./assets/atlas-entity-press-search-bridge-20260828.js?v=20260828-perf1';
+  const BUILD='20260828-perf1';
 
   if(window[BOOT_FLAG])return;
   window[BOOT_FLAG]=true;
@@ -24,6 +30,7 @@
     if(window[PRESS_COMPAT_FLAG]||typeof window.fetch!=='function')return;
     window[PRESS_COMPAT_FLAG]=true;
     const nativeFetch=window.fetch.bind(window);
+    if(typeof window.__ATLAS_PRESS_NATIVE_FETCH__!=='function')window.__ATLAS_PRESS_NATIVE_FETCH__=nativeFetch;
 
     window.fetch=async function atlasPressCompatibleFetch(input,init){
       const requestUrl=typeof input==='string'?input:String(input?.url||'');
@@ -64,7 +71,7 @@
       ready:true,
       pressSchemaCompatible:true,
       pressSearchBridge:false,
-      build:'20260828-fodich7',
+      build:BUILD,
       ...extra
     };
   }
@@ -141,7 +148,7 @@
         fallbackReload:true,
         error:'workspace-load-failed',
         failedAt:new Date().toISOString(),
-        build:'20260828-fodich7'
+        build:BUILD
       };
       /* Do not alter the existing Entidades explorer when fallback is absent. */
       loadPressSearchBridge();
