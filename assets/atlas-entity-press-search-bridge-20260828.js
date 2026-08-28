@@ -1,34 +1,46 @@
 'use strict';
 
-/* ATLAS · Entidades press-search bridge · 2026-08-28
- * Compatibility bridge for the 0512 explorer that can remain mounted when
- * the federated 0447 workspace is installed after initial render.
+/* ATLAS · Entidades press-search bridge · 2026-08-28 · perf1
+ * Performance-safe compatibility bridge for the 0512 explorer.
  *
- * Scope is deliberately narrow:
- * - does not replace ENTRY.load/open/explorer, routing, scoring or filters;
- * - leaves canonical aml_entities suggestions and activation untouched;
- * - appends press-only observations to the existing autocomplete;
- * - intercepts Buscar/Enter only long enough to resolve whether a press-only
- *   observation exists when there is no canonical match;
- * - press-only selections stay unreconciled and never receive an inferred RUT.
+ * Invariants:
+ * - canonical aml_entities search is never blocked by the press feed;
+ * - no extra Supabase lookup is added to Buscar/Enter;
+ * - press-only observations remain unreconciled and never receive inferred RUT;
+ * - the press feed is fetched/indexed once per TTL and searched in-memory;
+ * - expensive text normalization is done once when the feed is indexed, not on
+ *   every keystroke.
  */
 (function atlasEntityPressSearchBridge20260828(){
   const FLAG='__ATLAS_ENTITY_PRESS_SEARCH_BRIDGE_20260828__';
   const FEED_URL='https://raw.githubusercontent.com/smoralesm07-source/Monitor/atlas-press-state/atlas_prensa.json';
-  const BUILD='20260828-fodich6';
-  const MIN_CHARS=2;
+  const BUILD='20260828-perf1';
+  const PRESS_MIN_CHARS=3;
   const LIMIT=4;
   const TTL=5*60*1000;
+  const RESULT_CACHE_LIMIT=48;
+  const BUILD_CHUNK=240;
   if(window[FLAG])return;
   window[FLAG]=true;
 
-  let feedCache={at:0,articles:[]};
-  let inflight=null;
+  let feedCache={at:0,entities:[],articles:[]};
+  let feedInflight=null;
   let timer=null;
   let seq=0;
   let latest={term:'',rows:[]};
-  let bypassRunOnce=false;
-  let resolvingRun=false;
+  const resultCache=new Map();
+  const metrics={
+    build:BUILD,
+    feedLoads:0,
+    feedCacheHits:0,
+    resultCacheHits:0,
+    indexedEntities:0,
+    indexedArticles:0,
+    feedBuildMs:null,
+    lastSearchMs:null,
+    lastSearchTerm:'',
+    lastSearchRows:0
+  };
 
   const clean=v=>String(v??'').trim().replace(/[%_]/g,'').slice(0,120);
   const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9K]+/g,' ').replace(/\s+/g,' ').trim();
@@ -37,36 +49,101 @@
   const input=()=>document.querySelector('.aex #aex-q');
   const box=()=>document.querySelector('.aex #aex-suggest');
   const client=()=>{try{return typeof sb!=='undefined'?sb:(window.sb||null);}catch(_error){return window.sb||null;}};
+  const now=()=>typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();
+  const nextTick=()=>new Promise(resolve=>setTimeout(resolve,0));
+
+  function fetcher(){
+    const native=window.__ATLAS_PRESS_NATIVE_FETCH__;
+    if(typeof native==='function')return native;
+    return window.fetch.bind(window);
+  }
 
   function articleId(article,index){return String(article?.article_id||article?.id||`PRESS-ARTICLE-${index}`);}
   function articleDate(article){return String(article?.published_at||article?.observed_at||article?.date||article?.fecha||'').trim();}
   function articleText(article){
     return [
+      article?.headline,article?.title,article?.titular,
       article?.summary,article?.bajada,article?.description,article?.excerpt,article?.lead,
-      article?.headline,article?.title,article?.source,article?.media
+      article?.source,article?.source_name,article?.media,article?.medio
     ].filter(Boolean).join(' ');
   }
 
-  async function loadArticles(){
-    if(feedCache.articles.length&&Date.now()-feedCache.at<TTL)return feedCache.articles;
-    if(inflight)return inflight;
-    inflight=fetch(FEED_URL,{cache:'no-store'}).then(response=>{
+  function normalizeEntity(raw,index){
+    const name=String(raw?.name||raw?.nombre||'').trim();
+    const aliases=(Array.isArray(raw?.aliases)?raw.aliases:[]).map(v=>String(v||'').trim()).filter(Boolean);
+    return {
+      raw,
+      press_entity_id:String(raw?.press_entity_id||raw?.entity_id||`press:${index}`),
+      name,
+      aliases,
+      article_count:Number(raw?.article_count||raw?.mentions_count||0),
+      last_seen:String(raw?.last_seen||raw?.observed_at||''),
+      labelsNorm:[name,...aliases].map(norm).filter(Boolean)
+    };
+  }
+
+  function normalizeArticle(raw,index){
+    const article={
+      ...raw,
+      article_id:articleId(raw,index),
+      published_at:articleDate(raw),
+      headline:raw?.headline||raw?.title||raw?.titular||'',
+      summary:raw?.summary||raw?.bajada||raw?.description||raw?.excerpt||raw?.lead||'',
+      source:raw?.source||raw?.source_name||raw?.media||raw?.medio||'',
+      source_url:raw?.source_url||raw?.canonical_url||raw?.url||raw?.link||''
+    };
+    const text=articleText(article);
+    return {article,text,textNorm:norm(text)};
+  }
+
+  async function buildIndex(raw){
+    const started=now();
+    const sourceEntities=Array.isArray(raw?.entities)?raw.entities:[];
+    const sourceArticles=Array.isArray(raw?.articles)?raw.articles:[];
+    const entities=[];
+    const articles=[];
+
+    for(let i=0;i<sourceEntities.length;i++){
+      const item=normalizeEntity(sourceEntities[i],i);
+      if(item.name)entities.push(item);
+      if(i>0&&i%BUILD_CHUNK===0)await nextTick();
+    }
+    for(let i=0;i<sourceArticles.length;i++){
+      articles.push(normalizeArticle(sourceArticles[i],i));
+      if(i>0&&i%BUILD_CHUNK===0)await nextTick();
+    }
+
+    metrics.indexedEntities=entities.length;
+    metrics.indexedArticles=articles.length;
+    metrics.feedBuildMs=Math.round((now()-started)*10)/10;
+    return {entities,articles};
+  }
+
+  async function loadIndex(){
+    if((feedCache.entities.length||feedCache.articles.length)&&Date.now()-feedCache.at<TTL){
+      metrics.feedCacheHits+=1;
+      return feedCache;
+    }
+    if(feedInflight)return feedInflight;
+
+    metrics.feedLoads+=1;
+    feedInflight=fetcher()(FEED_URL,{cache:'no-store'}).then(response=>{
       if(!response.ok)throw new Error(`Prensa HTTP ${response.status}`);
       return response.json();
-    }).then(raw=>{
-      const articles=(Array.isArray(raw?.articles)?raw.articles:[]).map((article,index)=>({
-        ...article,
-        article_id:articleId(article,index),
-        published_at:articleDate(article),
-        headline:article?.headline||article?.title||'',
-        summary:article?.summary||article?.bajada||article?.description||article?.excerpt||article?.lead||'',
-        source:article?.source||article?.source_name||article?.media||'',
-        source_url:article?.source_url||article?.canonical_url||article?.url||article?.link||''
-      }));
-      feedCache={at:Date.now(),articles};
-      return articles;
-    }).finally(()=>{inflight=null;});
-    return inflight;
+    }).then(buildIndex).then(index=>{
+      feedCache={at:Date.now(),...index};
+      resultCache.clear();
+      return feedCache;
+    }).finally(()=>{feedInflight=null;});
+    return feedInflight;
+  }
+
+  function warmIndex(){
+    if((feedCache.entities.length||feedCache.articles.length)&&Date.now()-feedCache.at<TTL)return;
+    if(feedInflight)return;
+    const start=()=>void loadIndex().catch(()=>{});
+    if(typeof requestIdleCallback==='function')requestIdleCallback(start,{timeout:700});
+    else setTimeout(start,90);
   }
 
   function observedNameFromText(text,term){
@@ -102,44 +179,112 @@
     return out.join(' ');
   }
 
+  function resultCacheGet(key){
+    if(!resultCache.has(key))return null;
+    const rows=resultCache.get(key);
+    resultCache.delete(key);
+    resultCache.set(key,rows);
+    metrics.resultCacheHits+=1;
+    return rows.map(row=>({...row,article_ids:[...(row.article_ids||[])]}));
+  }
+
+  function resultCacheSet(key,rows){
+    if(resultCache.has(key))resultCache.delete(key);
+    resultCache.set(key,rows.map(row=>({...row,article_ids:[...(row.article_ids||[])]})));
+    while(resultCache.size>RESULT_CACHE_LIMIT)resultCache.delete(resultCache.keys().next().value);
+  }
+
+  function entityRank(item,q){
+    let best=99;
+    for(const label of item.labelsNorm){
+      if(label===q)best=Math.min(best,0);
+      else if(label.startsWith(q))best=Math.min(best,1);
+      else if(label.split(' ').some(token=>token.startsWith(q)))best=Math.min(best,2);
+      else if(label.includes(q))best=Math.min(best,3);
+    }
+    return best;
+  }
+
+  function putFound(found,row){
+    const key=norm(row.name);
+    if(!key)return;
+    const existing=found.get(key);
+    if(!existing){found.set(key,row);return;}
+    const ids=new Set([...(existing.article_ids||[]),...(row.article_ids||[])]);
+    existing.article_ids=[...ids];
+    existing.article_count=Math.max(Number(existing.article_count||0),ids.size,Number(row.article_count||0));
+    if(row.last_seen&&(!existing.last_seen||row.last_seen>existing.last_seen))existing.last_seen=row.last_seen;
+  }
+
   async function searchPress(term){
+    const started=now();
     const q=clean(term);
     const nq=norm(q);
-    if(nq.length<3||/^ENT-/i.test(q)||/^[0-9kK.\-\s]+$/.test(q))return [];
-    const articles=await loadArticles();
+    if(nq.length<PRESS_MIN_CHARS||/^ENT-/i.test(q)||/^[0-9kK.\-\s]+$/.test(q))return [];
+
+    const cached=resultCacheGet(nq);
+    if(cached){
+      metrics.lastSearchMs=Math.round((now()-started)*10)/10;
+      metrics.lastSearchTerm=q;
+      metrics.lastSearchRows=cached.length;
+      return cached;
+    }
+
+    const index=await loadIndex();
     const found=new Map();
-    for(let index=0;index<articles.length;index++){
-      const article=articles[index];
-      const text=articleText(article);
-      if(!norm(text).includes(nq))continue;
-      const name=observedNameFromText(text,q);
+
+    for(const item of index.entities){
+      const score=entityRank(item,nq);
+      if(score>=99)continue;
+      putFound(found,{
+        __pressOnly:true,
+        __synthetic:false,
+        reconciled:false,
+        press_entity_id:item.press_entity_id,
+        name:item.name,
+        aliases:item.aliases,
+        article_count:item.article_count,
+        last_seen:item.last_seen,
+        article_ids:[],
+        __pressRank:score
+      });
+    }
+
+    for(const indexed of index.articles){
+      if(!indexed.textNorm.includes(nq))continue;
+      const name=observedNameFromText(indexed.text,q);
       if(!name)continue;
-      const key=norm(name);
-      if(!key)continue;
-      const id=article.article_id||articleId(article,index);
-      const existing=found.get(key);
-      if(existing){
-        if(id&&!existing.article_ids.includes(id))existing.article_ids.push(id);
-        existing.article_count=existing.article_ids.length;
-        const seen=articleDate(article);
-        if(seen&&(!existing.last_seen||seen>existing.last_seen))existing.last_seen=seen;
-        continue;
-      }
-      found.set(key,{
+      const article=indexed.article;
+      const id=article.article_id;
+      putFound(found,{
         __pressOnly:true,
         __synthetic:true,
         reconciled:false,
-        press_entity_id:`press-text:${key.replace(/\s+/g,'_')}`,
+        press_entity_id:`press-text:${norm(name).replace(/\s+/g,'_')}`,
         name,
         aliases:[],
-        article_count:1,
-        last_seen:articleDate(article),
-        article_ids:id?[id]:[]
+        article_count:id?1:0,
+        last_seen:article.published_at,
+        article_ids:id?[id]:[],
+        __pressRank:4
       });
     }
-    return [...found.values()].sort((a,b)=>Number(b.article_count||0)-Number(a.article_count||0)||String(a.name||'').localeCompare(String(b.name||''),'es')).slice(0,LIMIT);
+
+    const rows=[...found.values()]
+      .sort((a,b)=>Number(a.__pressRank||9)-Number(b.__pressRank||9)||Number(b.article_count||0)-Number(a.article_count||0)||String(a.name||'').localeCompare(String(b.name||''),'es'))
+      .slice(0,LIMIT)
+      .map(({__pressRank,...row})=>row);
+
+    resultCacheSet(nq,rows);
+    metrics.lastSearchMs=Math.round((now()-started)*10)/10;
+    metrics.lastSearchTerm=q;
+    metrics.lastSearchRows=rows.length;
+    return rows;
   }
 
+  /* Kept for backwards-compatible diagnostics only. It is deliberately NOT
+     called from Buscar/Enter, so canonical search never waits on a duplicate
+     Supabase request. */
   async function hasCanonicalMatch(term){
     const q=clean(term);
     if(!q)return false;
@@ -179,29 +324,35 @@
     latest={term:clean(term),rows};
   }
 
-  function preservePressRows(term,rows){
-    const restore=()=>{
+  function preserveAfterCanonical(term,rows){
+    if(!rows.length)return;
+    setTimeout(()=>{
       const host=box();
       const field=input();
-      if(!host||!field||clean(field.value)!==clean(term)||!rows.length)return;
+      if(!host||!field||clean(field.value)!==clean(term))return;
       if(!host.querySelector('[data-aex-press-bridge]'))renderPressRows(term,rows);
-    };
-    setTimeout(restore,320);
-    setTimeout(restore,900);
+    },420);
   }
 
   async function refresh(term){
     const q=clean(term);
     const token=++seq;
-    if(q.length<MIN_CHARS){latest={term:'',rows:[]};box()?.querySelector('[data-aex-press-bridge]')?.remove();return;}
+    if(norm(q).length<PRESS_MIN_CHARS){
+      latest={term:'',rows:[]};
+      box()?.querySelector('[data-aex-press-bridge]')?.remove();
+      return;
+    }
     try{
       const rows=await searchPress(q);
       if(token!==seq)return;
       latest={term:q,rows};
       renderPressRows(q,rows);
-      preservePressRows(q,rows);
+      preserveAfterCanonical(q,rows);
     }catch(_error){
-      if(token===seq){latest={term:q,rows:[]};box()?.querySelector('[data-aex-press-bridge]')?.remove();}
+      if(token===seq){
+        latest={term:q,rows:[]};
+        box()?.querySelector('[data-aex-press-bridge]')?.remove();
+      }
     }
   }
 
@@ -212,77 +363,60 @@
     return true;
   }
 
-  function canonicalSuggestionExists(){return Boolean(box()?.querySelector('[data-aex-suggest-id]'));}
   function currentPressRow(){
     const q=clean(input()?.value||'');
     if(!q||q!==latest.term||!latest.rows.length)return null;
     return latest.rows[0];
   }
 
-  function replayCanonicalRun(run){
-    if(!run)return;
-    bypassRunOnce=true;
-    run.click();
-  }
-
-  async function resolveRun(run){
-    if(resolvingRun)return;
-    const field=input();
-    const q=clean(field?.value||'');
-    if(!q)return replayCanonicalRun(run);
-    if(/^ENT-/i.test(q)||/^[0-9kK.\-\s]+$/.test(q)||canonicalSuggestionExists())return replayCanonicalRun(run);
-    resolvingRun=true;
-    run?.setAttribute('aria-busy','true');
-    try{
-      const [canonical,rows]=await Promise.all([hasCanonicalMatch(q),searchPress(q)]);
-      if(clean(input()?.value||'')!==q)return;
-      latest={term:q,rows};
-      renderPressRows(q,rows);
-      preservePressRows(q,rows);
-      if(canonical===true||!rows.length)return replayCanonicalRun(run);
-      if(typeof entry()?.openPressObservation==='function')openPressRow(rows[0],q);
-      else replayCanonicalRun(run);
-    }catch(_error){
-      replayCanonicalRun(run);
-    }finally{
-      resolvingRun=false;
-      run?.removeAttribute('aria-busy');
-    }
+  function canonicalSuggestionState(){
+    const host=box();
+    if(host?.querySelector('[data-aex-suggest-id]'))return 'match';
+    if(host?.querySelector('.aex-suggest-empty'))return 'empty';
+    return 'unknown';
   }
 
   document.addEventListener('input',event=>{
     const target=event.target;
     if(!(target instanceof HTMLInputElement)||target.id!=='aex-q'||!target.closest('.aex'))return;
     clearTimeout(timer);
-    timer=setTimeout(()=>void refresh(target.value),260);
+    const q=target.value;
+    if(norm(q).length<PRESS_MIN_CHARS){
+      seq+=1;
+      latest={term:'',rows:[]};
+      box()?.querySelector('[data-aex-press-bridge]')?.remove();
+      return;
+    }
+    timer=setTimeout(()=>void refresh(q),190);
   },true);
 
   document.addEventListener('focusin',event=>{
     const target=event.target;
-    if(target instanceof HTMLInputElement&&target.id==='aex-q'&&target.closest('.aex')&&clean(target.value).length>=MIN_CHARS)void refresh(target.value);
+    if(!(target instanceof HTMLInputElement)||target.id!=='aex-q'||!target.closest('.aex'))return;
+    warmIndex();
+    if(norm(target.value).length>=PRESS_MIN_CHARS)void refresh(target.value);
   },true);
 
   document.addEventListener('click',event=>{
     const button=event.target.closest?.('[data-aex-press-index]');
     if(button){
-      event.preventDefault();event.stopImmediatePropagation();
+      event.preventDefault();
+      event.stopImmediatePropagation();
       const row=latest.rows[Number(button.dataset.aexPressIndex)];
       openPressRow(row,latest.term);
       return;
     }
+
     const run=event.target.closest?.('#aex-run');
     if(!run||!run.closest('.aex'))return;
-    if(bypassRunOnce){bypassRunOnce=false;return;}
     const row=currentPressRow();
-    if(row&&!canonicalSuggestionExists()&&typeof entry()?.openPressObservation==='function'){
-      event.preventDefault();event.stopImmediatePropagation();
+    /* Only short-circuit after the canonical autocomplete has conclusively
+       returned zero rows. If canonical state is pending/unknown, do nothing and
+       let 0512 execute immediately. */
+    if(row&&canonicalSuggestionState()==='empty'&&typeof entry()?.openPressObservation==='function'){
+      event.preventDefault();
+      event.stopImmediatePropagation();
       openPressRow(row,latest.term);
-      return;
-    }
-    const q=clean(input()?.value||'');
-    if(q&&!/^ENT-/i.test(q)&&!/^[0-9kK.\-\s]+$/.test(q)){
-      event.preventDefault();event.stopImmediatePropagation();
-      void resolveRun(run);
     }
   },true);
 
@@ -290,32 +424,32 @@
     const target=event.target;
     if(!(target instanceof HTMLInputElement)||target.id!=='aex-q'||!target.closest('.aex')||event.key!=='Enter')return;
     const row=currentPressRow();
-    if(row&&!canonicalSuggestionExists()&&typeof entry()?.openPressObservation==='function'){
-      event.preventDefault();event.stopImmediatePropagation();
+    if(row&&canonicalSuggestionState()==='empty'&&typeof entry()?.openPressObservation==='function'){
+      event.preventDefault();
+      event.stopImmediatePropagation();
       openPressRow(row,latest.term);
-      return;
-    }
-    const q=clean(target.value);
-    if(q&&!/^ENT-/i.test(q)&&!/^[0-9kK.\-\s]+$/.test(q)){
-      event.preventDefault();event.stopImmediatePropagation();
-      void resolveRun(document.querySelector('.aex #aex-run'));
     }
   },true);
 
   document.addEventListener('atlas:entity-workspace-ready',()=>{
     const field=input();
-    if(field&&clean(field.value).length>=MIN_CHARS)void refresh(field.value);
+    if(field){
+      warmIndex();
+      if(norm(field.value).length>=PRESS_MIN_CHARS)void refresh(field.value);
+    }
   });
 
   window.__ATLAS_ENTITY_PRESS_SEARCH_BRIDGE__={
     active:true,
     build:BUILD,
     source:'Monitor/atlas-press-state/atlas_prensa.json',
-    policy:'APPEND_PRESS_ONLY_TO_0512_AND_RESOLVE_PRESS_ONLY_ON_RUN_WITHOUT_REPLACING_CANONICAL_EXPLORER',
+    policy:'NON_BLOCKING_CANONICAL+ONE_FETCH_INDEXED_PRESS+NO_DUPLICATE_CANONICAL_LOOKUP',
     automaticIdentityJoin:false,
     inferredRut:false,
     search:searchPress,
     hasCanonicalMatch,
+    warm:warmIndex,
+    metrics,
     installedAt:new Date().toISOString()
   };
 })();
