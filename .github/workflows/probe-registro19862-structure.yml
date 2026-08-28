@@ -1,0 +1,37 @@
+name: Probe Registro 19862 structure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/probe-registro19862-structure.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Inspect official HTML structure
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import re, requests
+          from urllib.parse import urlencode
+          s=requests.Session(); s.headers['User-Agent']='ATLAS-UAF/0.95 (+public-data-validation)'
+          urls=[
+            'https://registros19862.gob.cl/transferencia/4463063',
+            'https://registros19862.gob.cl/institucion/61979750/transferencias?'+urlencode({'trans_emitidas[periodos]':'2026','trans_emitidas[filtrar]':''}),
+            'https://registros19862.gob.cl/institucion/70574900/transferencias?'+urlencode({'trans_recibidas[periodos]':'2025','trans_recibidas[filtrar]':''}),
+          ]
+          for u in urls:
+            r=s.get(u,timeout=30); print('\nURL',u,'STATUS',r.status_code,'LEN',len(r.text),'FINAL',r.url)
+            text=r.text
+            for pat in ['/transferencia/','Folio','Institución receptora','trans_recibidas','offset=']:
+              i=text.find(pat)
+              if i>=0: print('SNIP',pat,re.sub(r'\s+',' ',text[max(0,i-500):i+1200])[:1700])
+          PY
