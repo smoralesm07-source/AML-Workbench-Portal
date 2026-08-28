@@ -1,12 +1,13 @@
 'use strict';
 /* ATLAS AML · single active release authority 0.95.0 · freeze-safe
  * NO_ACTIVE_SESSION_RELOAD: authenticated sessions are never reloaded to enforce version identity.
+ * RES_BOOTSTRAP_0954: guarantees the Empresas (RES) runtime even when index.html omits its late assets.
  */
 (function atlasSingleReleaseAuthority(){
   const PRODUCT='ATLAS AML',TAGLINE='Plataforma Integrada de Inteligencia y Riesgo',MANIFEST='./atlas-release.json';
   const root=document.documentElement;
   const active={release:'0.95.0',build:'0950'};
-  let applying=false,observer=null,queued=false;
+  let applying=false,observer=null,queued=false,resRuntimePromise=null;
 
   function setRootAttr(name,value){if(root.getAttribute(name)!==value)root.setAttribute(name,value);}
   function setText(el,value){if(el&&el.textContent!==value)el.textContent=value;}
@@ -50,11 +51,57 @@
       const meta=document.querySelector('meta[name="application-name"]');
       if(meta&&meta.content!==`${PRODUCT} · ${TAGLINE}`)meta.content=`${PRODUCT} · ${TAGLINE}`;
       applyVisibleIdentity();
-      window.__ATLAS_RELEASE_GUARD_HEALTH__={status:'ready',release:active.release,build:active.build,visibleVersionPolicy:'ATLAS_RELEASE_GUARD_0950_ONLY',runtimePolicy:'CANONICAL_COMPILED_RUNTIME_ONLY',sessionPolicy:'NO_ACTIVE_SESSION_RELOAD',freezeGuard:'NO_GLOBAL_CHILD_MUTATION_OBSERVER',checkedAt:new Date().toISOString()};
+      window.__ATLAS_RELEASE_GUARD_HEALTH__={status:'ready',release:active.release,build:active.build,visibleVersionPolicy:'ATLAS_RELEASE_GUARD_0950_ONLY',runtimePolicy:'CANONICAL_COMPILED_RUNTIME_ONLY',sessionPolicy:'NO_ACTIVE_SESSION_RELOAD',freezeGuard:'NO_GLOBAL_CHILD_MUTATION_OBSERVER',resBootstrap:window.AtlasRes0952?.open?'ready':'loading',checkedAt:new Date().toISOString()};
     }finally{applying=false;}
   }
 
   function queueApply(){if(queued)return;queued=true;queueMicrotask(()=>{queued=false;applyRelease();});}
+
+  function ensureResCss(selector,href,datasetKey,datasetValue){
+    if(document.querySelector(selector))return;
+    const link=document.createElement('link');
+    link.rel='stylesheet';link.href=href;link.dataset[datasetKey]=datasetValue;
+    document.head.appendChild(link);
+  }
+  function loadResScript(selector,src,datasetKey,datasetValue,ready){
+    if(ready())return Promise.resolve(true);
+    const existing=document.querySelector(selector);
+    if(existing)return Promise.resolve(ready());
+    return new Promise(resolve=>{
+      const script=document.createElement('script');
+      script.src=src;script.defer=true;script.dataset[datasetKey]=datasetValue;
+      script.addEventListener('load',()=>resolve(ready()),{once:true});
+      script.addEventListener('error',()=>resolve(false),{once:true});
+      document.head.appendChild(script);
+    });
+  }
+  function ensureResRuntime(){
+    ensureResCss('link[data-atlas-res-intelligence="0952"]','./assets/atlas-res-intelligence-0952.css?v=0952-resboot1','atlasResIntelligence','0952');
+    ensureResCss('link[data-atlas-res-refinement="0953"]','./assets/atlas-res-refinement-0953.css?v=0953-resboot1','atlasResRefinement','0953');
+    ensureResCss('link[data-atlas-res-cartogram="0954"]','./assets/atlas-res-cartogram-fix-0954.css?v=0954-resboot1','atlasResCartogram','0954');
+    if(window.AtlasRes0952?.open){
+      window.__ATLAS_RES_BOOTSTRAP__={status:'ready',version:'0.95.4',source:'release-guard',checkedAt:new Date().toISOString()};
+      return Promise.resolve(true);
+    }
+    if(resRuntimePromise)return resRuntimePromise;
+    resRuntimePromise=(async()=>{
+      const core=await loadResScript('script[data-atlas-res-intelligence="0952"]','./assets/atlas-res-intelligence-0952.js?v=0952-resboot1','atlasResIntelligence','0952',()=>!!window.AtlasRes0952?.open);
+      if(!core)throw new Error('RES intelligence 0.95.2 no disponible');
+      await loadResScript('script[data-atlas-res-refinement="0953"]','./assets/atlas-res-refinement-0953.js?v=0953-resboot1','atlasResRefinement','0953',()=>!!window.__ATLAS_RES_REFINEMENT_0953__);
+      await loadResScript('script[data-atlas-res-cartogram="0954"]','./assets/atlas-res-cartogram-fix-0954.js?v=0954-resboot1','atlasResCartogram','0954',()=>!!window.__ATLAS_RES_CARTOGRAM_FIX_0954__);
+      window.__ATLAS_RES_BOOTSTRAP__={status:'ready',version:'0.95.4',source:'release-guard',core:!!window.AtlasRes0952?.open,refinement:!!window.__ATLAS_RES_REFINEMENT_0953__,cartogram:!!window.__ATLAS_RES_CARTOGRAM_FIX_0954__,checkedAt:new Date().toISOString()};
+      applyRelease();
+      window.dispatchEvent(new CustomEvent('atlas:nav-refresh'));
+      return !!window.AtlasRes0952?.open;
+    })().catch(error=>{
+      resRuntimePromise=null;
+      window.__ATLAS_RES_BOOTSTRAP__={status:'error',version:'0.95.4',source:'release-guard',error:String(error?.message||error),checkedAt:new Date().toISOString()};
+      console.error('[ATLAS RES bootstrap]',error);
+      return false;
+    });
+    return resRuntimePromise;
+  }
+
   function watchRootAttributes(){
     applyRelease();
     if(observer)return;
@@ -79,14 +126,22 @@
     }
   }
 
-  const api={product:PRODUCT,policy:'SINGLE_ACTIVE_RELEASE',runtimePolicy:'CANONICAL_COMPILED_RUNTIME_ONLY',sessionPolicy:'NO_ACTIVE_SESSION_RELOAD',apply:applyRelease,verify:verifyManifest};
+  document.addEventListener('click',event=>{
+    const target=event.target?.closest?.('[data-view="res"]');
+    if(!target||window.AtlasRes0952?.open)return;
+    event.preventDefault();event.stopImmediatePropagation();
+    void ensureResRuntime().then(ok=>{if(ok)window.AtlasRes0952.open();});
+  },true);
+
+  const api={product:PRODUCT,policy:'SINGLE_ACTIVE_RELEASE',runtimePolicy:'CANONICAL_COMPILED_RUNTIME_ONLY',sessionPolicy:'NO_ACTIVE_SESSION_RELOAD',apply:applyRelease,verify:verifyManifest,ensureResRuntime};
   Object.defineProperties(api,{version:{get:()=>active.release},build:{get:()=>active.build}});
   window.AtlasRelease=api;
   applyRelease();
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watchRootAttributes,{once:true});else watchRootAttributes();
-  window.addEventListener('pageshow',()=>{applyRelease();void verifyManifest();});
+  void ensureResRuntime();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{watchRootAttributes();void ensureResRuntime();},{once:true});else{watchRootAttributes();void ensureResRuntime();}
+  window.addEventListener('pageshow',()=>{applyRelease();void verifyManifest();void ensureResRuntime();});
   window.addEventListener('focus',()=>void verifyManifest());
   window.addEventListener('atlas:themechange',queueApply);
   void verifyManifest();
-  for(const ms of [120,500,1500,4000])setTimeout(applyRelease,ms);
+  for(const ms of [120,500,1500,4000])setTimeout(()=>{applyRelease();void ensureResRuntime();},ms);
 })();
