@@ -26,14 +26,25 @@
     if(typeof priorNavigate==='function')return priorNavigate(view,...args);
   }
 
+  function pinCurrentGlobals(){
+    try{window.loadSanctions=openCurrentSanctions;}catch{}
+    try{loadSanctions=openCurrentSanctions;}catch{}
+  }
+
   try{navigate=sanctionsAwareNavigate;}catch{}
   window.navigate=sanctionsAwareNavigate;
+  pinCurrentGlobals();
+  queueMicrotask(pinCurrentGlobals);
+  window.setTimeout(pinCurrentGlobals,0);
+  window.setTimeout(pinCurrentGlobals,250);
+  window.addEventListener('load',pinCurrentGlobals,{once:true});
 
   document.addEventListener('click',event=>{
     const target=event.target?.closest?.('[data-view="sanctions"]');
     if(!target)return;
     event.preventDefault();
     event.stopImmediatePropagation();
+    pinCurrentGlobals();
     openCurrentSanctions().catch(error=>{
       console.error('ATLAS Sanciones current route',error);
       const host=document.querySelector('#content');
@@ -47,11 +58,13 @@
     fallback:'AML_SANCTIONS_V12_APPROVED.reload',
     legacyFrozenRouteBypassed:true,
     currentSpectrumPinned:true,
+    globalLoaderPinned:true,
     open:openCurrentSanctions,
     health:()=>({
       version:ROUTE_VERSION,
       currentRuntime:!!window.ATLAS_SANCTIONS_CURRENT,
       currentLoad:typeof window.ATLAS_SANCTIONS_CURRENT?.load==='function',
+      globalLoadPinned:window.loadSanctions===openCurrentSanctions,
       fallbackV12:typeof window.AML_SANCTIONS_V12_APPROVED?.reload==='function',
       currentView:(typeof state==='object'&&state)?state.view:null
     })
