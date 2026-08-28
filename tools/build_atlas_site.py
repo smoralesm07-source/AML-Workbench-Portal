@@ -85,6 +85,32 @@ def strip_legacy_public_spend_tags(template: str) -> str:
     return template
 
 
+def strip_runtime_source_tags(template: str, source_assets: list[str]) -> str:
+    """Remove direct index references to manifest fragments before compiling.
+
+    Manifest-declared JS/CSS are build-time source fragments. A historical
+    direct tag in index.html must not make the build fail or execute twice; the
+    compiler owns the production tag and emits only compiled bundles.
+    """
+    for source_name in source_assets:
+        escaped = re.escape(source_name)
+        if source_name.endswith(".css"):
+            template = re.sub(
+                rf"\s*<link[^>]+href=['\"]\.\/{escaped}(?:\?[^'\"]*)?['\"][^>]*>\s*",
+                "\n",
+                template,
+                flags=re.I,
+            )
+        elif source_name.endswith(".js"):
+            template = re.sub(
+                rf"\s*<script[^>]+src=['\"]\.\/{escaped}(?:\?[^'\"]*)?['\"][^>]*>\s*<\/script>\s*",
+                "\n",
+                template,
+                flags=re.I,
+            )
+    return template
+
+
 def build(out_dir: Path):
     release = load_json("atlas-release.json")
     runtime = load_json("atlas-runtime-manifest.json")
@@ -191,6 +217,7 @@ def build(out_dir: Path):
 
     template = (ROOT / "index.html").read_text(encoding="utf-8")
     template = strip_legacy_public_spend_tags(template)
+    template = strip_runtime_source_tags(template, source_assets)
     template = re.sub(r'data-aml-version="[^"]+"', f'data-aml-version="{rel}"', template, count=1)
     template = re.sub(r'data-aml-build="[^"]+"', f'data-aml-build="{build_id}"', template, count=1)
     template = re.sub(r'data-atlas-release="[^"]+"', f'data-atlas-release="{rel}"', template, count=1)
