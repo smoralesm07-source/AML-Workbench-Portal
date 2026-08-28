@@ -1,0 +1,89 @@
+/* ATLAS AML · Empresas (RES) · refinement 0.95.3 */
+.res952-root .res953-sourcebar{
+  display:flex;align-items:center;justify-content:flex-end;gap:10px;min-height:30px;
+  padding:2px 2px 4px;color:var(--r-muted);font-size:10px;font-variant-numeric:tabular-nums;
+}
+.res952-root .res953-sourcebar span{color:var(--r-green);font-weight:850}
+.res952-root .res953-sourcebar b{color:var(--r-text);font-size:10px;font-weight:780}
+.res952-root .res953-sourcebar i{width:1px;height:13px;background:var(--r-line);display:block}
+.res952-root .res953-economic-only{grid-template-columns:1fr}
+.res952-root .res953-economic-only .res952-economic{max-width:none}
+.res952-root .res953-hidden-source{display:none!important}
+
+.res953-phenomenon-command{display:grid;gap:10px}
+.res953-phenomenon-command>header{
+  display:flex;justify-content:space-between;align-items:flex-end;gap:18px;padding:2px 1px 0;
+}
+.res953-phenomenon-command>header span{
+  display:block;color:var(--r-orange);font-size:9px;font-weight:900;letter-spacing:.13em;text-transform:uppercase;
+}
+.res953-phenomenon-command>header h3{margin:3px 0 0;font-size:18px;letter-spacing:-.025em}
+.res953-phenomenon-command>header p{margin:0;max-width:620px;color:var(--r-muted);font-size:9.5px;line-height:1.45;text-align:right}
+.res953-alert-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.res953-alert{
+  appearance:none;min-width:0;text-align:left;color:var(--r-text);cursor:pointer;
+  border:1px solid var(--r-line);border-radius:13px;padding:13px 14px;background:var(--r-panel);
+  display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;transition:.16s ease;
+  box-shadow:0 7px 18px rgba(0,0,0,.06)
+}
+.res953-alert:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--r-orange) 52%,var(--r-line));background:var(--r-panel-2)}
+.res953-alert-index{
+  width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:11px;font-weight:900;
+  color:var(--r-orange);background:color-mix(in srgb,var(--r-orange) 10%,var(--r-panel-2));
+  border:1px solid color-mix(in srgb,var(--r-orange) 28%,var(--r-line));
+}
+.res953-alert-body{min-width:0;display:grid;gap:5px}
+.res953-alert-kicker{font-size:8.5px;font-weight:850;letter-spacing:.1em;color:var(--r-muted);text-transform:uppercase}
+.res953-alert-title{font-size:12px;font-weight:850;line-height:1.25}
+.res953-alert-metric{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.res953-alert-metric b{font-size:20px;letter-spacing:-.03em;color:var(--r-orange)}
+.res953-alert-metric span{font-size:9px;color:var(--r-muted)}
+.res953-alert-copy{font-size:9px;line-height:1.45;color:var(--r-muted)}
+.res953-alert-action{font-size:8.7px;line-height:1.35;color:var(--r-text);padding-top:5px;border-top:1px solid var(--r-line-soft)}
+.res953-alert-action strong{color:var(--r-orange);font-weight:850}
+
+.res953-convergence{
+  display:grid;grid-template-columns:minmax(0,1.45fr) minmax(290px,.75fr);gap:9px;
+}
+.res953-convergence-panel,.res953-context-panel{
+  min-width:0;border:1px solid var(--r-line);border-radius:13px;background:var(--r-panel);padding:12px 14px;
+}
+.res953-panel-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:8px}
+.res953-panel-head b{font-size:11px}.res953-panel-head span{font-size:8.7px;color:var(--r-muted)}
+.res953-convergence-list{display:grid;gap:3px}
+.res953-convergence-row{
+  appearance:none;border:0;border-top:1px solid var(--r-line-soft);background:transparent;color:var(--r-text);
+  padding:8px 1px;display:grid;grid-template-columns:minmax(150px,.8fr) minmax(0,1fr) auto;gap:12px;
+  align-items:center;text-align:left;cursor:pointer
+}
+.res953-convergence-row:first-child{border-top:0}
+.res953-convergence-row:hover b{color:var(--r-orange)}
+.res953-convergence-row b{font-size:10px;transition:.15s ease}.res953-convergence-row small{display:block;color:var(--r-muted);font-size:8.5px;margin-top:2px}
+.res953-signal-chips{display:flex;gap:4px;flex-wrap:wrap}
+.res953-signal-chips span{border:1px solid var(--r-line);border-radius:999px;padding:3px 6px;background:var(--r-panel-2);color:var(--r-muted);font-size:7.8px;font-weight:760}
+.res953-convergence-row strong{font-size:9px;color:var(--r-orange);white-space:nowrap}
+.res953-context-list{display:grid;gap:1px}
+.res953-context-item{display:grid;grid-template-columns:1fr auto;gap:10px;padding:8px 0;border-top:1px solid var(--r-line-soft)}
+.res953-context-item:first-child{border-top:0}
+.res953-context-item span{font-size:9px;color:var(--r-muted);line-height:1.4}.res953-context-item b{font-size:11px;text-align:right}
+.res953-context-note{margin:8px 0 0;padding:8px 9px;border-radius:9px;background:color-mix(in srgb,var(--r-blue) 6%,var(--r-panel-2));color:var(--r-muted);font-size:8.5px;line-height:1.45}
+.res953-method-note{
+  display:grid!important;grid-template-columns:auto 1fr!important;gap:12px!important;align-items:start!important;
+  padding:9px 11px!important;margin:0!important
+}
+.res953-method-note b{min-width:0!important}.res953-method-note span{font-size:8.8px!important}
+.res953-evidence-card{margin-top:1px}
+.res953-evidence-card>header h3{font-size:13px}
+.res953-evidence-card .res952-company-list{max-height:330px;overflow:auto}
+
+@media (max-width:1080px){
+  .res953-alert-grid{grid-template-columns:1fr}
+  .res953-convergence{grid-template-columns:1fr}
+  .res953-phenomenon-command>header{align-items:flex-start;flex-direction:column}
+  .res953-phenomenon-command>header p{text-align:left}
+}
+@media (max-width:720px){
+  .res952-root .res953-sourcebar{justify-content:flex-start;padding-left:2px}
+  .res953-convergence-row{grid-template-columns:1fr auto}.res953-signal-chips{grid-column:1/-1;grid-row:2}
+  .res953-alert{padding:11px}.res953-alert-metric b{font-size:18px}
+}
