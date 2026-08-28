@@ -1,0 +1,9 @@
+/* ATLAS AML · Empresas (RES) · cartogram scale fix 0.95.4 */
+.res952-region-node:before{
+  right:auto;
+  width:var(--res954-bar-width,20%);
+  transform:none;
+  transition:width .22s ease,opacity .16s ease,filter .16s ease;
+}
+.res952-region-node:hover:before{filter:saturate(1.12) brightness(1.05)}
+.res952-region-node.active:before{opacity:1}
