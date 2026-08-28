@@ -9,7 +9,7 @@
   const VERSION='IGR-2A-1.0.0';
   const SOURCE='https://raw.githubusercontent.com/smoralesm07-source/Radar_delictual/radar-data/data/processed/cead_geographic_score_v1.json';
   const VIEW='territory';
-  const IFRAME='./assets/territorio-aml-beta.html?v=0917-workspace1';
+  const IFRAME='./assets/territorio-aml-beta.html?v=0918-so3';
   const state={status:'idle',rows:[],computed:{regions:[],communes:[]},loadedAt:null,error:null};
   let loadPromise=null;
   let activeFrame=null;
@@ -185,7 +185,7 @@
     try{if(typeof shell==='function')shell('Territorio','IGR · amenaza territorial LA · historia real 2020–2025');}catch{}
     ensureHostStyle();
     const root=document.querySelector('#content,.v019-content');if(!root)throw new Error('Contenedor Territorio no disponible');
-    root.innerHTML=`<section data-atlas-igr-v2a-host="1" aria-label="Territorio IGR"><iframe title="ATLAS Territorio · IGR" src="${IFRAME}" loading="eager" scrolling="no" referrerpolicy="no-referrer" frameborder="0"></iframe></section>`;
+    root.innerHTML=`<section data-atlas-igr-v2a-host="1" aria-label="Territorio IGR"><iframe title="ATLAS Territorio · IGR" src="${IFRAME}&t=${Date.now()}" loading="eager" scrolling="no" referrerpolicy="no-referrer" frameborder="0"></iframe></section>`;
     root.style.margin='0';root.style.border='0';root.style.outline='0';root.style.borderRadius='0';root.style.boxShadow='none';root.style.background='var(--atlas-bg,#07111f)';
     activateWideRoot(root);
     activeFrame=root.querySelector('iframe');
