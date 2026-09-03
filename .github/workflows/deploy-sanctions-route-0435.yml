@@ -1,4 +1,4 @@
-name: Deploy current ATLAS Sanciones v12 route
+name: Deploy current ATLAS Sanciones radiography
 
 on:
   issues:
@@ -40,7 +40,7 @@ jobs:
           print(f"ATLAS_BUILD={r['build']}")
           PY
 
-      - name: Validate approved Sanciones v12 route authority
+      - name: Validate current Sanciones radiography route authority
         shell: bash
         run: |
           set -euo pipefail
@@ -52,12 +52,22 @@ jobs:
           assert r['release']==b['app_version']==m['release'],(r,b,m)
           assert r['build']==b['build']==m['build'],(r,b,m)
           s=[x['path'] for x in m['scripts']]
-          assert s.index('atlas-sanctions-v12-approved-06.js')+1==s.index('atlas-sanctions-v12-route.js'),s[-20:]
-          assert s.index('atlas-sanctions-v12-route.js')<s.index('atlas-current-ui.js'),s[-20:]
+          i06=s.index('atlas-sanctions-v12-approved-06.js')
+          ispec=s.index('assets/atlas-sanctions-spectrum-0940.js')
+          irad=s.index('assets/atlas-sanctions-radiography-0960.js')
+          iroute=s.index('atlas-sanctions-v12-route.js')
+          iui=s.index('atlas-current-ui.js')
+          assert i06 < ispec < irad < iroute < iui,s[-24:]
           assert b['sanctions_route_authority']=='atlas-sanctions-v12-route.js',b
-          assert b['sanctions_route_policy']=='BYPASS_V019_FROZEN_LEGACY_LOADER',b
+          policy=b['sanctions_route_policy']
+          assert policy.startswith('CURRENT_RADIOGRAPHY_'),policy
+          assert 'SPECTRUM_0940_FALLBACK' in policy,policy
+          assert 'V12_LAST_RESORT' in policy,policy
           PY
+          node --check assets/atlas-sanctions-radiography-0960.js
           node --check atlas-sanctions-v12-route.js
+          grep -q 'SANCTIONS_RADIOGRAPHY_CURRENT_0961' assets/atlas-sanctions-radiography-0960.js
+          grep -q 'ATLAS_SANCTIONS_CURRENT.load@0.96.1' atlas-sanctions-v12-route.js
           grep -q 'legacyFrozenRouteBypassed:true' atlas-sanctions-v12-route.js
           grep -q 'AML_SANCTIONS_V12_APPROVED' atlas-sanctions-v12-route.js
 
@@ -70,14 +80,15 @@ jobs:
             test -e "$f" || continue
             node --check "$f"
           done
+          grep -R -q 'SANCTIONS_RADIOGRAPHY_CURRENT_0961' _site/atlas-runtime-current-*.js
+          grep -R -q 'ATLAS_SANCTIONS_CURRENT.load@0.96.1' _site/atlas-runtime-current-*.js
+          grep -R -q 'Evolución de sanciones y enforcement' _site/atlas-runtime-current-*.js
+          grep -R -q 'Sanciones por supervisor e industria' _site/atlas-runtime-current-*.js
+          grep -R -q 'Concentración regional' _site/atlas-runtime-current-*.js
+          grep -R -q 'Hallazgos prioritarios' _site/atlas-runtime-current-*.js
+          grep -R -q 'Ficha de sanción / detalle' _site/atlas-runtime-current-*.js
           grep -R -q 'legacyFrozenRouteBypassed:true' _site/atlas-runtime-current-*.js
           grep -R -q 'AML_SANCTIONS_V12_APPROVED.reload' _site/atlas-runtime-current-*.js
-          grep -R -q 'Consulta directa de entidad' _site/atlas-runtime-current-*.js
-          grep -R -q 'Últimas sanciones · Top 5' _site/atlas-runtime-current-*.js
-          grep -R -q 'Concentración regional de sanciones' _site/atlas-runtime-current-*.js
-          grep -R -q 'Materias sancionatorias' _site/atlas-runtime-current-*.js
-          grep -R -q 'Sanciones por supervisor' _site/atlas-runtime-current-*.js
-          grep -R -q 'Entidades sancionadas' _site/atlas-runtime-current-*.js
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -123,14 +134,14 @@ jobs:
             curl -fsSL "$base/$src?r=${ATLAS_BUILD}&_=${stamp}" >> /tmp/runtime.js
             printf '\n' >> /tmp/runtime.js
           done < /tmp/srcs
+          grep -q 'SANCTIONS_RADIOGRAPHY_CURRENT_0961' /tmp/runtime.js
+          grep -q 'ATLAS_SANCTIONS_CURRENT.load@0.96.1' /tmp/runtime.js
+          grep -q 'Evolución de sanciones y enforcement' /tmp/runtime.js
+          grep -q 'Sanciones por supervisor e industria' /tmp/runtime.js
+          grep -q 'Concentración regional' /tmp/runtime.js
+          grep -q 'Hallazgos prioritarios' /tmp/runtime.js
+          grep -q 'Ficha de sanción / detalle' /tmp/runtime.js
           grep -q 'legacyFrozenRouteBypassed:true' /tmp/runtime.js
-          grep -q 'AML_SANCTIONS_V12_APPROVED.reload' /tmp/runtime.js
-          grep -q 'Consulta directa de entidad' /tmp/runtime.js
-          grep -q 'Últimas sanciones · Top 5' /tmp/runtime.js
-          grep -q 'Concentración regional de sanciones' /tmp/runtime.js
-          grep -q 'Materias sancionatorias' /tmp/runtime.js
-          grep -q 'Sanciones por supervisor' /tmp/runtime.js
-          grep -q 'Entidades sancionadas' /tmp/runtime.js
 
       - name: Report deployment
         if: always() && github.event_name == 'issues'
@@ -138,4 +149,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          gh issue comment '${{ github.event.issue.number }}' --body "## Deploy actual Sanciones v12 · ATLAS\n\n- resultado: \`${{ job.status }}\`\n- run id: \`${{ github.run_id }}\`\n- release/build: \`${ATLAS_RELEASE:-unknown} / ${ATLAS_BUILD:-unknown}\`\n- Pages URL: \`${{ steps.deployment.outputs.page_url }}\`\n- route authority: \`atlas-sanctions-v12-route.js\`\n- target: \`AML_SANCTIONS_V12_APPROVED.reload\`\n- v019 frozen loader bypassed: \`yes\`\n- public bundle markers checked when result=success"
+          gh issue comment '${{ github.event.issue.number }}' --body "## Deploy Sanciones Radiography 0.96.1 · ATLAS\n\n- resultado: \`${{ job.status }}\`\n- run id: \`${{ github.run_id }}\`\n- release/build: \`${ATLAS_RELEASE:-unknown} / ${ATLAS_BUILD:-unknown}\`\n- Pages URL: \`${{ steps.deployment.outputs.page_url }}\`\n- route authority: \`atlas-sanctions-v12-route.js\`\n- target: \`ATLAS_SANCTIONS_CURRENT.load@0.96.1\`\n- fallback: \`Spectrum 0.94 → v12 approved\`\n- public bundle markers checked when result=success"
