@@ -1,33 +1,31 @@
 'use strict';
 
-/* ATLAS AML · Sanciones route authority 0.96
- * Autoridad funcional: ATLAS_SANCTIONS_CURRENT = Radiografía sancionatoria 0.96.
+/* ATLAS AML · Sanciones route authority 0.96.1
+ * Autoridad funcional: ATLAS_SANCTIONS_CURRENT = Radiografía sancionatoria 0.96.1.
  * Spectrum 0.94 y v12 quedan únicamente como fallback técnico histórico.
  */
 (function atlasSanctionsCurrentRouteAuthority(){
-  const ROUTE_VERSION='SANCTIONS_RADIOGRAPHY_ROUTE_0960';
+  const ROUTE_VERSION='SANCTIONS_RADIOGRAPHY_ROUTE_0961';
   const priorNavigate=(typeof navigate==='function')?navigate:(typeof window.navigate==='function'?window.navigate:null);
 
   function currentLoader(){
     const current=window.ATLAS_SANCTIONS_CURRENT?.load;
-    if(typeof current==='function'&&window.ATLAS_SANCTIONS_CURRENT?.version==='0.96.0')return current;
-    const legacyCurrent=window.ATLAS_SANCTIONS_CURRENT?.load;
-    if(typeof legacyCurrent==='function')return legacyCurrent;
+    if(typeof current==='function'&&window.ATLAS_SANCTIONS_CURRENT?.version==='0.96.1')return current;
+    if(typeof current==='function')return current;
+    const spectrum=window.ATLAS_SANCTIONS_SPECTRUM?.load||window.ATLAS_SANCTIONS_SPECTRUM?.reload;
+    if(typeof spectrum==='function')return spectrum;
     const fallback=window.AML_SANCTIONS_V12_APPROVED?.reload;
     if(typeof fallback==='function')return fallback;
     throw new Error('Sanciones current no está disponible en el runtime canónico.');
   }
-
   async function openCurrentSanctions(){
     try{if(typeof state==='object'&&state)state.view='sanctions';}catch{}
     return currentLoader()();
   }
-
   async function sanctionsAwareNavigate(view,...args){
     if(view==='sanctions')return openCurrentSanctions();
     if(typeof priorNavigate==='function')return priorNavigate(view,...args);
   }
-
   function pinCurrentGlobals(){
     try{window.loadSanctions=openCurrentSanctions;}catch{}
     try{loadSanctions=openCurrentSanctions;}catch{}
@@ -56,10 +54,10 @@
 
   window.ATLAS_SANCTIONS_ROUTE={
     version:ROUTE_VERSION,
-    target:'ATLAS_SANCTIONS_CURRENT.load@0.96.0',
+    target:'ATLAS_SANCTIONS_CURRENT.load@0.96.1',
     fallback:'Spectrum 0.94 → AML_SANCTIONS_V12_APPROVED.reload',
     legacyFrozenRouteBypassed:true,
-    radiography0960Pinned:true,
+    radiography0961Pinned:true,
     globalLoaderPinned:true,
     open:openCurrentSanctions,
     health:()=>({
