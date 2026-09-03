@@ -1,208 +1,99 @@
 'use strict';
 
-/* ATLAS AML · Sanciones · Radiografía sancionatoria de Chile 0.96.0
- * Usuario principal: Fiscalización UAF.
+/* ATLAS AML · Sanciones · Radiografía sancionatoria de Chile 0.96.1
+ * Autoridad funcional del módulo Sanciones.
  * Universo evaluado: padrón SII + padrón UAF + padrón OSFL, deduplicado por RUT.
  * Fuentes: CMF, UAF, SCJ + acciones de enforcement CGR con semántica separada.
  */
-(function atlasSanctionsRadiography0960(){
-  if(window.ATLAS_SANCTIONS_CURRENT?.version==='0.96.0') return;
-  const VERSION='0.96.0',BUILD='0960',AUTH='SANCTIONS_RADIOGRAPHY_CURRENT_0960';
+(function atlasSanctionsRadiography0961(){
+  const VERSION='0.96.1',BUILD='0961',AUTH='SANCTIONS_RADIOGRAPHY_CURRENT_0961';
+  if(window.ATLAS_SANCTIONS_CURRENT?.version===VERSION) return;
+
   const V={
     overview:'aml_v_sanctions_overview_current_v0960',
     events:'aml_v_sanctions_radiography_current_v0960',
     sources:'aml_sanctions_source_snapshot_v0960',
     universe:'aml_v_sanctions_universe_summary_current_v0960'
   };
-  const PAGE=1000,MAX=5000;
-  const S={events:[],overview:null,sources:[],universe:null,loading:false,error:null,selected:null,filters:{year:'',regulator:'',region:'',condition:'',sector:'',mix:'',scope:'',q:''}};
+  const PAGE=1000,MAX=5000,PAGE_SIZE=25;
+  const REGULATORS=['CMF','UAF','SCJ','CGR'];
+  const sourceName={CMF:'Comisión para el Mercado Financiero',UAF:'Unidad de Análisis Financiero',SCJ:'Superintendencia de Casinos de Juego',CGR:'Contraloría General de la República'};
+  const sourceColor={CMF:'#58b7ff',UAF:'#55d6b6',SCJ:'#f3b75a',CGR:'#d58aff'};
   const nf=new Intl.NumberFormat('es-CL');
   const clp=new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0});
+  const S={events:[],overview:null,sources:[],universe:null,loading:false,error:null,selectedId:null,page:0,sort:{key:'event_date',dir:'desc'},filters:{year:'',regulator:'',region:'',condition:'',sector:'',scope:'',q:''}};
   const num=v=>{const n=Number(v);return Number.isFinite(n)?n:null};
   const fmt=v=>num(v)==null?'—':nf.format(Math.round(num(v)));
   const pct=v=>num(v)==null?'—':`${num(v).toLocaleString('es-CL',{maximumFractionDigits:1})}%`;
   const money=v=>num(v)==null?'—':clp.format(num(v));
-  const date=v=>v?String(v).slice(0,10):'—';
+  const date=v=>{if(!v)return '—';const s=String(v).slice(0,10);const m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${m[3]}-${m[2]}-${m[1]}`:s};
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9K]+/g,' ').replace(/\s+/g,' ').trim();
   const safeUrl=v=>{try{const u=new URL(String(v||''));return /^https?:$/.test(u.protocol)?u.href:''}catch{return ''}};
   const db=()=>{try{return typeof sb!=='undefined'?sb:(window.sb||null)}catch{return window.sb||null}};
   const host=()=>document.querySelector('#content');
-  const sourceColor={CMF:'var(--s96-cmf)',UAF:'var(--s96-uaf)',SCJ:'var(--s96-scj)',CGR:'var(--s96-cgr)'};
-  const sourceName={CMF:'Comisión para el Mercado Financiero',UAF:'Unidad de Análisis Financiero',SCJ:'Superintendencia de Casinos de Juego',CGR:'Contraloría General de la República'};
-  const conditionLabel=v=>({SO_REGISTERED:'SO inscrito',POTENTIAL_SO_CURRENT:'Potencial SO',OTHER_SANCTIONED_ENTITY:'Otra entidad',OTHER_CGR_ENFORCEMENT_ENTITY:'Otra entidad',UNRESOLVED_IDENTITY:'Identidad no conciliada'}[v]||v||'No observado');
-  const mixOf=e=>e.is_osfl_observed&&e.is_res_observed?'OSFL + RES':e.is_osfl_observed?'OSFL':e.is_res_observed?'RES':'OTRAS ENTIDADES';
   const entry=()=>window.__ATLAS_ENTITY_ENTRY__||null;
+  const entityKey=e=>String(e?.entity_key||e?.entity_id||e?.rut||e?.source_entity_name||e?.event_id||'');
+  const conditionLabel=e=>e?.is_uaf_registered?'SO inscrito':e?.is_potential_screening?'Potencial SO':({OTHER_SANCTIONED_ENTITY:'Otra entidad',OTHER_CGR_ENFORCEMENT_ENTITY:'Otra entidad',UNRESOLVED_IDENTITY:'Identidad no conciliada'}[e?.current_condition]||e?.current_condition||'No observado');
+  const amountLabel=e=>num(e?.amount_uf)!=null?`${fmt(e.amount_uf)} UF`:num(e?.amount_clp)!=null?money(e.amount_clp):'No publicado';
 
+  function normalizedRegion(v){
+    const raw=String(v||'').trim();if(!raw)return '';
+    const n=norm(raw);
+    if(n.includes('METROPOLITANA'))return 'Metropolitana de Santiago';
+    if(n.includes('OHIGGINS')||n.includes('O HIGGINS')||n.includes('LIBERTADOR GENERAL BERNARDO'))return "Libertador Gral. Bernardo O'Higgins";
+    if(n.includes('AYSEN'))return 'Aysén';
+    if(n.includes('ARICA')&&n.includes('PARINACOTA'))return 'Arica y Parinacota';
+    if(n.includes('ARAUCANIA'))return 'La Araucanía';
+    if(n.includes('BIOBIO'))return 'Biobío';
+    if(n.includes('MAGALLANES'))return 'Magallanes y de la Antártica Chilena';
+    return raw;
+  }
   async function page(table,select='*',order=null,ascending=false){
-    const c=db();if(!c)throw new Error('Sesión de datos no disponible');
-    const out=[];let from=0;
-    for(;;){
-      let q=c.from(table).select(select).range(from,Math.min(from+PAGE-1,MAX-1));
-      if(order)q=q.order(order,{ascending,nullsFirst:false});
-      const r=await q;if(r.error)throw r.error;
-      const rows=r.data||[];out.push(...rows);
-      if(rows.length<PAGE||out.length>=MAX)break;from+=PAGE;
-    }
-    return out;
+    const c=db();if(!c)throw new Error('Sesión de datos no disponible.');const out=[];let from=0;
+    for(;;){let q=c.from(table).select(select).range(from,Math.min(from+PAGE-1,MAX-1));if(order)q=q.order(order,{ascending:!!ascending,nullsFirst:false});const r=await q;if(r.error)throw r.error;const rows=r.data||[];out.push(...rows);if(rows.length<PAGE||out.length>=MAX)break;from+=PAGE;}return out;
   }
-  async function single(table){const c=db();if(!c)throw new Error('Sesión de datos no disponible');const r=await c.from(table).select('*').limit(1);if(r.error)throw r.error;return r.data?.[0]||null;}
-
+  async function single(table){const c=db();if(!c)throw new Error('Sesión de datos no disponible.');const r=await c.from(table).select('*').limit(1);if(r.error)throw r.error;return r.data?.[0]||null;}
   async function loadData(){
-    const [overview,events,sources,universe]=await Promise.all([
-      single(V.overview),page(V.events,'*','event_date',false),page(V.sources,'*','source_code',true),single(V.universe)
-    ]);
-    S.overview=overview;S.events=events;S.sources=sources;S.universe=universe;
-    const snapshot={version:VERSION,build:BUILD,overview,contracts:V,refreshedAt:new Date().toISOString()};
-    window.__ATLAS_SANCTIONS_SIGNALS__={...snapshot,events,entityContext:entityId=>events.filter(e=>e.entity_id===entityId)};
-    try{window.dispatchEvent(new CustomEvent('atlas:sanctions-radiography:ready',{detail:snapshot}));}catch{}
+    const [overview,events,sources,universe]=await Promise.all([single(V.overview),page(V.events,'*','event_date',false),page(V.sources,'*','source_code',true),single(V.universe)]);
+    S.overview=overview;S.sources=sources||[];S.universe=universe;S.events=(events||[]).map((e,i)=>({...e,_idx:i,_region:normalizedRegion(e.region),_entityKey:entityKey(e)}));
+    const snapshot={version:VERSION,build:BUILD,overview,contracts:V,refreshedAt:new Date().toISOString()};window.__ATLAS_SANCTIONS_SIGNALS__={...snapshot,events:S.events,entityContext:id=>S.events.filter(e=>e.entity_id===id)};try{window.dispatchEvent(new CustomEvent('atlas:sanctions-radiography:ready',{detail:snapshot}));}catch{}
   }
-
   function shell(){return `<div class="san96" data-san96 data-authority="${AUTH}">
-    <section class="san96-hero">
-      <div class="san96-hero-top"><div><span class="san96-kicker">FISCALIZACIÓN UAF · SANCIONES 0.96</span><h1>Radiografía sancionatoria de Chile</h1><p>Una sola lectura sobre el universo consolidado SII + UAF + OSFL. Integra sanciones CMF, UAF y SCJ, y acciones de enforcement CGR, preservando la diferencia jurídica entre una sanción regulatoria y un reparo, sumario o derivación.</p></div><div class="san96-universe"><span>Universo sometido a evaluación</span><b>${fmt(S.universe?.unified_universe_count)}</b><small>${fmt(S.universe?.sii_registry_count)} SII · ${fmt(S.universe?.uaf_registry_count)} UAF · ${fmt(S.universe?.osfl_registry_count)} OSFL · deduplicado por RUT</small></div></div>
-      <div class="san96-source-grid" id="san96Sources"></div>
-    </section>
-    <section class="san96-command">
-      <label>Buscar entidad<input id="san96Q" type="search" autocomplete="off" placeholder="Nombre, RUT, motivo o resolución"></label>
-      <label>Año<select id="san96Year"><option value="">Todos</option></select></label>
-      <label>Fuente<select id="san96Reg"><option value="">Todas</option></select></label>
-      <label>Condición UAF<select id="san96Condition"><option value="">Todas</option><option value="SO_REGISTERED">SO inscrito</option><option value="POTENTIAL_SO_CURRENT">Potencial SO</option><option value="OTHER">Otra / no observada</option></select></label>
-      <label>Región<select id="san96Region"><option value="">Todas</option></select></label>
-      <label>Universo<select id="san96Scope"><option value="">Todo lo observado</option><option value="unified">Sólo universo SII+UAF+OSFL</option></select></label>
-      <button class="san96-clear" id="san96Clear" type="button">Limpiar</button>
-    </section>
+    <section class="san96-hero"><div class="san96-hero-top"><div class="san96-hero-copy"><span class="san96-kicker">FISCALIZACIÓN UAF · SANCIONES 0.96.1</span><h1>Radiografía sancionatoria de Chile</h1><p>Lectura integrada del universo SII + UAF + OSFL. Las sanciones regulatorias CMF, UAF y SCJ se analizan separadamente de las acciones de enforcement CGR para evitar equivalencias jurídicas incorrectas.</p></div><div class="san96-universe"><span>Universo sometido a evaluación</span><b>${fmt(S.universe?.unified_universe_count)}</b><small>${fmt(S.universe?.sii_registry_count)} SII · ${fmt(S.universe?.uaf_registry_count)} UAF · ${fmt(S.universe?.osfl_registry_count)} OSFL</small><em>Deduplicado por RUT</em></div></div><div class="san96-source-grid" id="san96Sources"></div></section>
+    <section class="san96-command" aria-label="Filtros de sanciones"><label class="san96-search">Buscar entidad<input id="san96Q" type="search" autocomplete="off" placeholder="Nombre, RUT, motivo o resolución"></label><label>Año<select id="san96Year"><option value="">Todos</option></select></label><label>Fuente / supervisor<select id="san96Reg"><option value="">Todas</option></select></label><label>Condición UAF<select id="san96Condition"><option value="">Todas</option><option value="SO_REGISTERED">SO inscrito</option><option value="POTENTIAL_SO_CURRENT">Potencial SO</option><option value="OTHER">Otra / no observada</option></select></label><label>Región<select id="san96Region"><option value="">Todas</option></select></label><label>Industria / sector<select id="san96Sector"><option value="">Todos</option></select></label><label>Universo<select id="san96Scope"><option value="">Todo lo observado</option><option value="unified">Sólo universo SII+UAF+OSFL</option></select></label><button class="san96-clear" id="san96Clear" type="button">Limpiar</button></section>
     <section class="san96-kpis" id="san96Kpis"></section>
-    <section class="san96-grid">
-      <article class="san96-panel"><div class="san96-panel-head"><div><span>EVOLUCIÓN</span><h3>Sanciones y enforcement por año</h3></div><small>cada color = fuente · clic para filtrar</small></div><div id="san96YearChart"></div></article>
-      <article class="san96-panel"><div class="san96-panel-head"><div><span>TERRITORIO</span><h3>Concentración regional</h3></div><small>entidades con región observable</small></div><div id="san96Regions"></div></article>
-      <article class="san96-panel"><div class="san96-panel-head"><div><span>SO Y POTENCIALES SO</span><h3>Sectores con presencia sancionatoria</h3></div><small>sector UAF vigente / screening actual</small></div><div id="san96Sectors"></div></article>
-      <article class="san96-panel"><div class="san96-panel-head"><div><span>HUELLA SOCIETARIA</span><h3>OSFL y empresas RES</h3></div><small>presencia dentro de entidades observadas</small></div><div id="san96Mix"></div></article>
-      <article class="san96-panel wide"><div class="san96-explorer-head"><div class="san96-panel-head" style="margin:0"><div><span>EXPEDIENTES</span><h3>Eventos y entidades</h3></div></div><div class="san96-count" id="san96Count"></div></div><div class="san96-events" id="san96Events"></div></article>
+    <section class="san96-dashboard">
+      <article class="san96-panel san96-trend-panel"><div class="san96-panel-head"><div><span>EVOLUCIÓN</span><h3>Evolución de sanciones y enforcement</h3><p>Cantidad de eventos por supervisor y año.</p></div><small id="san96TrendMeta"></small></div><div id="san96Trend"></div></article>
+      <article class="san96-panel san96-matrix-panel"><div class="san96-panel-head"><div><span>SUPERVISOR × INDUSTRIA</span><h3>Sanciones por supervisor e industria</h3><p>Comparación del patrón sectorial observado.</p></div><small id="san96MatrixMeta"></small></div><div id="san96Matrix"></div></article>
+      <article class="san96-panel san96-region-panel"><div class="san96-panel-head"><div><span>TERRITORIO</span><h3>Concentración regional</h3><p>Ranking normalizado por eventos con región observable.</p></div><small id="san96RegionMeta"></small></div><div id="san96Regions"></div></article>
+      <article class="san96-panel san96-so-panel"><div class="san96-panel-head"><div><span>SO Y POTENCIALES SO</span><h3>Exposición dentro del perímetro UAF</h3><p>Entidades y sectores identificados en el corte actual.</p></div></div><div id="san96SO"></div></article>
+      <article class="san96-panel san96-findings-panel"><div class="san96-panel-head"><div><span>LECTURA AUTOMÁTICA</span><h3>Hallazgos prioritarios</h3><p>Señales descriptivas derivadas del corte filtrado.</p></div></div><div id="san96Findings"></div></article>
+      <article class="san96-panel san96-table-panel"><div class="san96-explorer-head"><div class="san96-panel-head"><div><span>EXPEDIENTES</span><h3>Detalle de sanciones / eventos</h3><p>Seleccione una fila para abrir su ficha.</p></div></div><div class="san96-count" id="san96Count"></div></div><div id="san96Table"></div><div class="san96-pagination" id="san96Pagination"></div></article>
+      <article class="san96-panel san96-detail-panel"><div class="san96-panel-head"><div><span>FICHA</span><h3>Ficha de sanción / detalle</h3><p>Contexto, monto, motivo y trazabilidad documental.</p></div></div><div id="san96Detail"></div></article>
     </section>
-    <details class="san96-panel san96-method"><summary>Fuentes, alcance y reglas de interpretación</summary><p><b>Universo:</b> padrón SII + padrón UAF + padrón OSFL, deduplicados por RUT. <b>CMF/UAF/SCJ:</b> registros sancionatorios observados por Radar Sanciones. <b>CGR:</b> reparos, procedimientos disciplinarios y derivaciones se presentan como acciones de enforcement y no se convierten en sanciones finales sin evidencia expresa. <b>Identidad:</b> los eventos no conciliados permanecen visibles. <b>SO y potencial SO:</b> se toman del contrato UAF vigente. <b>OSFL/RES:</b> son atributos de presencia en fuentes, no explicaciones causales. El monitor prioriza revisión fiscalizadora; no constituye por sí solo una conclusión de incumplimiento LA/FT.</p></details>
-    <div class="san96-shade" id="san96Shade" hidden></div><aside class="san96-drawer" id="san96Drawer" hidden></aside>
-  </div>`;}
-
-  function sourceCards(){
-    const rows=['CMF','UAF','SCJ','CGR'].map(code=>{
-      const snap=S.sources.find(x=>x.source_code===code)||{};
-      const ev=S.events.filter(x=>x.regulator===code);
-      const docs=ev.filter(x=>safeUrl(x.document_url)).length;
-      const last=ev.reduce((m,x)=>String(x.event_date||'')>m?String(x.event_date):m,'');
-      const status=snap.status|| (ev.length?'ACTIVE':'PENDING');
-      return `<div class="san96-source" data-src="${code}"><em>${esc(status)}</em><span>${esc(code)} · ${esc(sourceName[code])}</span><b>${fmt(ev.length)} evento(s)</b><small>${fmt(docs)} con documento · último ${esc(date(last))}${code==='CGR'?' · enforcement':''}</small></div>`;
-    });
-    const el=document.getElementById('san96Sources');if(el)el.innerHTML=rows.join('');
-  }
-
-  function filtered(){
-    const f=S.filters,q=norm(f.q);
-    return S.events.filter(e=>{
-      if(f.year&&String(e.event_year)!==f.year)return false;
-      if(f.regulator&&e.regulator!==f.regulator)return false;
-      if(f.region&&(e.region||'SIN REGIÓN OBSERVADA')!==f.region)return false;
-      if(f.scope==='unified'&&!e.in_unified_universe)return false;
-      if(f.condition==='SO_REGISTERED'&&!e.is_uaf_registered)return false;
-      if(f.condition==='POTENTIAL_SO_CURRENT'&&!e.is_potential_screening)return false;
-      if(f.condition==='OTHER'&&(e.is_uaf_registered||e.is_potential_screening))return false;
-      if(f.sector&&(e.uaf_sector||'SIN SECTOR UAF')!==f.sector)return false;
-      if(f.mix&&mixOf(e)!==f.mix)return false;
-      if(q&&!norm([e.canonical_name,e.source_entity_name,e.rut,e.reason,e.resolution_ref,e.event_kind,e.regulator].join(' ')).includes(q))return false;
-      return true;
-    });
-  }
-
-  function groups(D,keyFn){const m=new Map();for(const e of D){const k=keyFn(e);m.set(k,(m.get(k)||0)+1)}return [...m].map(([key,value])=>({key,value})).sort((a,b)=>b.value-a.value)}
-  function distinctEntities(D,pred=()=>true){return new Set(D.filter(pred).map(e=>e.entity_key)).size;}
-  function amountLabel(e){if(num(e.amount_uf)!=null)return `${fmt(e.amount_uf)} UF`;if(num(e.amount_clp)!=null)return money(e.amount_clp);return 'Monto no publicado';}
-
-  function renderKpis(D){
-    const docs=D.filter(e=>safeUrl(e.document_url)).length;
-    const sanc=D.filter(e=>e.sanction_record).length,cgr=D.filter(e=>e.regulator==='CGR').length;
-    const el=document.getElementById('san96Kpis');if(!el)return;
-    const k=(label,value,detail,cls='')=>`<div class="san96-kpi ${cls}"><span>${esc(label)}</span><b>${esc(value)}</b><small>${esc(detail)}</small></div>`;
-    el.innerHTML=[
-      k('Eventos filtrados',fmt(D.length),`${fmt(distinctEntities(D))} entidades / identidades`,'info'),
-      k('Sanciones regulatorias',fmt(sanc),'CMF + UAF + SCJ','good'),
-      k('Acciones CGR',fmt(cgr),'enforcement con semántica separada','cgr'),
-      k('Dentro universo único',fmt(distinctEntities(D,e=>e.in_unified_universe)),`${fmt(D.filter(e=>e.in_unified_universe).length)} eventos`,'good'),
-      k('SO / potenciales',`${fmt(distinctEntities(D,e=>e.is_uaf_registered))} / ${fmt(distinctEntities(D,e=>e.is_potential_screening))}`,'entidades distintas','warn'),
-      k('Trazabilidad documental',pct(D.length?100*docs/D.length:0),`${fmt(docs)} eventos con enlace público`,'info')
-    ].join('');
-  }
-
-  function yearChart(D){
-    const el=document.getElementById('san96YearChart');if(!el)return;
-    const years=[...new Set(D.map(e=>e.event_year).filter(Boolean))].sort((a,b)=>b-a);
-    if(!years.length){el.innerHTML='<div class="san96-empty">Sin eventos para los filtros actuales.</div>';return;}
-    const data=years.map(y=>{const rows=D.filter(e=>e.event_year===y);const counts=Object.fromEntries(['CMF','UAF','SCJ','CGR'].map(r=>[r,rows.filter(e=>e.regulator===r).length]));return {y,total:rows.length,counts}});
-    const max=Math.max(...data.map(x=>x.total),1);
-    el.innerHTML=`<div class="san96-year-chart">${data.map(x=>`<div class="san96-year-row"><span>${x.y}</span><div class="san96-stack" style="width:${Math.max(5,100*x.total/max)}%">${['CMF','UAF','SCJ','CGR'].filter(r=>x.counts[r]).map(r=>`<button type="button" class="${r}" data-year="${x.y}" data-reg="${r}" title="${r}: ${x.counts[r]}" style="width:${100*x.counts[r]/x.total}%"></button>`).join('')}</div><em>${fmt(x.total)}</em></div>`).join('')}</div><div class="san96-legend">${['CMF','UAF','SCJ','CGR'].map(r=>`<span><i style="--c:${sourceColor[r]}"></i>${r}</span>`).join('')}</div>`;
-    el.querySelectorAll('[data-year]').forEach(b=>b.onclick=()=>{S.filters.year=b.dataset.year||'';S.filters.regulator=b.dataset.reg||'';syncControls();render();});
-  }
-
-  function bars(elId,rows,onClick,empty='Sin datos observables.',maxRows=12){
-    const el=document.getElementById(elId);if(!el)return;const R=rows.slice(0,maxRows);if(!R.length){el.innerHTML=`<div class="san96-empty">${esc(empty)}</div>`;return;}const max=Math.max(...R.map(x=>x.value),1);
-    el.innerHTML=`<div class="san96-bars">${R.map(x=>`<button type="button" class="san96-bar" data-key="${esc(x.key)}"><span class="san96-bar-main"><div><b title="${esc(x.key)}">${esc(x.key)}</b><small>${pct(100*x.value/Math.max(1,rows.reduce((a,b)=>a+b.value,0)))}</small></div><span class="san96-track"><i style="width:${Math.max(2,100*x.value/max)}%"></i></span></span><em>${fmt(x.value)}</em></button>`).join('')}</div>`;
-    el.querySelectorAll('[data-key]').forEach(b=>b.onclick=()=>onClick(b.dataset.key));
-  }
-
-  function renderRegions(D){const rows=groups(D.filter(e=>e.region),e=>e.region);bars('san96Regions',rows,k=>{S.filters.region=k;syncControls();render();},'No hay región materializada para este corte.');}
-  function renderSectors(D){const rows=groups(D.filter(e=>e.is_uaf_registered||e.is_potential_screening),e=>e.uaf_sector||'SIN SECTOR UAF');bars('san96Sectors',rows,k=>{S.filters.sector=k;render();},'No hay SO o potenciales SO en los filtros actuales.');}
-
-  function renderMix(D){
-    const el=document.getElementById('san96Mix');if(!el)return;
-    const unique=new Map();for(const e of D){const k=e.entity_key;if(!unique.has(k))unique.set(k,mixOf(e));else if(mixOf(e)==='OSFL + RES')unique.set(k,'OSFL + RES');}
-    const order=['OSFL + RES','OSFL','RES','OTRAS ENTIDADES'];const counts=Object.fromEntries(order.map(k=>[k,0]));for(const v of unique.values())counts[v]=(counts[v]||0)+1;
-    const total=Math.max(1,[...unique].length),a=100*counts['OSFL + RES']/total,b=a+100*counts.OSFL/total,c=b+100*counts.RES/total;
-    const colors={'OSFL + RES':'var(--s96-uaf)','OSFL':'var(--s96-cmf)','RES':'var(--s96-scj)','OTRAS ENTIDADES':'rgba(161,185,211,.22)'};
-    el.innerHTML=`<div class="san96-mix"><div class="san96-donut" style="--p1:${a}%;--p2:${b}%;--p3:${c}%"></div><div class="san96-mix-list">${order.map(k=>`<button type="button" class="san96-mix-btn" data-mix="${esc(k)}"><i style="--c:${colors[k]}"></i><span>${esc(k)}</span><b>${fmt(counts[k])}</b></button>`).join('')}</div></div>`;
-    el.querySelectorAll('[data-mix]').forEach(b=>b.onclick=()=>{S.filters.mix=S.filters.mix===b.dataset.mix?'':b.dataset.mix||'';render();});
-  }
-
-  function badges(e){return `${e.in_unified_universe?'<span class="san96-badge universe">Universo SII+UAF+OSFL</span>':'<span class="san96-badge out">Fuera/no conciliado</span>'}${e.is_uaf_registered?'<span class="san96-badge so">SO</span>':''}${e.is_potential_screening?'<span class="san96-badge potential">Potencial SO</span>':''}${e.is_osfl_observed?'<span class="san96-badge osfl">OSFL</span>':''}${e.is_res_observed?'<span class="san96-badge res">RES</span>':''}`;}
-
-  function renderEvents(D){
-    const count=document.getElementById('san96Count');if(count)count.textContent=`${fmt(D.length)} eventos · ${fmt(distinctEntities(D))} entidades/identidades`;
-    const el=document.getElementById('san96Events');if(!el)return;
-    const rows=[...D].sort((a,b)=>String(b.event_date||'').localeCompare(String(a.event_date||''))).slice(0,160);
-    if(!rows.length){el.innerHTML='<div class="san96-empty">No hay eventos que cumplan los filtros.</div>';return;}
-    el.innerHTML=rows.map(e=>`<button type="button" class="san96-event" data-event="${esc(e.event_id)}"><span class="date">${esc(date(e.event_date))}</span><span class="src ${esc(e.regulator)}">${esc(e.regulator)}</span><span class="san96-event-main"><b>${esc(e.canonical_name||e.source_entity_name||'Identidad no conciliada')}</b><span>${esc(e.event_kind||'Evento')} · ${esc(e.uaf_sector||conditionLabel(e.current_condition))}</span></span><span class="san96-event-meta"><b>${esc(amountLabel(e))}</b><small>${safeUrl(e.document_url)?'Documento disponible':'Sin enlace materializado'}</small></span><span class="arrow">›</span></button>`).join('');
-    el.querySelectorAll('[data-event]').forEach(b=>b.onclick=()=>openDrawer(S.events.find(e=>e.event_id===b.dataset.event)));
-  }
-
-  function openEntity(id,row){const E=entry();if(E&&typeof E.open==='function')return E.open(id,{entity_id:id,name:row?.canonical_name||'',rut:row?.rut||''});if(typeof window.openEntity==='function')return window.openEntity(id);}
-  function closeDrawer(){const s=document.getElementById('san96Shade'),d=document.getElementById('san96Drawer');if(s)s.hidden=true;if(d)d.hidden=true;S.selected=null;}
-  function openDrawer(seed){
-    if(!seed)return;S.selected=seed;const shade=document.getElementById('san96Shade'),dr=document.getElementById('san96Drawer');if(!shade||!dr)return;
-    const ev=[...S.events.filter(x=>x.entity_key===seed.entity_key)].sort((a,b)=>String(b.event_date||'').localeCompare(String(a.event_date||'')));
-    const regs=[...new Set(ev.map(x=>x.regulator))];const docs=ev.filter(x=>safeUrl(x.document_url)).length;
-    shade.hidden=false;dr.hidden=false;
-    dr.innerHTML=`<div class="san96-drawer-head"><div><span class="san96-kicker">EXPEDIENTE SANCIONATORIO</span><h2>${esc(seed.canonical_name||seed.source_entity_name||'Identidad no conciliada')}</h2><p>${esc(seed.rut||seed.entity_id||'Sin RUT conciliado')} · ${esc([seed.commune,seed.region].filter(Boolean).join(' · ')||'territorio no observado')}</p></div><button class="san96-close" type="button" data-close>×</button></div><div style="margin-top:8px">${badges(seed)}</div><div class="san96-drawer-kpis"><div><span>Eventos</span><b>${fmt(ev.length)}</b></div><div><span>Fuentes</span><b>${fmt(regs.length)}</b></div><div><span>Documentos</span><b>${fmt(docs)}</b></div><div><span>Última fecha</span><b>${esc(date(ev[0]?.event_date))}</b></div></div>${seed.entity_id?'<button type="button" class="san96-entity-open" data-open-entity>Abrir Entidad 360 →</button>':''}<div>${ev.map(e=>{const url=safeUrl(e.document_url);return `<article class="san96-dossier-event"><strong>${esc(date(e.event_date))} · ${esc(e.regulator)} · ${esc(e.event_kind||'Evento')}</strong><span>${esc(conditionLabel(e.current_condition))}${e.uaf_sector?` · ${esc(e.uaf_sector)}`:''} · ${esc(amountLabel(e))}</span><p>${esc(e.reason||'Motivo no materializado en la fuente actual')}</p>${e.regulator==='CGR'?'<span class="san96-badge potential">Acción CGR de enforcement · no equivale por sí sola a sanción final</span>':''}${url?`<a class="san96-doc" href="${esc(url)}" target="_blank" rel="noopener">Abrir documento público ↗</a>`:'<span class="san96-doc" style="color:var(--s96-muted)">Documento público aún no materializado</span>'}</article>`}).join('')}</div>`;
-    dr.querySelector('[data-close]').onclick=closeDrawer;shade.onclick=closeDrawer;const open=dr.querySelector('[data-open-entity]');if(open)open.onclick=()=>openEntity(seed.entity_id,seed);
-  }
-
-  function populateControls(){
-    const years=[...new Set(S.events.map(e=>e.event_year).filter(Boolean))].sort((a,b)=>b-a),regs=['CMF','UAF','SCJ','CGR'].filter(r=>S.events.some(e=>e.regulator===r)),regions=[...new Set(S.events.map(e=>e.region).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
-    const y=document.getElementById('san96Year'),r=document.getElementById('san96Reg'),g=document.getElementById('san96Region');
-    if(y)y.innerHTML='<option value="">Todos</option>'+years.map(v=>`<option value="${v}">${v}</option>`).join('');
-    if(r)r.innerHTML='<option value="">Todas</option>'+regs.map(v=>`<option value="${v}">${v}</option>`).join('');
-    if(g)g.innerHTML='<option value="">Todas</option>'+regions.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
-  }
-  function syncControls(){const pairs=[['san96Year','year'],['san96Reg','regulator'],['san96Condition','condition'],['san96Region','region'],['san96Scope','scope']];for(const [id,k] of pairs){const e=document.getElementById(id);if(e)e.value=S.filters[k]||'';}const q=document.getElementById('san96Q');if(q&&q.value!==S.filters.q)q.value=S.filters.q;}
-  function bind(){
-    const changes=[['san96Year','year'],['san96Reg','regulator'],['san96Condition','condition'],['san96Region','region'],['san96Scope','scope']];for(const [id,k] of changes){document.getElementById(id)?.addEventListener('change',e=>{S.filters[k]=e.target.value;render();});}
-    let timer=null;document.getElementById('san96Q')?.addEventListener('input',e=>{clearTimeout(timer);timer=setTimeout(()=>{S.filters.q=e.target.value.trim();render();},120);});
-    document.getElementById('san96Clear')?.addEventListener('click',()=>{S.filters={year:'',regulator:'',region:'',condition:'',sector:'',mix:'',scope:'',q:''};syncControls();render();});
-  }
-  function render(){const D=filtered();sourceCards();renderKpis(D);yearChart(D);renderRegions(D);renderSectors(D);renderMix(D);renderEvents(D);}
-
-  async function load(){
-    const h=host();if(!h)return;S.loading=true;S.error=null;h.innerHTML='<div class="san96-loading">Construyendo radiografía sancionatoria…</div>';
-    try{await loadData();h.innerHTML=shell();populateControls();bind();syncControls();render();S.loading=false;}
-    catch(error){S.loading=false;S.error=error;h.innerHTML=`<div class="san96-error"><b>No fue posible abrir la radiografía sancionatoria.</b><br>${esc(error?.message||error)}</div>`;throw error;}
-  }
-
-  window.ATLAS_SANCTIONS_CURRENT={version:VERSION,build:BUILD,authority:AUTH,load,reload:load,state:S,contracts:V,methodology:{universe:'SII+UAF+OSFL deduplicado por RUT',regulatorySources:['CMF','UAF','SCJ'],cgr:'ENFORCEMENT_ACTION_SEPARATE_SEMANTICS'}};
+    <details class="san96-panel san96-method"><summary>Fuentes, alcance y reglas de interpretación</summary><p><b>Universo:</b> padrón SII + padrón UAF + padrón OSFL, deduplicados por RUT. <b>CMF/UAF/SCJ:</b> sanciones regulatorias observadas en Radar Sanciones. <b>CGR:</b> reparos, procedimientos disciplinarios y derivaciones se muestran como acciones de enforcement, no como sanciones finales salvo evidencia expresa. <b>SO y potencial SO:</b> corresponden al contrato UAF vigente. <b>Territorio:</b> la vista normaliza variantes de nombres regionales para evitar doble conteo. Las señales son descriptivas y orientan la revisión; no constituyen por sí solas una conclusión de incumplimiento LA/FT.</p></details></div>`;}
+  function filtered(){const f=S.filters,q=norm(f.q);return S.events.filter(e=>{if(f.year&&String(e.event_year)!==f.year)return false;if(f.regulator&&e.regulator!==f.regulator)return false;if(f.region&&e._region!==f.region)return false;if(f.scope==='unified'&&!e.in_unified_universe)return false;if(f.condition==='SO_REGISTERED'&&!e.is_uaf_registered)return false;if(f.condition==='POTENTIAL_SO_CURRENT'&&!e.is_potential_screening)return false;if(f.condition==='OTHER'&&(e.is_uaf_registered||e.is_potential_screening))return false;if(f.sector&&(e.uaf_sector||'Sin sector UAF')!==f.sector)return false;if(q&&!norm([e.canonical_name,e.source_entity_name,e.rut,e.reason,e.resolution_ref,e.event_kind,e.regulator,e.uaf_sector,e._region].join(' ')).includes(q))return false;return true;});}
+  function groups(D,keyFn){const m=new Map();for(const e of D){const k=keyFn(e);if(!k)continue;m.set(k,(m.get(k)||0)+1)}return [...m].map(([key,value])=>({key,value})).sort((a,b)=>b.value-a.value||String(a.key).localeCompare(String(b.key),'es'));}
+  function distinctEntities(D,pred=()=>true){return new Set(D.filter(pred).map(e=>e._entityKey).filter(Boolean)).size;}
+  function entitiesWithCounts(D){const m=new Map();for(const e of D){const k=e._entityKey;if(!k)continue;const a=m.get(k)||[];a.push(e);m.set(k,a)}return m;}
+  function sourceCards(){const el=document.getElementById('san96Sources');if(!el)return;el.innerHTML=REGULATORS.map(code=>{const snap=S.sources.find(x=>x.source_code===code)||{},ev=S.events.filter(x=>x.regulator===code),docs=ev.filter(x=>safeUrl(x.document_url)).length,last=ev.reduce((m,x)=>String(x.event_date||'')>m?String(x.event_date):m,''),active=S.filters.regulator===code?' active':'';return `<button type="button" class="san96-source${active}" data-src="${code}" style="--src:${sourceColor[code]}"><span>${esc(code)} · ${esc(sourceName[code])}</span><b>${fmt(ev.length)} <small>evento(s)</small></b><em>${esc(snap.status||'ACTIVE')}</em><small>${fmt(docs)} con documento · último ${esc(date(last))}${code==='CGR'?' · enforcement':''}</small></button>`;}).join('');el.querySelectorAll('[data-src]').forEach(b=>b.addEventListener('click',()=>{S.filters.regulator=S.filters.regulator===b.dataset.src?'':b.dataset.src;S.page=0;syncControls();render();}));}
+  function renderKpis(D){const el=document.getElementById('san96Kpis');if(!el)return;const docs=D.filter(e=>safeUrl(e.document_url)).length,regulatory=D.filter(e=>e.sanction_record&&e.regulator!=='CGR').length,cgr=D.filter(e=>e.regulator==='CGR').length;const k=(label,value,detail,cls='')=>`<div class="san96-kpi ${cls}"><span>${esc(label)}</span><b>${esc(value)}</b><small>${esc(detail)}</small></div>`;el.innerHTML=[k('Eventos filtrados',fmt(D.length),`${fmt(distinctEntities(D))} entidades / identidades`,'info'),k('Sanciones regulatorias',fmt(regulatory),'CMF + UAF + SCJ','good'),k('Acciones CGR',fmt(cgr),'Enforcement con semántica separada','cgr'),k('Dentro universo único',fmt(distinctEntities(D,e=>e.in_unified_universe)),`${fmt(D.filter(e=>e.in_unified_universe).length)} eventos`,'good'),k('SO / potenciales',`${fmt(distinctEntities(D,e=>e.is_uaf_registered))} / ${fmt(distinctEntities(D,e=>e.is_potential_screening))}`,'Entidades distintas','warn'),k('Trazabilidad documental',pct(D.length?100*docs/D.length:0),`${fmt(docs)} de ${fmt(D.length)} eventos`,'info')].join('');}
+  function niceMax(v){if(v<=5)return 5;const p=Math.pow(10,Math.floor(Math.log10(v))),n=v/p,step=n<=1?1:n<=2?2:n<=5?5:10;return step*p;}
+  function renderTrend(D){const el=document.getElementById('san96Trend'),meta=document.getElementById('san96TrendMeta');if(!el)return;const years=[...new Set(D.map(e=>Number(e.event_year)).filter(Number.isFinite))].sort((a,b)=>a-b);if(!years.length){el.innerHTML='<div class="san96-empty">Sin eventos para los filtros actuales.</div>';if(meta)meta.textContent='';return;}const counts={};for(const r of REGULATORS)counts[r]=Object.fromEntries(years.map(y=>[y,0]));for(const e of D)if(counts[e.regulator]&&Number.isFinite(Number(e.event_year)))counts[e.regulator][Number(e.event_year)]++;const all=REGULATORS.flatMap(r=>years.map(y=>counts[r][y]||0)),yMax=niceMax(Math.max(1,...all)),W=760,H=286,L=48,R=18,T=18,B=44,plotW=W-L-R,plotH=H-T-B,x=i=>L+(years.length===1?plotW/2:i*plotW/(years.length-1)),y=v=>T+plotH-(v/yMax)*plotH;let svg=`<svg class="san96-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolución de sanciones por supervisor">`;for(let i=0;i<=5;i++){const value=Math.round(yMax*i/5),yy=y(value);svg+=`<line x1="${L}" y1="${yy}" x2="${W-R}" y2="${yy}" class="grid"/><text x="${L-8}" y="${yy+4}" text-anchor="end" class="axis">${fmt(value)}</text>`;}years.forEach((yr,i)=>{if(years.length<=9||i%2===0||i===years.length-1)svg+=`<text x="${x(i)}" y="${H-14}" text-anchor="middle" class="axis">${yr}</text>`;});for(const r of REGULATORS){const pts=years.map((yr,i)=>`${x(i)},${y(counts[r][yr]||0)}`).join(' ');svg+=`<polyline points="${pts}" fill="none" stroke="${sourceColor[r]}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity=".92"/>`;years.forEach((yr,i)=>{const v=counts[r][yr]||0;svg+=`<g class="san96-point" data-year="${yr}" data-reg="${r}"><circle cx="${x(i)}" cy="${y(v)}" r="${v?4.3:2.3}" fill="${v?sourceColor[r]:'#14283a'}" stroke="${sourceColor[r]}" stroke-width="1.4"><title>${r} · ${yr}: ${v} evento(s)</title></circle></g>`;});}svg+='</svg>';el.innerHTML=`<div class="san96-chart-wrap">${svg}</div><div class="san96-legend">${REGULATORS.map(r=>`<button type="button" data-reg-legend="${r}" class="${S.filters.regulator===r?'active':''}"><i style="--c:${sourceColor[r]}"></i>${r}</button>`).join('')}</div>`;el.querySelectorAll('.san96-point').forEach(p=>p.addEventListener('click',()=>{S.filters.year=p.dataset.year;S.filters.regulator=p.dataset.reg;S.page=0;syncControls();render();}));el.querySelectorAll('[data-reg-legend]').forEach(b=>b.addEventListener('click',()=>{const r=b.dataset.regLegend;S.filters.regulator=S.filters.regulator===r?'':r;S.page=0;syncControls();render();}));if(meta){const latest=Math.max(...years);meta.textContent=`${years[0]}–${latest} · ${fmt(D.length)} eventos`;}}
+  function renderMatrix(D){const el=document.getElementById('san96Matrix'),meta=document.getElementById('san96MatrixMeta');if(!el)return;const mapped=D.filter(e=>e.uaf_sector),sectorRows=groups(mapped,e=>e.uaf_sector).slice(0,8);if(!sectorRows.length){el.innerHTML='<div class="san96-empty">Sin sector UAF materializado para el corte actual.</div>';if(meta)meta.textContent='0% cobertura';return;}const matrix=sectorRows.map(row=>{const ev=mapped.filter(e=>e.uaf_sector===row.key);return {sector:row.key,total:ev.length,counts:Object.fromEntries(REGULATORS.map(r=>[r,ev.filter(e=>e.regulator===r).length]))};}),max=Math.max(1,...matrix.flatMap(r=>REGULATORS.map(s=>r.counts[s])));el.innerHTML=`<div class="san96-matrix"><div class="head sector">Industria / sector</div>${REGULATORS.map(r=>`<div class="head">${r}</div>`).join('')}<div class="head total">Total</div>${matrix.map(row=>`<button type="button" class="sector-name" data-sector="${esc(row.sector)}" title="Filtrar por ${esc(row.sector)}">${esc(row.sector)}</button>${REGULATORS.map(r=>{const v=row.counts[r],alpha=v?(.12+.72*v/max):.025;return `<button type="button" class="cell" data-sector="${esc(row.sector)}" data-mreg="${r}" style="--cell:${sourceColor[r]};--alpha:${alpha}" title="${r} · ${esc(row.sector)}: ${v}">${fmt(v)}</button>`}).join('')}<div class="total">${fmt(row.total)}</div>`).join('')}</div>`;el.querySelectorAll('[data-sector]').forEach(b=>b.addEventListener('click',()=>{S.filters.sector=b.dataset.sector||'';if(b.dataset.mreg)S.filters.regulator=b.dataset.mreg;S.page=0;syncControls();render();}));if(meta)meta.textContent=`Cobertura sectorial ${pct(D.length?100*mapped.length/D.length:0)}`;}
+  function renderRegions(D){const el=document.getElementById('san96Regions'),meta=document.getElementById('san96RegionMeta');if(!el)return;const observable=D.filter(e=>e._region),rows=groups(observable,e=>e._region),top=rows.slice(0,12);if(!top.length){el.innerHTML='<div class="san96-empty">Sin región observable para el corte actual.</div>';if(meta)meta.textContent='';return;}const max=Math.max(...top.map(x=>x.value),1),total=observable.length;el.innerHTML=`<div class="san96-region-bars">${top.map((x,i)=>`<button type="button" class="san96-region-row" data-region="${esc(x.key)}"><span class="rank">${i+1}</span><span class="region-name" title="${esc(x.key)}">${esc(x.key)}</span><span class="region-track"><i style="width:${Math.max(2,100*x.value/max)}%"></i></span><b>${fmt(x.value)}</b><em>${pct(100*x.value/total)}</em></button>`).join('')}</div>`;el.querySelectorAll('[data-region]').forEach(b=>b.addEventListener('click',()=>{S.filters.region=b.dataset.region||'';S.page=0;syncControls();render();}));if(meta)meta.textContent=`${fmt(total)} eventos con región · ${fmt(D.length-total)} sin región`;}
+  function renderSO(D){const el=document.getElementById('san96SO');if(!el)return;const so=distinctEntities(D,e=>e.is_uaf_registered),pot=distinctEntities(D,e=>e.is_potential_screening),mapped=D.filter(e=>(e.is_uaf_registered||e.is_potential_screening)&&e.uaf_sector),rows=groups(mapped,e=>e.uaf_sector).slice(0,6),max=Math.max(1,...rows.map(x=>x.value));el.innerHTML=`<div class="san96-so-kpis"><div><span>Entidades SO</span><b>${fmt(so)}</b><small>inscritas UAF</small></div><div class="potential"><span>Potenciales SO</span><b>${fmt(pot)}</b><small>screening vigente</small></div></div><div class="san96-subtitle">Sectores con mayor presencia de eventos</div>${rows.length?`<div class="san96-sector-bars">${rows.map(x=>`<button type="button" data-so-sector="${esc(x.key)}"><span title="${esc(x.key)}">${esc(x.key)}</span><i><em style="width:${Math.max(3,100*x.value/max)}%"></em></i><b>${fmt(x.value)}</b></button>`).join('')}</div>`:'<div class="san96-empty compact">Sin sectores UAF en el corte.</div>'}`;el.querySelectorAll('[data-so-sector]').forEach(b=>b.addEventListener('click',()=>{S.filters.sector=b.dataset.soSector||'';S.page=0;syncControls();render();}));}
+  function renderFindings(D){const el=document.getElementById('san96Findings');if(!el)return;if(!D.length){el.innerHTML='<div class="san96-empty">No hay hallazgos para un corte vacío.</div>';return;}const entityMap=entitiesWithCounts(D),entities=entityMap.size,repeated=[...entityMap.values()].filter(v=>v.length>1).length,multisource=[...entityMap.values()].filter(v=>new Set(v.map(e=>e.regulator)).size>1).length,regional=D.filter(e=>e._region),topRegion=groups(regional,e=>e._region)[0],topReg=groups(D,e=>e.regulator)[0],sectorBase=D.filter(e=>(e.is_uaf_registered||e.is_potential_screening)&&e.uaf_sector),topSector=groups(sectorBase,e=>e.uaf_sector)[0],docs=D.filter(e=>safeUrl(e.document_url)).length;const findings=[{cls:'warn',icon:'↻',title:'Reincidencia observada',text:`${pct(entities?100*repeated/entities:0)} de las entidades del corte registra más de un evento (${fmt(repeated)} de ${fmt(entities)}).`},{cls:'info',icon:'⌖',title:'Concentración regional',text:topRegion?`${pct(100*topRegion.value/Math.max(1,regional.length))} de los eventos con región se concentra en ${topRegion.key}.`:'No existe región materializada suficiente para estimar concentración.'},{cls:'blue',icon:'▦',title:'Supervisor dominante',text:topReg?`${topReg.key} concentra ${pct(100*topReg.value/D.length)} de los eventos del corte (${fmt(topReg.value)}).`:'Sin supervisor dominante.'},{cls:'gold',icon:'◫',title:'Sector con mayor exposición',text:topSector?`${topSector.key} concentra ${fmt(topSector.value)} eventos entre SO y potenciales SO con sector observado.`:'Sin sector UAF suficiente en el corte.'},{cls:'purple',icon:'◎',title:'Cruce entre supervisores',text:`${fmt(multisource)} entidades aparecen en más de una fuente/supervisor dentro del corte actual.`},{cls:'good',icon:'✓',title:'Trazabilidad documental',text:`${pct(100*docs/D.length)} de los eventos filtrados cuenta con enlace documental materializado (${fmt(docs)} de ${fmt(D.length)}).`}];el.innerHTML=`<div class="san96-findings">${findings.map(f=>`<div class="san96-finding ${f.cls}"><i>${f.icon}</i><div><b>${esc(f.title)}</b><p>${esc(f.text)}</p></div></div>`).join('')}</div>`;}
+  function compareRows(a,b,key){let av=a[key],bv=b[key];if(key==='name'){av=a.canonical_name||a.source_entity_name||'';bv=b.canonical_name||b.source_entity_name||'';}if(key==='region'){av=a._region||'';bv=b._region||'';}if(key==='amount'){av=num(a.amount_clp)??num(a.amount_uf)??-Infinity;bv=num(b.amount_clp)??num(b.amount_uf)??-Infinity;}if(av==null)av='';if(bv==null)bv='';if(typeof av==='number'&&typeof bv==='number')return av-bv;return String(av).localeCompare(String(bv),'es',{numeric:true,sensitivity:'base'});}
+  function sortedRows(D){const {key,dir}=S.sort;return [...D].sort((a,b)=>{const c=compareRows(a,b,key);return dir==='asc'?c:-c;});}
+  function renderTable(D){const el=document.getElementById('san96Table'),count=document.getElementById('san96Count'),pager=document.getElementById('san96Pagination');if(!el)return;if(count)count.textContent=`${fmt(D.length)} eventos · ${fmt(distinctEntities(D))} entidades/identidades`;const sorted=sortedRows(D),pages=Math.max(1,Math.ceil(sorted.length/PAGE_SIZE));if(S.page>=pages)S.page=pages-1;if(S.page<0)S.page=0;const rows=sorted.slice(S.page*PAGE_SIZE,(S.page+1)*PAGE_SIZE);if(!rows.length){el.innerHTML='<div class="san96-empty">No hay eventos que cumplan los filtros.</div>';if(pager)pager.innerHTML='';renderDetail(null);return;}if(!S.selectedId||!D.some(e=>String(e.event_id)===String(S.selectedId)))S.selectedId=rows[0]?.event_id||null;const head=(label,key)=>`<button type="button" data-sort="${key}">${label}${S.sort.key===key?` <span>${S.sort.dir==='asc'?'↑':'↓'}</span>`:''}</button>`;el.innerHTML=`<div class="san96-table-scroll"><table class="san96-table"><thead><tr><th>${head('Fecha','event_date')}</th><th>${head('Entidad','name')}</th><th>RUT</th><th>${head('Supervisor','regulator')}</th><th>${head('Región','region')}</th><th>${head('Industria / sector','uaf_sector')}</th><th>Condición UAF</th><th>Tipo</th><th>${head('Monto','amount')}</th><th>Documento</th></tr></thead><tbody>${rows.map(e=>{const selected=String(e.event_id)===String(S.selectedId);return `<tr data-event-id="${esc(e.event_id)}" class="${selected?'selected':''}"><td>${esc(date(e.event_date))}</td><td><b>${esc(e.canonical_name||e.source_entity_name||'Identidad no conciliada')}</b></td><td>${esc(e.rut||'—')}</td><td><span class="san96-source-tag ${esc(e.regulator)}">${esc(e.regulator)}</span></td><td>${esc(e._region||'—')}</td><td title="${esc(e.uaf_sector||'')}">${esc(e.uaf_sector||'—')}</td><td>${esc(conditionLabel(e))}</td><td>${esc(e.regulator==='CGR'?'Enforcement':e.event_kind||'Sanción')}</td><td>${esc(amountLabel(e))}</td><td>${safeUrl(e.document_url)?'<span class="san96-doc-ok">Disponible</span>':'<span class="san96-doc-miss">Sin enlace</span>'}</td></tr>`}).join('')}</tbody></table></div>`;el.querySelectorAll('[data-sort]').forEach(b=>b.addEventListener('click',()=>{const key=b.dataset.sort;if(S.sort.key===key)S.sort.dir=S.sort.dir==='asc'?'desc':'asc';else S.sort={key,dir:key==='name'||key==='region'?'asc':'desc'};S.page=0;renderTable(D);}));el.querySelectorAll('[data-event-id]').forEach(tr=>tr.addEventListener('click',()=>{S.selectedId=tr.dataset.eventId;renderTable(D);renderDetail(S.events.find(e=>String(e.event_id)===String(S.selectedId)));}));if(pager)pager.innerHTML=`<button type="button" data-page="prev" ${S.page===0?'disabled':''}>← Anterior</button><span>Página <b>${S.page+1}</b> de ${pages}</span><button type="button" data-page="next" ${S.page>=pages-1?'disabled':''}>Siguiente →</button>`;pager?.querySelector('[data-page="prev"]')?.addEventListener('click',()=>{S.page--;renderTable(D);});pager?.querySelector('[data-page="next"]')?.addEventListener('click',()=>{S.page++;renderTable(D);});renderDetail(S.events.find(e=>String(e.event_id)===String(S.selectedId))||rows[0]);}
+  function openEntity(id,row){const E=entry();if(E&&typeof E.open==='function')return E.open(id,{entity_id:id,name:row?.canonical_name||row?.source_entity_name||'',rut:row?.rut||''});if(typeof window.openEntity==='function')return window.openEntity(id);}
+  function renderDetail(e){const el=document.getElementById('san96Detail');if(!el)return;if(!e){el.innerHTML='<div class="san96-empty">Seleccione un evento para revisar su ficha.</div>';return;}const url=safeUrl(e.document_url),fields=[['Entidad',e.canonical_name||e.source_entity_name||'Identidad no conciliada'],['RUT',e.rut||'—'],['Supervisor',`${e.regulator} · ${sourceName[e.regulator]||''}`],['Fecha',date(e.event_date)],['Región',e._region||'—'],['Industria / sector',e.uaf_sector||'—'],['Condición UAF',conditionLabel(e)],['Tipo',e.regulator==='CGR'?'Acción de enforcement':e.event_kind||'Sanción regulatoria'],['Monto',amountLabel(e)],['Resolución / referencia',e.resolution_ref||'—'],['Calidad documental',e.document_quality||(url?'Enlace materializado':'Sin enlace')],['Identidad',e.identity_status||'—']];el.innerHTML=`<div class="san96-detail-title"><b>${esc(e.canonical_name||e.source_entity_name||'Identidad no conciliada')}</b><span class="san96-source-tag ${esc(e.regulator)}">${esc(e.regulator)}</span></div><div class="san96-detail-grid">${fields.map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div><div class="san96-reason"><span>Motivo principal</span><p>${esc(e.reason||e.document_excerpt||'Motivo no materializado en la fuente actual.')}</p></div>${e.regulator==='CGR'?'<div class="san96-cgr-note">CGR se presenta como enforcement. Este evento no equivale por sí solo a una sanción regulatoria final.</div>':''}<div class="san96-detail-actions">${url?`<a href="${esc(url)}" target="_blank" rel="noopener">Abrir documento público ↗</a>`:'<button type="button" disabled>Documento no disponible</button>'}${e.entity_id?'<button type="button" data-open-entity>Abrir Entidad 360 →</button>':''}</div>`;el.querySelector('[data-open-entity]')?.addEventListener('click',()=>openEntity(e.entity_id,e));}
+  function populateControls(){const years=[...new Set(S.events.map(e=>e.event_year).filter(Boolean))].sort((a,b)=>b-a),regs=REGULATORS.filter(r=>S.events.some(e=>e.regulator===r)),regions=[...new Set(S.events.map(e=>e._region).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es')),sectors=[...new Set(S.events.map(e=>e.uaf_sector).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));const fill=(id,first,arr)=>{const e=document.getElementById(id);if(e)e.innerHTML=first+arr.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');};fill('san96Year','<option value="">Todos</option>',years);fill('san96Reg','<option value="">Todas</option>',regs);fill('san96Region','<option value="">Todas</option>',regions);fill('san96Sector','<option value="">Todos</option>',sectors);}
+  function syncControls(){const pairs=[['san96Year','year'],['san96Reg','regulator'],['san96Condition','condition'],['san96Region','region'],['san96Sector','sector'],['san96Scope','scope']];for(const [id,k] of pairs){const e=document.getElementById(id);if(e)e.value=S.filters[k]||'';}const q=document.getElementById('san96Q');if(q&&q.value!==S.filters.q)q.value=S.filters.q;}
+  function bind(){const changes=[['san96Year','year'],['san96Reg','regulator'],['san96Condition','condition'],['san96Region','region'],['san96Sector','sector'],['san96Scope','scope']];for(const [id,k] of changes)document.getElementById(id)?.addEventListener('change',e=>{S.filters[k]=e.target.value;S.page=0;render();});let timer=null;document.getElementById('san96Q')?.addEventListener('input',e=>{clearTimeout(timer);timer=setTimeout(()=>{S.filters.q=e.target.value.trim();S.page=0;render();},140);});document.getElementById('san96Clear')?.addEventListener('click',()=>{S.filters={year:'',regulator:'',region:'',condition:'',sector:'',scope:'',q:''};S.page=0;S.selectedId=null;syncControls();render();});}
+  function render(){const D=filtered();sourceCards();renderKpis(D);renderTrend(D);renderMatrix(D);renderRegions(D);renderSO(D);renderFindings(D);renderTable(D);syncControls();}
+  async function load(){const h=host();if(!h)return;S.loading=true;S.error=null;h.innerHTML='<div class="san96-loading"><span></span><b>Construyendo radiografía sancionatoria…</b><small>Consolidando fuentes, universo y eventos.</small></div>';try{await loadData();h.innerHTML=shell();populateControls();bind();syncControls();render();S.loading=false;}catch(error){S.loading=false;S.error=error;console.error('ATLAS Sanciones 0.96.1',error);h.innerHTML=`<div class="san96-error"><b>No fue posible abrir Sanciones.</b><p>${esc(error?.message||error)}</p><button type="button" id="san96Retry">Reintentar</button></div>`;document.getElementById('san96Retry')?.addEventListener('click',()=>load());}}
+  window.ATLAS_SANCTIONS_CURRENT={version:VERSION,build:BUILD,authority:AUTH,load,reload:load,state:S,contracts:V,health:()=>({version:VERSION,build:BUILD,authority:AUTH,events:S.events.length,error:S.error?String(S.error?.message||S.error):null,loaded:!!document.querySelector('[data-san96]')}),methodology:{universe:'SII+UAF+OSFL deduplicado por RUT',regulatorySources:['CMF','UAF','SCJ'],cgr:'ENFORCEMENT_ACTION_SEPARATE_SEMANTICS',region:'CLIENT_NORMALIZED_ALIAS_MERGE'}};
 })();
