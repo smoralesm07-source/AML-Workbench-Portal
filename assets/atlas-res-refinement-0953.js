@@ -1,9 +1,9 @@
 'use strict';
-/* ATLAS AML · Empresas (RES) · refinement 0.96.4 */
-(function atlasResRefinement0964(){
+/* ATLAS AML · Empresas (RES) · refinement 0.96.5 */
+(function atlasResRefinement0965(){
   if(window.__ATLAS_RES_REFINEMENT_0953__) return;
   window.__ATLAS_RES_REFINEMENT_0953__=true;
-  const VERSION='0.96.4';
+  const VERSION='0.96.5';
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const num=v=>new Intl.NumberFormat('es-CL').format(Number(v||0));
   const pct=v=>`${Number(v||0).toLocaleString('es-CL',{minimumFractionDigits:1,maximumFractionDigits:1})}%`;
@@ -82,20 +82,29 @@
     s.addEventListener('click',e=>{const x=e.target.closest('[data-res953-kind]');if(!x)return;e.preventDefault();const kind=x.dataset.res953Kind;if(detail[kind])select(s,kind);trigger(root,kind,x.dataset.res953Term||'',x.dataset.res953Scroll==='1');});
   }
 
-  let scheduled=false;
+  let routeTimer=0;
+  const retryTimers=new Set();
   function apply(){
-    const root=document.querySelector('[data-res952-root]');if(!root)return;
+    const root=document.querySelector('[data-res952-root]');if(!root)return false;
     compact(root);build(root);
-    window.__ATLAS_RES_REFINEMENT__={version:VERSION,status:'ready',phenomena:'interactive-convergence-matrix',companyDrawer:'opaque-theme-safe',observer:'coalesced-idempotent',checkedAt:new Date().toISOString()};
+    window.__ATLAS_RES_REFINEMENT__={version:VERSION,status:'ready',phenomena:'interactive-convergence-matrix',companyDrawer:'opaque-theme-safe',observer:'disabled-bounded-init',checkedAt:new Date().toISOString()};
+    return true;
   }
-  function schedule(){
-    if(scheduled)return;
-    scheduled=true;
-    requestAnimationFrame(()=>{scheduled=false;apply();});
+  function clearRetries(){
+    retryTimers.forEach(id=>clearTimeout(id));
+    retryTimers.clear();
   }
-  const observer=new MutationObserver(()=>schedule());
-  observer.observe(document.documentElement,{childList:true,subtree:true});
-  [0,100,300,700,1400].forEach(ms=>setTimeout(schedule,ms));
-  document.addEventListener('atlas:routechange',schedule);
-  window.addEventListener('atlas:nav-refresh',schedule);
+  function runBoundedInit(){
+    clearRetries();
+    [0,120,400,900,1800,3200].forEach(ms=>{
+      const id=setTimeout(()=>{retryTimers.delete(id);apply();},ms);
+      retryTimers.add(id);
+    });
+  }
+  function scheduleRouteInit(){
+    clearTimeout(routeTimer);
+    routeTimer=setTimeout(runBoundedInit,40);
+  }
+  runBoundedInit();
+  document.addEventListener('atlas:routechange',scheduleRouteInit);
 })();
