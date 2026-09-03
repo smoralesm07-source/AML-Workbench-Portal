@@ -1,9 +1,9 @@
 'use strict';
-/* ATLAS AML · Empresas (RES) · refinement 0.96.3 */
-(function atlasResRefinement0963(){
+/* ATLAS AML · Empresas (RES) · refinement 0.96.4 */
+(function atlasResRefinement0964(){
   if(window.__ATLAS_RES_REFINEMENT_0953__) return;
   window.__ATLAS_RES_REFINEMENT_0953__=true;
-  const VERSION='0.96.3';
+  const VERSION='0.96.4';
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const num=v=>new Intl.NumberFormat('es-CL').format(Number(v||0));
   const pct=v=>`${Number(v||0).toLocaleString('es-CL',{minimumFractionDigits:1,maximumFractionDigits:1})}%`;
@@ -17,7 +17,12 @@
     if(hero&&!root.querySelector('.res953-sourcebar')){
       const bar=document.createElement('div');bar.className='res953-sourcebar';bar.innerHTML=`<span>● RES operativo</span><i></i><b>Corte ${esc(cutoff())}</b>`;hero.replaceWith(bar);
     }
-    const tab=root.querySelector('[data-res952-route="territory"]');if(tab){tab.textContent='Mapa';tab.removeAttribute('disabled');tab.title='Abrir mapa analítico RES';}
+    const tab=root.querySelector('[data-res952-route="territory"]');
+    if(tab){
+      if(tab.textContent!=='Mapa') tab.textContent='Mapa';
+      if(tab.hasAttribute('disabled')) tab.removeAttribute('disabled');
+      if(tab.title!=='Abrir mapa analítico RES') tab.title='Abrir mapa analítico RES';
+    }
     if(root.querySelector('#res952-temporal-chart')&&root.dataset.res953Pulse!=='1'){
       root.dataset.res953Pulse='1';const card=[...root.querySelectorAll('.res952-card')].find(x=>(x.querySelector('header span')?.textContent||'').trim().toUpperCase()==='LECTURA SEMANAL');
       if(card){const p=card.parentElement;card.remove();if(p?.querySelector('.res952-economic'))p.classList.add('res953-economic-only');}
@@ -77,7 +82,20 @@
     s.addEventListener('click',e=>{const x=e.target.closest('[data-res953-kind]');if(!x)return;e.preventDefault();const kind=x.dataset.res953Kind;if(detail[kind])select(s,kind);trigger(root,kind,x.dataset.res953Term||'',x.dataset.res953Scroll==='1');});
   }
 
-  function apply(){const root=document.querySelector('[data-res952-root]');if(!root)return;compact(root);build(root);window.__ATLAS_RES_REFINEMENT__={version:VERSION,status:'ready',phenomena:'interactive-convergence-matrix',companyDrawer:'opaque-theme-safe',checkedAt:new Date().toISOString()};}
-  const observer=new MutationObserver(apply);observer.observe(document.documentElement,{childList:true,subtree:true});
-  [0,80,220,500,900,1500,2500].forEach(ms=>setTimeout(apply,ms));document.addEventListener('atlas:routechange',apply);window.addEventListener('atlas:nav-refresh',apply);
+  let scheduled=false;
+  function apply(){
+    const root=document.querySelector('[data-res952-root]');if(!root)return;
+    compact(root);build(root);
+    window.__ATLAS_RES_REFINEMENT__={version:VERSION,status:'ready',phenomena:'interactive-convergence-matrix',companyDrawer:'opaque-theme-safe',observer:'coalesced-idempotent',checkedAt:new Date().toISOString()};
+  }
+  function schedule(){
+    if(scheduled)return;
+    scheduled=true;
+    requestAnimationFrame(()=>{scheduled=false;apply();});
+  }
+  const observer=new MutationObserver(()=>schedule());
+  observer.observe(document.documentElement,{childList:true,subtree:true});
+  [0,100,300,700,1400].forEach(ms=>setTimeout(schedule,ms));
+  document.addEventListener('atlas:routechange',schedule);
+  window.addEventListener('atlas:nav-refresh',schedule);
 })();
