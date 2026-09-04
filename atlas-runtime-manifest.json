@@ -1,10 +1,10 @@
 {
   "schema": "ATLAS_RUNTIME_MANIFEST_V1",
   "release": "0.96.2",
-  "build": "0963",
+  "build": "0964",
   "policy": "CANONICAL_SOURCE_MANIFEST_FOR_COMPILED_RUNTIME",
   "publish_mode": "COMPILED_BUNDLES_ONLY",
-  "notes": "0.96.2 build 0963 materializes the governed Entidad 360 back/drill-down/UF layer with a new immediate loading authority that hides stale entity content during selection changes. Historia Inteligente remains the sole entity dossier authority. OSFL economic/public-funds 0.95 and Sanciones Radiography 0.96 remain active current capabilities.",
+  "notes": "0.96.2 build 0964 corrige el bloqueo observado en Entidad 360 mediante materialización progresiva fail-soft, tiempos máximos por fuente y render parcial utilizable. Historia Inteligente permanece como autoridad única del dossier; Volver, drill-down y ventas UF siguen vigentes.",
   "styles": [
     "styles.css",
     "v016.css",
@@ -170,7 +170,7 @@
     {"path":"v0449-entity-tax-docauth.js","type":"classic","role":"entity360-sii-document-authorization-current"},
     {"path":"assets/atlas-entity360-scope-authority-20260904.js","type":"classic","role":"entity360-cross-route-scope-authority"},
     {"path":"assets/atlas-entity360-drilldown-20260904.js","type":"classic","role":"entity360-governed-drilldown-and-back-navigation"},
-    {"path":"assets/atlas-entity360-loading-authority-0963.js","type":"classic","role":"entity360-immediate-loading-and-materialization-authority"},
+    {"path":"assets/atlas-entity360-resilience-0964.js","type":"classic","role":"entity360-resilient-progressive-materialization-authority"},
     {"path":"v0442-session-stability.module.js","type":"module","role":"auth-session-passive-stability-and-entity-history-final-render-guard"},
     {"path":"assets/atlas-ui-authority-0901.js","type":"classic","role":"final-ui-runtime-authority"},
     {"path":"assets/atlas-osfl-economic-0950.js","type":"classic","role":"osfl-economic-public-funds-current-0950"},
