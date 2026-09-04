@@ -553,6 +553,22 @@
     }finally{opening=false;}
   }
 
+  /* Captura de ruta.
+   * atlas-public-spend-v2.js (GP2) escucha el clic en fase de captura sobre
+   * document y llama stopImmediatePropagation(), abriendo su propia función
+   * interna sin pasar por window.AtlasPublicSpendV2. Como se registra antes que
+   * route-authority-0578, se queda con el clic y ningún módulo posterior corre.
+   * La fase de captura recorre window antes que document, así que escuchar en
+   * window es lo único que permite a este módulo tomar la ruta sin modificar
+   * GP2 ni el resto de la cadena. */
+  window.addEventListener('click',event=>{
+    const target=event.target?.closest?.('[data-view="public-spend"],[data-atlas-mobile-view="public-spend"]');
+    if(!target)return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    open().catch(err=>{S.error=String(err?.message||err);render();});
+  },true);
+
   const api={
     version:VERSION,authority:'GASTO_PUBLICO_GP10',
     open,load,render,state:()=>({tab:S.tab,findings:(S.findings||[]).length,error:S.error}),
