@@ -113,7 +113,7 @@
     let changed=0;
     root.querySelectorAll('.osflr-meter').forEach(meter=>{
       const cell=meter.closest('td');
-      const match=(cell?.textContent||'').match(/([0-9.]+(?:,[0-9]+)?)\s*%/);
+      const match=(cell?.textContent||'').match(/([0-9.]+(?j,[0-9]+)?)\s*%/);
       if(!match)return;
       const share=parseNumber(match[1]);
       if(!Number.isFinite(share))return;
@@ -200,14 +200,16 @@
     let rankingMismatch=0;
     root.querySelectorAll('.osflr-bars').forEach(group=>{
       const rows=[...group.children].filter(row=>row.matches?.('.osflr-bar-row,.osflr-bar'));
-      const values=rows.map(row=>parseNumber(directChild(row,'B')?.textContent));
+      const labels=rows.map(row=>directChild(row,'B')?.textContent||'');
+      const values=labels.map(parseNumber);
       const finite=values.filter(Number.isFinite);
       if(finite.length<2)return;
-      const max=Math.max(1,...finite);
+      const percentMode=labels.every(label=>String(label).includes('%'));
+      const max=percentMode?100:Math.max(1,...finite);
       rows.forEach((row,i)=>{
         if(!Number.isFinite(values[i]))return;
         const actual=Number(row.querySelector('[data-osfl-proportional-svg="1001"]')?.getAttribute('data-osfl-percent'));
-        const expected=100*values[i]/max;
+        const expected=percentMode?clamp(values[i]):100*values[i]/max;
         if(!Number.isFinite(actual)||Math.abs(actual-expected)>0.8)rankingMismatch++;
       });
     });
