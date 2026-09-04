@@ -10,11 +10,13 @@
  */
 (function atlasEntity360ForceAuthority20260903(){
   const FLAG='__ATLAS_ENTITY360_FORCE_AUTHORITY__';
-  const BUILD='20260903-e360-force2';
+  const BUILD='20260903-e360-force3';
   const MODULE_BUILD='20260903-e360-3';
   const EXEC_JS='./assets/atlas-entity360-executive-20260903.js?v=20260903-force2';
   const EXEC_CSS='./assets/atlas-entity360-executive-20260903.css?v=20260903-force2';
   const FORCE_CSS='./assets/atlas-entity360-force-authority-20260903.css?v=20260903-force2';
+  const POLISH_JS='./assets/atlas-entity360-polish-20260903.js?v=20260903-polish1';
+  const POLISH_CSS='./assets/atlas-entity360-polish-20260903.css?v=20260903-polish1';
   if(window[FLAG]?.build===BUILD)return;
 
   let observer=null;
@@ -70,10 +72,22 @@
     document.head.appendChild(link);
   }
 
+  function ensurePolishAssets(){
+    ensureLink(POLISH_CSS,'atlas-e360-polish-css');
+    if(window.__ATLAS_ENTITY360_POLISH__?.active)return true;
+    if(document.querySelector('script[data-atlas-e360-polish-js]'))return false;
+    const script=document.createElement('script');
+    script.src=POLISH_JS;script.async=false;script.setAttribute('data-atlas-e360-polish-js','1');
+    script.onload=()=>{try{window.__ATLAS_ENTITY360_POLISH__?.apply?.();}catch(_e){}};
+    document.body.appendChild(script);
+    return false;
+  }
+
   function ensureAssets(){
     bridgeCanonicalState();
     ensureLink(EXEC_CSS,'atlas-e360-force-exec-css');
     ensureLink(FORCE_CSS,'atlas-e360-force-css');
+    ensurePolishAssets();
     const api=window.__ATLAS_ENTITY360_EXECUTIVE__;
     if(api?.active&&api.build===MODULE_BUILD)return true;
     if(loading||document.querySelector('script[data-atlas-e360-force-exec-js]'))return false;
@@ -117,6 +131,7 @@
       const target=host.querySelector('.e360-head-side')||host.querySelector('.e360-head')||host;
       target.insertBefore(badge,target.firstChild);
     }
+    try{window.__ATLAS_ENTITY360_POLISH__?.apply?.();}catch(_e){}
   }
 
   function ensureAdvancedReturn(root){
@@ -143,22 +158,22 @@
     ensureAssets();ensurePlaceholder(entityId);
     const api=window.__ATLAS_ENTITY360_EXECUTIVE__;
     if(!api?.active||api.build!==MODULE_BUILD){
-      window[FLAG]={active:true,build:BUILD,moduleBuildRequired:MODULE_BUILD,entityId,waitingForExecutive:true,lastReason:reason,checkedAt:now()};
+      window[FLAG]={active:true,build:BUILD,moduleBuildRequired:MODULE_BUILD,polishBuild:'20260903-e360-polish1',entityId,waitingForExecutive:true,lastReason:reason,checkedAt:now()};
       return;
     }
     const current=window.__ATLAS_ENTITY360_EXECUTIVE_STATE__;
     const host=document.querySelector('#atlas-entity360-executive');
     const correct=host&&String(current?.entityId||host.dataset.entityId||'')===entityId&&current?.build===MODULE_BUILD&&!host.classList.contains('e360-force-placeholder');
-    if(correct){lastEntity=entityId;markProduction(entityId);window[FLAG]={active:true,build:BUILD,moduleBuild:MODULE_BUILD,entityId,present:true,hydrated:!!current?.hydrated,lastReason:reason,checkedAt:now()};return;}
+    if(correct){lastEntity=entityId;markProduction(entityId);window[FLAG]={active:true,build:BUILD,moduleBuild:MODULE_BUILD,polishBuild:'20260903-e360-polish1',entityId,present:true,hydrated:!!current?.hydrated,lastReason:reason,checkedAt:now()};return;}
     inflight=true;
     try{
       if(entityId!==lastEntity){rootForEntity()?.classList.remove('e360-advanced-open');lastEntity=entityId;}
       await api.open(entityId,{entity_id:entityId});
       markProduction(entityId);
       const finalState=window.__ATLAS_ENTITY360_EXECUTIVE_STATE__;
-      window[FLAG]={active:true,build:BUILD,moduleBuild:MODULE_BUILD,entityId,present:!!document.querySelector('#atlas-entity360-executive'),hydrated:!!finalState?.hydrated,lastReason:reason,mountedAt:now()};
+      window[FLAG]={active:true,build:BUILD,moduleBuild:MODULE_BUILD,polishBuild:'20260903-e360-polish1',entityId,present:!!document.querySelector('#atlas-entity360-executive'),hydrated:!!finalState?.hydrated,lastReason:reason,mountedAt:now()};
     }catch(error){
-      window[FLAG]={active:true,build:BUILD,moduleBuild:MODULE_BUILD,entityId,present:!!document.querySelector('#atlas-entity360-executive'),error:String(error?.message||error),lastReason:reason,failedAt:now()};
+      window[FLAG]={active:true,build:BUILD,moduleBuild:MODULE_BUILD,polishBuild:'20260903-e360-polish1',entityId,present:!!document.querySelector('#atlas-entity360-executive'),error:String(error?.message||error),lastReason:reason,failedAt:now()};
     }finally{inflight=false;}
   }
 
@@ -174,7 +189,7 @@
       const advanced=event.target.closest?.('[data-e360-lens]');if(advanced)openAdvanced(advanced);
       const back=event.target.closest?.('[data-e360-return-summary]');if(back){const root=rootForEntity();root?.classList.remove('e360-advanced-open');document.querySelector('#atlas-entity360-executive')?.scrollIntoView({behavior:'smooth',block:'start'});}
     },true);
-    window[FLAG]={active:true,build:BUILD,moduleBuildRequired:MODULE_BUILD,observer:true,canonicalStateBridge:!!window.amlState,installedAt:now()};
+    window[FLAG]={active:true,build:BUILD,moduleBuildRequired:MODULE_BUILD,polishBuild:'20260903-e360-polish1',observer:true,canonicalStateBridge:!!window.amlState,installedAt:now()};
     [0,60,180,450,1000,2500,5000].forEach(ms=>setTimeout(()=>schedule(`startup-${ms}`,0),ms));
     setInterval(()=>{
       bridgeCanonicalState();

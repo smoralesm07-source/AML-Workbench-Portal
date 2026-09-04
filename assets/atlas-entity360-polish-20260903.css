@@ -1,0 +1,206 @@
+/* ATLAS AML · Entidad 360 · Proposal 3 visual refinement · 2026-09-03 */
+#atlas-entity360-executive.e360-history-host{
+  --eh-bg:#07121f;
+  --eh-panel:#0a1726;
+  --eh-panel2:#0e2033;
+  --eh-panel3:#10253a;
+  --eh-line:#18324a;
+  --eh-line-soft:#122a40;
+  --eh-ink:#edf5ff;
+  --eh-ink2:#b9c9db;
+  --eh-muted:#738ba3;
+  --eh-faint:#58718a;
+  --eh-blue:#2d7df5;
+  --eh-cyan:#29c4dc;
+  --eh-teal:#20b6aa;
+  --eh-green:#44be83;
+  --eh-amber:#e6a43a;
+  --eh-red:#e8626b;
+  --eh-purple:#8d7af2;
+  --eh-shadow:0 12px 30px rgba(0,0,0,.16);
+  margin-bottom:14px;
+}
+#atlas-entity360-executive.e360-history-host .e360-history{font-size:12px;letter-spacing:0}
+#atlas-entity360-executive.e360-history-host svg{display:block;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+#atlas-entity360-executive .eh-layout{grid-template-columns:minmax(0,1fr) 282px;gap:10px}
+#atlas-entity360-executive .eh-main{display:grid;gap:10px}
+#atlas-entity360-executive .eh-side{gap:10px;top:6px}
+#atlas-entity360-executive .eh-story-head{grid-template-columns:minmax(330px,1.62fr) repeat(3,minmax(150px,.92fr));gap:8px;margin:0}
+#atlas-entity360-executive .eh-identity,
+#atlas-entity360-executive .eh-insight,
+#atlas-entity360-executive .eh-history,
+#atlas-entity360-executive .eh-card,
+#atlas-entity360-executive .eh-character,
+#atlas-entity360-executive .eh-compare{
+  background:linear-gradient(180deg,rgba(10,24,39,.99),rgba(7,18,31,.99));
+  border-color:var(--eh-line);
+  border-radius:10px;
+  box-shadow:var(--eh-shadow);
+}
+#atlas-entity360-executive .eh-identity,
+#atlas-entity360-executive .eh-insight,
+#atlas-entity360-executive .eh-card,
+#atlas-entity360-executive .eh-character,
+#atlas-entity360-executive .eh-compare{transition:border-color .16s ease,background-color .16s ease,transform .16s ease}
+#atlas-entity360-executive .eh-insight:hover,
+#atlas-entity360-executive .eh-card:hover{border-color:#254965;background:linear-gradient(180deg,rgba(12,29,47,.99),rgba(7,20,34,.99))}
+#atlas-entity360-executive .eh-identity{grid-template-columns:54px minmax(0,1fr);gap:11px;padding:12px 14px;min-height:88px}
+#atlas-entity360-executive .eh-entity-icon{width:50px;height:50px;border-radius:12px;border:1px solid rgba(45,125,245,.5);background:linear-gradient(145deg,rgba(45,125,245,.16),rgba(41,196,220,.035));color:#9ed6ff;font-size:0;box-shadow:inset 0 0 0 1px rgba(255,255,255,.015)}
+#atlas-entity360-executive .eh-entity-icon svg{width:25px;height:25px}
+#atlas-entity360-executive .eh-title-line h2{font-size:17px;line-height:1.05;font-weight:740;letter-spacing:-.025em}
+#atlas-entity360-executive .eh-title-line{gap:7px}
+#atlas-entity360-executive .eh-status{padding:3px 6px;font-size:8px}
+#atlas-entity360-executive .eh-idline{margin-top:5px;gap:6px 10px;font-size:9.5px}
+#atlas-entity360-executive .eh-tags{margin-top:7px;gap:4px}
+#atlas-entity360-executive .eh-tags span{display:inline-flex;align-items:center;gap:5px;padding:3px 6px;border-radius:5px;font-size:7.8px;background:rgba(45,125,245,.05);border-color:rgba(41,196,220,.23);color:#8dcce8}
+#atlas-entity360-executive .eh-tags span:before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;box-shadow:0 0 7px currentColor;opacity:.8}
+#atlas-entity360-executive .eh-insight{grid-template-columns:30px minmax(0,1fr);gap:9px;padding:11px 12px;min-height:88px}
+#atlas-entity360-executive .eh-insight-icon{width:30px;height:30px;border-radius:8px;font-size:0;border:1px solid rgba(45,125,245,.18);background:linear-gradient(145deg,rgba(45,125,245,.14),rgba(45,125,245,.035));color:#78bcff}
+#atlas-entity360-executive .eh-insight.cyan .eh-insight-icon{border-color:rgba(41,196,220,.2);background:rgba(41,196,220,.07);color:#69ddea}
+#atlas-entity360-executive .eh-insight.amber .eh-insight-icon{border-color:rgba(230,164,58,.2);background:rgba(230,164,58,.07);color:#f2bb64}
+#atlas-entity360-executive .eh-insight-icon svg{width:16px;height:16px}
+#atlas-entity360-executive .eh-insight span{font-size:9px;line-height:1.1;font-weight:760;color:#d8e5f2}
+#atlas-entity360-executive .eh-insight p{margin:5px 0 0;font-size:9.1px;line-height:1.38;color:var(--eh-muted);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+#atlas-entity360-executive .eh-kicker{font-size:7.4px;letter-spacing:.14em;color:#607c98}
+#atlas-entity360-executive .eh-history h3,
+#atlas-entity360-executive .eh-card h3,
+#atlas-entity360-executive .eh-character h3,
+#atlas-entity360-executive .eh-compare h3{font-size:12.5px;letter-spacing:-.01em}
+#atlas-entity360-executive .eh-history{padding:13px 14px 10px;overflow:hidden}
+#atlas-entity360-executive .eh-history>header{gap:10px;align-items:center}
+#atlas-entity360-executive .eh-history header p{margin-top:3px;font-size:8.7px;line-height:1.35}
+#atlas-entity360-executive .eh-history-actions{gap:3px}
+#atlas-entity360-executive .eh-history-actions button,
+#atlas-entity360-executive .eh-card header button{min-width:28px;height:26px;padding:5px 7px;border-radius:6px;font-size:8px;background:#091625;border-color:#183149}
+#atlas-entity360-executive .eh-history-actions button.active{background:linear-gradient(180deg,#153d70,#102f58);border-color:#245896;color:#b9dcff;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+#atlas-entity360-executive .eh-card header button{height:24px;min-width:auto;padding-inline:8px}
+#atlas-entity360-executive .eh-filters{gap:4px;margin:9px 0 4px}
+#atlas-entity360-executive .eh-filter{gap:4px;padding:4px 6px;border-radius:5px;font-size:7.5px;background:#081523}
+#atlas-entity360-executive .eh-filter i{width:5px;height:5px}
+#atlas-entity360-executive .eh-filter b{font-size:7px}
+#atlas-entity360-executive .eh-timeline-wrap{padding:3px 0 4px}
+#atlas-entity360-executive .eh-timeline{gap:4px;min-height:205px;padding:7px 2px 24px}
+#atlas-entity360-executive .eh-timeline:before{top:103px;height:1px;background:linear-gradient(90deg,rgba(45,125,245,.82),rgba(41,196,220,.5),rgba(143,164,186,.22))}
+#atlas-entity360-executive .eh-timeline.zoom-1 .eh-event{min-width:138px}
+#atlas-entity360-executive .eh-timeline.zoom-2 .eh-event{min-width:162px}
+#atlas-entity360-executive .eh-timeline.zoom-3 .eh-event{min-width:194px}
+#atlas-entity360-executive .eh-event{height:88px;flex-basis:162px;padding:0 6px}
+#atlas-entity360-executive .eh-event.bottom{margin-top:101px}
+#atlas-entity360-executive .eh-event:before{left:21px;height:24px;border-color:#244057}
+#atlas-entity360-executive .eh-event.top:before{top:75px}
+#atlas-entity360-executive .eh-event.bottom:before{bottom:73px}
+#atlas-entity360-executive .eh-event:after{left:18px;width:7px;height:7px;box-shadow:0 0 0 2px rgba(45,125,245,.12)}
+#atlas-entity360-executive .eh-event.top:after{top:100px}
+#atlas-entity360-executive .eh-event.bottom:after{bottom:100px}
+#atlas-entity360-executive .eh-event-icon{width:24px;height:24px;border-radius:7px;font-size:0;background:rgba(45,125,245,.12)}
+#atlas-entity360-executive .eh-event-icon svg{width:13px;height:13px}
+#atlas-entity360-executive .eh-event-copy{margin-top:5px}
+#atlas-entity360-executive .eh-event-copy b{font-size:7.7px;color:#a5bbcf}
+#atlas-entity360-executive .eh-event-copy strong{margin-top:2px;font-size:8.9px;line-height:1.22}
+#atlas-entity360-executive .eh-event-copy small{margin-top:2px;font-size:7.8px;line-height:1.26;-webkit-line-clamp:2}
+#atlas-entity360-executive .eh-axis{top:100px}
+#atlas-entity360-executive .eh-axis span{transform:translateY(9px);font-size:7px;padding:0 2px;background:#091827}
+#atlas-entity360-executive .eh-event:hover .eh-event-icon{transform:translateY(-1px);box-shadow:0 0 0 2px rgba(41,196,220,.11),0 5px 14px rgba(0,0,0,.18)}
+#atlas-entity360-executive .eh-event-drawer{right:8px;top:55px;width:min(302px,calc(100% - 20px));padding:14px;border-radius:9px;background:rgba(6,17,29,.99);box-shadow:0 20px 48px rgba(0,0,0,.42)}
+#atlas-entity360-executive .eh-event-drawer h4{font-size:12px;margin-top:8px}
+#atlas-entity360-executive .eh-event-drawer p{font-size:9px;line-height:1.4}
+#atlas-entity360-executive .eh-event-drawer dl div{padding:6px 0}
+#atlas-entity360-executive .eh-bottom-grid{gap:8px;margin-top:0;grid-template-columns:repeat(4,minmax(0,1fr))}
+#atlas-entity360-executive .eh-card{padding:11px 12px;min-height:164px}
+#atlas-entity360-executive .eh-card header{position:relative;display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:7px;align-items:center;margin-bottom:9px}
+#atlas-entity360-executive .eh-card header>div{min-width:0}
+#atlas-entity360-executive .eh-section-icon{width:22px;height:22px;display:grid;place-items:center;border-radius:6px;border:1px solid rgba(41,196,220,.17);background:rgba(45,125,245,.06);color:#76bad9}
+#atlas-entity360-executive .eh-section-icon svg{width:12px;height:12px}
+#atlas-entity360-executive .eh-san .eh-section-icon{color:#e9797f;border-color:rgba(232,98,107,.18);background:rgba(232,98,107,.05)}
+#atlas-entity360-executive .eh-res .eh-section-icon{color:#52d7dc}
+#atlas-entity360-executive .eh-spend .eh-section-icon{color:#55d0bd}
+#atlas-entity360-executive .eh-san-total{gap:6px}
+#atlas-entity360-executive .eh-san-total b{font-size:20px;line-height:1}
+#atlas-entity360-executive .eh-san-total span{font-size:7.8px}
+#atlas-entity360-executive .eh-san-bars{gap:4px;margin-top:8px}
+#atlas-entity360-executive .eh-san-bars div,
+#atlas-entity360-executive .eh-mini-grid div{position:relative;padding:7px 7px 8px;border-radius:6px;background:#091725;overflow:hidden}
+#atlas-entity360-executive .eh-san-bars div:after{content:'';position:absolute;left:0;bottom:0;width:var(--eh-meter,8%);height:2px;background:linear-gradient(90deg,var(--eh-red),var(--eh-amber));opacity:.75}
+#atlas-entity360-executive .eh-san-bars span,
+#atlas-entity360-executive .eh-mini-grid span{font-size:7px}
+#atlas-entity360-executive .eh-san-bars b,
+#atlas-entity360-executive .eh-mini-grid b{font-size:11px;margin-top:2px}
+#atlas-entity360-executive .eh-card p{font-size:8.2px;line-height:1.35;margin:7px 0 0}
+#atlas-entity360-executive .eh-card>small{margin-top:6px;font-size:7.5px;line-height:1.3}
+#atlas-entity360-executive .eh-res-logo{font-size:24px;margin-top:2px}
+#atlas-entity360-executive .eh-res-state{margin:6px 0}
+#atlas-entity360-executive .eh-res-state span{font-size:6.8px}
+#atlas-entity360-executive .eh-res-state b{font-size:8.8px;line-height:1.25}
+#atlas-entity360-executive .eh-spend-body{gap:9px;align-items:center}
+#atlas-entity360-executive .eh-spend-body>div>strong{font-size:14px;line-height:1.05}
+#atlas-entity360-executive .eh-spend-body>div>span{font-size:7.2px}
+#atlas-entity360-executive .eh-donut{width:66px;height:66px}
+#atlas-entity360-executive .eh-donut .base{stroke:#17324a;stroke-width:5}
+#atlas-entity360-executive .eh-donut .value{stroke:var(--eh-teal);stroke-width:5;filter:drop-shadow(0 0 3px rgba(32,182,170,.18))}
+#atlas-entity360-executive .eh-donut text{fill:#d7eef4;stroke:none;font-size:6px}
+#atlas-entity360-executive .eh-donut text+text{fill:#6f91a7;font-size:4px}
+#atlas-entity360-executive .eh-docs ul{gap:4px}
+#atlas-entity360-executive .eh-docs li{padding:6px 7px;border-radius:6px;background:#091725;border-color:#142f46}
+#atlas-entity360-executive .eh-docs li span{font-size:7.5px}
+#atlas-entity360-executive .eh-docs li code{font-size:6.8px}
+#atlas-entity360-executive .eh-empty{padding:9px 10px;border-radius:6px;min-height:70px}
+#atlas-entity360-executive .eh-empty b{font-size:8.6px}
+#atlas-entity360-executive .eh-empty span{font-size:7.7px;line-height:1.3;margin-top:4px}
+#atlas-entity360-executive .eh-character,
+#atlas-entity360-executive .eh-compare{padding:12px}
+#atlas-entity360-executive .eh-character header,
+#atlas-entity360-executive .eh-compare header{margin-bottom:7px}
+#atlas-entity360-executive .eh-character-row{position:relative;display:grid;grid-template-columns:22px minmax(0,1fr);column-gap:7px;align-items:center;padding:7px 0;border-bottom:1px dashed #153047}
+#atlas-entity360-executive .eh-row-icon{grid-row:1/4;width:20px;height:20px;display:grid;place-items:center;border-radius:5px;background:#0d2032;border:1px solid #173750;color:#6baed0}
+#atlas-entity360-executive .eh-row-icon svg{width:11px;height:11px}
+#atlas-entity360-executive .eh-character-row>span,
+#atlas-entity360-executive .eh-character-row>b,
+#atlas-entity360-executive .eh-character-row>small{grid-column:2}
+#atlas-entity360-executive .eh-character-row>span{font-size:6.8px;text-transform:none;letter-spacing:0;color:#5e7891}
+#atlas-entity360-executive .eh-character-row>b{font-size:8.6px;line-height:1.25;margin-top:1px;color:#cfdeeb;font-weight:650}
+#atlas-entity360-executive .eh-character-row>small{font-size:6.8px;line-height:1.28;margin-top:2px;color:#58718a}
+#atlas-entity360-executive .eh-secondary{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:30px;margin-top:9px;border:1px solid #1c3c58;border-radius:7px;background:linear-gradient(180deg,#0d2034,#0a1929);color:#c9d8e8;font:650 8.6px/1 inherit;cursor:pointer}
+#atlas-entity360-executive .eh-secondary:hover{border-color:#2b5f8c;background:linear-gradient(180deg,#133055,#0c223c);color:#edf5ff}
+#atlas-entity360-executive .eh-button-arrow{width:12px;height:12px;display:inline-flex}
+#atlas-entity360-executive .eh-button-arrow svg{width:12px;height:12px}
+#atlas-entity360-executive .eh-compare-tabs{display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:2px;margin-top:7px;border:1px solid #17354d;border-radius:7px;background:#081624}
+#atlas-entity360-executive .eh-compare-tabs button{height:28px;border:0;border-radius:5px;background:transparent;color:#7c93a9;font:650 8.8px/1 inherit;cursor:pointer}
+#atlas-entity360-executive .eh-compare-tabs button.active{background:linear-gradient(180deg,#17467f,#133b6d);color:#dbeeff;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+#atlas-entity360-executive .eh-compare-body{margin-top:8px;display:grid;grid-template-columns:1fr;gap:6px;padding:8px 9px;border:1px solid #142f46;border-radius:7px;background:#091725}
+#atlas-entity360-executive .eh-compare-body>div span{display:block;font-size:6.8px;color:#617b93}
+#atlas-entity360-executive .eh-compare-body>div b{display:block;margin-top:2px;font-size:12px;color:#eff6fd;line-height:1}
+#atlas-entity360-executive .eh-compare-body>div small{display:block;margin-top:5px;font-size:7.4px;line-height:1.25;color:#aebed0;text-transform:uppercase;letter-spacing:.05em}
+#atlas-entity360-executive .eh-compare-body p{margin:0;padding-top:6px;border-top:1px solid #132b40;font-size:7.5px;line-height:1.35;color:#607b93}
+#atlas-entity360-executive .eh-footer{margin-top:10px;padding:8px 10px;border-top:1px solid #132c42;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:7px;align-items:center;color:#688198}
+#atlas-entity360-executive .eh-footer p{margin:0;font-size:7.5px;line-height:1.25}
+#atlas-entity360-executive .eh-footer b{font-size:7.3px;font-weight:600;color:#8198ad}
+#content .a45.e360-modern.e360-advanced-open>.a45-lenses,
+#content .a45.e360-modern.e360-advanced-open>main{filter:saturate(.58) contrast(.98)}
+@media(max-width:1280px){
+  #atlas-entity360-executive .eh-layout{grid-template-columns:minmax(0,1fr) 250px}
+  #atlas-entity360-executive .eh-story-head{grid-template-columns:minmax(300px,1.55fr) repeat(3,minmax(138px,.9fr))}
+  #atlas-entity360-executive .eh-insight p{-webkit-line-clamp:2}
+}
+@media(max-width:1080px){
+  #atlas-entity360-executive .eh-layout{grid-template-columns:1fr}
+  #atlas-entity360-executive .eh-side{position:static;grid-template-columns:1fr 1fr}
+  #atlas-entity360-executive .eh-story-head{grid-template-columns:repeat(3,1fr)}
+  #atlas-entity360-executive .eh-identity{grid-column:1/-1}
+  #atlas-entity360-executive .eh-bottom-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:720px){
+  #atlas-entity360-executive .eh-story-head,
+  #atlas-entity360-executive .eh-side,
+  #atlas-entity360-executive .eh-bottom-grid{grid-template-columns:1fr}
+  #atlas-entity360-executive .eh-history>header{align-items:flex-start;flex-direction:column}
+  #atlas-entity360-executive .eh-history-actions{justify-content:flex-start}
+  #atlas-entity360-executive .eh-identity{grid-template-columns:44px 1fr}
+  #atlas-entity360-executive .eh-entity-icon{width:42px;height:42px}
+}
+@media(prefers-reduced-motion:reduce){
+  #atlas-entity360-executive .eh-identity,
+  #atlas-entity360-executive .eh-insight,
+  #atlas-entity360-executive .eh-card,
+  #atlas-entity360-executive .eh-character,
+  #atlas-entity360-executive .eh-compare{transition:none}
+}
