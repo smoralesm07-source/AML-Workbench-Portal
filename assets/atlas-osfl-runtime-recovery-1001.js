@@ -15,8 +15,9 @@
   const clientReady=()=>!!(window.sb&&typeof window.sb.from==='function');
   const root=()=>document.querySelector('[data-osflr-root]');
   const anchor=()=>document.querySelector('.v030-hero,.atlas-osfl-hero');
-  const pane=()=>document.querySelector('[data-pane="osfl"]');
-  const inOsflContext=()=>!!(root()||anchor()||pane());
+  const activeNav=()=>document.querySelector('.v019-nav-btn[data-view="osfl"].active,.atlas-nav-btn[data-view="osfl"].active');
+  const routeState=()=>{try{return window.state?.view||'';}catch{return '';}};
+  const inOsflContext=()=>routeState()==='osfl'||!!activeNav()||!!root()||!!anchor();
 
   function isHydrated(){
     const r=root();
@@ -107,7 +108,7 @@
   window.addEventListener('focus',()=>setTimeout(()=>check('focus'),120));
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(()=>check('visible'),120);});
   document.addEventListener('click',ev=>{
-    const target=ev.target?.closest?.('[data-route="osfl"],[data-nav="osfl"],[href*="osfl"]');
+    const target=ev.target?.closest?.('[data-view="osfl"],[data-atlas-mobile-view="osfl"],[data-route="osfl"],[data-nav="osfl"],[href*="osfl"]');
     if(target) setTimeout(()=>check('osfl-navigation'),220);
   },true);
 
