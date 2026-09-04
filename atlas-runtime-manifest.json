@@ -70,501 +70,104 @@
     "assets/atlas-osfl-economic-0950.css"
   ],
   "scripts": [
-    {
-      "path": "v0333-auth-preflight.js",
-      "type": "classic",
-      "role": "auth-preflight"
-    },
-    {
-      "path": "app.js",
-      "type": "classic",
-      "role": "core"
-    },
-    {
-      "path": "v0422-auth-bootstrap-fix.js",
-      "type": "classic",
-      "role": "auth-rescue"
-    },
-    {
-      "path": "app-v016.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "rules-v016.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v017-core.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v017-ui.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v017-domain.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v017-findings.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v017-views.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v017-entity.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v018-ui.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v018-views.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v019-live.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0191-tuning.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0191-csp.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0192-ux.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0193-uaf.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0193-core.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0193-questions.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0193-territory.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0194-home.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0194-bridge.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v020-radar.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0201-insights.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0201-fixes.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0202-alerts.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0203-dashboard.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0204-uaf-indicators.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0205-reconciliation.js",
-      "type": "classic",
-      "role"": "feature"
-    },
-    {
-      "path": "v0206-stability.js",
-      "type": "classic",
-      "role": "data-loader"
-    },
-    {
-      "path": "v0207-freshness.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0209-entity-consolidation.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0210-reconciliation-analysis.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0211-bootstrap.js",
-      "type": "classic",
-      "role": "startup-barrier"
-    },
-    {
-      "path": "v022-territory-risk.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0221-hotfix.js",
-      "type": "classic",
-      "role": "retained-feature-hardening"
-    },
-    {
-      "path": "v0222-radar-hotfix.js",
-      "type": "classic",
-      "role": "retained-feature-hardening"
-    },
-    {
-      "path": "v023-ipa3-shadow.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v024-dashboard-feedback.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0241-reconciliation-restore.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v025-territory-ipa.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v025-territory-ipa-hardening.js",
-      "type": "classic",
-      "role": "feature-hardening"
-    },
-    {
-      "path": "v026-territory-causal-profile.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v026-territory-profile-legend.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v027-model-consistency.js",
-      "type": "classic",
-      "role": "model-guard"
-    },
-    {
-      "path": "v027-source-null-hardening.js",
-      "type": "classic",
-      "role": "source-guard"
-    },
-    {
-      "path": "v028-ipa3-global.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v028-sanctions-ipa3.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v029-territory-analytics.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v030-osfl.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0301-osfl-consistency.js",
-      "type": "classic",
-      "role": "feature-hardening"
-    },
-    {
-      "path": "v0302-performance.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0311-uaf-fallback.js",
-      "type": "classic",
-      "role": "fallback"
-    },
-    {
-      "path": "v031-territory-cockpit.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0312-territory-refinement.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v032-osfl-expert.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0321-osfl-polish.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v032-irg-territory.js",
-      "type": "module",
-      "role": "feature"
-    },
-    {
-      "path": "v0331-radar-layout.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "v0332-radar-intelligence.js",
-      "type": "classic",
-      "role": "feature"
-    },
-    {
-      "path": "atlas-cgr-bridge.js",
-      "type": "classic",
-      "role": "current-bridge"
-    },
-    {
-      "path": "v036-radar-integrado-real.js",
-      "type": "classic",
-      "role": "radar-integrado"
-    },
-    {
-      "path": "v036-radar-integrado-hardening.js",
-      "type": "classic",
-      "role": "radar-integrado"
-    },
-    {
-      "path": "v036-radar-integrado-crosswalk.js",
-      "type": "classic",
-      "role": "radar-integrado"
-    },
-    {
-      "path": "v037-public-spend.js",
-      "type": "classic",
-      "role": "public-spend"
-    },
-    {
-      "path": "v036-radar-integrado-runtime-fix.js",
-      "type": "classic",
-      "role": "radar-integrado-current-fix"
-    },
-    {
-      "path": "v0402-reconciliation-live.js",
-      "type": "classic",
-      "role": "uaf-sii-current"
-    },
-    {
-      "path": "v038-entity360.js",
-      "type": "classic",
-      "role": "entity360-detail-legacy-helper"
-    },
-    {
-      "path": "v0391-entity-entry.js",
-      "type": "classic",
-      "role": "entity360-six-lens-current-authority"
-    },
-    {
-      "path": "v0344-public-entities.module.js",
-      "type": "module",
-      "role": "public-entity-context"
-    },
-    {
-      "path": "v0401-radar-graphics-fix.js",
-      "type": "classic",
-      "role": "graphics-current"
-    },
-    {
-      "path": "v0402-aie-brand.js",
-      "type": "classic",
-      "role": "branding-current"
-    },
-    {
-      "path": "atlas-sanctions-v12-approved-01.js",
-      "type": "classic",
-      "role": "sanctions-v12-approved-fallback"
-    },
-    {
-      "path": "atlas-sanctions-v12-approved-02.js",
-      "type": "classic",
-      "role": "sanctions-v12-approved-fallback"
-    },
-    {
-      "path": "atlas-sanctions-v12-approved-03.js",
-      "type": "classic",
-      "role": "sanctions-v12-approved-fallback"
-    },
-    {
-      "path": "atlas-sanctions-v12-approved-04.js",
-      "type": "classic",
-      "role": "sanctions-v12-approved-fallback"
-    },
-    {
-      "path": "atlas-sanctions-v12-approved-05.js",
-      "type": "classic",
-      "role": "sanctions-v12-approved-fallback"
-    },
-    {
-      "path": "atlas-sanctions-v12-approved-06.js",
-      "type": "classic",
-      "role": "sanctions-v12-approved-fallback"
-    },
-    {
-      "path": "assets/atlas-sanctions-spectrum-0940.js",
-      "type": "classic",
-      "role": "sanctions-spectrum-fallback-0940"
-    },
-    {
-      "path": "assets/atlas-sanctions-radiography-0960.js",
-      "type": "classic",
-      "role": "sanctions-radiography-current-authority-0960"
-    },
-    {
-      "path": "atlas-sanctions-v12-route.js",
-      "type": "classic",
-      "role": "sanctions-radiography-route-authority-0960"
-    },
-    {
-      "path": "atlas-current-ui.js",
-      "type": "classic",
-      "role": "ui-authority"
-    },
-    {
-      "path": "atlas-current-analytics.js",
-      "type": "classic",
-      "role": "analytics-visual-authority"
-    },
-    {
-      "path": "v0434-reconciliation-command.js",
-      "type": "classic",
-      "role": "uaf-sii-reconciliation-command"
-    },
-    {
-      "path": "v0435-reconciliation-fix.js",
-      "type": "classic",
-      "role": "uaf-sii-reconciliation-hardening"
-    },
-    {
-      "path": "v0444-backend-stability.js",
-      "type": "classic",
-      "role": "backend-stability-reconciliation-summary"
-    },
-    {
-      "path": "v0446-reconciliation-interactions.js",
-      "type": "classic",
-      "role": "reconciliation-global-crossfilter-current"
-    },
-    {
-      "path": "atlas-reportability-current.js",
-      "type": "classic",
-      "role": "reportability-methodology-current-authority"
-    },
-    {
-      "path": "v0443-auth-ui-stability.js",
-      "type": "classic",
-      "role": "auth-ui-stability-final-guard"
-    },
-    {
-      "path": "v0447-entity-workspace.js",
-      "type": "classic",
-      "role": "entity360-single-workspace-autocomplete-current"
-    },
-    {
-      "path": "v0448-entity-route-authority.js",
-      "type": "classic",
-      "role": "entity360-route-current-authority"
-    },
-    {
-      "path": "v0449-entity-tax-docauth.js",
-      "type": "classic",
-      "role": "entity360-sii-document-authorization-current"
-    },
-    {
-      "path": "v0442-session-stability.module.js",
-      "type": "module",
-      "role": "auth-session-passive-stability-and-entity-final-pin"
-    },
-    {
-      "path": "assets/atlas-ui-authority-0901.js",
-      "type": "classic",
-      "role": "final-ui-runtime-authority"
-    },
-    {
-      "path": "assets/atlas-osfl-economic-0950.js",
-      "type": "classic",
-      "role": "osfl-economic-public-funds-current-0950"
-    },
-    {
-      "path": "assets/atlas-osfl-route-authority-0950.js",
-      "type": "classic",
-      "role": "osfl-route-install-current-authority-0950"
-    },
-    {
-      "path": "assets/atlas-osfl-graphics-authority-0951.module.js",
-      "type": "module",
-      "role": "osfl-graphics-cache-busting-authority-0951"
-    },
-    {
-      "path": "assets/atlas-osfl-graphics-final-1001.js",
-      "type": "classic",
-      "role": "osfl-graphics-final-runtime-1001"
-    }
+    {"path":"v0333-auth-preflight.js","type":"classic","role":"auth-preflight"},
+    {"path":"app.js","type":"classic","role":"core"},
+    {"path":"v0422-auth-bootstrap-fix.js","type":"classic","role":"auth-rescue"},
+    {"path":"app-v016.js","type":"classic","role":"feature"},
+    {"path":"rules-v016.js","type":"classic","role":"feature"},
+    {"path":"v017-core.js","type":"classic","role":"feature"},
+    {"path":"v017-ui.js","type":"classic","role":"feature"},
+    {"path":"v017-domain.js","type":"classic","role":"feature"},
+    {"path":"v017-findings.js","type":"classic","role":"feature"},
+    {"path":"v017-views.js","type":"classic","role":"feature"},
+    {"path":"v017-entity.js","type":"classic","role":"feature"},
+    {"path":"v018-ui.js","type":"classic","role":"feature"},
+    {"path":"v018-views.js","type":"classic","role":"feature"},
+    {"path":"v019-live.js","type":"classic","role":"feature"},
+    {"path":"v0191-tuning.js","type":"classic","role":"feature"},
+    {"path":"v0191-csp.js","type":"classic","role":"feature"},
+    {"path":"v0192-ux.js","type":"classic","role":"feature"},
+    {"path":"v0193-uaf.js","type":"classic","role":"feature"},
+    {"path":"v0193-core.js","type":"classic","role":"feature"},
+    {"path":"v0193-questions.js","type":"classic","role":"feature"},
+    {"path":"v0193-territory.js","type":"classic","role":"feature"},
+    {"path":"v0194-home.js","type":"classic","role":"feature"},
+    {"path":"v0194-bridge.js","type":"classic","role":"feature"},
+    {"path":"v020-radar.js","type":"classic","role":"feature"},
+    {"path":"v0201-insights.js","type":"classic","role":"feature"},
+    {"path":"v0201-fixes.js","type":"classic","role":"feature"},
+    {"path":"v0202-alerts.js","type":"classic","role":"feature"},
+    {"path":"v0203-dashboard.js","type":"classic","role":"feature"},
+    {"path":"v0204-uaf-indicators.js","type":"classic","role":"feature"},
+    {"path":"v0205-reconciliation.js","type":"classic","role":"feature"},
+    {"path":"v0206-stability.js","type":"classic","role":"data-loader"},
+    {"path":"v0207-freshness.js","type":"classic","role":"feature"},
+    {"path":"v0209-entity-consolidation.js","type":"classic","role":"feature"},
+    {"path":"v0210-reconciliation-analysis.js","type":"classic","role":"feature"},
+    {"path":"v0211-bootstrap.js","type":"classic","role":"startup-barrier"},
+    {"path":"v022-territory-risk.js","type":"classic","role":"feature"},
+    {"path":"v0221-hotfix.js","type":"classic","role":"retained-feature-hardening"},
+    {"path":"v0222-radar-hotfix.js","type":"classic","role":"retained-feature-hardening"},
+    {"path":"v023-ipa3-shadow.js","type":"classic","role":"feature"},
+    {"path":"v024-dashboard-feedback.js","type":"classic","role":"feature"},
+    {"path":"v0241-reconciliation-restore.js","type":"classic","role":"feature"},
+    {"path":"v025-territory-ipa.js","type":"classic","role":"feature"},
+    {"path":"v025-territory-ipa-hardening.js","type":"classic","role":"feature-hardening"},
+    {"path":"v026-territory-causal-profile.js","type":"classic","role":"feature"},
+    {"path":"v026-territory-profile-legend.js","type":"classic","role":"feature"},
+    {"path":"v027-model-consistency.js","type":"classic","role":"model-guard"},
+    {"path":"v027-source-null-hardening.js","type":"classic","role":"source-guard"},
+    {"path":"v028-ipa3-global.js","type":"classic","role":"feature"},
+    {"path":"v028-sanctions-ipa3.js","type":"classic","role":"feature"},
+    {"path":"v029-territory-analytics.js","type":"classic","role":"feature"},
+    {"path":"v030-osfl.js","type":"classic","role":"feature"},
+    {"path":"v0301-osfl-consistency.js","type":"classic","role":"feature-hardening"},
+    {"path":"v0302-performance.js","type":"classic","role":"feature"},
+    {"path":"v0311-uaf-fallback.js","type":"classic","role":"fallback"},
+    {"path":"v031-territory-cockpit.js","type":"classic","role":"feature"},
+    {"path":"v0312-territory-refinement.js","type":"classic","role":"feature"},
+    {"path":"v032-osfl-expert.js","type":"classic","role":"feature"},
+    {"path":"v0321-osfl-polish.js","type":"classic","role":"feature"},
+    {"path":"v032-irg-territory.js","type":"module","role":"feature"},
+    {"path":"v0331-radar-layout.js","type":"classic","role":"feature"},
+    {"path":"v0332-radar-intelligence.js","type":"classic","role":"feature"},
+    {"path":"atlas-cgr-bridge.js","type":"classic","role":"current-bridge"},
+    {"path":"v036-radar-integrado-real.js","type":"classic","role":"radar-integrado"},
+    {"path":"v036-radar-integrado-hardening.js","type":"classic","role":"radar-integrado"},
+    {"path":"v036-radar-integrado-crosswalk.js","type":"classic","role":"radar-integrado"},
+    {"path":"v037-public-spend.js","type":"classic","role":"public-spend"},
+    {"path":"v036-radar-integrado-runtime-fix.js","type":"classic","role":"radar-integrado-current-fix"},
+    {"path":"v0402-reconciliation-live.js","type":"classic","role":"uaf-sii-current"},
+    {"path":"v038-entity360.js","type":"classic","role":"entity360-detail-legacy-helper"},
+    {"path":"v0391-entity-entry.js","type":"classic","role":"entity360-six-lens-current-authority"},
+    {"path":"v0344-public-entities.module.js","type":"module","role":"public-entity-context"},
+    {"path":"v0401-radar-graphics-fix.js","type":"classic","role":"graphics-current"},
+    {"path":"v0402-aie-brand.js","type":"classic","role":"branding-current"},
+    {"path":"atlas-sanctions-v12-approved-01.js","type":"classic","role":"sanctions-v12-approved-fallback"},
+    {"path":"atlas-sanctions-v12-approved-02.js","type":"classic","role":"sanctions-v12-approved-fallback"},
+    {"path":"atlas-sanctions-v12-approved-03.js","type":"classic","role":"sanctions-v12-approved-fallback"},
+    {"path":"atlas-sanctions-v12-approved-04.js","type":"classic","role":"sanctions-v12-approved-fallback"},
+    {"path":"atlas-sanctions-v12-approved-05.js","type":"classic","role":"sanctions-v12-approved-fallback"},
+    {"path":"atlas-sanctions-v12-approved-06.js","type":"classic","role":"sanctions-v12-approved-fallback"},
+    {"path":"assets/atlas-sanctions-spectrum-0940.js","type":"classic","role":"sanctions-spectrum-fallback-0940"},
+    {"path":"assets/atlas-sanctions-radiography-0960.js","type":"classic","role":"sanctions-radiography-current-authority-0960"},
+    {"path":"atlas-sanctions-v12-route.js","type":"classic","role":"sanctions-radiography-route-authority-0960"},
+    {"path":"atlas-current-ui.js","type":"classic","role":"ui-authority"},
+    {"path":"atlas-current-analytics.js","type":"classic","role":"analytics-visual-authority"},
+    {"path":"v0434-reconciliation-command.js","type":"classic","role":"uaf-sii-reconciliation-command"},
+    {"path":"v0435-reconciliation-fix.js","type":"classic","role":"uaf-sii-reconciliation-hardening"},
+    {"path":"v0444-backend-stability.js","type":"classic","role":"backend-stability-reconciliation-summary"},
+    {"path":"v0446-reconciliation-interactions.js","type":"classic","role":"reconciliation-global-crossfilter-current"},
+    {"path":"atlas-reportability-current.js","type":"classic","role":"reportability-methodology-current-authority"},
+    {"path":"v0443-auth-ui-stability.js","type":"classic","role":"auth-ui-stability-final-guard"},
+    {"path":"v0447-entity-workspace.js","type":"classic","role":"entity360-single-workspace-autocomplete-current"},
+    {"path":"v0448-entity-route-authority.js","type":"classic","role":"entity360-route-current-authority"},
+    {"path":"v0449-entity-tax-docauth.js","type":"classic","role":"entity360-sii-document-authorization-current"},
+    {"path":"v0442-session-stability.module.js","type":"module","role":"auth-session-passive-stability-and-entity-final-pin"},
+    {"path":"assets/atlas-ui-authority-0901.js","type":"classic","role":"final-ui-runtime-authority"},
+    {"path":"assets/atlas-osfl-economic-0950.js","type":"classic","role":"osfl-economic-public-funds-current-0950"},
+    {"path":"assets/atlas-osfl-route-authority-0950.js","type":"classic","role":"osfl-route-install-current-authority-0950"},
+    {"path":"assets/atlas-osfl-graphics-authority-0951.module.js","type":"module","role":"osfl-graphics-cache-busting-authority-0951"}
   ],
   "forbidden_runtime_assets": [
     "v0272-runtime-version.css",
@@ -573,7 +176,7 @@
     "v0342-runtime.js",
     "v0343-final.module.js",
     "v035-radar-command-center.css",
-    "v035-radar-command-center-patch.cs",
+    "v035-radar-command-center-patch.css",
     "v035-radar-command-center.js",
     "v035-radar-command-center-patch.js",
     "v035-final.module.js",
