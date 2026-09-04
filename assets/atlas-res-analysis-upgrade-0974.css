@@ -1,4 +1,4 @@
-/* ATLAS AML · Empresas (RES) · analyst upgrade 0.97.4 */
+/* ATLAS AML · Empresas (RES) · analyst upgrade 0.98.0 */
 
 .res952-root .res974-click-hint{color:var(--r-text);font-weight:800}
 .res952-root .res970-analytics-grid[data-res974="1"]{align-items:stretch}
@@ -9,7 +9,7 @@
 .res952-root .res974-evidence-pulse{animation:res974-evidence-pulse .65s ease}
 @keyframes res974-evidence-pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--r-orange) 26%,transparent)}100%{box-shadow:0 0 0 13px transparent}}
 
-/* 1. Desvíos: dispersión SVG real, sin variables inline bloqueadas por CSP. */
+/* Hallazgos RES: cuatro preguntas analíticas complementarias. */
 .res952-root .res974-scatter{display:block;width:100%;min-height:292px;overflow:visible}
 .res952-root .res974-scatter-grid line{stroke:var(--r-line-soft);stroke-width:1}
 .res952-root .res974-scatter-grid text,.res952-root .res974-axis-label{fill:var(--r-muted);font-size:8px;font-family:inherit}
@@ -18,8 +18,6 @@
 .res952-root .res974-scatter-point text{fill:var(--r-orange);font-size:8px;font-weight:900;pointer-events:none}
 .res952-root .res974-scatter-point:hover circle,.res952-root .res974-scatter-point:focus circle,.res952-root .res974-scatter-point.active circle{fill:var(--r-orange);stroke:var(--r-text);stroke-width:2}
 .res952-root .res974-scatter-point:hover text,.res952-root .res974-scatter-point:focus text,.res952-root .res974-scatter-point.active text{fill:#17120a}
-
-/* 2. Comunas: incremento absoluto, no repetición de dos barras casi iguales. */
 .res952-root .res974-delta-list{display:grid}
 .res952-root .res974-delta-list>button{appearance:none;display:grid;grid-template-columns:116px minmax(120px,1fr) 70px;gap:10px;align-items:center;width:100%;padding:7px 4px;border:0;border-bottom:1px solid var(--r-line-soft);background:transparent;color:var(--r-text);text-align:left;cursor:pointer}
 .res952-root .res974-delta-list>button:hover,.res952-root .res974-delta-list>button.active{background:color-mix(in srgb,var(--r-blue) 7%,var(--r-panel-2))}
@@ -32,8 +30,6 @@
 .res952-root progress::-webkit-progress-bar{background:var(--r-panel-3);border-radius:99px}
 .res952-root progress::-webkit-progress-value{background:linear-gradient(90deg,var(--r-blue),var(--r-orange));border-radius:99px}
 .res952-root progress::-moz-progress-bar{background:linear-gradient(90deg,var(--r-blue),var(--r-orange));border-radius:99px}
-
-/* 3. Fechas: calendario de picos; responde cuándo, no sólo cuál fue mayor. */
 .res952-root .res974-month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;min-height:240px}
 .res952-root .res974-month-grid>section{display:grid;grid-template-rows:auto 1fr auto;min-width:0;padding:7px;border:1px solid var(--r-line-soft);border-radius:9px;background:color-mix(in srgb,var(--r-panel-2) 76%,transparent)}
 .res952-root .res974-month-grid>section>header{display:grid;gap:1px;padding-bottom:6px;border-bottom:1px solid var(--r-line-soft)}
@@ -51,8 +47,6 @@
 .res952-root .res974-month-grid button.l4{background:color-mix(in srgb,var(--r-orange) 14%,var(--r-panel-3))}
 .res952-root .res974-month-grid button.l5{background:color-mix(in srgb,var(--r-orange) 20%,var(--r-panel-3));border-color:color-mix(in srgb,var(--r-orange) 45%,var(--r-line))}
 .res952-root .res974-month-grid footer{padding-top:5px;border-top:1px solid var(--r-line-soft);color:var(--r-muted);font-size:6.5px}
-
-/* 4. Capital: concentración y acumulación. */
 .res952-root .res974-capital-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:8px}
 .res952-root .res974-capital-summary>span{display:grid;gap:2px;padding:8px 9px;border:1px solid var(--r-line-soft);border-radius:8px;background:var(--r-panel-2)}
 .res952-root .res974-capital-summary b{font-size:13px;color:var(--r-orange)}
@@ -65,13 +59,102 @@
 .res952-root .res974-capital-list progress::-webkit-progress-value{background:var(--r-orange)}
 .res952-root .res974-capital-list progress::-moz-progress-bar{background:var(--r-orange)}
 
-/* Evidencia del cruce RES–SII. */
-.res952-root .res971-evidence>header>div{display:grid;gap:2px}.res952-root .res971-evidence>header>div small{color:var(--r-muted);font-size:7px}.res952-root .res971-evidence>header>span strong{color:var(--r-orange);font-size:10px}
-.res952-root .res974-evidence-row{appearance:none;width:100%;border-left:0;border-right:0;border-top:0;background:transparent;color:var(--r-text);text-align:left;cursor:pointer}
-.res952-root .res974-evidence-row:hover{background:color-mix(in srgb,var(--r-blue) 8%,var(--r-panel-2))}
-.res952-root .res974-evidence-row:focus{outline:1px solid var(--r-blue);outline-offset:-1px}
+/* 0.98 · Explorador estructural RES ↔ SII. Reemplaza treemap + ranking duplicado + CTA oculto. */
+.res952-root .res971-economy.res980-economy{display:block!important;padding:18px!important;overflow:visible!important;background:linear-gradient(180deg,color-mix(in srgb,var(--r-panel) 96%,var(--r-blue) 4%),var(--r-panel))!important}
+.res952-root .res980-econ-head{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:18px;align-items:start;margin-bottom:14px}
+.res952-root .res980-econ-head>div:first-child{display:grid;gap:5px}
+.res952-root .res980-econ-head>div:first-child>span{color:var(--r-orange);font-size:8px;font-weight:900;letter-spacing:.14em}
+.res952-root .res980-econ-head h2{margin:0;color:var(--r-text);font-size:18px;line-height:1.15}
+.res952-root .res980-econ-head p{max-width:900px;margin:0;color:var(--r-muted);font-size:8.3px;line-height:1.55}
+.res952-root .res980-econ-head p b{color:var(--r-text)}
+.res952-root .res980-econ-context{display:grid;grid-template-columns:auto 1fr;gap:2px 9px;align-items:center;padding:12px 13px;border:1px solid color-mix(in srgb,var(--r-blue) 45%,var(--r-line));border-radius:11px;background:color-mix(in srgb,var(--r-blue) 8%,var(--r-panel-2))}
+.res952-root .res980-econ-context strong{grid-row:1/3;color:var(--r-blue);font-size:24px;line-height:1}
+.res952-root .res980-econ-context small{color:var(--r-muted);font-size:7.3px;line-height:1.25}
+.res952-root .res980-econ-context em{color:var(--r-text);font-size:7px;font-style:normal;font-weight:800}
+.res952-root .res980-econ-layout{display:grid;grid-template-columns:270px minmax(0,1fr);gap:10px;align-items:stretch}
+.res952-root .res980-activity-rail,.res952-root .res980-analysis,.res952-root .res980-evidence{border:1px solid var(--r-line);border-radius:12px;background:color-mix(in srgb,var(--r-panel-2) 78%,var(--r-panel))}
+.res952-root .res980-activity-rail{display:grid;grid-template-rows:auto 1fr;min-height:570px;overflow:hidden}
+.res952-root .res980-activity-rail>header{display:grid;gap:9px;padding:12px;border-bottom:1px solid var(--r-line-soft)}
+.res952-root .res980-activity-rail>header>div{display:flex;gap:7px;align-items:center}
+.res952-root .res980-activity-rail>header>div>span{display:grid;place-items:center;width:19px;height:19px;border-radius:6px;background:var(--r-orange);color:#16100a;font-size:8px;font-weight:950}
+.res952-root .res980-activity-rail>header b{font-size:9px;color:var(--r-text)}
+.res952-root .res980-activity-rail label,.res952-root .res980-evidence-tools label{display:grid;gap:4px}
+.res952-root .res980-activity-rail label>span,.res952-root .res980-evidence-tools label>span{color:var(--r-muted);font-size:6.7px;font-weight:750}
+.res952-root .res980-activity-rail input,.res952-root .res980-evidence-tools input,.res952-root .res980-evidence-tools select{width:100%;min-height:31px;padding:6px 8px;border:1px solid var(--r-line);border-radius:8px;outline:0;background:var(--r-panel);color:var(--r-text);font:inherit;font-size:8px}
+.res952-root .res980-activity-rail input:focus,.res952-root .res980-evidence-tools input:focus,.res952-root .res980-evidence-tools select:focus{border-color:var(--r-blue);box-shadow:0 0 0 2px color-mix(in srgb,var(--r-blue) 12%,transparent)}
+.res952-root .res980-activity-list{display:grid;align-content:start;max-height:590px;overflow:auto;padding:6px}
+.res952-root .res980-activity-list>button{appearance:none;display:grid;grid-template-columns:54px minmax(0,1fr) 14px;gap:8px;align-items:center;width:100%;padding:10px 8px;border:1px solid transparent;border-bottom-color:var(--r-line-soft);border-radius:8px;background:transparent;color:var(--r-text);text-align:left;cursor:pointer}
+.res952-root .res980-activity-list>button:hover{background:color-mix(in srgb,var(--r-blue) 6%,var(--r-panel-2));border-color:var(--r-line)}
+.res952-root .res980-activity-list>button.active{border-color:color-mix(in srgb,var(--r-orange) 60%,var(--r-line));background:color-mix(in srgb,var(--r-orange) 8%,var(--r-panel-2));box-shadow:inset 3px 0 0 var(--r-orange)}
+.res952-root .res980-activity-list code{padding:4px 5px;border-radius:5px;background:var(--r-panel-3);color:var(--r-blue);font-size:7.3px;text-align:center}
+.res952-root .res980-activity-list>button>span{display:grid;gap:2px;min-width:0}
+.res952-root .res980-activity-list b{overflow:hidden;color:var(--r-text);font-size:7.7px;line-height:1.25;text-overflow:ellipsis}
+.res952-root .res980-activity-list small{color:var(--r-muted);font-size:6.5px}
+.res952-root .res980-activity-list i{color:var(--r-muted);font-size:14px;font-style:normal;text-align:right}
+.res952-root .res980-analysis{min-width:0;padding:12px}
+.res952-root .res980-focus{display:grid;gap:10px}
+.res952-root .res980-selected-head{display:flex;justify-content:space-between;gap:12px;align-items:start;padding-bottom:9px;border-bottom:1px solid var(--r-line-soft)}
+.res952-root .res980-selected-head>div{display:grid;gap:3px}
+.res952-root .res980-selected-head>div>span,.res952-root .res980-evidence-head>div>span{color:var(--r-orange);font-size:6.8px;font-weight:900;letter-spacing:.11em}
+.res952-root .res980-selected-head h3,.res952-root .res980-evidence-head h3{margin:0;color:var(--r-text);font-size:12px;line-height:1.25}
+.res952-root .res980-selected-head h3 code{margin-right:6px;padding:3px 5px;border-radius:5px;background:var(--r-panel-3);color:var(--r-blue);font-size:8px}
+.res952-root .res980-selected-head p,.res952-root .res980-evidence-head p{margin:0;color:var(--r-muted);font-size:7px}
+.res952-root .res980-source-badge{flex:0 0 auto;padding:5px 7px;border:1px solid color-mix(in srgb,var(--r-blue) 35%,var(--r-line));border-radius:99px;color:var(--r-blue);font-size:6.6px;font-weight:850}
+.res952-root .res980-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.res952-root .res980-kpis article{display:grid;gap:2px;min-width:0;padding:9px;border:1px solid var(--r-line-soft);border-radius:9px;background:var(--r-panel)}
+.res952-root .res980-kpis span{color:var(--r-muted);font-size:6.6px}
+.res952-root .res980-kpis b{overflow:hidden;color:var(--r-text);font-size:12px;line-height:1.15;text-overflow:ellipsis;white-space:nowrap}
+.res952-root .res980-kpis article:first-child b{color:var(--r-blue)}
+.res952-root .res980-kpis article:nth-child(3) b,.res952-root .res980-kpis article:nth-child(4) b{color:var(--r-orange)}
+.res952-root .res980-kpis small{color:var(--r-muted);font-size:6.2px;line-height:1.25}
+.res952-root .res980-profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.res952-root .res980-insight-card{display:grid;grid-template-rows:auto 1fr auto;min-width:0;min-height:215px;padding:10px;border:1px solid var(--r-line-soft);border-radius:10px;background:var(--r-panel)}
+.res952-root .res980-insight-card>header{display:flex;justify-content:space-between;gap:8px;align-items:start;margin-bottom:7px}
+.res952-root .res980-insight-card>header>div{display:grid;gap:2px}
+.res952-root .res980-insight-card>header span{color:var(--r-orange);font-size:6.3px;font-weight:900;letter-spacing:.1em}
+.res952-root .res980-insight-card h4{margin:0;color:var(--r-text);font-size:9px}
+.res952-root .res980-insight-card>header em{color:var(--r-muted);font-size:6.3px;font-style:normal}
+.res952-root .res980-insight-card>p{margin:7px 0 0;padding-top:6px;border-top:1px solid var(--r-line-soft);color:var(--r-muted);font-size:6.5px;line-height:1.35}
+.res952-root .res980-temporal-svg{display:block;width:100%;height:160px;overflow:visible}
+.res952-root .res980-chart-grid line{stroke:var(--r-line-soft);stroke-width:1}
+.res952-root .res980-chart-grid text,.res952-root .res980-month-label{fill:var(--r-muted);font-family:inherit;font-size:7px}
+.res952-root .res980-month-bar{fill:color-mix(in srgb,var(--r-blue) 72%,var(--r-orange));transition:filter .15s ease,opacity .15s ease}
+.res952-root .res980-month-bar:hover{filter:brightness(1.2)}
+.res952-root .res980-month-value{fill:var(--r-text);font-family:inherit;font-size:7px;font-weight:850}
+.res952-root .res980-ranked-bars{display:grid;align-content:start;gap:7px}
+.res952-root .res980-ranked-bars>div{display:grid;grid-template-columns:minmax(100px,1.15fr) minmax(90px,1fr);gap:8px;align-items:center}
+.res952-root .res980-ranked-bars>div>span{display:flex;justify-content:space-between;gap:6px;min-width:0}
+.res952-root .res980-ranked-bars b{overflow:hidden;color:var(--r-text);font-size:7px;text-overflow:ellipsis;white-space:nowrap}
+.res952-root .res980-ranked-bars small{flex:0 0 auto;color:var(--r-muted);font-size:6.3px}
+.res952-root .res980-ranked-bars progress{height:6px}
+.res952-root .res980-capital-bands progress::-webkit-progress-value{background:var(--r-orange)}
+.res952-root .res980-capital-bands progress::-moz-progress-bar{background:var(--r-orange)}
+.res952-root .res980-loading,.res952-root .res980-empty{display:grid;place-items:start;gap:4px;min-height:95px;padding:18px;border:1px dashed var(--r-line);border-radius:9px;background:var(--r-panel);color:var(--r-muted);font-size:8px}
+.res952-root .res980-loading b{color:var(--r-text);font-size:9px}
 
-/* Drawer para revisar la sociedad desde el hallazgo económico. */
+/* La evidencia societaria es parte permanente de la vista, no un CTA secundario. */
+.res952-root .res980-evidence{margin-top:10px;padding:12px;overflow:hidden}
+.res952-root .res980-evidence-head{display:flex;justify-content:space-between;gap:12px;align-items:end;padding-bottom:9px;border-bottom:1px solid var(--r-line-soft)}
+.res952-root .res980-evidence-head>div{display:grid;gap:2px}
+.res952-root .res980-evidence-head>strong{color:var(--r-orange);font-size:15px}.res952-root .res980-evidence-head>strong small{color:var(--r-muted);font-size:6.5px;font-weight:650}
+.res952-root .res980-evidence-tools{display:grid;grid-template-columns:minmax(220px,1fr) 150px 180px;gap:7px;padding:9px 0}
+.res952-root .res980-company-head,.res952-root .res980-company-list>button{display:grid;grid-template-columns:minmax(240px,2.2fr) 92px 70px 110px minmax(120px,1fr);gap:9px;align-items:center}
+.res952-root .res980-company-head{padding:6px 9px;border-top:1px solid var(--r-line-soft);border-bottom:1px solid var(--r-line);color:var(--r-muted);font-size:6.4px;font-weight:850;letter-spacing:.07em;text-transform:uppercase}
+.res952-root .res980-company-list{max-height:430px;overflow:auto}
+.res952-root .res980-company-list>button{appearance:none;width:100%;padding:8px 9px;border:0;border-bottom:1px solid var(--r-line-soft);background:transparent;color:var(--r-text);font:inherit;text-align:left;cursor:pointer}
+.res952-root .res980-company-list>button:hover,.res952-root .res980-company-list>button:focus{background:color-mix(in srgb,var(--r-blue) 8%,var(--r-panel-2));outline:0}
+.res952-root .res980-company-list>button>span:first-child{display:grid;gap:2px;min-width:0}
+.res952-root .res980-company-list b{overflow:hidden;font-size:7.5px;text-overflow:ellipsis;white-space:nowrap}
+.res952-root .res980-company-list small{color:var(--r-blue);font-size:6.5px}
+.res952-root .res980-company-list time,.res952-root .res980-company-list em,.res952-root .res980-company-list strong,.res952-root .res980-company-list>button>span:last-child{font-size:7px}
+.res952-root .res980-company-list em{font-style:normal;color:var(--r-muted)}
+.res952-root .res980-company-list strong{font-weight:800;text-align:right}
+.res952-root .res980-more{appearance:none;display:block;margin:9px auto 0;padding:7px 12px;border:1px solid var(--r-line);border-radius:8px;background:var(--r-panel);color:var(--r-blue);font:inherit;font-size:7px;font-weight:850;cursor:pointer}
+.res952-root .res980-more:hover{border-color:var(--r-blue);background:color-mix(in srgb,var(--r-blue) 7%,var(--r-panel))}
+.res952-root .res980-econ-note{margin-top:10px;padding:9px 10px;border-left:2px solid var(--r-orange);background:color-mix(in srgb,var(--r-panel-3) 70%,transparent);color:var(--r-muted);font-size:6.8px;line-height:1.45}
+.res952-root .res980-econ-note b{color:var(--r-text)}
+
+/* Drawer de revisión societaria con enriquecimiento tributario. */
 .res974-econ-drawer{--r-panel:#0f1827;--r-panel-2:#131f31;--r-panel-3:#18263a;--r-line:#26374e;--r-line-soft:#1c2a3d;--r-text:#edf3fb;--r-muted:#91a2b8;--r-orange:#f59e0b;--r-blue:#5d91ff;--r-green:#3dcc9a;position:fixed;z-index:10030;top:0;right:0;width:min(620px,calc(100vw - 24px));height:100vh;overflow:auto;padding:22px 22px 34px;border-left:1px solid #31435c;background:#0f1827;color:#edf3fb;box-shadow:-28px 0 90px rgba(0,0,0,.55);transform:translateX(103%);transition:transform .22s ease}
 .res974-econ-drawer.open{transform:translateX(0)}
 html[data-atlas-theme="light"] .res974-econ-drawer{--r-panel:#fff;--r-panel-2:#f5f7fa;--r-panel-3:#eef2f6;--r-line:#d7dee8;--r-line-soft:#e7ebf0;--r-text:#192231;--r-muted:#66758a;--r-orange:#d97706;--r-blue:#2563eb;--r-green:#11845b;border-left-color:#cbd5e1;background:#fff;color:#192231;box-shadow:-20px 0 60px rgba(15,23,42,.2)}
@@ -80,14 +163,34 @@ html[data-atlas-theme="light"] .res974-econ-drawer{--r-panel:#fff;--r-panel-2:#f
 .res974-drawer-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:12px 0}.res974-drawer-kpis>div{display:grid;gap:3px;padding:9px 10px;border:1px solid var(--r-line);border-radius:9px;background:var(--r-panel-2)}.res974-drawer-kpis span{font-size:7px;color:var(--r-muted)}.res974-drawer-kpis b{font-size:10px}
 .res974-econ-drawer dl,.res974-drawer-enrichment dl{display:grid;grid-template-columns:132px 1fr;gap:0;margin:0;border:1px solid var(--r-line);border-radius:10px;overflow:hidden}.res974-econ-drawer dt,.res974-econ-drawer dd{margin:0;padding:8px 9px;border-bottom:1px solid var(--r-line-soft);font-size:8.5px}.res974-econ-drawer dt{background:var(--r-panel-2);color:var(--r-muted)}.res974-econ-drawer dd{background:var(--r-panel);color:var(--r-text)}
 .res974-drawer-enrichment{display:grid;gap:9px;margin-top:12px;padding:12px;border:1px solid color-mix(in srgb,var(--r-blue) 26%,var(--r-line));border-radius:11px;background:color-mix(in srgb,var(--r-blue) 4%,var(--r-panel))}.res974-drawer-enrichment>header{display:flex;justify-content:space-between;gap:9px;align-items:center}.res974-drawer-enrichment>header b{font-size:10px}.res974-drawer-enrichment>header span{font-size:7px;color:var(--r-blue)}
-.res974-drawer-acts{display:grid;gap:5px}.res974-drawer-acts span{display:flex;gap:7px;align-items:start;padding:6px 7px;border:1px solid var(--r-line-soft);border-radius:7px;background:var(--r-panel-2);font-size:7.8px;line-height:1.35}.res974-drawer-acts code{flex:0 0 auto;color:var(--r-blue);font-size:7.5px}
+.res974-drawer-acts{display:grid;gap:5px}.res974-drawer-acts span{display:flex;gap:7px;align-items:start;padding:6px 7px;border:1px solid var(--r-line-soft);border-radius:7px;background:var(--r-panel-2);font-size:7.8px;line-height:1.35}.res974-drawer-acts code{flex:0 0 auto;color:var(--r-blue);font-size:7.5px}.res974-drawer-acts small{color:var(--r-muted)}
 
-@media(max-width:1180px){.res952-root .res974-month-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:1180px){
+  .res952-root .res974-month-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .res952-root .res980-econ-layout{grid-template-columns:230px minmax(0,1fr)}
+  .res952-root .res980-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .res952-root .res980-company-head,.res952-root .res980-company-list>button{grid-template-columns:minmax(190px,2fr) 80px 62px 95px minmax(90px,1fr)}
+}
+@media(max-width:900px){
+  .res952-root .res980-econ-head{grid-template-columns:1fr}
+  .res952-root .res980-econ-context{max-width:360px}
+  .res952-root .res980-econ-layout{grid-template-columns:1fr}
+  .res952-root .res980-activity-rail{min-height:0}
+  .res952-root .res980-activity-list{grid-template-columns:repeat(2,minmax(0,1fr));max-height:300px}
+  .res952-root .res980-profile-grid{grid-template-columns:1fr}
+  .res952-root .res980-evidence-tools{grid-template-columns:1fr 1fr}
+  .res952-root .res980-evidence-tools label:first-child{grid-column:1/-1}
+}
 @media(max-width:760px){
   .res952-root .res974-delta-list>button{grid-template-columns:96px minmax(80px,1fr) 58px;gap:6px}
   .res952-root .res974-month-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .res952-root .res974-capital-summary{grid-template-columns:1fr}
   .res952-root .res974-capital-list>button{grid-template-columns:96px minmax(80px,1fr) 48px;gap:6px}
+  .res952-root .res980-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .res952-root .res980-activity-list{grid-template-columns:1fr}
+  .res952-root .res980-evidence-tools{grid-template-columns:1fr}.res952-root .res980-evidence-tools label:first-child{grid-column:auto}
+  .res952-root .res980-company-head{display:none}
+  .res952-root .res980-company-list>button{grid-template-columns:minmax(0,1fr) auto;gap:4px 10px}.res952-root .res980-company-list time,.res952-root .res980-company-list em,.res952-root .res980-company-list strong,.res952-root .res980-company-list>button>span:last-child{grid-column:2;text-align:right}
   .res974-drawer-kpis{grid-template-columns:1fr}
   .res974-econ-drawer dl,.res974-drawer-enrichment dl{grid-template-columns:110px 1fr}
 }
