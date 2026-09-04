@@ -11,5 +11,21 @@
 #content .a45.e360-modern.e360-history-active.e360-advanced-open>:is(.a45-cover,.a45-lenses,main,.a45-footer,.e360-advanced-returnbar){display:none!important}
 #content .a45.e360-modern.e360-history-active.e360-advanced-open>#atlas-entity360-executive{display:block!important}
 
+/* 2026-09-04 · Historia 360: category color lives only in dot + text.
+   Active/hover states keep a neutral ATLAS surface and border. */
+#atlas-entity360-executive .eh-filter,
+#atlas-entity360-executive .eh-filter:hover,
+#atlas-entity360-executive .eh-filter.active[data-source],
+#atlas-entity360-executive .eh-filter.active[data-source]:hover{
+  border-color:rgba(87,112,138,.30)!important;
+}
+#atlas-entity360-executive .eh-filter.active[data-source]{
+  background:#081523!important;
+  box-shadow:none!important;
+}
+#atlas-entity360-executive .eh-filter.active[data-source]:hover{
+  background:#0d2234!important;
+}
+
 @media(max-width:780px){.e360-force-loading{align-items:flex-start;flex-direction:column}.e360-force-loading>div:last-child{text-align:left}.e360-head-side>.e360-force-production-badge{margin-left:0}}
 @media(prefers-reduced-motion:reduce){#atlas-entity360-executive{scroll-behavior:auto}}
