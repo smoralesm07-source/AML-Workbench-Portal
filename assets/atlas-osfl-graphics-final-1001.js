@@ -113,7 +113,7 @@
     let changed=0;
     root.querySelectorAll('.osflr-meter').forEach(meter=>{
       const cell=meter.closest('td');
-      const match=(cell?.textContent||'').match(/([0-9.]+(?j,[0-9]+)?)\s*%/);
+      const match=(cell?.textContent||'').match(/([0-9.]+(?:,[0-9]+)?)\s*%/);
       if(!match)return;
       const share=parseNumber(match[1]);
       if(!Number.isFinite(share))return;
