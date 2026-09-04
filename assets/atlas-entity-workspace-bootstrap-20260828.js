@@ -1,22 +1,8 @@
 'use strict';
 
-/* ATLAS · Entity workspace bootstrap · 2026-08-28 · perf1+press0951+racefix1
- * Production-safe compatibility layer for Entidades.
- * The canonical Pages runtime already compiles v0447 before later standalone
- * explorer enhancers. If its press authority survived, reuse it instead of
- * attempting to reload a root source fragment that Pages does not publish.
- * PRESS_ONLY observations remain non-reconciled and receive no inferred RUT.
- *
- * perf1 exposes the original fetch implementation to the lightweight 0512
- * press bridge. This prevents that bridge from paying the compatibility
- * parse+serialize cost a second time; v0447 continues using the normalized
- * compatibility response unchanged.
- *
- * press0951 loads the Entidades press-observation presentation layer: compact
- * governed hierarchy, denser press evidence and an explicit return control.
- * racefix1 keeps press-only suggestions stable across the 0512 canonical
- * autocomplete rewrite and makes Enter wait only when canonical search is empty
- * or the press-only search is already pending.
+/* ATLAS · Entity workspace bootstrap · production compatibility layer
+ * 2026-09-03: Entidad 360 Executive is now loaded independently of the legacy
+ * v0203 renderer and hooks the canonical __ATLAS_ENTITY_ENTRY__ authority.
  */
 (function atlasEntityWorkspaceBootstrap20260828(){
   const BOOT_FLAG='__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_20260828__';
@@ -32,7 +18,7 @@
   const PRESS_SEARCH_RACEFIX_SRC='./assets/atlas-entity-press-search-racefix-20260828.js?v=20260828-racefix1';
   const PRESS_VIEW_JS_SRC='./assets/atlas-entity-press-view-0951.js?v=0951-1';
   const PRESS_VIEW_CSS_SRC='./assets/atlas-entity-press-view-0951.css?v=0951-1';
-  const BUILD='20260828-perf1+press0951+racefix1';
+  const BUILD='20260903-e360-entry3';
 
   if(window[BOOT_FLAG])return;
   window[BOOT_FLAG]=true;
@@ -79,12 +65,10 @@
     window[PRESS_COMPAT_FLAG]=true;
     const nativeFetch=window.fetch.bind(window);
     if(typeof window.__ATLAS_PRESS_NATIVE_FETCH__!=='function')window.__ATLAS_PRESS_NATIVE_FETCH__=nativeFetch;
-
     window.fetch=async function atlasPressCompatibleFetch(input,init){
       const requestUrl=typeof input==='string'?input:String(input?.url||'');
       const response=await nativeFetch(input,init);
       if(!requestUrl.startsWith(PRESS_FEED_URL))return response;
-
       try{
         const raw=await response.clone().json();
         const articles=(Array.isArray(raw?.articles)?raw.articles:[]).map((article,index)=>({
@@ -96,43 +80,21 @@
           source:article?.source||article?.source_name||article?.media||article?.medio||'',
           source_url:article?.source_url||article?.canonical_url||article?.url||article?.link||''
         }));
-        const normalized={...raw,articles};
         const headers=new Headers(response.headers);
         headers.set('content-type','application/json; charset=utf-8');
-        return new Response(JSON.stringify(normalized),{
-          status:response.status,
-          statusText:response.statusText,
-          headers
-        });
-      }catch(_error){
-        return response;
-      }
+        return new Response(JSON.stringify({...raw,articles}),{status:response.status,statusText:response.statusText,headers});
+      }catch(_error){return response;}
     };
   }
 
-  function dispatchReady(){
-    document.dispatchEvent(new CustomEvent('atlas:entity-workspace-ready'));
-  }
-
-  function setState(extra){
-    window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__={
-      ready:true,
-      pressSchemaCompatible:true,
-      pressSearchBridge:false,
-      pressSearchRacefix:!!window.__ATLAS_ENTITY_PRESS_SEARCH_RACEFIX__,
-      pressView0951:!!window.__ATLAS_ENTITY_PRESS_VIEW_0951__,
-      build:BUILD,
-      ...extra
-    };
-  }
+  function dispatchReady(){document.dispatchEvent(new CustomEvent('atlas:entity-workspace-ready'));}
+  function setState(extra){window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__={ready:true,pressSchemaCompatible:true,pressSearchBridge:false,pressSearchRacefix:!!window.__ATLAS_ENTITY_PRESS_SEARCH_RACEFIX__,pressView0951:!!window.__ATLAS_ENTITY_PRESS_VIEW_0951__,build:BUILD,...extra};}
 
   function loadPressSearchBridge(){
     installPressView0951();
     if(window.__ATLAS_ENTITY_PRESS_SEARCH_BRIDGE_20260828__){
       if(window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__)window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__.pressSearchBridge=true;
-      installPressSearchRacefix();
-      dispatchReady();
-      return;
+      installPressSearchRacefix();dispatchReady();return;
     }
     if(window[BRIDGE_LOADING_FLAG])return;
     window[BRIDGE_LOADING_FLAG]=true;
@@ -140,29 +102,15 @@
     bridge.src=PRESS_SEARCH_BRIDGE_SRC;
     bridge.async=false;
     bridge.dataset.atlasEntityPressSearchBridge='1';
-    bridge.onload=()=>{
-      window[BRIDGE_LOADING_FLAG]=false;
-      if(window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__)window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__.pressSearchBridge=true;
-      installPressSearchRacefix();
-      dispatchReady();
-    };
-    bridge.onerror=()=>{
-      window[BRIDGE_LOADING_FLAG]=false;
-      if(window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__)window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__.pressSearchBridge=false;
-      installPressSearchRacefix();
-      dispatchReady();
-    };
+    bridge.onload=()=>{window[BRIDGE_LOADING_FLAG]=false;if(window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__)window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__.pressSearchBridge=true;installPressSearchRacefix();dispatchReady();};
+    bridge.onerror=()=>{window[BRIDGE_LOADING_FLAG]=false;if(window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__)window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__.pressSearchBridge=false;installPressSearchRacefix();dispatchReady();};
     document.body.appendChild(bridge);
   }
 
   function reuseCompiledWorkspace(entry){
     if(!entry||typeof entry.openPressObservation!=='function')return false;
     window[LOADED_FLAG]=true;
-    setState({
-      reusedCompiledAuthority:true,
-      fallbackReload:false,
-      loadedAt:new Date().toISOString()
-    });
+    setState({reusedCompiledAuthority:true,fallbackReload:false,loadedAt:new Date().toISOString()});
     loadPressSearchBridge();
     return true;
   }
@@ -173,65 +121,29 @@
     if(window[LOADING_FLAG])return true;
     const entry=window.__ATLAS_ENTITY_ENTRY__;
     if(!entry||typeof entry.open!=='function')return false;
-
     installPressSchemaCompatibility();
     if(reuseCompiledWorkspace(entry))return true;
-
-    /* Development/source fallback only. Canonical Pages normally never enters
-       this branch because v0447 is already part of the compiled 0.90.1 runtime. */
     window[LOADING_FLAG]=true;
     const script=document.createElement('script');
     script.src=WORKSPACE_SRC;
     script.async=false;
-    script.onload=()=>{
-      window[LOADING_FLAG]=false;
-      window[LOADED_FLAG]=true;
-      setState({
-        reusedCompiledAuthority:false,
-        fallbackReload:true,
-        loadedAt:new Date().toISOString()
-      });
-      loadPressSearchBridge();
-    };
-    script.onerror=()=>{
-      window[LOADING_FLAG]=false;
-      window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__={
-        ready:false,
-        pressSchemaCompatible:true,
-        pressSearchBridge:false,
-        pressSearchRacefix:!!window.__ATLAS_ENTITY_PRESS_SEARCH_RACEFIX__,
-        pressView0951:!!window.__ATLAS_ENTITY_PRESS_VIEW_0951__,
-        reusedCompiledAuthority:false,
-        fallbackReload:true,
-        error:'workspace-load-failed',
-        failedAt:new Date().toISOString(),
-        build:BUILD
-      };
-      /* Do not alter the existing Entidades explorer when fallback is absent. */
-      loadPressSearchBridge();
-    };
+    script.onload=()=>{window[LOADING_FLAG]=false;window[LOADED_FLAG]=true;setState({reusedCompiledAuthority:false,fallbackReload:true,loadedAt:new Date().toISOString()});loadPressSearchBridge();};
+    script.onerror=()=>{window[LOADING_FLAG]=false;window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__={ready:false,pressSchemaCompatible:true,pressSearchBridge:false,pressSearchRacefix:!!window.__ATLAS_ENTITY_PRESS_SEARCH_RACEFIX__,pressView0951:!!window.__ATLAS_ENTITY_PRESS_VIEW_0951__,reusedCompiledAuthority:false,fallbackReload:true,error:'workspace-load-failed',failedAt:new Date().toISOString(),build:BUILD};loadPressSearchBridge();};
     document.body.appendChild(script);
     return true;
   }
 
   installPressView0951();
   installPressSchemaCompatibility();
-  if(loadWorkspaceWhenReady())return;
-
-  let attempts=0;
-  const timer=setInterval(()=>{
-    attempts+=1;
-    if(loadWorkspaceWhenReady()||attempts>=300)clearInterval(timer);
-  },100);
-
-  window.addEventListener('load',loadWorkspaceWhenReady,{once:true});
-  document.addEventListener('atlas:entity-entry-ready',loadWorkspaceWhenReady);
+  if(!loadWorkspaceWhenReady()){
+    let attempts=0;
+    const timer=setInterval(()=>{attempts+=1;if(loadWorkspaceWhenReady()||attempts>=300)clearInterval(timer);},100);
+    window.addEventListener('load',loadWorkspaceWhenReady,{once:true});
+    document.addEventListener('atlas:entity-entry-ready',loadWorkspaceWhenReady);
+  }
 })();
 
-/* ATLAS · Sanciones chart authority 0.96.2 loader.
- * Kept here as a late production bootstrap so it can enhance Sanciones whether
- * the section authority is loaded before or after the main portal runtime.
- */
+/* Sanciones chart authority 0.96.2 */
 (function atlasSanctionsChartsLoader0962(){
   if(window.__ATLAS_SANCTIONS_CHARTS_0962_LOADER__)return;
   window.__ATLAS_SANCTIONS_CHARTS_0962_LOADER__=true;
@@ -242,66 +154,52 @@
   document.body.appendChild(script);
 })();
 
-/* ATLAS · Entidad 360 Executive loader · 2026-09-03
- * This bootstrap is part of the active production index, so Entidad 360 is
- * attached here explicitly instead of depending on dormant legacy loaders.
+/* Entidad 360 Executive · canonical production loader.
+ * IMPORTANT: no legacy renderer precondition. The module hooks
+ * window.__ATLAS_ENTITY_ENTRY__.open itself.
  */
-(function atlasEntity360ExecutiveActiveLoader20260903(){
+(function atlasEntity360ExecutiveProductionLoader20260903(){
   const FLAG='__ATLAS_ENTITY360_EXECUTIVE_ACTIVE_LOADER__';
-  if(window[FLAG])return;
-  window[FLAG]={active:true,build:'20260903-e360-active1',installed:false};
-  const cssHref='./assets/atlas-entity360-executive-20260903.css?v=20260903-active1';
-  const jsSrc='./assets/atlas-entity360-executive-20260903.js?v=20260903-active1';
-  const trajectorySrc='./assets/atlas-entity360-trajectory-20260903.js?v=20260903-active1';
+  const BUILD='20260903-e360-entry3';
+  const CSS='./assets/atlas-entity360-executive-20260903.css?v=20260903-entry3';
+  const JS='./assets/atlas-entity360-executive-20260903.js?v=20260903-entry3';
 
-  function loadTrajectory(){
-    if(window.__ATLAS_ENTITY360_TRAJECTORY__?.active){window[FLAG].trajectory=true;return;}
-    if(document.querySelector('script[data-atlas-e360-trajectory-active]'))return;
-    const script=document.createElement('script');
-    script.src=trajectorySrc;
-    script.async=false;
-    script.dataset.atlasE360TrajectoryActive='1';
-    script.onload=()=>{window[FLAG].trajectory=!!window.__ATLAS_ENTITY360_TRAJECTORY__?.active;};
-    script.onerror=()=>{window[FLAG].trajectoryError='asset-load-failed';};
-    document.body.appendChild(script);
+  if(window[FLAG]?.build===BUILD)return;
+  window[FLAG]={active:true,build:BUILD,installed:false,startedAt:new Date().toISOString()};
+
+  if(!document.querySelector('link[data-atlas-e360-executive-active]')){
+    const link=document.createElement('link');
+    link.rel='stylesheet';
+    link.href=CSS;
+    link.dataset.atlasE360ExecutiveActive='1';
+    document.head.appendChild(link);
   }
 
-  function install(){
-    if(window.__ATLAS_ENTITY360_EXECUTIVE__?.active){
+  function connect(){
+    const api=window.__ATLAS_ENTITY360_EXECUTIVE__;
+    if(api?.active){
       window[FLAG].installed=true;
-      loadTrajectory();
-      return;
+      window[FLAG].moduleBuild=api.build||null;
+      window[FLAG].entryHooked=api.hookEntry?.()||!!window.__ATLAS_ENTITY_ENTRY__?.open?.__atlasE360Executive;
+      window[FLAG].connectedAt=new Date().toISOString();
+      return true;
     }
-    if(typeof window.v0203RenderEntity!=='function')return false;
-    if(!document.querySelector('link[data-atlas-e360-executive-active]')){
-      const link=document.createElement('link');
-      link.rel='stylesheet';
-      link.href=cssHref;
-      link.dataset.atlasE360ExecutiveActive='1';
-      document.head.appendChild(link);
-    }
-    if(document.querySelector('script[data-atlas-e360-executive-active]'))return true;
+    return false;
+  }
+
+  if(connect())return;
+  if(!document.querySelector('script[data-atlas-e360-executive-active]')){
     const script=document.createElement('script');
-    script.src=jsSrc;
+    script.src=JS;
     script.async=false;
     script.dataset.atlasE360ExecutiveActive='1';
-    script.onload=()=>{
-      window[FLAG].installed=!!window.__ATLAS_ENTITY360_EXECUTIVE__?.active;
-      window[FLAG].loadedAt=new Date().toISOString();
-      loadTrajectory();
-    };
-    script.onerror=()=>{window[FLAG].error='asset-load-failed';};
+    script.onload=()=>{window[FLAG].loadedAt=new Date().toISOString();connect();};
+    script.onerror=()=>{window[FLAG].error='asset-load-failed';window[FLAG].failedAt=new Date().toISOString();};
     document.body.appendChild(script);
-    return true;
   }
 
-  let attempts=0;
-  const timer=setInterval(()=>{
-    attempts+=1;
-    if(install()||attempts>=300)clearInterval(timer);
-  },100);
-  install();
-  window.addEventListener('load',install,{once:true});
-  document.addEventListener('atlas:entity-workspace-ready',install);
-  document.addEventListener('atlas:entity-entry-ready',install);
+  document.addEventListener('atlas:entity-workspace-ready',connect);
+  document.addEventListener('atlas:entity-entry-ready',connect);
+  window.addEventListener('load',connect,{once:true});
+  [250,1000,2500,5000].forEach(ms=>setTimeout(connect,ms));
 })();
