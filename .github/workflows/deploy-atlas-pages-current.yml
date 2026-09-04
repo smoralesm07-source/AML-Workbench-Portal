@@ -64,14 +64,20 @@ jobs:
               assert required in declared, required
 
           assert f"release:'{rel}',build:'{bid}'" in guard
-          assert 'CLEAN_SEARCH_NO_PERSISTED_ENTITY360' in route
+
+          # Entidades must be a hard fresh-search boundary. The prior 360 dossier
+          # cannot survive the menu transition or repaint asynchronously afterward.
+          assert 'HARD_CLEAN_SEARCH_NO_PERSISTED_ENTITY360' in route
+          assert 'ENTITIES_HARD_CLEAN_BOUNDARY_20260904' in route
           assert 'cleanSearchOnEveryEntry:true' in route
           assert 'previousEntityCleared:true' in route
-          assert "mode:'entities-clean-search'" in route
+          assert "mode:'entities-clean-search-boundary'" in route
+          assert 'directMenuCapture:true' in route
+          assert 'latePaintGuard:true' in route
           assert 'ENTRY.load=entityLoad' in route
           assert "if (view === 'entities') return stableLoad" in session
           assert "ENTRY.load=loadWorkspace" in workspace
-          print(f'validated ATLAS {rel} build {bid} with clean Entidades route')
+          print(f'validated ATLAS {rel} build {bid} with Entidades hard clean boundary')
           PY
 
           node --check atlas-release-guard.js
@@ -119,11 +125,15 @@ jobs:
           assert f'atlas-release-guard.js?r={bid}' in html
           assert re.search(rf'atlas-runtime-current-\d+\.js\?r={re.escape(bid)}', html)
 
-          # Regression guard for the reported Entidad 360 -> Entidades bug.
-          assert 'CLEAN_SEARCH_NO_PERSISTED_ENTITY360' in runtime
+          # Regression guard for Entidad 360 -> Entidades: compiled production
+          # runtime must contain the hard clean boundary and late-paint protection.
+          assert 'HARD_CLEAN_SEARCH_NO_PERSISTED_ENTITY360' in runtime
+          assert 'ENTITIES_HARD_CLEAN_BOUNDARY_20260904' in runtime
           assert 'cleanSearchOnEveryEntry:true' in runtime
           assert 'previousEntityCleared:true' in runtime
-          assert "mode:'entities-clean-search'" in runtime
+          assert "mode:'entities-clean-search-boundary'" in runtime
+          assert 'directMenuCapture:true' in runtime
+          assert 'latePaintGuard:true' in runtime
           assert "if (view === 'entities') return stableLoad" in runtime
 
           assert '__ATLAS_OSFL_ECONOMIC_0950__' in runtime
@@ -131,7 +141,7 @@ jobs:
           assert 'SANCTIONS_RADIOGRAPHY_CURRENT_0960' in runtime or 'SANCTIONS_SPECTRUM_CURRENT_0940' in runtime
           assert 'atlas-data-audit.js' not in html
           assert 'atlas-data-audit.css' not in html
-          print(f'built ATLAS {rel} build {bid}; clean Entidades regression guard passed')
+          print(f'built ATLAS {rel} build {bid}; Entidades hard-boundary regression guard passed')
           PY
 
           for js in _site/atlas-runtime-current-*.js _site/atlas-module-current-*.js; do
@@ -191,10 +201,13 @@ jobs:
                       'html_build':f'data-aml-build="{bid}"' in html,
                       'html_title':f'<title>ATLAS AML · v{rel}</title>' in html,
                       'release_json':str(live_release.get('release'))==rel and str(live_release.get('build'))==bid,
-                      'clean_policy':'CLEAN_SEARCH_NO_PERSISTED_ENTITY360' in runtime,
+                      'hard_clean_policy':'HARD_CLEAN_SEARCH_NO_PERSISTED_ENTITY360' in runtime,
+                      'hard_boundary_patch':'ENTITIES_HARD_CLEAN_BOUNDARY_20260904' in runtime,
                       'clean_every_entry':'cleanSearchOnEveryEntry:true' in runtime,
                       'previous_entity_cleared':'previousEntityCleared:true' in runtime,
-                      'clean_mode':"mode:'entities-clean-search'" in runtime,
+                      'clean_boundary_mode':"mode:'entities-clean-search-boundary'" in runtime,
+                      'direct_menu_capture':'directMenuCapture:true' in runtime,
+                      'late_paint_guard':'latePaintGuard:true' in runtime,
                       'final_entity_route':"if (view === 'entities') return stableLoad" in runtime,
                   }
                   failed=[name for name,ok in checks.items() if not ok]
