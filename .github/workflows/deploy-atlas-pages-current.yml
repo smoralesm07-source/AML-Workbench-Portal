@@ -46,6 +46,8 @@ jobs:
           candidates=Path('assets/atlas-universo-so-candidate-management-0820.js').read_text()
           retired_audit=Path('assets/atlas-data-audit.js').read_text()
           osfl=Path('assets/atlas-osfl-economic-0950.js').read_text()
+          osfl_graphics=Path('assets/atlas-osfl-graphics-final-1001.js').read_text()
+          osfl_recovery=Path('assets/atlas-osfl-runtime-recovery-1001.js').read_text()
           sanctions=Path('assets/atlas-sanctions-spectrum-0940.js').read_text()
 
           assert release['release']=='0.95.0' and release['build']=='0950'
@@ -54,6 +56,8 @@ jobs:
           assert "release:'0.95.0',build:'0950'" in guard
           assert 'atlas-release-guard-0950-freeze-safe' in guard
           assert 'assets/atlas-ui-authority-0901.js' in [x['path'] for x in runtime['scripts']]
+          assert 'assets/atlas-osfl-economic-0950.js' in [x['path'] for x in runtime['scripts']]
+          assert 'assets/atlas-osfl-graphics-final-1001.js' in [x['path'] for x in runtime['scripts']]
           assert "RELEASE='0.95.0'" in ui and "BUILD='0950'" in ui
           assert 'data-atlas-ui-authority' in ui
           assert "CSS='./assets/atlas-ui-authority-0901.css?v=0950-" in ui
@@ -65,6 +69,10 @@ jobs:
           assert 'retired' in retired_audit.lower() and 'v024AuditHtml' in retired_audit
           assert '__ATLAS_OSFL_ECONOMIC_0950__' in osfl
           assert 'aml_v_osfl_economic_concentration_current_v0950' in osfl
+          assert 'OSFL_GRAPHICS_FINAL_1001' in osfl_graphics
+          assert '__ATLAS_OSFL_RUNTIME_RECOVERY_1002__' in osfl_recovery
+          assert "canonical:'0.95.0'" in osfl_recovery
+          assert Path('assets/atlas-osfl-production-fix-1002.css').is_file()
           assert 'SANCTIONS_SPECTRUM_CURRENT_0940' in sanctions
 
           assert 'atlas-universo-so-contact-osint-0840.css?v=0840-1' in html
@@ -79,6 +87,8 @@ jobs:
           node --check atlas-release-guard.js
           node --check assets/atlas-ui-authority-0901.js
           node --check assets/atlas-osfl-economic-0950.js
+          node --check assets/atlas-osfl-graphics-final-1001.js
+          node --check assets/atlas-osfl-runtime-recovery-1001.js
           node --check assets/atlas-sanctions-spectrum-0940.js
           node --check assets/atlas-data-audit.js
           node --check assets/atlas-universo-so-entity-explorer-0813.js
@@ -108,13 +118,18 @@ jobs:
           test -s _site/atlas-release-guard.js
           test -s _site/atlas-runtime-current.css
           test -s _site/atlas-runtime-current-01.js
+          test -s _site/assets/atlas-osfl-runtime-recovery-1001.js
+          test -s _site/assets/atlas-osfl-production-fix-1002.css
           test ! -e _site/assets/atlas-ui-authority-0901.js
           test -s _site/assets/atlas-ui-authority-0901.css
           test -s _site/assets/atlas-universo-so-contact-osint-0840.js
           test -s _site/assets/territorio-aml-beta.html
           test ! -e _site/assets/atlas-data-audit.js
           test ! -e _site/assets/atlas-data-audit.css
-          cat _site/atlas-runtime-current-*.js > /tmp/atlas-runtime-current.js
+
+          mapfile -t runtime_segments < <(find _site -maxdepth 1 -type f -name 'atlas-runtime-current-*.js' | sort)
+          test "${#runtime_segments[@]}" -ge 1
+          cat "${runtime_segments[@]}" > /tmp/atlas-runtime-current.js
           grep -q "RELEASE='0.95.0'" /tmp/atlas-runtime-current.js
           grep -q "BUILD='0950'" /tmp/atlas-runtime-current.js
           grep -q 'data-atlas-ui-authority' /tmp/atlas-runtime-current.js
@@ -123,16 +138,21 @@ jobs:
           grep -q "globalSourceHealth:'preserved'" /tmp/atlas-runtime-current.js
           grep -q '__ATLAS_OSFL_ECONOMIC_0950__' /tmp/atlas-runtime-current.js
           grep -q 'aml_v_osfl_economic_concentration_current_v0950' /tmp/atlas-runtime-current.js
+          grep -q 'OSFL_GRAPHICS_FINAL_1001' /tmp/atlas-runtime-current.js
           grep -q 'SANCTIONS_SPECTRUM_CURRENT_0940' /tmp/atlas-runtime-current.js
           grep -q 'osfl95-card' _site/atlas-runtime-current.css
           grep -q 'html\[data-atlas-release="0.95.0"\]' _site/assets/atlas-ui-authority-0901.css
           grep -q 'v019-brand small\[data-atlas-version-label\]' _site/assets/atlas-ui-authority-0901.css
           grep -q 'data-atlas-global-audit-host' _site/assets/atlas-ui-authority-0901.css
+          grep -q '__ATLAS_OSFL_RUNTIME_RECOVERY_1002__' _site/assets/atlas-osfl-runtime-recovery-1001.js
+          ! grep -Eq 'atlas-osfl-(intelligence-0920|national-monitor-0930|map-summary-0932|growth-0934|remove-evidence-priority-0931)' _site/index.html
+
           python3 - <<'PY'
           from pathlib import Path
           import json
           html=Path('_site/index.html').read_text()
           release=json.loads(Path('_site/atlas-release.json').read_text())
+          report=json.loads(Path('_site/atlas-runtime-report.json').read_text())
           assert release['release']=='0.95.0' and release['build']=='0950'
           assert 'data-aml-version="0.95.0"' in html
           assert 'data-aml-build="0950"' in html
@@ -144,11 +164,14 @@ jobs:
           assert 'atlas-data-audit.js' not in html
           assert 'atlas-data-audit.css' not in html
           assert 'atlas-ui-authority-0901.js' not in html
+          assert report['legacy_osfl_standalones_published'] is False
+          assert report['osfl_runtime_authority']=='0.95.0 + recovery 1.00.2'
           PY
           for js in _site/atlas-runtime-current-*.js _site/atlas-module-current-*.js; do
             test -f "$js" || continue
             node --check "$js"
           done
+          node --check _site/assets/atlas-osfl-runtime-recovery-1001.js
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -169,7 +192,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import json, os, time, urllib.request
+          import json, os, re, time, urllib.request
 
           base=os.environ['PAGE_URL'].rstrip('/')
           sha=os.environ.get('GITHUB_SHA','unknown')
@@ -186,11 +209,15 @@ jobs:
               stamp=f'{sha}-{attempt}-{n}'
               try:
                   html=get('/',stamp)
-                  release_text=get('/atlas-release.json',stamp)
-                  release=json.loads(release_text)
+                  release=json.loads(get('/atlas-release.json',stamp))
                   runtime_css=get('/atlas-runtime-current.css',stamp)
-                  runtime_js=''.join(get(f'/atlas-runtime-current-{seg}.js',stamp) for seg in ('01','02','03','04'))
+                  segment_names=sorted(set(re.findall(r'\.\/(atlas-runtime-current-\d+\.js)',html)))
+                  if not segment_names:
+                      raise AssertionError('no compiled runtime segments referenced by live index')
+                  runtime_js=''.join(get('/'+name,stamp) for name in segment_names)
                   ui_css=get('/assets/atlas-ui-authority-0901.css',stamp)
+                  recovery=get('/assets/atlas-osfl-runtime-recovery-1001.js',stamp)
+                  production_css=get('/assets/atlas-osfl-production-fix-1002.css',stamp)
 
                   checks={
                       'html_version':'data-aml-version="0.95.0"' in html,
@@ -199,7 +226,12 @@ jobs:
                       'old_version_absent':'data-aml-version="0.90.1"' not in html,
                       'release_json':release.get('release')=='0.95.0' and release.get('build')=='0950',
                       'runtime_release':"RELEASE='0.95.0'" in runtime_js and "BUILD='0950'" in runtime_js,
+                      'all_runtime_segments':len(segment_names)>=1,
                       'osfl_0950':'__ATLAS_OSFL_ECONOMIC_0950__' in runtime_js and 'aml_v_osfl_economic_concentration_current_v0950' in runtime_js,
+                      'osfl_svg_final':'OSFL_GRAPHICS_FINAL_1001' in runtime_js,
+                      'osfl_recovery_1002':'__ATLAS_OSFL_RUNTIME_RECOVERY_1002__' in recovery and "canonical:'0.95.0'" in recovery,
+                      'osfl_production_css':'data-osfl95-root' in production_css and 'data-osfl-proportional-svg' in production_css,
+                      'legacy_osfl_absent':not re.search(r'atlas-osfl-(intelligence-0920|national-monitor-0930|map-summary-0932|growth-0934|remove-evidence-priority-0931)',html),
                       'sanctions_0940':'SANCTIONS_SPECTRUM_CURRENT_0940' in runtime_js,
                       'ui_authority':'data-atlas-ui-authority' in runtime_js and 'ensureBrandVersion' in runtime_js,
                       'osfl_css':'osfl95-card' in runtime_css,
@@ -208,7 +240,7 @@ jobs:
                   failed=[name for name,ok in checks.items() if not ok]
                   if failed:
                       raise AssertionError('failed checks: '+', '.join(failed))
-                  print(json.dumps({'status':'ok','release':'0.95.0','build':'0950','page_url':base,'checks':checks},ensure_ascii=False))
+                  print(json.dumps({'status':'ok','release':'0.95.0','build':'0950','page_url':base,'segments':segment_names,'checks':checks},ensure_ascii=False))
                   break
               except Exception as exc:
                   last_error=exc
