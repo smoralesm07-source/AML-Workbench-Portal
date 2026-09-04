@@ -10,11 +10,11 @@
  */
 (function atlasEntity360ForceAuthority20260903(){
   const FLAG='__ATLAS_ENTITY360_FORCE_AUTHORITY__';
-  const BUILD='20260903-e360-force3';
+  const BUILD='20260904-e360-force4';
   const MODULE_BUILD='20260903-e360-3';
-  const EXEC_JS='./assets/atlas-entity360-executive-20260903.js?v=20260903-force2';
-  const EXEC_CSS='./assets/atlas-entity360-executive-20260903.css?v=20260903-force2';
-  const FORCE_CSS='./assets/atlas-entity360-force-authority-20260903.css?v=20260903-force2';
+  const EXEC_JS='./assets/atlas-entity360-executive-20260903.js?v=20260904-retire1';
+  const EXEC_CSS='./assets/atlas-entity360-executive-20260903.css?v=20260904-retire1';
+  const FORCE_CSS='./assets/atlas-entity360-force-authority-20260903.css?v=20260904-retire1';
   const POLISH_JS='./assets/atlas-entity360-polish-20260903.js?v=20260903-polish1';
   const POLISH_CSS='./assets/atlas-entity360-polish-20260903.css?v=20260903-polish1';
   if(window[FLAG]?.build===BUILD)return;
@@ -104,6 +104,13 @@
     return document.querySelector('#content .a45')||document.querySelector('#content .aed-dossier')||document.querySelector('#content .v0203-entity')||document.querySelector('#content .v038-entity')||document.querySelector('#content');
   }
 
+  function retireLegacy360(root=rootForEntity()){
+    if(!root)return;
+    root.classList.remove('e360-advanced-open');
+    root.querySelector(':scope > .e360-advanced-returnbar')?.remove();
+    root.querySelectorAll('#atlas-entity360-executive [data-e360-lens],#atlas-entity360-executive [data-e360-go="e360-advanced"],#atlas-entity360-executive #e360-advanced').forEach(node=>node.remove());
+  }
+
   function ensurePlaceholder(entityId){
     const root=rootForEntity();if(!root||!entityId)return null;
     root.classList.add('e360-modern');
@@ -122,6 +129,7 @@
   function markProduction(entityId){
     const root=rootForEntity();const host=document.querySelector('#atlas-entity360-executive');
     if(root)root.classList.add('e360-modern');
+    retireLegacy360(root);
     if(!host)return;
     host.classList.remove('e360-force-placeholder');
     host.dataset.e360ForceAuthority=BUILD;host.dataset.entityId=entityId;
@@ -132,23 +140,6 @@
       target.insertBefore(badge,target.firstChild);
     }
     try{window.__ATLAS_ENTITY360_POLISH__?.apply?.();}catch(_e){}
-  }
-
-  function ensureAdvancedReturn(root){
-    if(!root||root.querySelector(':scope > .e360-advanced-returnbar'))return;
-    const main=root.querySelector(':scope > main');if(!main)return;
-    const bar=document.createElement('div');bar.className='e360-advanced-returnbar';
-    bar.innerHTML='<button type="button" data-e360-return-summary>← Volver al resumen 360</button><span>Análisis avanzado del expediente</span>';
-    root.insertBefore(bar,main);
-  }
-
-  function openAdvanced(button){
-    const root=rootForEntity();if(!root)return;
-    root.classList.add('e360-advanced-open');ensureAdvancedReturn(root);
-    const key=button?.dataset?.e360Lens;
-    setTimeout(()=>{
-      if(key)root.querySelector(`[data-a45-panel="${key}"]`)?.scrollIntoView({behavior:'smooth',block:'start'});
-    },50);
   }
 
   async function reconcile(reason='poll'){
@@ -167,7 +158,7 @@
     if(correct){lastEntity=entityId;markProduction(entityId);window[FLAG]={active:true,build:BUILD,moduleBuild:MODULE_BUILD,polishBuild:'20260903-e360-polish1',entityId,present:true,hydrated:!!current?.hydrated,lastReason:reason,checkedAt:now()};return;}
     inflight=true;
     try{
-      if(entityId!==lastEntity){rootForEntity()?.classList.remove('e360-advanced-open');lastEntity=entityId;}
+      if(entityId!==lastEntity){retireLegacy360();lastEntity=entityId;}
       await api.open(entityId,{entity_id:entityId});
       markProduction(entityId);
       const finalState=window.__ATLAS_ENTITY360_EXECUTIVE_STATE__;
@@ -182,13 +173,10 @@
   function install(){
     bridgeCanonicalState();
     ensureAssets();
+    retireLegacy360();
     const app=document.querySelector('#app');
     if(!app){setTimeout(install,100);return;}
     if(!observer){observer=new MutationObserver(()=>schedule('dom-mutation'));observer.observe(app,{childList:true,subtree:true});}
-    document.addEventListener('click',event=>{
-      const advanced=event.target.closest?.('[data-e360-lens]');if(advanced)openAdvanced(advanced);
-      const back=event.target.closest?.('[data-e360-return-summary]');if(back){const root=rootForEntity();root?.classList.remove('e360-advanced-open');document.querySelector('#atlas-entity360-executive')?.scrollIntoView({behavior:'smooth',block:'start'});}
-    },true);
     window[FLAG]={active:true,build:BUILD,moduleBuildRequired:MODULE_BUILD,polishBuild:'20260903-e360-polish1',observer:true,canonicalStateBridge:!!window.amlState,installedAt:now()};
     [0,60,180,450,1000,2500,5000].forEach(ms=>setTimeout(()=>schedule(`startup-${ms}`,0),ms));
     setInterval(()=>{
@@ -196,7 +184,7 @@
       const stamp=String(window.__ATLAS_ENTITY360_CURRENT__?.renderedAt||'');
       const id=stateEntity();
       if(id!==lastEntity||stamp!==lastRenderStamp||!document.querySelector('#atlas-entity360-executive')){lastRenderStamp=stamp;schedule('state-poll',0);}
-      else if(entityRoute())markProduction(id);
+      else if(entityRoute()){retireLegacy360();markProduction(id);}
     },250);
   }
 
