@@ -10,11 +10,11 @@
  */
 (function atlasEntity360ForceAuthority20260903(){
   const FLAG='__ATLAS_ENTITY360_FORCE_AUTHORITY__';
-  const BUILD='20260903-e360-force1';
+  const BUILD='20260903-e360-force2';
   const MODULE_BUILD='20260903-e360-3';
-  const EXEC_JS='./assets/atlas-entity360-executive-20260903.js?v=20260903-force1';
-  const EXEC_CSS='./assets/atlas-entity360-executive-20260903.css?v=20260903-force1';
-  const FORCE_CSS='./assets/atlas-entity360-force-authority-20260903.css?v=20260903-force1';
+  const EXEC_JS='./assets/atlas-entity360-executive-20260903.js?v=20260903-force2';
+  const EXEC_CSS='./assets/atlas-entity360-executive-20260903.css?v=20260903-force2';
+  const FORCE_CSS='./assets/atlas-entity360-force-authority-20260903.css?v=20260903-force2';
   if(window[FLAG]?.build===BUILD)return;
 
   let observer=null;
@@ -26,7 +26,16 @@
 
   const now=()=>new Date().toISOString();
 
+  function bridgeCanonicalState(){
+    const canonical=window.amlState||null;
+    if(!canonical)return null;
+    try{if(window.state!==canonical)window.state=canonical;}catch(_e){}
+    return canonical;
+  }
+
   function stateEntity(){
+    const canonical=bridgeCanonicalState();
+    if(canonical?.selectedEntity)return String(canonical.selectedEntity);
     try{if(typeof state!=='undefined'&&state?.selectedEntity)return String(state.selectedEntity);}catch(_e){}
     if(window.state?.selectedEntity)return String(window.state.selectedEntity);
     const current=window.__ATLAS_ENTITY360_CURRENT__;
@@ -37,14 +46,16 @@
     const selected=document.querySelector('#a47-selected small')?.textContent||'';
     const selectedMatch=selected.match(/\bENT-[A-Z0-9-]{3,}\b/i);
     if(selectedMatch)return selectedMatch[0];
-    const canonical=document.querySelector('#content .a45-identity code')?.textContent||'';
-    const canonicalMatch=canonical.match(/\bENT-[A-Z0-9-]{3,}\b/i);
+    const canonicalDom=document.querySelector('#content .a45-identity code')?.textContent||'';
+    const canonicalMatch=canonicalDom.match(/\bENT-[A-Z0-9-]{3,}\b/i);
     if(canonicalMatch)return canonicalMatch[0];
     const attributed=document.querySelector('#content [data-entity-id]')?.getAttribute('data-entity-id');
     return attributed?String(attributed):'';
   }
 
   function entityRoute(){
+    const canonical=bridgeCanonicalState();
+    if(['entities','entity','entity360'].includes(String(canonical?.view||'')))return true;
     try{if(typeof state!=='undefined'&&['entities','entity','entity360'].includes(String(state?.view||'')))return true;}catch(_e){}
     if(['entities','entity','entity360'].includes(String(window.state?.view||'')))return true;
     const current=window.__ATLAS_ENTITY360_CURRENT__;
@@ -60,6 +71,7 @@
   }
 
   function ensureAssets(){
+    bridgeCanonicalState();
     ensureLink(EXEC_CSS,'atlas-e360-force-exec-css');
     ensureLink(FORCE_CSS,'atlas-e360-force-css');
     const api=window.__ATLAS_ENTITY360_EXECUTIVE__;
@@ -125,6 +137,7 @@
   }
 
   async function reconcile(reason='poll'){
+    bridgeCanonicalState();
     if(inflight||!entityRoute())return;
     const entityId=stateEntity();if(!entityId)return;
     ensureAssets();ensurePlaceholder(entityId);
@@ -152,6 +165,7 @@
   function schedule(reason='mutation',delay=40){clearTimeout(timer);timer=setTimeout(()=>void reconcile(reason),delay);}
 
   function install(){
+    bridgeCanonicalState();
     ensureAssets();
     const app=document.querySelector('#app');
     if(!app){setTimeout(install,100);return;}
@@ -160,9 +174,10 @@
       const advanced=event.target.closest?.('[data-e360-lens]');if(advanced)openAdvanced(advanced);
       const back=event.target.closest?.('[data-e360-return-summary]');if(back){const root=rootForEntity();root?.classList.remove('e360-advanced-open');document.querySelector('#atlas-entity360-executive')?.scrollIntoView({behavior:'smooth',block:'start'});}
     },true);
-    window[FLAG]={active:true,build:BUILD,moduleBuildRequired:MODULE_BUILD,observer:true,installedAt:now()};
+    window[FLAG]={active:true,build:BUILD,moduleBuildRequired:MODULE_BUILD,observer:true,canonicalStateBridge:!!window.amlState,installedAt:now()};
     [0,60,180,450,1000,2500,5000].forEach(ms=>setTimeout(()=>schedule(`startup-${ms}`,0),ms));
     setInterval(()=>{
+      bridgeCanonicalState();
       const stamp=String(window.__ATLAS_ENTITY360_CURRENT__?.renderedAt||'');
       const id=stateEntity();
       if(id!==lastEntity||stamp!==lastRenderStamp||!document.querySelector('#atlas-entity360-executive')){lastRenderStamp=stamp;schedule('state-poll',0);}
