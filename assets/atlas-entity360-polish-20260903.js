@@ -1,11 +1,99 @@
 'use strict';
 
-/* ATLAS AML · Entidad 360 visual polish authority · 2026-09-03
- * Presentation-only. No data, scoring, auth, RLS or identity semantics are changed.
+/* ATLAS AML · Entidad 360 visual/runtime polish authority · 2026-09-04
+ * Presentation-first repair. It does not alter AML data, scoring, RLS, auth or
+ * identity joins. The only runtime intervention is synchronising the historical
+ * `window.amlState` compatibility mirror from the canonical application state
+ * before Historia Inteligente is asked to render.
  */
-(function atlasEntity360Polish20260903(){
-  const BUILD='20260904-e360-polish2';
+(function atlasEntity360Polish20260904(){
+  const BUILD='20260904-e360-polish3';
+  const PATCH='ENTITY360_CANONICAL_STATE_BRIDGE_20260904';
+  const VARIANT='HISTORY_INTELLIGENCE_ATLAS_V1';
   if(window.__ATLAS_ENTITY360_POLISH__?.build===BUILD)return;
+
+  function canonicalState(){
+    try{if(typeof state!=='undefined'&&state)return state;}catch(_error){}
+    if(window.state)return window.state;
+    return window.amlState||null;
+  }
+
+  function canonicalEntityId(fallback=null){
+    const s=canonicalState();
+    return s?.selectedEntity||fallback||window.__ATLAS_ENTITY360_CURRENT__?.entityId||window.__ATLAS_ENTITY360_CURRENT__?.selectedEntity||null;
+  }
+
+  function syncCompatibility(entityId=null,reason='sync'){
+    const s=canonicalState();
+    const id=entityId||s?.selectedEntity||null;
+    if(s){
+      try{
+        if(id)s.selectedEntity=id;
+        if(id)s.view='entities';
+      }catch(_error){}
+    }
+    const legacy=window.amlState;
+    if(legacy&&legacy!==s){
+      try{
+        if(id)legacy.selectedEntity=id;
+        if(id)legacy.view='entities';
+      }catch(_error){}
+    }
+    window.__ATLAS_ENTITY360_STATE_BRIDGE__={
+      active:true,patch:PATCH,entityId:id||null,reason,
+      canonicalView:s?.view||null,
+      compatibilityMirrored:!!legacy&&legacy!==s,
+      updatedAt:new Date().toISOString()
+    };
+    return id;
+  }
+
+  function historyApi(){
+    const api=window.__ATLAS_ENTITY360_EXECUTIVE__;
+    return api?.active&&api?.variant===VARIANT&&typeof api.open==='function'?api:null;
+  }
+
+  function currentHistoryHost(id=null){
+    const host=document.querySelector('#atlas-entity360-executive');
+    if(!host||host.dataset?.e360Variant!==VARIANT)return null;
+    if(id&&String(host.dataset?.entityId||'')!==String(id))return null;
+    return host;
+  }
+
+  async function healHistory(entityId=null,reason='heal'){
+    const id=syncCompatibility(entityId||canonicalEntityId(),reason);
+    if(!id)return false;
+    if(currentHistoryHost(id))return true;
+    const api=historyApi();
+    if(!api)return false;
+    try{
+      await api.open(String(id),{entity_id:String(id),source:`${PATCH}:${reason}`});
+      return !!currentHistoryHost(id);
+    }catch(_error){return false;}
+  }
+
+  function installEntryBridge(){
+    const entry=window.__ATLAS_ENTITY_ENTRY__;
+    if(!entry||typeof entry.open!=='function')return false;
+    if(entry.open.__atlasCanonicalStateBridge===PATCH)return true;
+    const base=entry.open;
+    const wrapped=async function atlasEntity360CanonicalStateBridge(entityId,meta,...rest){
+      const id=entityId||meta?.entity_id||canonicalEntityId();
+      syncCompatibility(id,'entry-open-before');
+      const result=await base.apply(this,[entityId,meta,...rest]);
+      syncCompatibility(id||canonicalEntityId(),'entry-open-after');
+      if(id&&!currentHistoryHost(id))await healHistory(id,'entry-open-settle');
+      return result;
+    };
+    wrapped.__atlasCanonicalStateBridge=PATCH;
+    wrapped.__atlasCanonicalStateBase=base;
+    entry.open=wrapped;
+    return true;
+  }
+
+  /* v0447 captures ENTRY.open when it boots. This file is compiled immediately
+     after Historia Inteligente and before v0447, so install the bridge now. */
+  installEntryBridge();
 
   const svg=(name)=>{
     const common='viewBox="0 0 24 24" aria-hidden="true" focusable="false"';
@@ -32,13 +120,10 @@
     return p[name]||p.star;
   };
 
-  const setIcon=(node,name)=>{if(!node)return;node.innerHTML=svg(name);};
+  const setIcon=(node,name)=>{if(node)node.innerHTML=svg(name);};
 
   function polishCharacterRows(host){
-    const iconByLabel={
-      'Actividad económica':'building','Otras actividades':'building','Tramo de ventas':'sales',
-      'Trabajadores':'workers','Región':'pin','Comuna':'pin','Inicio actividades':'calendar','Término de giro':'calendar'
-    };
+    const iconByLabel={'Actividad económica':'building','Otras actividades':'building','Tramo de ventas':'sales','Ventas anuales (UF)':'sales','Trabajadores':'workers','Región':'pin','Comuna':'pin','Inicio actividades':'calendar','Término de giro':'calendar'};
     host.querySelectorAll('.eh-character-row').forEach(row=>{
       if(row.querySelector('.eh-row-icon'))return;
       const label=(row.querySelector('span')?.textContent||'').trim();
@@ -47,11 +132,9 @@
   }
 
   function polishSectionHeaders(host){
-    const defs=[
-      ['.eh-san','sanctions'],['.eh-res','building'],['.eh-spend','spend'],['.eh-docs','document'],['.eh-compare','compare']
-    ];
-    defs.forEach(([selector,name])=>{
-      const card=host.querySelector(selector);const box=card?.querySelector(':scope > header');if(!box||box.querySelector('.eh-section-icon'))return;
+    [['.eh-san','sanctions'],['.eh-res','building'],['.eh-spend','spend'],['.eh-docs','document'],['.eh-compare','compare']].forEach(([selector,name])=>{
+      const card=host.querySelector(selector),box=card?.querySelector(':scope > header');
+      if(!box||box.querySelector('.eh-section-icon'))return;
       const i=document.createElement('i');i.className='eh-section-icon';i.innerHTML=svg(name);box.prepend(i);
     });
   }
@@ -76,16 +159,15 @@
   function countryCompare(host){
     const tab=host.querySelector('[data-eh-compare="territory"]');if(!tab)return;
     tab.textContent='País';tab.setAttribute('aria-label','Comparar con País');
-    if(!tab.__atlasCountryBound){
-      tab.__atlasCountryBound=true;
-      tab.addEventListener('click',event=>{
-        event.stopImmediatePropagation();
-        host.querySelectorAll('[data-eh-compare]').forEach(b=>b.classList.toggle('active',b===tab));
-        const body=host.querySelector('[data-eh-compare-body]');if(!body)return;
-        body.dataset.mode='country';
-        body.innerHTML='<div><span>País</span><b>Chile</b><small>Referencia nacional</small></div><p>Referencia nacional de pares no materializada en Entidad 360. ATLAS no estima un benchmark sin una base gobernada.</p>';
-      },true);
-    }
+    if(tab.__atlasCountryBound)return;
+    tab.__atlasCountryBound=true;
+    tab.addEventListener('click',event=>{
+      event.stopImmediatePropagation();
+      host.querySelectorAll('[data-eh-compare]').forEach(b=>b.classList.toggle('active',b===tab));
+      const body=host.querySelector('[data-eh-compare-body]');if(!body)return;
+      body.dataset.mode='country';
+      body.innerHTML='<div><span>País</span><b>Chile</b><small>Referencia nacional</small></div><p>Referencia nacional de pares no materializada en Entidad 360. ATLAS no estima un benchmark sin una base gobernada.</p>';
+    },true);
   }
 
   function polishButtons(host){
@@ -101,20 +183,38 @@
   }
 
   function apply(){
-    const host=document.querySelector('#atlas-entity360-executive.e360-history-host');if(!host)return false;
+    installEntryBridge();
+    const id=canonicalEntityId();
+    if(id)syncCompatibility(id,'polish-apply');
+    const host=document.querySelector('#atlas-entity360-executive.e360-history-host');
+    if(!host){if(id)queueMicrotask(()=>void healHistory(id,'polish-missing-host'));return false;}
     host.dataset.e360Polish=BUILD;
     retireLegacyActions(host);
     polishTimeline(host);polishCharacterRows(host);polishSectionHeaders(host);polishSanctionBars(host);countryCompare(host);polishButtons(host);
     return true;
   }
 
-  let queued=false;
-  const schedule=()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;apply();});};
-  const observer=new MutationObserver(schedule);
+  let queued=false,healQueued=false;
+  const schedule=()=>{
+    if(queued)return;queued=true;
+    requestAnimationFrame(()=>{queued=false;apply();});
+  };
+  const scheduleHeal=(reason='mutation')=>{
+    if(healQueued)return;healQueued=true;
+    queueMicrotask(async()=>{healQueued=false;installEntryBridge();const id=canonicalEntityId();if(id&&!currentHistoryHost(id))await healHistory(id,reason);schedule();});
+  };
+
+  const observer=new MutationObserver(()=>scheduleHeal('dom-mutation'));
   observer.observe(document.documentElement,{childList:true,subtree:true});
-  document.addEventListener('atlas:entity-workspace-ready',schedule);
-  document.addEventListener('atlas:entity-entry-ready',schedule);
-  window.addEventListener('load',schedule,{once:true});
-  [0,120,400,1000,2500].forEach(ms=>setTimeout(schedule,ms));
-  window.__ATLAS_ENTITY360_POLISH__={active:true,build:BUILD,authority:'ENTITY360_PROPOSAL3_POLISH_ATLAS',apply,installedAt:new Date().toISOString()};
+  document.addEventListener('atlas:entity-workspace-ready',()=>scheduleHeal('workspace-ready'));
+  document.addEventListener('atlas:entity-entry-ready',()=>scheduleHeal('entry-ready'));
+  window.addEventListener('load',()=>scheduleHeal('window-load'),{once:true});
+  [0,80,220,600,1400,3000].forEach(ms=>setTimeout(()=>scheduleHeal('startup'),ms));
+
+  window.__ATLAS_ENTITY360_POLISH__={
+    active:true,build:BUILD,patch:PATCH,
+    authority:'ENTITY360_PROPOSAL3_POLISH_ATLAS+CANONICAL_STATE_BRIDGE',
+    canonicalStateFirst:true,compatibilityStateMirrored:true,
+    apply,heal:healHistory,sync:syncCompatibility,installedAt:new Date().toISOString()
+  };
 })();
