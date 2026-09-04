@@ -97,6 +97,7 @@
     const root=rootForEntity();const host=document.querySelector('#atlas-entity360-executive');
     if(root)root.classList.add('e360-modern');
     if(!host)return;
+    host.classList.remove('e360-force-placeholder');
     host.dataset.e360ForceAuthority=BUILD;host.dataset.entityId=entityId;
     let badge=host.querySelector('.e360-force-production-badge');
     if(!badge){
@@ -135,7 +136,7 @@
     const current=window.__ATLAS_ENTITY360_EXECUTIVE_STATE__;
     const host=document.querySelector('#atlas-entity360-executive');
     const correct=host&&String(current?.entityId||host.dataset.entityId||'')===entityId&&current?.build===MODULE_BUILD&&!host.classList.contains('e360-force-placeholder');
-    if(correct){markProduction(entityId);window[FLAG]={active:true,build:BUILD,moduleBuild:MODULE_BUILD,entityId,present:true,hydrated:!!current?.hydrated,lastReason:reason,checkedAt:now()};return;}
+    if(correct){lastEntity=entityId;markProduction(entityId);window[FLAG]={active:true,build:BUILD,moduleBuild:MODULE_BUILD,entityId,present:true,hydrated:!!current?.hydrated,lastReason:reason,checkedAt:now()};return;}
     inflight=true;
     try{
       if(entityId!==lastEntity){rootForEntity()?.classList.remove('e360-advanced-open');lastEntity=entityId;}
