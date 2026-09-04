@@ -56,6 +56,16 @@
 .san96 .san96-source{background:rgba(255,255,255,.025)!important;color:inherit!important}
 .san96 .san96-legend button{background:transparent!important;color:var(--s964-muted)!important}
 
+/* Expedientes · readability refinement 0.96.7.
+   Tipo is intentionally removed from the analyst table; the event kind remains
+   available in the sanction detail drawer. Larger type improves long-session reading. */
+.san96 .san96-table th:nth-child(8),
+.san96 .san96-table td:nth-child(8){display:none!important}
+.san96 .san96-table{min-width:1020px!important}
+.san96 .san96-table td{font-size:10px!important;line-height:1.35!important;padding-top:8px!important;padding-bottom:8px!important}
+.san96 .san96-table th{font-size:9.3px!important;line-height:1.25!important;padding-top:8px!important;padding-bottom:8px!important}
+.san96 .san96-count{font-size:9.5px!important}
+
 @media(max-width:1100px){
   .san96 .san96-region-row,.san96 .san963-region-row{grid-template-columns:26px minmax(150px,1.3fr) minmax(90px,.9fr) 44px 50px!important;gap:7px!important}
 }
