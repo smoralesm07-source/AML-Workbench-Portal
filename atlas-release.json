@@ -1,7 +1,7 @@
 {
   "product": "ATLAS AML",
-  "release": "0.96.3",
-  "build": "0963",
+  "release": "0.96.2",
+  "build": "0962",
   "channel": "current",
   "deployment_policy": "SINGLE_ACTIVE_RELEASE",
   "source_branch": "main",
@@ -33,5 +33,5 @@
   "potential_subjects_policy": "ACTECO_CANDIDATE_USE_SI_ACTIVE_SII_NOT_UAF_RUT_EXACT+REGISTRATION_HYPOTHESIS_NOT_PROVEN_NON_COMPLIANCE+RES_COMPLEMENTARY_EVIDENCE_ONLY",
   "osfl_policy": "OSFL_OBSERVED_36843+SII_ECONOMIC_10650+REGISTRO19862_CONTEXT_NOT_RECEIPT+ROW_LEVEL_TRANSFER_EVIDENCE_REQUIRED+ECONOMIC_SCALE_NOT_AML_RISK",
   "sanctions_policy": "CURRENT_RADIOGRAPHY_0960+UNIFIED_SII_UAF_OSFL_UNIVERSE+CMF_UAF_SCJ_SANCTIONS+CGR_ENFORCEMENT_SEPARATE_SEMANTICS+DOCUMENT_EVIDENCE+CURRENT_UAF_STATUS+OSFL_RES_CONTEXT+NO_HEURISTIC_UAF_STATUS+NO_INFERRED_TERRITORY",
-  "release_notes": "0.96.3 makes Historia Inteligente the persistent Entidad 360 authority. It keeps the final render guard from 0.96.2, permanently retires the historical dynamic Executive/Trajectory loader from the UAF highlight layer, and restores the validated fresh-entry routing contract so the fix can pass production validation and deploy. No AML data, RLS, authentication, scoring or identity-join semantics are changed."
+  "release_notes": "0.96.2 is the visible ATLAS release. Historia Inteligente remains the sole Entidad 360 authority, with the final render guard, current route authority and the legacy Executive/Trajectory dynamic loaders retired so older instances cannot repaint the workspace. No AML data, RLS, authentication, scoring or identity-join semantics are changed."
 }
