@@ -1,8 +1,8 @@
 'use strict';
 
 /* ATLAS · Entity workspace bootstrap · production compatibility layer
- * 2026-09-03: Entidad 360 Executive is now loaded independently of the legacy
- * v0203 renderer and hooks the canonical __ATLAS_ENTITY_ENTRY__ authority.
+ * 2026-09-03: Entidad 360 Executive is loaded independently of the legacy
+ * renderer and hooks the canonical __ATLAS_ENTITY_ENTRY__ authority.
  */
 (function atlasEntityWorkspaceBootstrap20260828(){
   const BOOT_FLAG='__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_20260828__';
@@ -18,7 +18,7 @@
   const PRESS_SEARCH_RACEFIX_SRC='./assets/atlas-entity-press-search-racefix-20260828.js?v=20260828-racefix1';
   const PRESS_VIEW_JS_SRC='./assets/atlas-entity-press-view-0951.js?v=0951-1';
   const PRESS_VIEW_CSS_SRC='./assets/atlas-entity-press-view-0951.css?v=0951-1';
-  const BUILD='20260903-e360-entry3';
+  const BUILD='20260903-e360-entry4';
 
   if(window[BOOT_FLAG])return;
   window[BOOT_FLAG]=true;
@@ -155,17 +155,17 @@
 })();
 
 /* Entidad 360 Executive · canonical production loader.
- * IMPORTANT: no legacy renderer precondition. The module hooks
- * window.__ATLAS_ENTITY_ENTRY__.open itself.
+ * It refuses stale 360 APIs and always installs the exact production build.
  */
 (function atlasEntity360ExecutiveProductionLoader20260903(){
   const FLAG='__ATLAS_ENTITY360_EXECUTIVE_ACTIVE_LOADER__';
-  const BUILD='20260903-e360-entry3';
-  const CSS='./assets/atlas-entity360-executive-20260903.css?v=20260903-entry3';
-  const JS='./assets/atlas-entity360-executive-20260903.js?v=20260903-entry3';
+  const BUILD='20260903-e360-entry4';
+  const MODULE_BUILD='20260903-e360-3';
+  const CSS='./assets/atlas-entity360-executive-20260903.css?v=20260903-entry4';
+  const JS='./assets/atlas-entity360-executive-20260903.js?v=20260903-entry4';
 
   if(window[FLAG]?.build===BUILD)return;
-  window[FLAG]={active:true,build:BUILD,installed:false,startedAt:new Date().toISOString()};
+  window[FLAG]={active:true,build:BUILD,moduleBuildRequired:MODULE_BUILD,installed:false,startedAt:new Date().toISOString()};
 
   if(!document.querySelector('link[data-atlas-e360-executive-active]')){
     const link=document.createElement('link');
@@ -177,26 +177,30 @@
 
   function connect(){
     const api=window.__ATLAS_ENTITY360_EXECUTIVE__;
-    if(api?.active){
+    if(api?.active&&api.build===MODULE_BUILD){
       window[FLAG].installed=true;
-      window[FLAG].moduleBuild=api.build||null;
+      window[FLAG].moduleBuild=api.build;
       window[FLAG].entryHooked=api.hookEntry?.()||!!window.__ATLAS_ENTITY_ENTRY__?.open?.__atlasE360Executive;
       window[FLAG].connectedAt=new Date().toISOString();
       return true;
+    }
+    if(api?.active&&api.build!==MODULE_BUILD){
+      window[FLAG].staleModuleBuild=api.build||'unknown';
+      window[FLAG].installed=false;
     }
     return false;
   }
 
   if(connect())return;
-  if(!document.querySelector('script[data-atlas-e360-executive-active]')){
-    const script=document.createElement('script');
-    script.src=JS;
-    script.async=false;
-    script.dataset.atlasE360ExecutiveActive='1';
-    script.onload=()=>{window[FLAG].loadedAt=new Date().toISOString();connect();};
-    script.onerror=()=>{window[FLAG].error='asset-load-failed';window[FLAG].failedAt=new Date().toISOString();};
-    document.body.appendChild(script);
-  }
+  const prior=document.querySelector('script[data-atlas-e360-executive-active]');
+  if(prior)prior.remove();
+  const script=document.createElement('script');
+  script.src=JS;
+  script.async=false;
+  script.dataset.atlasE360ExecutiveActive='1';
+  script.onload=()=>{window[FLAG].loadedAt=new Date().toISOString();connect();};
+  script.onerror=()=>{window[FLAG].error='asset-load-failed';window[FLAG].failedAt=new Date().toISOString();};
+  document.body.appendChild(script);
 
   document.addEventListener('atlas:entity-workspace-ready',connect);
   document.addEventListener('atlas:entity-entry-ready',connect);
