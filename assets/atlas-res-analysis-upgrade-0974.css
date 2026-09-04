@@ -1,0 +1,93 @@
+/* ATLAS AML · Empresas (RES) · analyst upgrade 0.97.4 */
+
+.res952-root .res974-click-hint{color:var(--r-text);font-weight:800}
+.res952-root .res970-analytics-grid[data-res974="1"]{align-items:stretch}
+.res952-root .res974-panel{overflow:hidden}
+.res952-root .res974-panel-note{margin:-3px 0 10px;color:var(--r-muted);font-size:7.8px;line-height:1.45}
+.res952-root [data-res974-kind]{transition:border-color .15s ease,background .15s ease,transform .15s ease,filter .15s ease}
+.res952-root [data-res974-kind].active{outline:1px solid color-mix(in srgb,var(--r-orange) 78%,transparent);outline-offset:-1px}
+.res952-root .res974-evidence-pulse{animation:res974-evidence-pulse .65s ease}
+@keyframes res974-evidence-pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--r-orange) 26%,transparent)}100%{box-shadow:0 0 0 13px transparent}}
+
+/* 1. Desvíos: dispersión SVG real, sin variables inline bloqueadas por CSP. */
+.res952-root .res974-scatter{display:block;width:100%;min-height:292px;overflow:visible}
+.res952-root .res974-scatter-grid line{stroke:var(--r-line-soft);stroke-width:1}
+.res952-root .res974-scatter-grid text,.res952-root .res974-axis-label{fill:var(--r-muted);font-size:8px;font-family:inherit}
+.res952-root .res974-scatter-point{cursor:pointer;outline:none}
+.res952-root .res974-scatter-point circle{fill:color-mix(in srgb,var(--r-orange) 18%,var(--r-panel-2));stroke:color-mix(in srgb,var(--r-orange) 72%,var(--r-line));stroke-width:1.4;transition:r .15s ease,fill .15s ease,stroke-width .15s ease}
+.res952-root .res974-scatter-point text{fill:var(--r-orange);font-size:8px;font-weight:900;pointer-events:none}
+.res952-root .res974-scatter-point:hover circle,.res952-root .res974-scatter-point:focus circle,.res952-root .res974-scatter-point.active circle{fill:var(--r-orange);stroke:var(--r-text);stroke-width:2}
+.res952-root .res974-scatter-point:hover text,.res952-root .res974-scatter-point:focus text,.res952-root .res974-scatter-point.active text{fill:#17120a}
+
+/* 2. Comunas: incremento absoluto, no repetición de dos barras casi iguales. */
+.res952-root .res974-delta-list{display:grid}
+.res952-root .res974-delta-list>button{appearance:none;display:grid;grid-template-columns:116px minmax(120px,1fr) 70px;gap:10px;align-items:center;width:100%;padding:7px 4px;border:0;border-bottom:1px solid var(--r-line-soft);background:transparent;color:var(--r-text);text-align:left;cursor:pointer}
+.res952-root .res974-delta-list>button:hover,.res952-root .res974-delta-list>button.active{background:color-mix(in srgb,var(--r-blue) 7%,var(--r-panel-2))}
+.res952-root .res974-delta-list>button>span{display:grid;gap:2px;min-width:0}
+.res952-root .res974-delta-list b{overflow:hidden;font-size:8.7px;text-overflow:ellipsis;white-space:nowrap}
+.res952-root .res974-delta-list small{color:var(--r-muted);font-size:7px}
+.res952-root .res974-delta-list strong{display:grid;color:var(--r-green);font-size:9px;text-align:right}
+.res952-root .res974-delta-list strong small{color:var(--r-green);font-weight:650}
+.res952-root progress{appearance:none;-webkit-appearance:none;width:100%;height:8px;border:0;border-radius:99px;overflow:hidden;background:var(--r-panel-3)}
+.res952-root progress::-webkit-progress-bar{background:var(--r-panel-3);border-radius:99px}
+.res952-root progress::-webkit-progress-value{background:linear-gradient(90deg,var(--r-blue),var(--r-orange));border-radius:99px}
+.res952-root progress::-moz-progress-bar{background:linear-gradient(90deg,var(--r-blue),var(--r-orange));border-radius:99px}
+
+/* 3. Fechas: calendario de picos; responde cuándo, no sólo cuál fue mayor. */
+.res952-root .res974-month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;min-height:240px}
+.res952-root .res974-month-grid>section{display:grid;grid-template-rows:auto 1fr auto;min-width:0;padding:7px;border:1px solid var(--r-line-soft);border-radius:9px;background:color-mix(in srgb,var(--r-panel-2) 76%,transparent)}
+.res952-root .res974-month-grid>section>header{display:grid;gap:1px;padding-bottom:6px;border-bottom:1px solid var(--r-line-soft)}
+.res952-root .res974-month-grid>section>header b{font-size:8.5px;color:var(--r-text)}
+.res952-root .res974-month-grid>section>header span{font-size:6.7px;color:var(--r-muted)}
+.res952-root .res974-month-grid>section>div{display:grid;align-content:start;gap:5px;padding:7px 0}
+.res952-root .res974-month-grid>section>div>small{padding-top:6px;color:var(--r-muted);font-size:6.6px;line-height:1.3}
+.res952-root .res974-month-grid button{appearance:none;display:grid;gap:2px;min-width:0;padding:6px 4px;border:1px solid var(--r-line-soft);border-radius:7px;background:var(--r-panel-3);color:var(--r-text);cursor:pointer;text-align:center}
+.res952-root .res974-month-grid button:hover,.res952-root .res974-month-grid button.active{border-color:var(--r-orange);transform:translateY(-1px)}
+.res952-root .res974-month-grid button time{font-size:7px;color:var(--r-muted)}
+.res952-root .res974-month-grid button b{font-size:8.5px}
+.res952-root .res974-month-grid button.l1{background:color-mix(in srgb,var(--r-orange) 4%,var(--r-panel-3))}
+.res952-root .res974-month-grid button.l2{background:color-mix(in srgb,var(--r-orange) 7%,var(--r-panel-3))}
+.res952-root .res974-month-grid button.l3{background:color-mix(in srgb,var(--r-orange) 10%,var(--r-panel-3))}
+.res952-root .res974-month-grid button.l4{background:color-mix(in srgb,var(--r-orange) 14%,var(--r-panel-3))}
+.res952-root .res974-month-grid button.l5{background:color-mix(in srgb,var(--r-orange) 20%,var(--r-panel-3));border-color:color-mix(in srgb,var(--r-orange) 45%,var(--r-line))}
+.res952-root .res974-month-grid footer{padding-top:5px;border-top:1px solid var(--r-line-soft);color:var(--r-muted);font-size:6.5px}
+
+/* 4. Capital: concentración y acumulación. */
+.res952-root .res974-capital-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:8px}
+.res952-root .res974-capital-summary>span{display:grid;gap:2px;padding:8px 9px;border:1px solid var(--r-line-soft);border-radius:8px;background:var(--r-panel-2)}
+.res952-root .res974-capital-summary b{font-size:13px;color:var(--r-orange)}
+.res952-root .res974-capital-summary small{font-size:6.8px;color:var(--r-muted)}
+.res952-root .res974-capital-list{display:grid}
+.res952-root .res974-capital-list>button{appearance:none;display:grid;grid-template-columns:112px minmax(110px,1fr) 52px;gap:10px;align-items:center;width:100%;padding:6px 4px;border:0;border-bottom:1px solid var(--r-line-soft);background:transparent;color:var(--r-text);text-align:left;cursor:pointer}
+.res952-root .res974-capital-list>button:hover,.res952-root .res974-capital-list>button.active{background:color-mix(in srgb,var(--r-orange) 5%,var(--r-panel-2))}
+.res952-root .res974-capital-list>button>span{display:grid;gap:2px}
+.res952-root .res974-capital-list b{font-size:8px}.res952-root .res974-capital-list small{color:var(--r-muted);font-size:6.8px}.res952-root .res974-capital-list strong{font-size:8px;text-align:right}
+.res952-root .res974-capital-list progress::-webkit-progress-value{background:var(--r-orange)}
+.res952-root .res974-capital-list progress::-moz-progress-bar{background:var(--r-orange)}
+
+/* Evidencia del cruce RES–SII. */
+.res952-root .res971-evidence>header>div{display:grid;gap:2px}.res952-root .res971-evidence>header>div small{color:var(--r-muted);font-size:7px}.res952-root .res971-evidence>header>span strong{color:var(--r-orange);font-size:10px}
+.res952-root .res974-evidence-row{appearance:none;width:100%;border-left:0;border-right:0;border-top:0;background:transparent;color:var(--r-text);text-align:left;cursor:pointer}
+.res952-root .res974-evidence-row:hover{background:color-mix(in srgb,var(--r-blue) 8%,var(--r-panel-2))}
+.res952-root .res974-evidence-row:focus{outline:1px solid var(--r-blue);outline-offset:-1px}
+
+/* Drawer para revisar la sociedad desde el hallazgo económico. */
+.res974-econ-drawer{--r-panel:#0f1827;--r-panel-2:#131f31;--r-panel-3:#18263a;--r-line:#26374e;--r-line-soft:#1c2a3d;--r-text:#edf3fb;--r-muted:#91a2b8;--r-orange:#f59e0b;--r-blue:#5d91ff;--r-green:#3dcc9a;position:fixed;z-index:10030;top:0;right:0;width:min(620px,calc(100vw - 24px));height:100vh;overflow:auto;padding:22px 22px 34px;border-left:1px solid #31435c;background:#0f1827;color:#edf3fb;box-shadow:-28px 0 90px rgba(0,0,0,.55);transform:translateX(103%);transition:transform .22s ease}
+.res974-econ-drawer.open{transform:translateX(0)}
+html[data-atlas-theme="light"] .res974-econ-drawer{--r-panel:#fff;--r-panel-2:#f5f7fa;--r-panel-3:#eef2f6;--r-line:#d7dee8;--r-line-soft:#e7ebf0;--r-text:#192231;--r-muted:#66758a;--r-orange:#d97706;--r-blue:#2563eb;--r-green:#11845b;border-left-color:#cbd5e1;background:#fff;color:#192231;box-shadow:-20px 0 60px rgba(15,23,42,.2)}
+.res974-drawer-close{appearance:none;position:absolute;top:14px;right:14px;width:30px;height:30px;border:1px solid var(--r-line);border-radius:8px;background:var(--r-panel-2);color:var(--r-text);font-size:18px;cursor:pointer}
+.res974-drawer-eyebrow{display:block;padding-right:42px;color:var(--r-orange);font-size:8px;font-weight:900;letter-spacing:.12em}.res974-econ-drawer h3{margin:5px 42px 2px 0;font-size:20px;line-height:1.2}.res974-econ-drawer>p{margin:0 0 14px;color:var(--r-muted);font-size:10px}
+.res974-drawer-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:12px 0}.res974-drawer-kpis>div{display:grid;gap:3px;padding:9px 10px;border:1px solid var(--r-line);border-radius:9px;background:var(--r-panel-2)}.res974-drawer-kpis span{font-size:7px;color:var(--r-muted)}.res974-drawer-kpis b{font-size:10px}
+.res974-econ-drawer dl,.res974-drawer-enrichment dl{display:grid;grid-template-columns:132px 1fr;gap:0;margin:0;border:1px solid var(--r-line);border-radius:10px;overflow:hidden}.res974-econ-drawer dt,.res974-econ-drawer dd{margin:0;padding:8px 9px;border-bottom:1px solid var(--r-line-soft);font-size:8.5px}.res974-econ-drawer dt{background:var(--r-panel-2);color:var(--r-muted)}.res974-econ-drawer dd{background:var(--r-panel);color:var(--r-text)}
+.res974-drawer-enrichment{display:grid;gap:9px;margin-top:12px;padding:12px;border:1px solid color-mix(in srgb,var(--r-blue) 26%,var(--r-line));border-radius:11px;background:color-mix(in srgb,var(--r-blue) 4%,var(--r-panel))}.res974-drawer-enrichment>header{display:flex;justify-content:space-between;gap:9px;align-items:center}.res974-drawer-enrichment>header b{font-size:10px}.res974-drawer-enrichment>header span{font-size:7px;color:var(--r-blue)}
+.res974-drawer-acts{display:grid;gap:5px}.res974-drawer-acts span{display:flex;gap:7px;align-items:start;padding:6px 7px;border:1px solid var(--r-line-soft);border-radius:7px;background:var(--r-panel-2);font-size:7.8px;line-height:1.35}.res974-drawer-acts code{flex:0 0 auto;color:var(--r-blue);font-size:7.5px}
+
+@media(max-width:1180px){.res952-root .res974-month-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:760px){
+  .res952-root .res974-delta-list>button{grid-template-columns:96px minmax(80px,1fr) 58px;gap:6px}
+  .res952-root .res974-month-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .res952-root .res974-capital-summary{grid-template-columns:1fr}
+  .res952-root .res974-capital-list>button{grid-template-columns:96px minmax(80px,1fr) 48px;gap:6px}
+  .res974-drawer-kpis{grid-template-columns:1fr}
+  .res974-econ-drawer dl,.res974-drawer-enrichment dl{grid-template-columns:110px 1fr}
+}
