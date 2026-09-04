@@ -167,7 +167,8 @@
     {"path":"assets/atlas-ui-authority-0901.js","type":"classic","role":"final-ui-runtime-authority"},
     {"path":"assets/atlas-osfl-economic-0950.js","type":"classic","role":"osfl-economic-public-funds-current-0950"},
     {"path":"assets/atlas-osfl-route-authority-0950.js","type":"classic","role":"osfl-route-install-current-authority-0950"},
-    {"path":"assets/atlas-osfl-graphics-authority-0951.module.js","type":"module","role":"osfl-graphics-cache-busting-authority-0951"}
+    {"path":"assets/atlas-osfl-graphics-authority-0951.module.js","type":"module","role":"osfl-graphics-cache-busting-authority-0951"},
+    {"path":"assets/atlas-osfl-graphics-final-1001.js","type":"classic","role":"osfl-graphics-final-runtime-1001"}
   ],
   "forbidden_runtime_assets": [
     "v0272-runtime-version.css",
