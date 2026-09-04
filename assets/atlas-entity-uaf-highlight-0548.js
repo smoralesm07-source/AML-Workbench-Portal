@@ -8,7 +8,7 @@
   let scheduled=false;
 
   const db=()=>{try{return typeof sb!=='undefined'?sb:(window.sb||null);}catch{return window.sb||null;}};
-  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
   const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/\s+/g,' ').trim();
   const isSoText=v=>/\b(SO|SUJETO OBLIGADO)\b/.test(norm(v))&&/\bUAF\b/.test(norm(v));
 
@@ -150,4 +150,30 @@
   s.id='atlas-entity-res-bootstrap-0553-js';
   s.src='./assets/atlas-entity-res-bootstrap-0553.js?v=0556-1';
   document.body.appendChild(s);
+})();
+
+/* ATLAS AML 0.71.0 · Entidad 360 Executive.
+ * Se instala al completar la carga para envolver la autoridad final de Entidades,
+ * preservando los módulos previos y reduciendo el riesgo de carreras entre capas.
+ */
+(function atlasEntity360ExecutiveLoader20260903(){
+  const FLAG='__ATLAS_ENTITY360_EXECUTIVE_LOADER__';
+  if(window[FLAG])return;
+  window[FLAG]={active:true,installed:false,build:'20260903-e360-loader1'};
+  const CSS='./assets/atlas-entity360-executive-20260903.css?v=20260903-1';
+  const JS='./assets/atlas-entity360-executive-20260903.js?v=20260903-1';
+  function install(){
+    if(window[FLAG].installed||window.__ATLAS_ENTITY360_EXECUTIVE__?.active)return;
+    if(typeof window.v0203RenderEntity!=='function'){setTimeout(install,120);return;}
+    if(!document.querySelector('link[data-atlas-e360-executive]')){
+      const link=document.createElement('link');link.rel='stylesheet';link.href=CSS;link.dataset.atlasE360Executive='1';document.head.appendChild(link);
+    }
+    if(document.querySelector('script[data-atlas-e360-executive]'))return;
+    const script=document.createElement('script');script.src=JS;script.async=false;script.dataset.atlasE360Executive='1';
+    script.onload=()=>{window[FLAG].installed=!!window.__ATLAS_ENTITY360_EXECUTIVE__?.active;window[FLAG].loadedAt=new Date().toISOString();};
+    script.onerror=()=>{window[FLAG].error='asset-load-failed';window[FLAG].failedAt=new Date().toISOString();};
+    document.body.appendChild(script);
+  }
+  if(document.readyState==='complete')setTimeout(install,0);else window.addEventListener('load',()=>setTimeout(install,0),{once:true});
+  document.addEventListener('atlas:entity-workspace-ready',()=>setTimeout(install,0));
 })();
