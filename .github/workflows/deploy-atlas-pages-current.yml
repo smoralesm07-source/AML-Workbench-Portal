@@ -109,6 +109,7 @@ jobs:
           html=p.read_text(encoding='utf-8')
           html=re.sub(r'\s*<link[^>]+href=["\']\./assets/atlas-data-audit\.css(?:\?[^"\']*)?["\'][^>]*>\s*', '\n', html, flags=re.I)
           html=re.sub(r'\s*<script[^>]+src=["\']\./assets/atlas-data-audit\.js(?:\?[^"\']*)?["\'][^>]*>\s*</script>\s*', '\n', html, flags=re.I)
+          html=re.sub(r'(\./assets/atlas-osfl-runtime-recovery-1001\.js)(?:\?[^"\']*)?', r'\1?v=1002-1', html, flags=re.I)
           p.write_text(html, encoding='utf-8')
           PY
           rm -f _site/assets/atlas-data-audit.js _site/assets/atlas-data-audit.css
@@ -145,6 +146,7 @@ jobs:
           grep -q 'v019-brand small\[data-atlas-version-label\]' _site/assets/atlas-ui-authority-0901.css
           grep -q 'data-atlas-global-audit-host' _site/assets/atlas-ui-authority-0901.css
           grep -q '__ATLAS_OSFL_RUNTIME_RECOVERY_1002__' _site/assets/atlas-osfl-runtime-recovery-1001.js
+          grep -q 'atlas-osfl-runtime-recovery-1001.js?v=1002-1' _site/index.html
           ! grep -Eq 'atlas-osfl-(intelligence-0920|national-monitor-0930|map-summary-0932|growth-0934|remove-evidence-priority-0931)' _site/index.html
 
           python3 - <<'PY'
@@ -160,6 +162,7 @@ jobs:
           assert '<title>ATLAS AML · v0.95.0</title>' in html
           assert 'atlas-release-guard.js?r=0950' in html
           assert 'atlas-runtime-current-01.js?r=0950' in html
+          assert 'atlas-osfl-runtime-recovery-1001.js?v=1002-1' in html
           assert 'data-aml-version="0.90.1"' not in html
           assert 'atlas-data-audit.js' not in html
           assert 'atlas-data-audit.css' not in html
@@ -230,6 +233,7 @@ jobs:
                       'osfl_0950':'__ATLAS_OSFL_ECONOMIC_0950__' in runtime_js and 'aml_v_osfl_economic_concentration_current_v0950' in runtime_js,
                       'osfl_svg_final':'OSFL_GRAPHICS_FINAL_1001' in runtime_js,
                       'osfl_recovery_1002':'__ATLAS_OSFL_RUNTIME_RECOVERY_1002__' in recovery and "canonical:'0.95.0'" in recovery,
+                      'osfl_recovery_cache_bust':'atlas-osfl-runtime-recovery-1001.js?v=1002-1' in html,
                       'osfl_production_css':'data-osfl95-root' in production_css and 'data-osfl-proportional-svg' in production_css,
                       'legacy_osfl_absent':not re.search(r'atlas-osfl-(intelligence-0920|national-monitor-0930|map-summary-0932|growth-0934|remove-evidence-priority-0931)',html),
                       'sanctions_0940':'SANCTIONS_SPECTRUM_CURRENT_0940' in runtime_js,
