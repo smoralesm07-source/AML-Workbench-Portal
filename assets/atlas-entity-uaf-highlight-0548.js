@@ -1,7 +1,11 @@
 'use strict';
-/* ATLAS AML 0.54.8 · Identificación visual reforzada de Sujetos Obligados UAF */
+/* ATLAS AML 0.54.8 · Identificación visual reforzada de Sujetos Obligados UAF
+ * 0.96.3: this source is UI-only. Historical Entidad 360 Executive/Trajectory
+ * dynamic loaders are permanently retired; Historia Inteligente is the sole
+ * Entity 360 authority.
+ */
 (function atlasEntityUafHighlight0548(){
-  const VERSION='ENTITY-UAF-HIGHLIGHT-0548.1';
+  const VERSION='ENTITY-UAF-HIGHLIGHT-0548.2';
   const cache=new Map();
   const pending=new Set();
   let activeEntityId='';
@@ -109,7 +113,7 @@
   const obs=new MutationObserver(schedule);
   obs.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['aria-hidden']});
   schedule();
-  window.__ATLAS_ENTITY_UAF_HIGHLIGHT__={active:true,version:VERSION,policy:'VISIBLE_SO_UAF_IN_SEARCH_SHEET_DOSSIER',getActiveEntityId:()=>activeEntityId};
+  window.__ATLAS_ENTITY_UAF_HIGHLIGHT__={active:true,version:VERSION,policy:'VISIBLE_SO_UAF_IN_SEARCH_SHEET_DOSSIER',entity360Loader:'RETIRED_0963',getActiveEntityId:()=>activeEntityId};
 })();
 
 /* ATLAS AML 0.55.0 · canonical autocomplete selection.
@@ -152,45 +156,7 @@
   document.body.appendChild(s);
 })();
 
-/* ATLAS AML 0.71.0 · Entidad 360 Executive.
- * Se instala al completar la carga para envolver la autoridad final de Entidades,
- * preservando intactos los módulos UAF/RES y evitando carreras entre capas. */
-(function atlasEntity360ExecutiveLoader20260903(){
-  const FLAG='__ATLAS_ENTITY360_EXECUTIVE_LOADER__';
-  if(window[FLAG])return;
-  window[FLAG]={active:true,installed:false,trajectory:false,build:'20260903-e360-loader2'};
-  const CSS='./assets/atlas-entity360-executive-20260903.css?v=20260903-2';
-  const JS='./assets/atlas-entity360-executive-20260903.js?v=20260903-2';
-  const TRAJECTORY='./assets/atlas-entity360-trajectory-20260903.js?v=20260903-1';
-  function installTrajectory(){
-    if(window.__ATLAS_ENTITY360_TRAJECTORY__?.active){window[FLAG].trajectory=true;return;}
-    if(document.querySelector('script[data-atlas-e360-trajectory]'))return;
-    const t=document.createElement('script');
-    t.src=TRAJECTORY;t.async=false;t.dataset.atlasE360Trajectory='1';
-    t.onload=()=>{window[FLAG].trajectory=!!window.__ATLAS_ENTITY360_TRAJECTORY__?.active;};
-    t.onerror=()=>{window[FLAG].trajectoryError='asset-load-failed';};
-    document.body.appendChild(t);
-  }
-  function install(){
-    if(window[FLAG].installed||window.__ATLAS_ENTITY360_EXECUTIVE__?.active){installTrajectory();return;}
-    if(typeof window.v0203RenderEntity!=='function'){setTimeout(install,120);return;}
-    if(!document.querySelector('link[data-atlas-e360-executive]')){
-      const link=document.createElement('link');
-      link.rel='stylesheet';link.href=CSS;link.dataset.atlasE360Executive='1';
-      document.head.appendChild(link);
-    }
-    if(document.querySelector('script[data-atlas-e360-executive]'))return;
-    const script=document.createElement('script');
-    script.src=JS;script.async=false;script.dataset.atlasE360Executive='1';
-    script.onload=()=>{
-      window[FLAG].installed=!!window.__ATLAS_ENTITY360_EXECUTIVE__?.active;
-      window[FLAG].loadedAt=new Date().toISOString();
-      installTrajectory();
-    };
-    script.onerror=()=>{window[FLAG].error='asset-load-failed';window[FLAG].failedAt=new Date().toISOString();};
-    document.body.appendChild(script);
-  }
-  if(document.readyState==='complete')setTimeout(install,0);
-  else window.addEventListener('load',()=>setTimeout(install,0),{once:true});
-  document.addEventListener('atlas:entity-workspace-ready',()=>setTimeout(install,0));
-})();
+/* 0.96.3 · IMPORTANT: the former atlasEntity360ExecutiveLoader20260903 block
+ * was intentionally deleted. Nothing in this source may dynamically load or
+ * replace the current Entidad 360 renderer. */
+window.__ATLAS_ENTITY360_LEGACY_LOADER_RETIRED__={active:true,build:'0963',policy:'NO_DYNAMIC_EXECUTIVE_OR_TRAJECTORY_LOAD'};

@@ -1,0 +1,20 @@
+/* ATLAS OSFL · production isolation 1.00.2
+ * Loaded after historical OSFL styles. Scopes the current 0.95 radiography
+ * so legacy 0.92/0.93 CSS cannot flatten or hide proportional graphics.
+ */
+[data-osfl95-root]{display:block!important;visibility:visible!important;opacity:1!important;position:relative!important;contain:layout style}
+[data-osfl95-root][data-status="ready"]{min-height:0}
+[data-osfl95-root] .osflr-view{display:none!important}
+[data-osfl95-root] .osflr-view.active{display:block!important}
+[data-osfl95-root] .osflr-card,[data-osfl95-root] [data-osflr-growth],[data-osfl95-root] [data-osflr-territory-chart],[data-osfl95-root] [data-osflr-region-top],[data-osfl95-root] [data-osflr-activity-top]{visibility:visible!important;opacity:1!important}
+[data-osfl95-root] svg{max-width:100%}
+[data-osfl95-root] [data-osfl-proportional-svg]{display:block!important;width:100%!important;min-width:0!important;overflow:visible!important}
+[data-osfl95-root] [data-osfl-ring-svg]{display:block!important;margin:0 auto!important}
+[data-osfl95-root] .osflr-bar>div,[data-osfl95-root] .osflr-bar-row>div,[data-osfl95-root] .osflr-dist>div>div,[data-osfl95-root] .osflr-meter,[data-osfl95-root] .osflr-stackbar{display:block!important;position:relative!important;overflow:hidden!important;min-width:0!important}
+[data-osfl95-root] .osflr-bars,[data-osfl95-root] .osflr-dist,[data-osfl95-root] .osflr-sector-list,[data-osfl95-root] .osflr-sectors{visibility:visible!important;opacity:1!important}
+[data-osfl95-root] .osflr-line{display:block!important;width:100%!important;height:190px!important}
+[data-osfl95-root] .osflr-line path,[data-osfl95-root] .osflr-line circle,[data-osfl95-root] .osflr-line text{visibility:visible!important;opacity:1!important}
+[data-osfl95-root] .osflr-ring-svg-host{display:grid!important;place-items:center!important;min-height:118px!important;background:none!important}
+[data-osfl95-root] [data-osflr-status]{visibility:visible!important;opacity:1!important}
+/* Historical shells are not allowed to coexist with the canonical root. */
+.v030-osfl>[data-osflr-root]:not([data-osfl95-root]){display:none!important}

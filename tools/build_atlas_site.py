@@ -27,6 +27,13 @@ LEGACY_PUBLIC_SPEND_STANDALONES = [
     "atlas-public-spend-mobile-route-0573",
     "atlas-public-spend-route-authority-0578",
 ]
+LEGACY_OSFL_STANDALONES = [
+    "atlas-osfl-intelligence-0920",
+    "atlas-osfl-national-monitor-0930",
+    "atlas-osfl-map-summary-0932",
+    "atlas-osfl-growth-0934",
+    "atlas-osfl-remove-evidence-priority-0931",
+]
 
 
 def load_json(name: str):
@@ -68,8 +75,9 @@ def sanitize_legacy_authority(text: str) -> str:
     return text
 
 
-def strip_legacy_public_spend_tags(template: str) -> str:
-    for stem in LEGACY_PUBLIC_SPEND_STANDALONES:
+def strip_standalone_tags(template: str, stems: list[str]) -> str:
+    """Remove historical standalone CSS/JS tags from the production template."""
+    for stem in stems:
         template = re.sub(
             rf"\s*<link[^>]+href=['\"]\.\/assets\/{re.escape(stem)}\.css(?:\?[^'\"]*)?['\"][^>]*>\s*",
             "\n",
@@ -83,6 +91,20 @@ def strip_legacy_public_spend_tags(template: str) -> str:
             flags=re.I,
         )
     return template
+
+
+def strip_legacy_public_spend_tags(template: str) -> str:
+    return strip_standalone_tags(template, LEGACY_PUBLIC_SPEND_STANDALONES)
+
+
+def strip_legacy_osfl_tags(template: str) -> str:
+    """Retire the 0.92/0.93 OSFL renderers from Pages.
+
+    The canonical OSFL surface is compiled from the 0.95 manifest. Keeping the
+    older standalones after ATLAS_RUNTIME_SCRIPTS made them re-wrap v030LoadOsfl
+    and mutate the same DOM after the canonical radiography had mounted.
+    """
+    return strip_standalone_tags(template, LEGACY_OSFL_STANDALONES)
 
 
 def strip_runtime_source_tags(template: str, source_assets: list[str]) -> str:
@@ -198,7 +220,7 @@ def build(out_dir: Path):
             dirs_exist_ok=True,
             ignore=shutil.ignore_patterns(*sorted(LEGACY_UNPUBLISHED_ASSETS)),
         )
-        # Assets that are declared in the runtime manifest are build-time source
+        # Assets declared in the runtime manifest are build-time source
         # fragments. They have already been folded into the compiled bundles and
         # must not remain as independently executable/versioned files in Pages.
         for source_name in source_assets:
@@ -207,6 +229,13 @@ def build(out_dir: Path):
             published_source = out_dir / source_name
             if published_source.is_file():
                 published_source.unlink()
+        # OSFL 0.92/0.93 standalones are deliberately unpublished. The 0.95
+        # compiled runtime plus the late 1.00.2 recovery are the only authorities.
+        for stem in LEGACY_OSFL_STANDALONES:
+            for suffix in (".js", ".css"):
+                legacy_osfl = out_dir / "assets" / f"{stem}{suffix}"
+                if legacy_osfl.is_file():
+                    legacy_osfl.unlink()
     for pattern in ("*.png", "*.svg", "*.ico", "*.webp", "*.jpg", "*.jpeg"):
         for src in ROOT.glob(pattern):
             copy_file(src, out_dir / src.name)
@@ -217,6 +246,7 @@ def build(out_dir: Path):
 
     template = (ROOT / "index.html").read_text(encoding="utf-8")
     template = strip_legacy_public_spend_tags(template)
+    template = strip_legacy_osfl_tags(template)
     template = strip_runtime_source_tags(template, source_assets)
     template = re.sub(r'data-aml-version="[^"]+"', f'data-aml-version="{rel}"', template, count=1)
     template = re.sub(r'data-aml-build="[^"]+"', f'data-aml-build="{build_id}"', template, count=1)
@@ -246,6 +276,12 @@ def build(out_dir: Path):
     for legacy in ["v037-public-spend.js", "atlas-public-spend-mobile-route-0573.js", "atlas-public-spend-guided-0570.js", "atlas-public-spend-audit-0550.js", "atlas-public-spend-progressive-0577.css"]:
         if legacy in template:
             raise SystemExit(f"legacy public-spend runtime remains in built index: {legacy}")
+    for stem in LEGACY_OSFL_STANDALONES:
+        if stem in template:
+            raise SystemExit(f"legacy OSFL standalone remains in built index: {stem}")
+        for suffix in (".js", ".css"):
+            if (out_dir / "assets" / f"{stem}{suffix}").exists():
+                raise SystemExit(f"legacy OSFL standalone leaked into Pages artifact: {stem}{suffix}")
     if f"{GP2_JS}?v={GP2_VERSION}" not in template or f"{GP2_CSS}?v={GP2_VERSION}" not in template or f"{GP2_AUTH}?v={GP2_AUTH_VERSION}" not in template:
         raise SystemExit("native public-spend GP2 assets missing from built index")
     for retired in RETIRED_PUBLIC_SPEND_FRAGMENTS:
@@ -275,10 +311,13 @@ def build(out_dir: Path):
         "source_style_fragments": len(runtime_styles),
         "source_script_fragments": len(runtime_scripts),
         "retired_public_spend_fragments": sorted(RETIRED_PUBLIC_SPEND_FRAGMENTS),
+        "retired_osfl_standalones": sorted(LEGACY_OSFL_STANDALONES),
         "published_css": [compiled_css, GP2_CSS],
         "published_js": [*compiled_js, GP2_JS, GP2_AUTH],
         "historical_source_assets_published": False,
         "legacy_auth_runtime_published": False,
+        "legacy_osfl_standalones_published": False,
+        "osfl_runtime_authority": "0.95.0 + recovery 1.00.2",
         "public_spend_runtime": f"{GP2_JS}?v={GP2_VERSION}",
         "public_spend_authority": f"{GP2_AUTH}?v={GP2_AUTH_VERSION}",
         "visible_version_authority": "atlas-release-guard.js",

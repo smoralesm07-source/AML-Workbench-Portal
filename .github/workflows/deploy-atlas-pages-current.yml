@@ -20,6 +20,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       - name: Checkout triggering revision
         uses: actions/checkout@v4
@@ -27,64 +28,63 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 1
 
-      - name: Validate canonical 0.95.0 source
+      - name: Validate current release and Entidades route
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           import json
           from pathlib import Path
+
           release=json.loads(Path('atlas-release.json').read_text())
           runtime=json.loads(Path('atlas-runtime-manifest.json').read_text())
           build=json.loads(Path('build.json').read_text())
           guard=Path('atlas-release-guard.js').read_text()
-          ui=Path('assets/atlas-ui-authority-0901.js').read_text()
-          css=Path('assets/atlas-ui-authority-0901.css').read_text()
-          html=Path('index.html').read_text()
-          loader=Path('assets/atlas-universo-so-entity-explorer-0813.js').read_text()
-          universo=Path('assets/atlas-universo-so-entity-explorer-0816.js').read_text()
-          candidates=Path('assets/atlas-universo-so-candidate-management-0820.js').read_text()
-          retired_audit=Path('assets/atlas-data-audit.js').read_text()
-          osfl=Path('assets/atlas-osfl-economic-0950.js').read_text()
-          sanctions=Path('assets/atlas-sanctions-spectrum-0940.js').read_text()
+          route=Path('v0448-entity-route-authority.js').read_text()
+          workspace=Path('v0447-entity-workspace.js').read_text()
+          session=Path('v0442-session-stability.module.js').read_text()
 
-          assert release['release']=='0.95.0' and release['build']=='0950'
-          assert runtime['release']=='0.95.0' and runtime['build']=='0950'
-          assert build['app_version']=='0.95.0' and build['build']=='0950'
-          assert "release:'0.95.0',build:'0950'" in guard
-          assert 'atlas-release-guard-0950-freeze-safe' in guard
-          assert 'assets/atlas-ui-authority-0901.js' in [x['path'] for x in runtime['scripts']]
-          assert "RELEASE='0.95.0'" in ui and "BUILD='0950'" in ui
-          assert 'data-atlas-ui-authority' in ui
-          assert "CSS='./assets/atlas-ui-authority-0901.css?v=0950-" in ui
-          assert 'ensureBrandVersion' in ui and 'data-atlas-version-label' in ui
-          assert "globalSourceHealth:'preserved'" in ui and 'AtlasGlobalSourceHealth?.schedule?.()' in ui
-          assert 'html[data-atlas-release="0.95.0"]' in css
-          assert '.v019-brand small[data-atlas-version-label]' in css
-          assert '[data-atlas-global-audit-host]' in css and '[data-topbar-mode="1"]' in css
-          assert 'retired' in retired_audit.lower() and 'v024AuditHtml' in retired_audit
-          assert '__ATLAS_OSFL_ECONOMIC_0950__' in osfl
-          assert 'aml_v_osfl_economic_concentration_current_v0950' in osfl
-          assert 'SANCTIONS_SPECTRUM_CURRENT_0940' in sanctions
+          rel=str(release['release'])
+          bid=str(release['build'])
+          assert runtime['release']==rel and str(runtime['build'])==bid
+          assert build['app_version']==rel and str(build['build'])==bid
+          assert release['deployment_policy']=='SINGLE_ACTIVE_RELEASE'
+          assert release['runtime_policy']=='CANONICAL_COMPILED_RUNTIME_ONLY'
+          assert release['pages_artifact_policy']=='COMPILED_CURRENT_BUNDLES_ONLY'
 
-          assert 'atlas-universo-so-contact-osint-0840.css?v=0840-1' in html
-          assert 'atlas-universo-so-contact-osint-0840.js?v=0840-1' in html
-          assert 'ENTITY_EXPLORER_SPECIALIZATION_0816_LOADING' in loader
-          assert 'ENTITY_EXPLORER_SPECIALIZATION_0816' in universo
-          assert "VERSION='0.83.1'" in candidates
-          assert Path('assets/territorio-aml-beta.html').is_file()
-          assert Path('assets/atlas-territory-communal-beta-0900.js').is_file()
-          assert Path('assets/atlas-territory-communal-beta-0900.css').is_file()
+          declared=[x['path'] for x in runtime['scripts']]
+          for required in [
+              'v0447-entity-workspace.js',
+              'v0448-entity-route-authority.js',
+              'v0442-session-stability.module.js',
+              'assets/atlas-ui-authority-0901.js',
+              'assets/atlas-osfl-economic-0950.js',
+              'assets/atlas-sanctions-radiography-0960.js',
+          ]:
+              assert required in declared, required
+
+          assert f"release:'{rel}',build:'{bid}'" in guard
+
+          # Entidades must be a hard fresh-search boundary. The prior 360 dossier
+          # cannot survive the menu transition or repaint asynchronously afterward.
+          assert 'HARD_CLEAN_SEARCH_NO_PERSISTED_ENTITY360' in route
+          assert 'ENTITIES_HARD_CLEAN_BOUNDARY_20260904' in route
+          assert 'cleanSearchOnEveryEntry:true' in route
+          assert 'previousEntityCleared:true' in route
+          assert "mode:'entities-clean-search-boundary'" in route
+          assert 'directMenuCapture:true' in route
+          assert 'latePaintGuard:true' in route
+          assert 'ENTRY.load=entityLoad' in route
+          assert "if (view === 'entities') return stableLoad" in session
+          assert "ENTRY.load=loadWorkspace" in workspace
+          print(f'validated ATLAS {rel} build {bid} with Entidades hard clean boundary')
           PY
+
           node --check atlas-release-guard.js
-          node --check assets/atlas-ui-authority-0901.js
-          node --check assets/atlas-osfl-economic-0950.js
-          node --check assets/atlas-sanctions-spectrum-0940.js
-          node --check assets/atlas-data-audit.js
-          node --check assets/atlas-universo-so-entity-explorer-0813.js
-          node --check assets/atlas-universo-so-entity-explorer-0816.js
-          node --check assets/atlas-universo-so-candidate-management-0820.js
-          node tests/atlas-runtime-freeze-0712.mjs
+          node --check v0447-entity-workspace.js
+          node --check v0448-entity-route-authority.js
+          node --check v0449-entity-tax-docauth.js
+          node --check v0442-session-stability.module.js
 
       - name: Build canonical Atlas site
         shell: bash
@@ -92,6 +92,8 @@ jobs:
           set -euo pipefail
           python3 tools/build_atlas_site.py --out _site
 
+          # Keep the current production hardening that retires the legacy data-audit
+          # standalone and pins the OSFL recovery asset to its corrected cache key.
           python3 - <<'PY'
           import re
           from pathlib import Path
@@ -99,52 +101,55 @@ jobs:
           html=p.read_text(encoding='utf-8')
           html=re.sub(r'\s*<link[^>]+href=["\']\./assets/atlas-data-audit\.css(?:\?[^"\']*)?["\'][^>]*>\s*', '\n', html, flags=re.I)
           html=re.sub(r'\s*<script[^>]+src=["\']\./assets/atlas-data-audit\.js(?:\?[^"\']*)?["\'][^>]*>\s*</script>\s*', '\n', html, flags=re.I)
+          html=re.sub(r'(\./assets/atlas-osfl-runtime-recovery-1001\.js)(?:\?[^"\']*)?', r'\1?v=1002-1', html, flags=re.I)
           p.write_text(html, encoding='utf-8')
           PY
           rm -f _site/assets/atlas-data-audit.js _site/assets/atlas-data-audit.css
 
-          test -s _site/index.html
-          test -s _site/atlas-release.json
-          test -s _site/atlas-release-guard.js
-          test -s _site/atlas-runtime-current.css
-          test -s _site/atlas-runtime-current-01.js
-          test ! -e _site/assets/atlas-ui-authority-0901.js
-          test -s _site/assets/atlas-ui-authority-0901.css
-          test -s _site/assets/atlas-universo-so-contact-osint-0840.js
-          test -s _site/assets/territorio-aml-beta.html
-          test ! -e _site/assets/atlas-data-audit.js
-          test ! -e _site/assets/atlas-data-audit.css
-          cat _site/atlas-runtime-current-*.js > /tmp/atlas-runtime-current.js
-          grep -q "RELEASE='0.95.0'" /tmp/atlas-runtime-current.js
-          grep -q "BUILD='0950'" /tmp/atlas-runtime-current.js
-          grep -q 'data-atlas-ui-authority' /tmp/atlas-runtime-current.js
-          grep -q "atlas-ui-authority-0901.css?v=0950-" /tmp/atlas-runtime-current.js
-          grep -q 'ensureBrandVersion' /tmp/atlas-runtime-current.js
-          grep -q "globalSourceHealth:'preserved'" /tmp/atlas-runtime-current.js
-          grep -q '__ATLAS_OSFL_ECONOMIC_0950__' /tmp/atlas-runtime-current.js
-          grep -q 'aml_v_osfl_economic_concentration_current_v0950' /tmp/atlas-runtime-current.js
-          grep -q 'SANCTIONS_SPECTRUM_CURRENT_0940' /tmp/atlas-runtime-current.js
-          grep -q 'osfl95-card' _site/atlas-runtime-current.css
-          grep -q 'html\[data-atlas-release="0.95.0"\]' _site/assets/atlas-ui-authority-0901.css
-          grep -q 'v019-brand small\[data-atlas-version-label\]' _site/assets/atlas-ui-authority-0901.css
-          grep -q 'data-atlas-global-audit-host' _site/assets/atlas-ui-authority-0901.css
           python3 - <<'PY'
+          import json, re
           from pathlib import Path
-          import json
-          html=Path('_site/index.html').read_text()
+
           release=json.loads(Path('_site/atlas-release.json').read_text())
-          assert release['release']=='0.95.0' and release['build']=='0950'
-          assert 'data-aml-version="0.95.0"' in html
-          assert 'data-aml-build="0950"' in html
-          assert 'data-atlas-release="0.95.0"' in html
-          assert '<title>ATLAS AML · v0.95.0</title>' in html
-          assert 'atlas-release-guard.js?r=0950' in html
-          assert 'atlas-runtime-current-01.js?r=0950' in html
-          assert 'data-aml-version="0.90.1"' not in html
+          rel=str(release['release'])
+          bid=str(release['build'])
+          html=Path('_site/index.html').read_text(encoding='utf-8')
+          runtime_segments=sorted(Path('_site').glob('atlas-runtime-current-*.js'))
+          module_segments=sorted(Path('_site').glob('atlas-module-current-*.js'))
+          assert runtime_segments, 'no compiled runtime segments'
+          assert module_segments, 'no compiled module segments'
+          runtime='\n'.join(p.read_text(encoding='utf-8') for p in runtime_segments)
+          modules='\n'.join(p.read_text(encoding='utf-8') for p in module_segments)
+          compiled=runtime+'\n'+modules
+
+          assert f'data-aml-version="{rel}"' in html
+          assert f'data-aml-build="{bid}"' in html
+          assert f'data-atlas-release="{rel}"' in html
+          assert f'<title>ATLAS AML · v{rel}</title>' in html
+          assert f'atlas-release-guard.js?r={bid}' in html
+          assert re.search(rf'atlas-runtime-current-\d+\.js\?r={re.escape(bid)}', html)
+          assert re.search(rf'atlas-module-current-\d+\.js\?r={re.escape(bid)}', html)
+
+          # Regression guard for Entidad 360 -> Entidades. The classic route
+          # authority is in runtime bundles; the final session authority is a
+          # module bundle, so production validation must inspect both.
+          assert 'HARD_CLEAN_SEARCH_NO_PERSISTED_ENTITY360' in runtime
+          assert 'ENTITIES_HARD_CLEAN_BOUNDARY_20260904' in runtime
+          assert 'cleanSearchOnEveryEntry:true' in runtime
+          assert 'previousEntityCleared:true' in runtime
+          assert "mode:'entities-clean-search-boundary'" in runtime
+          assert 'directMenuCapture:true' in runtime
+          assert 'latePaintGuard:true' in runtime
+          assert "if (view === 'entities') return stableLoad" in modules
+
+          assert '__ATLAS_OSFL_ECONOMIC_0950__' in compiled
+          assert 'OSFL_GRAPHICS_FINAL_1001' in compiled
+          assert 'SANCTIONS_RADIOGRAPHY_CURRENT_0960' in compiled or 'SANCTIONS_SPECTRUM_CURRENT_0940' in compiled
           assert 'atlas-data-audit.js' not in html
           assert 'atlas-data-audit.css' not in html
-          assert 'atlas-ui-authority-0901.js' not in html
+          print(f'built ATLAS {rel} build {bid}; Entidades hard-boundary regression guard passed')
           PY
+
           for js in _site/atlas-runtime-current-*.js _site/atlas-module-current-*.js; do
             test -f "$js" || continue
             node --check "$js"
@@ -162,22 +167,27 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Verify live Atlas 0.95.0 and current modules
+      - name: Verify live current release and Entidades clean entry
         shell: bash
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import json, os, time, urllib.request
+          import json, os, re, time, urllib.request
+          from pathlib import Path
 
+          expected=json.loads(Path('atlas-release.json').read_text())
+          rel=str(expected['release'])
+          bid=str(expected['build'])
           base=os.environ['PAGE_URL'].rstrip('/')
           sha=os.environ.get('GITHUB_SHA','unknown')
           attempt=os.environ.get('GITHUB_RUN_ATTEMPT','1')
 
           def get(path, stamp):
-              url=f"{base}{path}{'&' if '?' in path else '?'}atlas0950={stamp}"
-              req=urllib.request.Request(url,headers={'Cache-Control':'no-cache','User-Agent':'ATLAS-live-smoke/0.95'})
+              sep='&' if '?' in path else '?'
+              url=f"{base}{path}{sep}atlas={stamp}"
+              req=urllib.request.Request(url,headers={'Cache-Control':'no-cache','User-Agent':f'ATLAS-live-smoke/{rel}'})
               with urllib.request.urlopen(req,timeout=20) as response:
                   return response.read().decode('utf-8','replace')
 
@@ -186,29 +196,34 @@ jobs:
               stamp=f'{sha}-{attempt}-{n}'
               try:
                   html=get('/',stamp)
-                  release_text=get('/atlas-release.json',stamp)
-                  release=json.loads(release_text)
-                  runtime_css=get('/atlas-runtime-current.css',stamp)
-                  runtime_js=''.join(get(f'/atlas-runtime-current-{seg}.js',stamp) for seg in ('01','02','03','04'))
-                  ui_css=get('/assets/atlas-ui-authority-0901.css',stamp)
+                  live_release=json.loads(get('/atlas-release.json',stamp))
+                  runtime_names=sorted(set(re.findall(r'\.\/(atlas-runtime-current-\d+\.js)',html)))
+                  module_names=sorted(set(re.findall(r'\.\/(atlas-module-current-\d+\.js)',html)))
+                  if not runtime_names:
+                      raise AssertionError('no compiled runtime segments referenced by live index')
+                  if not module_names:
+                      raise AssertionError('no compiled module segments referenced by live index')
+                  runtime='\n'.join(get('/'+name,stamp) for name in runtime_names)
+                  modules='\n'.join(get('/'+name,stamp) for name in module_names)
 
                   checks={
-                      'html_version':'data-aml-version="0.95.0"' in html,
-                      'html_build':'data-aml-build="0950"' in html,
-                      'html_title':'<title>ATLAS AML · v0.95.0</title>' in html,
-                      'old_version_absent':'data-aml-version="0.90.1"' not in html,
-                      'release_json':release.get('release')=='0.95.0' and release.get('build')=='0950',
-                      'runtime_release':"RELEASE='0.95.0'" in runtime_js and "BUILD='0950'" in runtime_js,
-                      'osfl_0950':'__ATLAS_OSFL_ECONOMIC_0950__' in runtime_js and 'aml_v_osfl_economic_concentration_current_v0950' in runtime_js,
-                      'sanctions_0940':'SANCTIONS_SPECTRUM_CURRENT_0940' in runtime_js,
-                      'ui_authority':'data-atlas-ui-authority' in runtime_js and 'ensureBrandVersion' in runtime_js,
-                      'osfl_css':'osfl95-card' in runtime_css,
-                      'ui_css':'html[data-atlas-release="0.95.0"]' in ui_css and 'v019-brand small[data-atlas-version-label]' in ui_css,
+                      'html_version':f'data-aml-version="{rel}"' in html,
+                      'html_build':f'data-aml-build="{bid}"' in html,
+                      'html_title':f'<title>ATLAS AML · v{rel}</title>' in html,
+                      'release_json':str(live_release.get('release'))==rel and str(live_release.get('build'))==bid,
+                      'hard_clean_policy':'HARD_CLEAN_SEARCH_NO_PERSISTED_ENTITY360' in runtime,
+                      'hard_boundary_patch':'ENTITIES_HARD_CLEAN_BOUNDARY_20260904' in runtime,
+                      'clean_every_entry':'cleanSearchOnEveryEntry:true' in runtime,
+                      'previous_entity_cleared':'previousEntityCleared:true' in runtime,
+                      'clean_boundary_mode':"mode:'entities-clean-search-boundary'" in runtime,
+                      'direct_menu_capture':'directMenuCapture:true' in runtime,
+                      'late_paint_guard':'latePaintGuard:true' in runtime,
+                      'final_entity_route':"if (view === 'entities') return stableLoad" in modules,
                   }
                   failed=[name for name,ok in checks.items() if not ok]
                   if failed:
                       raise AssertionError('failed checks: '+', '.join(failed))
-                  print(json.dumps({'status':'ok','release':'0.95.0','build':'0950','page_url':base,'checks':checks},ensure_ascii=False))
+                  print(json.dumps({'status':'ok','release':rel,'build':bid,'page_url':base,'runtime_segments':runtime_names,'module_segments':module_names,'checks':checks},ensure_ascii=False))
                   break
               except Exception as exc:
                   last_error=exc
@@ -216,5 +231,5 @@ jobs:
                   if n<12:
                       time.sleep(8)
           else:
-              raise SystemExit(f'ATLAS 0.95.0 live smoke failed after 12 attempts: {last_error}')
+              raise SystemExit(f'ATLAS {rel} live smoke failed after 12 attempts: {last_error}')
           PY

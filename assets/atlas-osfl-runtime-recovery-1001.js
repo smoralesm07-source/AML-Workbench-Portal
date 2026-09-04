@@ -1,91 +1,175 @@
 'use strict';
 
-/* ATLAS OSFL Runtime Recovery 1.00.1
- * Repairs late Supabase/runtime initialization for the OSFL Radiografía Nacional.
- * It only rebuilds the OSFL workspace when data client is ready and the current
- * radiography is missing, stalled or failed. No database writes are performed.
+/* ATLAS OSFL Runtime Recovery 1.00.2
+ * Final production authority loaded after historical OSFL standalones.
+ * Enforces the canonical 0.95 Radiografía, rehydrates it with the active
+ * Supabase client and reapplies CSP-safe SVG graphics. No database writes.
  */
-(function atlasOsflRuntimeRecovery1001(){
+(function atlasOsflRuntimeRecovery1002(){
   if(window.__ATLAS_OSFL_RUNTIME_RECOVERY_1001__) return;
   window.__ATLAS_OSFL_RUNTIME_RECOVERY_1001__=true;
+  window.__ATLAS_OSFL_RUNTIME_RECOVERY_1002__=true;
+  /* Prevent any later dynamic reload of the retired 1.00/0.93 radiography. */
+  window.__ATLAS_OSFL_RADIOGRAPHY_1000__=true;
 
-  const BUILD='1001';
-  const RUNTIME='./assets/atlas-osfl-national-monitor-0930.js?v=1001-runtime';
-  const state={repairing:false,lastRepair:0,observer:null,checks:0};
-  const clientReady=()=>!!(window.sb&&typeof window.sb.from==='function');
-  const root=()=>document.querySelector('[data-osflr-root]');
-  const anchor=()=>document.querySelector('.v030-hero,.atlas-osfl-hero');
-  const pane=()=>document.querySelector('[data-pane="osfl"]');
-  const inOsflContext=()=>!!(root()||anchor()||pane());
+  const BUILD='1002';
+  const ROOT='[data-osflr-root]';
+  const CANONICAL='[data-osfl95-root]';
+  const HOST='.v030-osfl';
+  const CSS='./assets/atlas-osfl-production-fix-1002.css?v=1002-1';
+  const state={repairing:false,lastRepair:0,observer:null,checks:0,lastReason:'boot',lastError:null};
 
-  function isHydrated(){
-    const r=root();
+  function client(){
+    try{
+      const c=window.sb || globalThis.sb || null;
+      return c&&typeof c.from==='function'?c:null;
+    }catch(_){return null;}
+  }
+  const host=()=>document.querySelector(HOST);
+  const canonicalRoot=()=>document.querySelector(`${HOST} ${CANONICAL}`)||document.querySelector(CANONICAL);
+  const routeState=()=>{try{return window.state?.view||'';}catch(_){return '';}};
+  const activeNav=()=>document.querySelector('.v019-nav-btn[data-view="osfl"].active,.atlas-nav-btn[data-view="osfl"].active,[data-view="osfl"][aria-current="page"]');
+  const inOsflContext=()=>routeState()==='osfl'||!!activeNav()||!!host()||!!canonicalRoot();
+
+  function ensureCss(){
+    if(document.querySelector('link[data-atlas-osfl-production-fix="1002"]')) return;
+    const link=document.createElement('link');
+    link.rel='stylesheet';
+    link.href=CSS;
+    link.dataset.atlasOsflProductionFix='1002';
+    document.head.appendChild(link);
+  }
+
+  function canonicalApi(){
+    const api=window.__ATLAS_OSFL_RADIOGRAPHY_CURRENT__;
+    return api&&typeof api.mount==='function'&&typeof api.hydrate==='function'?api:null;
+  }
+
+  function purgeLegacy(){
+    const h=host();
+    if(!h) return 0;
+    let removed=0;
+    h.querySelectorAll(ROOT).forEach(r=>{
+      if(r.matches(CANONICAL)) return;
+      r.remove();
+      removed++;
+    });
+    h.querySelectorAll('[data-osflg-root],[data-osflm-root],[data-osfln-root],.atlas-osfl-national,.osflg-card').forEach(el=>{
+      if(el.closest(CANONICAL)) return;
+      el.remove();
+      removed++;
+    });
+    return removed;
+  }
+
+  function hasRealData(r=canonicalRoot()){
     if(!r) return false;
-    const kpis=r.querySelectorAll('[data-osflr-kpis] .osflr-kpi:not(.loading)');
-    const hasDataVisual=!!(
+    if(r.dataset.status!=='ready') return false;
+    const values=[...r.querySelectorAll('[data-osflr-kpis] b')].map(x=>(x.textContent||'').trim()).filter(Boolean);
+    const populated=values.filter(v=>v!=='—'&&!/^0(?:[,.]0+)?$/.test(v)).length;
+    const visual=!!(
       r.querySelector('[data-osflr-growth] svg')||
-      r.querySelector('[data-osflr-region-top] .osflr-bar-row')||
-      r.querySelector('[data-osflr-activity-top] .osflr-bar-row')
+      r.querySelector('[data-osflr-region-top] .osflr-bar,[data-osflr-region-top] .osflr-bar-row')||
+      r.querySelector('[data-osflr-activity-top] .osflr-bar,[data-osflr-activity-top] .osflr-bar-row')
     );
     const status=(r.querySelector('[data-osflr-status]')?.textContent||'').toLowerCase();
-    const failed=/no fue posible|cliente de datos no disponible|error/.test(status);
-    return kpis.length>=4&&hasDataVisual&&!failed;
+    return populated>=3&&visual&&!/error|no fue posible|cliente de datos no disponible/.test(status);
   }
 
-  function markSyncing(message='Sincronizando datos OSFL…'){
-    const r=root();
+  function mark(message,detail='autoridad canónica OSFL 0.95'){
+    const r=canonicalRoot()||document.querySelector(ROOT);
     const status=r?.querySelector('[data-osflr-status]');
     if(!status) return;
-    status.classList.remove('ok');
-    status.innerHTML=`<span class="osflr-pulse"></span><div><b>${message}</b><small>recuperación automática · build ${BUILD}</small></div>`;
+    status.innerHTML=`<i></i><span><b>${message}</b><small>${detail} · recovery ${BUILD}</small></span>`;
   }
 
-  function loadFreshRuntime(){
-    return new Promise((resolve,reject)=>{
-      document.querySelectorAll('script[data-osfl-runtime-repair]').forEach(s=>s.remove());
-      const s=document.createElement('script');
-      s.src=RUNTIME;
-      s.async=false;
-      s.dataset.osflRuntimeRepair=BUILD;
-      s.onload=()=>resolve();
-      s.onerror=()=>reject(new Error('No fue posible recargar el runtime OSFL.'));
-      document.body.appendChild(s);
-    });
-  }
-
-  async function repair(reason='runtime-check'){
-    if(state.repairing||!inOsflContext()||isHydrated()) return;
-    const now=Date.now();
-    if(now-state.lastRepair<1200) return;
-    if(!clientReady()){
-      markSyncing('Esperando conexión de datos…');
-      return;
+  function repairGraphics(reason){
+    try{window.__ATLAS_OSFL_GRAPHICS_FINAL_CURRENT__?.repair?.(`recovery-${reason}`);}catch(err){state.lastError=String(err?.message||err);}
+    try{window.__ATLAS_OSFL_GRAPHICS_CURRENT__?.repair?.();}catch(err){state.lastError=String(err?.message||err);}
+    const r=canonicalRoot();
+    if(r){
+      r.dataset.osflProductionAuthority='1002';
+      r.dataset.osflProductionReason=reason;
+      r.dataset.osflProductionAt=new Date().toISOString();
     }
+  }
 
+  async function enforce(reason='runtime-check',force=false){
+    if(!inOsflContext()) return false;
+    ensureCss();
+    const now=Date.now();
+    if(state.repairing) return false;
+    if(!force&&now-state.lastRepair<450) return hasRealData();
     state.repairing=true;
     state.lastRepair=now;
+    state.lastReason=reason;
     try{
-      markSyncing('Reconectando radiografía OSFL…');
-      const current=root();
-      if(current) current.remove();
-      delete window.__ATLAS_OSFL_RADIOGRAPHY_1000__;
-      await loadFreshRuntime();
-      window.dispatchEvent(new CustomEvent('atlas:osfl-runtime-recovered',{detail:{reason,build:BUILD}}));
+      const h=host();
+      if(!h){return false;}
+      purgeLegacy();
+      const api=canonicalApi();
+      if(!api){
+        pinLoader();
+        return false;
+      }
+      let r=canonicalRoot();
+      if(!r){
+        api.mount();
+        r=canonicalRoot();
+      }
+      if(!r) return false;
+      if(!client()){
+        mark('Esperando conexión de datos…','Supabase aún no disponible');
+        return false;
+      }
+      if(force||!hasRealData(r)){
+        mark('Sincronizando radiografía OSFL…');
+        await api.hydrate();
+      }
+      repairGraphics(reason);
+      const ready=hasRealData(r);
+      if(ready){
+        r.dataset.status='ready';
+        r.dataset.osflCanonical='0950';
+        document.dispatchEvent(new CustomEvent('atlas:osfl-production-ready',{detail:{build:BUILD,reason}}));
+      }
+      return ready;
     }catch(err){
-      console.warn('[ATLAS OSFL recovery]',err);
-      const r=root();
-      const status=r?.querySelector('[data-osflr-status]');
-      if(status) status.innerHTML=`<span class="osflr-pulse error"></span><div><b>No fue posible recuperar OSFL</b><small>${String(err?.message||err)}</small></div>`;
+      state.lastError=String(err?.message||err);
+      console.warn('[ATLAS OSFL 1002]',err);
+      mark('No fue posible sincronizar OSFL',state.lastError);
+      return false;
     }finally{
       state.repairing=false;
     }
   }
 
-  function check(reason){
+  function pinLoader(){
+    const current=window.v030LoadOsfl;
+    if(typeof current!=='function') return false;
+    if(current.__osflProduction1002) return true;
+    const base=current;
+    const wrapped=async function(){
+      const out=await base.apply(this,arguments);
+      await enforce('v030LoadOsfl',true);
+      return out;
+    };
+    wrapped.__osflProduction1002=true;
+    wrapped.__base=base;
+    window.v030LoadOsfl=wrapped;
+    return true;
+  }
+
+  function check(reason,force=false){
     if(!inOsflContext()) return;
     state.checks+=1;
-    if(isHydrated()) return;
-    void repair(reason);
+    pinLoader();
+    const r=canonicalRoot();
+    if(r&&hasRealData(r)){
+      repairGraphics(reason);
+      return;
+    }
+    void enforce(reason,force);
   }
 
   function observe(){
@@ -93,25 +177,29 @@
     let timer=0;
     state.observer=new MutationObserver(()=>{
       clearTimeout(timer);
-      timer=setTimeout(()=>check('dom-change'),180);
+      timer=setTimeout(()=>check('dom-change'),100);
     });
     state.observer.observe(document.documentElement,{childList:true,subtree:true});
   }
 
-  function schedule(){
-    [0,250,700,1400,2600,4500,7500].forEach(ms=>setTimeout(()=>check(`scheduled-${ms}`),ms));
-  }
-
-  window.addEventListener('load',schedule,{once:true});
-  window.addEventListener('pageshow',()=>setTimeout(()=>check('pageshow'),120));
-  window.addEventListener('focus',()=>setTimeout(()=>check('focus'),120));
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(()=>check('visible'),120);});
+  ensureCss();
+  pinLoader();
+  observe();
+  [0,100,300,700,1400,2600,4500,7500,12000].forEach(ms=>setTimeout(()=>check(`scheduled-${ms}`,ms>=700),ms));
+  window.addEventListener('load',()=>check('load',true),{once:true});
+  window.addEventListener('pageshow',()=>setTimeout(()=>check('pageshow',true),80));
+  window.addEventListener('focus',()=>setTimeout(()=>check('focus'),80));
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(()=>check('visible'),80);});
   document.addEventListener('click',ev=>{
-    const target=ev.target?.closest?.('[data-route="osfl"],[data-nav="osfl"],[href*="osfl"]');
-    if(target) setTimeout(()=>check('osfl-navigation'),220);
+    if(ev.target?.closest?.('[data-view="osfl"],[data-atlas-mobile-view="osfl"],[data-route="osfl"],[data-nav="osfl"],[href*="osfl"],[data-osflr-tab],[data-osflr-territory-controls] button')){
+      setTimeout(()=>check('osfl-interaction',true),60);
+    }
   },true);
 
-  observe();
-  schedule();
-  window.__ATLAS_OSFL_RUNTIME_RECOVER=()=>repair('manual');
+  window.__ATLAS_OSFL_RUNTIME_RECOVER=()=>enforce('manual',true);
+  window.__ATLAS_OSFL_RUNTIME_RECOVERY_CURRENT__={
+    version:'1.00.2',build:BUILD,canonical:'0.95.0',cspSafe:true,
+    enforce:()=>enforce('api',true),repairGraphics:()=>repairGraphics('api'),
+    status:()=>({ready:hasRealData(),checks:state.checks,lastReason:state.lastReason,lastError:state.lastError})
+  };
 })();
