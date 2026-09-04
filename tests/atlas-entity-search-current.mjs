@@ -107,7 +107,14 @@ assert.ok(css.includes('#v0344-entities-note{display:none'));
 assert.ok(css.includes('#content>.panel:has(#entity-search)'));
 assert.ok(docauthCss.includes('.a49-docauth'));
 assert.ok(docauthCss.includes('.a49-timeline'));
-assert.ok(finalModule.includes('singleWorkspacePinned:true'));
+
+// The final authority now deliberately preserves the advanced Entity/Digital
+// Identity explorer instead of pinning the retired single-workspace surface.
+assert.ok(finalModule.includes('singleWorkspacePinned:false'));
+assert.ok(finalModule.includes('landingPinned:true'));
+assert.ok(finalModule.includes('advancedExplorerPinned:true'));
+assert.ok(finalModule.includes('legacyRendererPinRetired:true'));
+assert.ok(finalModule.includes("finalCleanEntryAuthority:'FINAL_CLEAN_ENTITY_ENTRY_ADVANCED_PRESERVING'"));
 assert.ok(finalModule.includes('routePinned:true'));
 assert.ok(finalModule.includes('legacyCapturedLoaderBypassed:true'));
 assert.ok(finalModule.includes('autocompletePinned'));
@@ -120,4 +127,4 @@ assert.match(release.entity_search_policy,/ENTITY360_ROUTE_AUTHORITY_0448/);
 assert.match(release.entity360_document_authorization_policy,/SPECIFIC_DOCUMENT_VERIFICATION/);
 assert.match(release.entity360_document_authorization_policy,/MISSING_IS_NOT_NO_TIMBRAJE/);
 
-console.log(`ATLAS Entity 360 workspace + federated unreconciled press discovery + route + SII document authorization contract OK under release ${release.release}/${release.build}`);
+console.log(`ATLAS Entity 360 workspace + federated unreconciled press discovery + advanced explorer preservation + route + SII document authorization contract OK under release ${release.release}/${release.build}`);
