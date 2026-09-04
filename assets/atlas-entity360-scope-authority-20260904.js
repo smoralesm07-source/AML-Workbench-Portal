@@ -13,7 +13,7 @@
  * RLS, Auth, scoring formulas, entity joins or materialized analytical data.
  */
 (function atlasEntity360ScopeAuthority20260904(){
-  const BUILD='20260904-e360-scope1';
+  const BUILD='20260904-e360-scope2';
   const AUTHORITY='ENTITY360_ROUTE_SCOPE_AUTHORITY_20260904';
   const ENTITY_VIEWS=new Set(['entities','entity','entity360']);
   const ENTITY_ONLY_SELECTOR=[
@@ -41,6 +41,7 @@
   let lastInactiveReason='';
 
   const norm=v=>String(v??'').trim().toLowerCase();
+  const compactText=v=>String(v??'').trim().replace(/\s+/g,' ');
 
   function canonicalState(){
     try{if(typeof state!=='undefined'&&state)return state;}catch(_error){}
@@ -101,8 +102,21 @@
     while(node&&node!==document.body&&node.id!=='app'&&node.id!=='content'){
       const rect=node.getBoundingClientRect?.();
       const h=rect?.height||0;
-      const text=(node.textContent||'').trim();
+      const text=compactText(node.textContent);
       if(h>0&&h<=maxHeight&&text.length<900&&node.children.length<=12)candidate=node;
+      else if(h>maxHeight)break;
+      node=node.parentElement;
+    }
+    return candidate;
+  }
+
+  function exactTextAncestor(el,maxHeight){
+    const wanted=compactText(el?.textContent);
+    let node=el,candidate=el;
+    while(node&&node!==document.body&&node.id!=='app'&&node.id!=='content'){
+      if(compactText(node.textContent)!==wanted)break;
+      const h=node.getBoundingClientRect?.().height||0;
+      if(h>0&&h<=maxHeight&&node.children.length<=4)candidate=node;
       else if(h>maxHeight)break;
       node=node.parentElement;
     }
@@ -139,23 +153,25 @@
     let removed=0;
 
     /* Primary path: IPA3 chips created by the transversal IPA authority. Keep
-       them inside entity rows/cards; remove only shell-level orphan chips. */
+       them inside entity rows/cards; remove only shell-level orphan chips.
+       The wrapper is removed only when it contains exactly the same IPA text,
+       so a topbar or unrelated shell can never disappear with the chip. */
     document.querySelectorAll('.v028-ipa3-chip,[data-v028-ipa-entity]').forEach(el=>{
       if(!el?.isConnected||isContextualIpa(el))return;
-      const shell=boundedAncestor(el,64);
+      const shell=exactTextAncestor(el,64);
       if(shell&&shell.id!=='app'&&shell.id!=='content'){
         shell.remove();removed++;
       }
     });
 
     /* Historical fallback for the white `IPA 9.0 · Baja` strip. Restrict the
-       scan to leaf-ish elements and a small visual box to avoid touching any
-       analytical card/table that legitimately contains IPA text. */
+       scan to leaf-ish elements and exact-text wrappers, avoiding analytical
+       cards/tables that legitimately contain IPA alongside other content. */
     document.querySelectorAll('span,b,strong,small,div').forEach(el=>{
       if(!el?.isConnected||el.children.length>3||isContextualIpa(el))return;
-      const text=(el.textContent||'').trim().replace(/\s+/g,' ');
+      const text=compactText(el.textContent);
       if(!IPA_TEXT_RE.test(text))return;
-      const shell=boundedAncestor(el,64);
+      const shell=exactTextAncestor(el,64);
       if(shell&&shell.id!=='app'&&shell.id!=='content'){
         shell.remove();removed++;
       }
