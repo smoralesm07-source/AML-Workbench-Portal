@@ -114,9 +114,13 @@ jobs:
           rel=str(release['release'])
           bid=str(release['build'])
           html=Path('_site/index.html').read_text(encoding='utf-8')
-          segments=sorted(Path('_site').glob('atlas-runtime-current-*.js'))
-          assert segments, 'no compiled runtime segments'
-          runtime='\n'.join(p.read_text(encoding='utf-8') for p in segments)
+          runtime_segments=sorted(Path('_site').glob('atlas-runtime-current-*.js'))
+          module_segments=sorted(Path('_site').glob('atlas-module-current-*.js'))
+          assert runtime_segments, 'no compiled runtime segments'
+          assert module_segments, 'no compiled module segments'
+          runtime='\n'.join(p.read_text(encoding='utf-8') for p in runtime_segments)
+          modules='\n'.join(p.read_text(encoding='utf-8') for p in module_segments)
+          compiled=runtime+'\n'+modules
 
           assert f'data-aml-version="{rel}"' in html
           assert f'data-aml-build="{bid}"' in html
@@ -124,9 +128,11 @@ jobs:
           assert f'<title>ATLAS AML · v{rel}</title>' in html
           assert f'atlas-release-guard.js?r={bid}' in html
           assert re.search(rf'atlas-runtime-current-\d+\.js\?r={re.escape(bid)}', html)
+          assert re.search(rf'atlas-module-current-\d+\.js\?r={re.escape(bid)}', html)
 
-          # Regression guard for Entidad 360 -> Entidades: compiled production
-          # runtime must contain the hard clean boundary and late-paint protection.
+          # Regression guard for Entidad 360 -> Entidades. The classic route
+          # authority is in runtime bundles; the final session authority is a
+          # module bundle, so production validation must inspect both.
           assert 'HARD_CLEAN_SEARCH_NO_PERSISTED_ENTITY360' in runtime
           assert 'ENTITIES_HARD_CLEAN_BOUNDARY_20260904' in runtime
           assert 'cleanSearchOnEveryEntry:true' in runtime
@@ -134,11 +140,11 @@ jobs:
           assert "mode:'entities-clean-search-boundary'" in runtime
           assert 'directMenuCapture:true' in runtime
           assert 'latePaintGuard:true' in runtime
-          assert "if (view === 'entities') return stableLoad" in runtime
+          assert "if (view === 'entities') return stableLoad" in modules
 
-          assert '__ATLAS_OSFL_ECONOMIC_0950__' in runtime
-          assert 'OSFL_GRAPHICS_FINAL_1001' in runtime
-          assert 'SANCTIONS_RADIOGRAPHY_CURRENT_0960' in runtime or 'SANCTIONS_SPECTRUM_CURRENT_0940' in runtime
+          assert '__ATLAS_OSFL_ECONOMIC_0950__' in compiled
+          assert 'OSFL_GRAPHICS_FINAL_1001' in compiled
+          assert 'SANCTIONS_RADIOGRAPHY_CURRENT_0960' in compiled or 'SANCTIONS_SPECTRUM_CURRENT_0940' in compiled
           assert 'atlas-data-audit.js' not in html
           assert 'atlas-data-audit.css' not in html
           print(f'built ATLAS {rel} build {bid}; Entidades hard-boundary regression guard passed')
@@ -191,10 +197,14 @@ jobs:
               try:
                   html=get('/',stamp)
                   live_release=json.loads(get('/atlas-release.json',stamp))
-                  segment_names=sorted(set(re.findall(r'\.\/(atlas-runtime-current-\d+\.js)',html)))
-                  if not segment_names:
+                  runtime_names=sorted(set(re.findall(r'\.\/(atlas-runtime-current-\d+\.js)',html)))
+                  module_names=sorted(set(re.findall(r'\.\/(atlas-module-current-\d+\.js)',html)))
+                  if not runtime_names:
                       raise AssertionError('no compiled runtime segments referenced by live index')
-                  runtime='\n'.join(get('/'+name,stamp) for name in segment_names)
+                  if not module_names:
+                      raise AssertionError('no compiled module segments referenced by live index')
+                  runtime='\n'.join(get('/'+name,stamp) for name in runtime_names)
+                  modules='\n'.join(get('/'+name,stamp) for name in module_names)
 
                   checks={
                       'html_version':f'data-aml-version="{rel}"' in html,
@@ -208,12 +218,12 @@ jobs:
                       'clean_boundary_mode':"mode:'entities-clean-search-boundary'" in runtime,
                       'direct_menu_capture':'directMenuCapture:true' in runtime,
                       'late_paint_guard':'latePaintGuard:true' in runtime,
-                      'final_entity_route':"if (view === 'entities') return stableLoad" in runtime,
+                      'final_entity_route':"if (view === 'entities') return stableLoad" in modules,
                   }
                   failed=[name for name,ok in checks.items() if not ok]
                   if failed:
                       raise AssertionError('failed checks: '+', '.join(failed))
-                  print(json.dumps({'status':'ok','release':rel,'build':bid,'page_url':base,'segments':segment_names,'checks':checks},ensure_ascii=False))
+                  print(json.dumps({'status':'ok','release':rel,'build':bid,'page_url':base,'runtime_segments':runtime_names,'module_segments':module_names,'checks':checks},ensure_ascii=False))
                   break
               except Exception as exc:
                   last_error=exc
