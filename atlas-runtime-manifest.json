@@ -1,10 +1,10 @@
 {
   "schema": "ATLAS_RUNTIME_MANIFEST_V1",
-  "release": "0.96.3",
-  "build": "0963",
+  "release": "0.96.2",
+  "build": "0962",
   "policy": "CANONICAL_SOURCE_MANIFEST_FOR_COMPILED_RUNTIME",
   "publish_mode": "COMPILED_BUNDLES_ONLY",
-  "notes": "0.96.3 makes Historia Inteligente the persistent Entidad 360 authority. The UAF highlight layer is compiled before Historia with its historical Executive/Trajectory loader removed, and the final session module reconciles any late legacy repaint back to the current history variant. OSFL economic/public-funds 0.95 and Sanciones Radiography 0.96 remain active current capabilities.",
+  "notes": "0.96.2 is the visible Entidad 360 Historia Inteligente release. The UAF highlight layer is compiled before Historia with historical Executive/Trajectory dynamic loading retired, and the final session guard reconciles late legacy repaint back to the current history variant. OSFL economic/public-funds 0.95 and Sanciones Radiography 0.96 remain active current capabilities.",
   "styles": [
     "styles.css",
     "v016.css",
