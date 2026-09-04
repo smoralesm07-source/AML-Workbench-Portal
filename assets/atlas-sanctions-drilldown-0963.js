@@ -1,11 +1,13 @@
 'use strict';
-/* ATLAS AML · Sanciones dynamic drilldown 0.96.3
- * Adds explainable drill-through for findings and replaces the territory renderer
- * with an ATLAS-native, CSP-safe regional ranking. Does not mutate source data.
+/* ATLAS AML · Sanciones dynamic drilldown 0.96.5
+ * Adds explainable drill-through for findings, a robust regional ranking and an
+ * on-demand sanction detail drawer. The Expedientes table uses the full module
+ * width until an analyst explicitly clicks an event. Does not mutate source data.
  */
-(function atlasSanctionsDrilldown0963(){
-  const VERSION='0.96.3';
+(function atlasSanctionsDrilldown0965(){
+  const VERSION='0.96.5';
   let raf=0,observer=null,updating=false,lastRegionSig='';
+  let detailEventId=null;
   const nf=new Intl.NumberFormat('es-CL');
   const pct=v=>`${Number(v||0).toLocaleString('es-CL',{maximumFractionDigits:1})}%`;
   const fmt=v=>nf.format(Math.round(Number(v)||0));
@@ -57,6 +59,60 @@
     drawer.dataset.context=context||'';
   }
 
+  /* Ficha de sanción: the functional authority still owns the content. This
+     layer only changes when and where it is presented. The panel is invisible
+     on entry, so temporary/default selection never steals table width. */
+  function ensureDetailShade(){
+    let shade=document.querySelector('.san965-detail-shade');
+    if(!shade){shade=document.createElement('div');shade.className='san965-detail-shade';shade.hidden=true;document.body.appendChild(shade);shade.addEventListener('click',()=>closeDetail('shade'));}
+    return shade;
+  }
+  function detailPanel(root=document.querySelector('.san96')){return root?.querySelector('.san96-detail-panel')||null;}
+  function ensureDetailChrome(panel){
+    if(!panel)return;
+    panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label','Ficha de sanción / detalle');
+    const head=panel.querySelector('.san96-panel-head');
+    if(head&&!head.querySelector('.san965-detail-close')){const b=document.createElement('button');b.type='button';b.className='san965-detail-close';b.setAttribute('aria-label','Cerrar ficha');b.textContent='×';b.addEventListener('click',()=>closeDetail('button'));head.appendChild(b);}
+  }
+  function closeDetail(reason='close'){
+    detailEventId=null;
+    const S=state();if(S)S.selectedId=null;
+    const root=document.querySelector('.san96'),panel=detailPanel(root),shade=document.querySelector('.san965-detail-shade');
+    if(panel){panel.classList.remove('san965-detail-open');panel.hidden=true;panel.setAttribute('aria-hidden','true');}
+    if(shade)shade.hidden=true;
+    root?.querySelectorAll('.san96-table tbody tr.selected').forEach(row=>row.classList.remove('selected'));
+    if(root)root.dataset.sanctionsDetail=reason;
+  }
+  function openDetail(eventId){
+    const root=document.querySelector('.san96'),panel=detailPanel(root);if(!root||!panel)return false;
+    detailEventId=String(eventId||state()?.selectedId||'');if(!detailEventId)return false;
+    ensureDetailChrome(panel);ensureDetailShade().hidden=false;
+    panel.hidden=false;panel.setAttribute('aria-hidden','false');panel.classList.add('san965-detail-open');
+    root.dataset.sanctionsDetail='open-on-explicit-row-click';
+    root.querySelectorAll('.san96-table tbody tr').forEach(row=>row.classList.toggle('selected',String(row.dataset.eventId||'')===detailEventId));
+    requestAnimationFrame(()=>panel.querySelector('.san965-detail-close')?.focus({preventScroll:true}));
+    return true;
+  }
+  function decorateDetail(root){
+    const table=root.querySelector('.san96-table-panel'),panel=detailPanel(root);if(!table||!panel)return;
+    table.classList.add('san965-table-wide');ensureDetailChrome(panel);
+    if(!detailEventId){panel.hidden=true;panel.setAttribute('aria-hidden','true');panel.classList.remove('san965-detail-open');root.querySelectorAll('.san96-table tbody tr.selected').forEach(row=>row.classList.remove('selected'));return;}
+    const row=root.querySelector(`.san96-table tbody tr[data-event-id="${CSS.escape(detailEventId)}"]`);
+    if(!row){closeDetail('selected-event-left-current-page');return;}
+    panel.hidden=false;panel.setAttribute('aria-hidden','false');panel.classList.add('san965-detail-open');ensureDetailShade().hidden=false;
+  }
+  function installDetailInteraction(){
+    if(window.__ATLAS_SANCTIONS_DETAIL_ON_DEMAND_0965__)return;
+    document.addEventListener('click',event=>{
+      const row=event.target?.closest?.('.san96-table tbody tr[data-event-id]');
+      if(row){const id=row.dataset.eventId||'';detailEventId=String(id);setTimeout(()=>openDetail(id),0);return;}
+      if(event.target?.closest?.('.san96-clear,.san96-source,[data-reg-legend],[data-region],[data-sector],[data-so-sector]'))closeDetail('context-change');
+    });
+    document.addEventListener('change',event=>{if(event.target?.closest?.('.san96-command'))closeDetail('filter-change');});
+    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&detailEventId)closeDetail('escape');});
+    window.__ATLAS_SANCTIONS_DETAIL_ON_DEMAND_0965__={active:true,version:VERSION,installedAt:new Date().toISOString()};
+  }
+
   function findingData(kind,D){
     const em=groupedEntities(D);
     if(kind==='recurrent'){
@@ -103,10 +159,10 @@
     const host=root.querySelector('#san96Regions');if(!host)return;
     const observable=D.filter(e=>e._region||e.region),rows=groups(observable,e=>e._region||e.region),top=rows.slice(0,12),total=observable.length;
     const sig=JSON.stringify([rows.map(x=>[x.key,x.value]),state()?.filters||{}]);
-    if(sig===lastRegionSig&&host.querySelector('.san963-region-list'))return;lastRegionSig=sig;
+    if(sig===lastRegionSig&&host.querySelector('.san965-region-table'))return;lastRegionSig=sig;
     if(!top.length){host.innerHTML='<div class="san96-empty">Sin región observable para el corte actual.</div>';return;}
     const max=Math.max(1,...top.map(x=>x.value));
-    host.innerHTML=`<div class="san963-region-list">${top.map((x,i)=>`<div class="san963-region-row" role="button" tabindex="0" data-san963-region="${esc(x.key)}" aria-label="${esc(x.key)}: ${fmt(x.value)} eventos, ${pct(100*x.value/total)}"><span class="san963-region-rank">${i+1}</span><span class="san963-region-name" title="${esc(x.key)}">${esc(x.key)}</span><span class="san963-region-track"><progress class="san963-region-progress" max="${max}" value="${x.value}"></progress></span><span class="san963-region-count">${fmt(x.value)}</span><span class="san963-region-pct">${pct(100*x.value/total)}</span></div>`).join('')}</div><div class="san963-region-foot"><span>Mostrando ${fmt(top.length)} de ${fmt(rows.length)} regiones observadas.</span><b>Clic en una región: ver sanciones y profundizar.</b></div>`;
+    host.innerHTML=`<div class="san965-region-ranking"><table class="san965-region-table" aria-label="Concentración regional de sanciones"><thead><tr><th>#</th><th>Región</th><th>Concentración</th><th>Eventos</th><th>Participación</th></tr></thead><tbody>${top.map((x,i)=>`<tr tabindex="0" data-san963-region="${esc(x.key)}" aria-label="${esc(x.key)}: ${fmt(x.value)} eventos, ${pct(100*x.value/total)}"><td class="san965-region-rank">${i+1}</td><td class="san965-region-name" title="${esc(x.key)}">${esc(x.key)}</td><td class="san965-region-track"><progress max="${max}" value="${x.value}" aria-label="Concentración de ${esc(x.key)}"></progress></td><td class="san965-region-count">${fmt(x.value)}</td><td class="san965-region-pct">${pct(100*x.value/total)}</td></tr>`).join('')}</tbody></table></div><div class="san963-region-foot"><span>${fmt(total)} eventos con región · ${fmt(D.length-total)} sin región.</span><b>Clic en una región: revisar eventos.</b></div>`;
     host.querySelectorAll('[data-san963-region]').forEach(row=>{
       const open=()=>{const region=row.dataset.san963Region||'',regional=D.filter(e=>(e._region||e.region)===region);openDrawer(`Concentración regional · ${region}`,`${fmt(regional.length)} eventos observados en ${region}. Desde esta vista puede revisar las sanciones que explican la concentración.`,regional,`region:${region}`);};
       row.addEventListener('click',open);row.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});
@@ -117,13 +173,13 @@
   function decorate(){
     const root=document.querySelector('.san96');if(!root)return null;
     updating=true;
-    try{const D=currentEvents();renderRegions(root,D);decorateFindings(root,D);root.dataset.sanctionsDrilldown='0963';window.__ATLAS_SANCTIONS_DRILLDOWN__={status:'ready',version:VERSION,events:D.length,regionRows:root.querySelectorAll('.san963-region-row').length,findings:root.querySelectorAll('[data-san963-finding]').length,checkedAt:new Date().toISOString()};return window.__ATLAS_SANCTIONS_DRILLDOWN__;}
+    try{const D=currentEvents();renderRegions(root,D);decorateFindings(root,D);decorateDetail(root);root.dataset.sanctionsDrilldown='0965';window.__ATLAS_SANCTIONS_DRILLDOWN__={status:'ready',version:VERSION,events:D.length,regionRows:root.querySelectorAll('.san965-region-table tbody tr').length,findings:root.querySelectorAll('[data-san963-finding]').length,detailOnDemand:true,tableFullWidth:true,checkedAt:new Date().toISOString()};return window.__ATLAS_SANCTIONS_DRILLDOWN__;}
     finally{updating=false;}
   }
   function queue(){if(raf||updating)return;raf=requestAnimationFrame(()=>{raf=0;decorate();});}
   function observe(){if(observer)return;const target=document.querySelector('#content')||document.body||document.documentElement;observer=new MutationObserver(records=>{if(updating)return;if(records.some(r=>r.addedNodes.length||r.removedNodes.length||r.type==='characterData'))queue();});observer.observe(target,{subtree:true,childList:true,characterData:true});}
-  function boot(){observe();queue();setTimeout(queue,60);setTimeout(queue,220);}
+  function boot(){installDetailInteraction();observe();queue();setTimeout(queue,60);setTimeout(queue,220);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-  window.addEventListener('atlas:nav-refresh',queue);window.addEventListener('atlas:routechange',queue);window.addEventListener('atlas:themechange',queue);window.addEventListener('pageshow',queue);window.addEventListener('atlas:sanctions-radiography:ready',queue);
-  window.ATLAS_SANCTIONS_DRILLDOWN={version:VERSION,refresh:decorate,openFinding:kind=>{const x=findingData(kind,currentEvents());openDrawer(x.title,x.subtitle,x.rows,`finding:${kind}`);},health:()=>window.__ATLAS_SANCTIONS_DRILLDOWN__||null};
+  window.addEventListener('atlas:nav-refresh',queue);window.addEventListener('atlas:routechange',()=>{detailEventId=null;queue();});window.addEventListener('atlas:themechange',queue);window.addEventListener('pageshow',queue);window.addEventListener('atlas:sanctions-radiography:ready',queue);
+  window.ATLAS_SANCTIONS_DRILLDOWN={version:VERSION,refresh:decorate,closeDetail,openFinding:kind=>{const x=findingData(kind,currentEvents());openDrawer(x.title,x.subtitle,x.rows,`finding:${kind}`);},health:()=>window.__ATLAS_SANCTIONS_DRILLDOWN__||null};
 })();
