@@ -152,25 +152,34 @@
   window.ATLAS_SANCTIONS_GRAPHICS_FIX={version:VERSION,refresh:()=>{wrapCurrentLoader();return decorate();},health:()=>window.__ATLAS_SANCTIONS_GRAPHICS__||null};
 })();
 
-/* 0.96.3 late visual/interactivity bootstrap.
- * This is intentionally owned by the already-published 0.96.2 entry point so
- * Pages can pick up the correction without depending on historical index order.
+/* 0.96.6 bootstrap hardening.
+ * The drilldown is already declared directly in index.html. The previous
+ * bootstrap also appended the same script during HTML parsing, so two copies
+ * could run with independent local detail state and fight over the Ficha panel.
+ * Wait until parsing finishes, prefer the declared asset, and only load a
+ * fallback when the drilldown truly did not initialize.
  */
-(function atlasSanctionsDrilldownBootstrap0963(){
-  const CSS='./assets/atlas-sanctions-drilldown-0963.css?v=0963-1';
-  const JS='./assets/atlas-sanctions-drilldown-0963.js?v=0963-1';
+(function atlasSanctionsDrilldownBootstrap0966(){
+  const CSS='./assets/atlas-sanctions-drilldown-0963.css?v=0966-1';
+  const JS='./assets/atlas-sanctions-drilldown-0963.js?v=0966-1';
+  const assetPresent=(selector,needle)=>[...document.querySelectorAll(selector)].some(el=>String(el.getAttribute(selector==='link'?'href':'src')||'').includes(needle));
   function ensureCss(){
-    if(document.querySelector('link[data-atlas-sanctions-drilldown="0963"]'))return;
-    const link=document.createElement('link');link.rel='stylesheet';link.href=CSS;link.dataset.atlasSanctionsDrilldown='0963';document.head.appendChild(link);
+    if(assetPresent('link','atlas-sanctions-drilldown-0963.css'))return;
+    const link=document.createElement('link');link.rel='stylesheet';link.href=CSS;link.dataset.atlasSanctionsDrilldown='0966';document.head.appendChild(link);
+  }
+  function drilldownReady(){
+    const api=window.ATLAS_SANCTIONS_DRILLDOWN;
+    return !!(api&&typeof api.refresh==='function'&&/^0\.96\./.test(String(api.version||'')));
   }
   function ensureJs(){
-    if(window.ATLAS_SANCTIONS_DRILLDOWN?.version==='0.96.3')return;
-    if(document.querySelector('script[data-atlas-sanctions-drilldown="0963"]'))return;
-    const script=document.createElement('script');script.src=JS;script.defer=true;script.dataset.atlasSanctionsDrilldown='0963';document.body.appendChild(script);
+    if(drilldownReady())return;
+    if(assetPresent('script','atlas-sanctions-drilldown-0963.js'))return;
+    const script=document.createElement('script');script.src=JS;script.defer=true;script.dataset.atlasSanctionsDrilldown='0966';document.body.appendChild(script);
   }
   function boot(){ensureCss();ensureJs();}
-  boot();
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
+  else boot();
   window.addEventListener('pageshow',boot);
   window.addEventListener('atlas:nav-refresh',boot);
+  window.__ATLAS_SANCTIONS_DRILLDOWN_BOOTSTRAP_0966__={singleRuntime:true,deferredFallback:true,version:'0.96.6'};
 })();
