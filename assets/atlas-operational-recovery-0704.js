@@ -6,7 +6,7 @@
  */
 (function atlasOperationalRecovery0805(){
   if(window.AtlasOperationalRecovery0805)return;
-  const VERSION='0.80.5',RELEASE='0.90.1',BUILD='0901',VIEW_SO='sujetos-obligados',VIEW_ENTITIES='entities',VIEW_TERRITORY='territory',VIEW_OSFL='osfl';
+  const VERSION='0.80.5',RELEASE='0.96.2',BUILD='0962',VIEW_SO='sujetos-obligados',VIEW_ENTITIES='entities',VIEW_TERRITORY='territory',VIEW_OSFL='osfl';
   let opening=false,lastView='',sectorRiskPromise=null;
   const db=()=>{try{return typeof sb!=='undefined'?sb:(window.sb||null);}catch{return window.sb||null;}};
   const fn=name=>{try{return typeof window[name]==='function'?window[name]:null;}catch{return null;}};
