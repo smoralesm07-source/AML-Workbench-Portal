@@ -5,22 +5,27 @@
 .e360-force-loading{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:20px 22px;border:1px solid var(--atlas-line,#1e3247);border-radius:16px;background:var(--atlas-panel,#0c1725);color:var(--atlas-ink,#e6eef7)}
 .e360-force-loading>div:last-child{min-width:0;text-align:right}.e360-force-loading b,.e360-force-loading small{display:block}.e360-force-loading b{font-size:14px}.e360-force-loading small{margin-top:4px;color:var(--atlas-muted,#8397ad);font-size:10px}
 
-/* The renovated summary is the primary 360 surface. The historical six-lens
-   dossier remains available only when the analyst explicitly opens Advanced. */
-#content .a45.e360-modern>:is(.a45-cover,.a45-lenses,main,.a45-footer){display:none!important}
-#content .a45.e360-modern.e360-advanced-open>main,
-#content .a45.e360-modern.e360-advanced-open>.a45-footer{display:block!important}
-#content .a45.e360-modern.e360-advanced-open>.a45-lenses{display:flex!important;margin-top:8px}
-#content .a45.e360-modern.e360-advanced-open>.a45-cover{display:none!important}
-#content .a45.e360-modern>.e360-advanced-returnbar{display:none}
-#content .a45.e360-modern.e360-advanced-open>.e360-advanced-returnbar{position:sticky;top:8px;z-index:9;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0;padding:7px 9px;border:1px solid var(--atlas-line,#1e3247);border-radius:10px;background:rgba(12,23,37,.96);backdrop-filter:blur(10px)}
-.e360-advanced-returnbar button{border:0;border-radius:8px;background:rgba(255,255,255,.045);color:var(--atlas-ink2,#b3c4d5);padding:7px 9px;font:650 10px/1.2 inherit;cursor:pointer}.e360-advanced-returnbar button:hover{background:rgba(255,255,255,.08);color:var(--atlas-ink,#e6eef7)}
-.e360-advanced-returnbar span{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--atlas-muted,#8397ad)}
+/* Legacy six-lens dossier retired. The modern Entidad 360 is the only visible surface.
+   These selectors stay intentionally stronger than stale advanced-view rules. */
+#content .a45>:is(.a45-cover,.a45-lenses,main,.a45-footer,.e360-advanced-returnbar){display:none!important}
+#content .a45.e360-modern.e360-history-active.e360-advanced-open>:is(.a45-cover,.a45-lenses,main,.a45-footer,.e360-advanced-returnbar){display:none!important}
+#content .a45.e360-modern.e360-history-active.e360-advanced-open>#atlas-entity360-executive{display:block!important}
 
-/* Remove excess chroma from legacy details when explicitly expanded. */
-#content .a45.e360-modern.e360-advanced-open>.a45-lenses,
-#content .a45.e360-modern.e360-advanced-open>main{filter:saturate(.72)}
-#content .a45.e360-modern.e360-advanced-open .a45-card{box-shadow:none!important}
+/* 2026-09-04 · Historia 360: category color lives only in dot + text.
+   Active/hover states keep a neutral ATLAS surface and border. */
+#atlas-entity360-executive .eh-filter,
+#atlas-entity360-executive .eh-filter:hover,
+#atlas-entity360-executive .eh-filter.active[data-source],
+#atlas-entity360-executive .eh-filter.active[data-source]:hover{
+  border-color:rgba(87,112,138,.30)!important;
+}
+#atlas-entity360-executive .eh-filter.active[data-source]{
+  background:#081523!important;
+  box-shadow:none!important;
+}
+#atlas-entity360-executive .eh-filter.active[data-source]:hover{
+  background:#0d2234!important;
+}
 
-@media(max-width:780px){.e360-force-loading{align-items:flex-start;flex-direction:column}.e360-force-loading>div:last-child{text-align:left}.e360-head-side>.e360-force-production-badge{margin-left:0}.e360-advanced-returnbar span{display:none}}
-@media(prefers-reduced-motion:reduce){#content .a45.e360-modern.e360-advanced-open>.e360-advanced-returnbar{backdrop-filter:none}}
+@media(max-width:780px){.e360-force-loading{align-items:flex-start;flex-direction:column}.e360-force-loading>div:last-child{text-align:left}.e360-head-side>.e360-force-production-badge{margin-left:0}}
+@media(prefers-reduced-motion:reduce){#atlas-entity360-executive{scroll-behavior:auto}}

@@ -4,7 +4,7 @@
  * Presentation-only. No data, scoring, auth, RLS or identity semantics are changed.
  */
 (function atlasEntity360Polish20260903(){
-  const BUILD='20260903-e360-polish1';
+  const BUILD='20260904-e360-polish2';
   if(window.__ATLAS_ENTITY360_POLISH__?.build===BUILD)return;
 
   const svg=(name)=>{
@@ -94,9 +94,16 @@
     });
   }
 
+  function retireLegacyActions(host){
+    host.querySelectorAll('[data-e360-lens],[data-e360-go="e360-advanced"],#e360-advanced').forEach(node=>node.remove());
+    const root=host.closest('.a45');
+    if(root){root.classList.remove('e360-advanced-open');root.querySelector(':scope > .e360-advanced-returnbar')?.remove();}
+  }
+
   function apply(){
     const host=document.querySelector('#atlas-entity360-executive.e360-history-host');if(!host)return false;
     host.dataset.e360Polish=BUILD;
+    retireLegacyActions(host);
     polishTimeline(host);polishCharacterRows(host);polishSectionHeaders(host);polishSanctionBars(host);countryCompare(host);polishButtons(host);
     return true;
   }
