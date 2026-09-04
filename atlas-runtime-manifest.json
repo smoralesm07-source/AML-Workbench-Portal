@@ -1,10 +1,10 @@
 {
   "schema": "ATLAS_RUNTIME_MANIFEST_V1",
-  "release": "0.96.1",
-  "build": "0961",
+  "release": "0.96.2",
+  "build": "0962",
   "policy": "CANONICAL_SOURCE_MANIFEST_FOR_COMPILED_RUNTIME",
   "publish_mode": "COMPILED_BUNDLES_ONLY",
-  "notes": "0.96.1 current production runtime. Entidad 360 uses a single compiled Historia Inteligente authority before workspace capture; stale late executive authorities are retired. OSFL economic/public-funds 0.95 and Sanciones Radiography 0.96 remain active current capabilities.",
+  "notes": "0.96.2 keeps Entidad 360 on Historia Inteligente and retires the deferred legacy renderer pin that could repaint the old dossier after the current surface mounted. The final session module now reconciles any late legacy repaint back to the current history variant. OSFL economic/public-funds 0.95 and Sanciones Radiography 0.96 remain active current capabilities.",
   "styles": [
     "styles.css",
     "v016.css",
@@ -168,7 +168,7 @@
     {"path":"v0447-entity-workspace.js","type":"classic","role":"entity360-single-workspace-autocomplete-current"},
     {"path":"v0448-entity-route-authority.js","type":"classic","role":"entity360-route-current-authority"},
     {"path":"v0449-entity-tax-docauth.js","type":"classic","role":"entity360-sii-document-authorization-current"},
-    {"path":"v0442-session-stability.module.js","type":"module","role":"auth-session-passive-stability-and-entity-final-pin"},
+    {"path":"v0442-session-stability.module.js","type":"module","role":"auth-session-passive-stability-and-entity-history-final-render-guard"},
     {"path":"assets/atlas-ui-authority-0901.js","type":"classic","role":"final-ui-runtime-authority"},
     {"path":"assets/atlas-osfl-economic-0950.js","type":"classic","role":"osfl-economic-public-funds-current-0950"},
     {"path":"assets/atlas-osfl-route-authority-0950.js","type":"classic","role":"osfl-route-install-current-authority-0950"},
