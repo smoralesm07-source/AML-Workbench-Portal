@@ -1,10 +1,10 @@
 {
   "schema": "ATLAS_RUNTIME_MANIFEST_V1",
   "release": "0.96.2",
-  "build": "0962",
+  "build": "0963",
   "policy": "CANONICAL_SOURCE_MANIFEST_FOR_COMPILED_RUNTIME",
   "publish_mode": "COMPILED_BUNDLES_ONLY",
-  "notes": "0.96.2 keeps Entidad 360 Historia Inteligente as the sole entity dossier authority and adds a route-scope lifecycle guard: leaving Entidades clears stale entity state, rejects late Entity 360 repaint and removes only orphan shell-level IPA while preserving contextual IPA chips. OSFL economic/public-funds 0.95 and Sanciones Radiography 0.96 remain active current capabilities.",
+  "notes": "0.96.2 build 0963 materializes the governed Entidad 360 back/drill-down/UF layer with a new immediate loading authority that hides stale entity content during selection changes. Historia Inteligente remains the sole entity dossier authority. OSFL economic/public-funds 0.95 and Sanciones Radiography 0.96 remain active current capabilities.",
   "styles": [
     "styles.css",
     "v016.css",
@@ -170,6 +170,7 @@
     {"path":"v0449-entity-tax-docauth.js","type":"classic","role":"entity360-sii-document-authorization-current"},
     {"path":"assets/atlas-entity360-scope-authority-20260904.js","type":"classic","role":"entity360-cross-route-scope-authority"},
     {"path":"assets/atlas-entity360-drilldown-20260904.js","type":"classic","role":"entity360-governed-drilldown-and-back-navigation"},
+    {"path":"assets/atlas-entity360-loading-authority-0963.js","type":"classic","role":"entity360-immediate-loading-and-materialization-authority"},
     {"path":"v0442-session-stability.module.js","type":"module","role":"auth-session-passive-stability-and-entity-history-final-render-guard"},
     {"path":"assets/atlas-ui-authority-0901.js","type":"classic","role":"final-ui-runtime-authority"},
     {"path":"assets/atlas-osfl-economic-0950.js","type":"classic","role":"osfl-economic-public-funds-current-0950"},
