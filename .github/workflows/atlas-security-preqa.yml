@@ -1,0 +1,47 @@
+name: ATLAS security pre-QA
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: atlas-security-preqa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  security-preqa:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout reviewed revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
+
+      - name: Build canonical Pages artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/build_atlas_site.py --out _site-security
+
+      - name: Validate JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          for js in _site-security/atlas-runtime-current-*.js _site-security/atlas-module-current-*.js; do
+            test -f "$js" || continue
+            node --check "$js"
+          done
+          node --check atlas-release-guard.js
+          node --check assets/atlas-operational-recovery-0704.js
+          node --check v0442-session-stability.module.js
+          node --check v0448-entity-route-authority.js
+
+      - name: Run security pre-QA controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/security_preqa.py --site _site-security
