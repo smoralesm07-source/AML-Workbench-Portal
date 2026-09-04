@@ -1,0 +1,271 @@
+/* ATLAS AML · Sanciones graphics hardening 0.96.2
+   Loaded after the compiled runtime. Removes dependence on inline styles and
+   isolates current Sanciones graphics from legacy/global button presentation. */
+html[data-atlas-release="0.95.0"] .san96{
+  --s962-cmf:#58b7ff;
+  --s962-uaf:#55d6b6;
+  --s962-scj:#f3b75a;
+  --s962-cgr:#d58aff;
+  --s962-track:rgba(157,185,210,.10);
+}
+
+/* Source cards: no inline custom properties. */
+html[data-atlas-release="0.95.0"] .san96 .san96-source[data-src="CMF"]{--s96-src:var(--s962-cmf)}
+html[data-atlas-release="0.95.0"] .san96 .san96-source[data-src="UAF"]{--s96-src:var(--s962-uaf)}
+html[data-atlas-release="0.95.0"] .san96 .san96-source[data-src="SCJ"]{--s96-src:var(--s962-scj)}
+html[data-atlas-release="0.95.0"] .san96 .san96-source[data-src="CGR"]{--s96-src:var(--s962-cgr)}
+html[data-atlas-release="0.95.0"] .san96 .san96-source{
+  appearance:none!important;
+  -webkit-appearance:none!important;
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  padding:10px 12px 9px!important;
+  border:1px solid rgba(157,185,210,.17)!important;
+  border-radius:11px!important;
+  background:rgba(255,255,255,.025)!important;
+  box-shadow:none!important;
+  color:inherit!important;
+  text-align:left!important;
+}
+html[data-atlas-release="0.95.0"] .san96 .san96-source:before{background:var(--s96-src,var(--s962-cmf))!important}
+html[data-atlas-release="0.95.0"] .san96 .san96-source:hover,
+html[data-atlas-release="0.95.0"] .san96 .san96-source.active{
+  border-color:var(--s96-src,var(--s962-cmf))!important;
+  background:rgba(255,255,255,.05)!important;
+}
+
+/* Trend legend: source colour is class/data driven, never inline. */
+html[data-atlas-release="0.95.0"] .san96 .san96-legend button{
+  appearance:none!important;
+  -webkit-appearance:none!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:5px!important;
+  padding:4px 7px!important;
+  border:1px solid transparent!important;
+  border-radius:7px!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:var(--s96-muted)!important;
+  font-size:8px!important;
+  line-height:1.2!important;
+}
+html[data-atlas-release="0.95.0"] .san96 .san96-legend button:hover,
+html[data-atlas-release="0.95.0"] .san96 .san96-legend button.active{
+  border-color:var(--s96-line)!important;
+  background:rgba(255,255,255,.035)!important;
+  color:var(--s96-text)!important;
+}
+html[data-atlas-release="0.95.0"] .san96 .san96-legend i{display:block!important;width:10px!important;height:3px!important;border-radius:999px!important}
+html[data-atlas-release="0.95.0"] .san96 .san96-legend [data-reg-legend="CMF"] i{background:var(--s962-cmf)!important}
+html[data-atlas-release="0.95.0"] .san96 .san96-legend [data-reg-legend="UAF"] i{background:var(--s962-uaf)!important}
+html[data-atlas-release="0.95.0"] .san96 .san96-legend [data-reg-legend="SCJ"] i{background:var(--s962-scj)!important}
+html[data-atlas-release="0.95.0"] .san96 .san96-legend [data-reg-legend="CGR"] i{background:var(--s962-cgr)!important}
+
+/* Supervisor x industry matrix: explicit heat classes replace inline alpha. */
+html[data-atlas-release="0.95.0"] .san96 .san96-matrix .sector-name,
+html[data-atlas-release="0.95.0"] .san96 .san96-matrix .cell{
+  appearance:none!important;
+  -webkit-appearance:none!important;
+  min-width:0!important;
+  min-height:31px!important;
+  margin:0!important;
+  border:0!important;
+  border-radius:7px!important;
+  box-shadow:none!important;
+  line-height:1.15!important;
+}
+html[data-atlas-release="0.95.0"] .san96 .san96-matrix .sector-name{
+  display:block!important;
+  width:100%!important;
+  padding:6px 7px!important;
+  background:rgba(255,255,255,.025)!important;
+  color:var(--s96-text)!important;
+  font-size:8.3px!important;
+  font-weight:650!important;
+  text-align:left!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+html[data-atlas-release="0.95.0"] .san96 .san96-matrix .cell{
+  display:grid!important;
+  place-items:center!important;
+  width:100%!important;
+  padding:0 3px!important;
+  font-size:8.5px!important;
+  font-weight:900!important;
+  color:#eaf4fb!important;
+  --heat-rgb:88,183,255;
+  --heat-color:var(--s962-cmf);
+}
+html[data-atlas-release="0.95.0"] .san96 .san96-matrix .cell[data-mreg="UAF"]{--heat-rgb:85,214,182;--heat-color:var(--s962-uaf)}
+html[data-atlas-release="0.95.0"] .san96 .san96-matrix .cell[data-mreg="SCJ"]{--heat-rgb:243,183,90;--heat-color:var(--s962-scj)}
+html[data-atlas-release="0.95.0"] .san96 .san96-matrix .cell[data-mreg="CGR"]{--heat-rgb:213,138,255;--heat-color:var(--s962-cgr)}
+html[data-atlas-release="0.95.0"] .san96 .san96-matrix .cell.heat-0{background:rgba(var(--heat-rgb),.025)!important;color:var(--s96-muted)!important}
+html[data-atlas-release="0.95.0"] .san96 .san96-matrix .cell.heat-1{background:rgba(var(--heat-rgb),.09)!important}
+html[data-atlas-release="0.95.0"] .san96 .san96-matrix .cell.heat-2{background:rgba(var(--heat-rgb),.16)!important}
+html[data-atlas-release="0.95.0"] .san96 .san96-matrix .cell.heat-3{background:rgba(var(--heat-rgb),.24)!important}
+html[data-atlas-release="0.95.0"] .san96 .san96-matrix .cell.heat-4{background:rgba(var(--heat-rgb),.34)!important}
+html[data-atlas-release="0.95.0"] .san96 .san96-matrix .cell.heat-5{background:rgba(var(--heat-rgb),.46)!important}
+html[data-atlas-release="0.95.0"] .san96 .san96-matrix .cell:hover{outline:1px solid var(--heat-color)!important;filter:brightness(1.12)!important}
+
+/* Territory ranking. This rule intentionally outranks every historical button rule. */
+html[data-atlas-release="0.95.0"] .san96 .san96-region-bars{
+  display:grid!important;
+  gap:3px!important;
+  width:100%!important;
+}
+html[data-atlas-release="0.95.0"] .san96 .san96-region-row{
+  appearance:none!important;
+  -webkit-appearance:none!important;
+  display:grid!important;
+  grid-template-columns:24px minmax(0,1.45fr) minmax(90px,1fr) 40px 48px!important;
+  gap:7px!important;
+  align-items:center!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:30px!important;
+  margin:0!important;
+  padding:4px 5px!important;
+  border:0!important;
+  border-radius:8px!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:var(--s96-text)!important;
+  font-size:8.5px!important;
+  line-height:1.2!important;
+  text-align:left!important;
+  white-space:normal!important;
+  overflow:visible!important;
+}
+html[data-atlas-release="0.95.0"] .san96 .san96-region-row:hover{background:rgba(85,214,182,.05)!important}
+html[data-atlas-release="0.95.0"] .san96 .san96-region-row .rank{
+  display:grid!important;
+  place-items:center!important;
+  width:20px!important;
+  height:20px!important;
+  padding:0!important;
+  border-radius:6px!important;
+  background:rgba(255,255,255,.045)!important;
+  color:var(--s96-muted)!important;
+  font-size:7.5px!important;
+  font-weight:800!important;
+}
+html[data-atlas-release="0.95.0"] .san96 .san96-region-row .region-name{
+  display:block!important;
+  min-width:0!important;
+  color:var(--s96-text)!important;
+  font-size:8.8px!important;
+  font-weight:700!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+html[data-atlas-release="0.95.0"] .san96 .san96-region-row b{
+  display:block!important;
+  margin:0!important;
+  padding:0!important;
+  color:#eaf4fb!important;
+  font-size:8.5px!important;
+  font-weight:900!important;
+  text-align:right!important;
+}
+html[data-atlas-release="0.95.0"] .san96 .san96-region-row em{
+  display:block!important;
+  margin:0!important;
+  padding:0!important;
+  color:var(--s96-muted)!important;
+  font-size:7.8px!important;
+  font-style:normal!important;
+  text-align:right!important;
+}
+html[data-atlas-release="0.95.0"] .san96 .san96-region-track{
+  display:block!important;
+  width:100%!important;
+  height:8px!important;
+  min-width:70px!important;
+  border-radius:999px!important;
+  background:transparent!important;
+  overflow:hidden!important;
+}
+html[data-atlas-release="0.95.0"] .san96 progress.san96-region-progress,
+html[data-atlas-release="0.95.0"] .san96 progress.san96-sector-progress{
+  appearance:none!important;
+  -webkit-appearance:none!important;
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  border:0!important;
+  border-radius:999px!important;
+  background:var(--s962-track)!important;
+  overflow:hidden!important;
+}
+html[data-atlas-release="0.95.0"] .san96 progress.san96-region-progress::-webkit-progress-bar,
+html[data-atlas-release="0.95.0"] .san96 progress.san96-sector-progress::-webkit-progress-bar{background:var(--s962-track);border-radius:999px}
+html[data-atlas-release="0.95.0"] .san96 progress.san96-region-progress::-webkit-progress-value,
+html[data-atlas-release="0.95.0"] .san96 progress.san96-sector-progress::-webkit-progress-value{background:linear-gradient(90deg,var(--s962-uaf),var(--s962-cmf));border-radius:999px}
+html[data-atlas-release="0.95.0"] .san96 progress.san96-region-progress::-moz-progress-bar,
+html[data-atlas-release="0.95.0"] .san96 progress.san96-sector-progress::-moz-progress-bar{background:linear-gradient(90deg,var(--s962-uaf),var(--s962-cmf));border-radius:999px}
+
+/* SO/potential sector ranking also becomes CSP-safe progress. */
+html[data-atlas-release="0.95.0"] .san96 .san96-sector-bars button{
+  appearance:none!important;
+  -webkit-appearance:none!important;
+  display:grid!important;
+  grid-template-columns:minmax(120px,1.3fr) minmax(80px,1fr) 38px!important;
+  gap:7px!important;
+  align-items:center!important;
+  width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:4px 3px!important;
+  border:0!important;
+  border-radius:7px!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  color:var(--s96-text)!important;
+  font-size:8px!important;
+  line-height:1.2!important;
+}
+html[data-atlas-release="0.95.0"] .san96 .san96-sector-bars button:hover{background:rgba(85,214,182,.04)!important}
+html[data-atlas-release="0.95.0"] .san96 .san96-sector-bars button>span{
+  display:block!important;
+  min-width:0!important;
+  font-size:8px!important;
+  font-weight:650!important;
+  text-align:left!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+html[data-atlas-release="0.95.0"] .san96 .san96-sector-bars button>i{
+  display:block!important;
+  width:100%!important;
+  height:7px!important;
+  border-radius:999px!important;
+  background:transparent!important;
+  overflow:hidden!important;
+}
+html[data-atlas-release="0.95.0"] .san96 .san96-sector-bars button>b{
+  display:block!important;
+  margin:0!important;
+  padding:0!important;
+  font-size:8px!important;
+  font-weight:900!important;
+  text-align:right!important;
+}
+
+/* Guard against accidental huge typography inherited from historical controls. */
+html[data-atlas-release="0.95.0"] .san96 .san96-region-panel,
+html[data-atlas-release="0.95.0"] .san96 .san96-so-panel,
+html[data-atlas-release="0.95.0"] .san96 .san96-matrix-panel{font-size:10px!important}
+
+@media (max-width:1100px){
+  html[data-atlas-release="0.95.0"] .san96 .san96-region-row{grid-template-columns:22px minmax(0,1.35fr) minmax(70px,.9fr) 36px 43px!important;gap:5px!important}
+}
+@media (max-width:760px){
+  html[data-atlas-release="0.95.0"] .san96 .san96-region-row{grid-template-columns:22px minmax(0,1fr) 36px 44px!important}
+  html[data-atlas-release="0.95.0"] .san96 .san96-region-track{grid-column:2/5!important;margin-top:2px!important}
+}
