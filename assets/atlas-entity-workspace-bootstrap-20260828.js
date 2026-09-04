@@ -18,7 +18,7 @@
   const PRESS_SEARCH_RACEFIX_SRC='./assets/atlas-entity-press-search-racefix-20260828.js?v=20260828-racefix1';
   const PRESS_VIEW_JS_SRC='./assets/atlas-entity-press-view-0951.js?v=0951-1';
   const PRESS_VIEW_CSS_SRC='./assets/atlas-entity-press-view-0951.css?v=0951-1';
-  const BUILD='20260903-e360-entry4';
+  const BUILD='20260903-e360-entry5';
 
   if(window[BOOT_FLAG])return;
   window[BOOT_FLAG]=true;
@@ -159,10 +159,10 @@
  */
 (function atlasEntity360ExecutiveProductionLoader20260903(){
   const FLAG='__ATLAS_ENTITY360_EXECUTIVE_ACTIVE_LOADER__';
-  const BUILD='20260903-e360-entry4';
+  const BUILD='20260903-e360-entry5';
   const MODULE_BUILD='20260903-e360-3';
-  const CSS='./assets/atlas-entity360-executive-20260903.css?v=20260903-entry4';
-  const JS='./assets/atlas-entity360-executive-20260903.js?v=20260903-entry4';
+  const CSS='./assets/atlas-entity360-executive-20260903.css?v=20260903-entry5';
+  const JS='./assets/atlas-entity360-executive-20260903.js?v=20260903-entry5';
 
   if(window[FLAG]?.build===BUILD)return;
   window[FLAG]={active:true,build:BUILD,moduleBuildRequired:MODULE_BUILD,installed:false,startedAt:new Date().toISOString()};
@@ -206,4 +206,90 @@
   document.addEventListener('atlas:entity-entry-ready',connect);
   window.addEventListener('load',connect,{once:true});
   [250,1000,2500,5000].forEach(ms=>setTimeout(connect,ms));
+})();
+
+/* Entidad 360 · FINAL VISUAL AUTHORITY
+ * The canonical 0.44.7 workspace captures BASE_OPEN before late loaders run.
+ * Therefore a function wrapper alone can be bypassed. This observer works at
+ * the final DOM layer: after any entity renderer/hydrator paints #content, it
+ * guarantees the executive summary is present for the active selectedEntity.
+ */
+(function atlasEntity360FinalVisualAuthority20260903(){
+  const FLAG='__ATLAS_ENTITY360_FINAL_VISUAL_AUTHORITY__';
+  const BUILD='20260903-e360-final5';
+  const MODULE_BUILD='20260903-e360-3';
+  if(window[FLAG]?.build===BUILD)return;
+
+  let timer=null;
+  let inflight=false;
+  let waits=0;
+  let observer=null;
+
+  function selectedEntity(){
+    try{if(typeof state!=='undefined'&&state?.selectedEntity)return String(state.selectedEntity);}catch(_error){}
+    const current=window.__ATLAS_ENTITY360_CURRENT__?.selectedEntity;
+    return current?String(current):'';
+  }
+
+  function hasRenderedEntity(){
+    const c=document.querySelector('#content');
+    if(!c)return false;
+    return !!c.querySelector('.a45:not(.a47-entity-empty), .v0203-entity, .v038-entity');
+  }
+
+  function schedule(reason='mutation',delay=70){
+    clearTimeout(timer);
+    timer=setTimeout(()=>void reconcile(reason),delay);
+  }
+
+  async function reconcile(reason){
+    if(inflight)return;
+    const entityId=selectedEntity();
+    if(!entityId||!hasRenderedEntity())return;
+
+    const api=window.__ATLAS_ENTITY360_EXECUTIVE__;
+    if(!api?.active||api.build!==MODULE_BUILD){
+      waits+=1;
+      if(waits<80)schedule('api-wait',150);
+      window[FLAG]={active:true,build:BUILD,moduleBuildRequired:MODULE_BUILD,entityId,waitingForApi:true,waits,lastReason:reason,checkedAt:new Date().toISOString()};
+      return;
+    }
+    waits=0;
+
+    const host=document.querySelector('#atlas-entity360-executive');
+    const current=window.__ATLAS_ENTITY360_EXECUTIVE_STATE__;
+    if(host&&current?.build===MODULE_BUILD&&String(current.entityId||'')===entityId){
+      host.dataset.e360FinalAuthority=BUILD;
+      window[FLAG]={active:true,build:BUILD,moduleBuildRequired:MODULE_BUILD,entityId,present:true,waitingForApi:false,lastReason:reason,checkedAt:new Date().toISOString()};
+      return;
+    }
+
+    inflight=true;
+    try{
+      await api.open(entityId,{entity_id:entityId});
+      const mounted=document.querySelector('#atlas-entity360-executive');
+      if(mounted)mounted.dataset.e360FinalAuthority=BUILD;
+      window[FLAG]={active:true,build:BUILD,moduleBuildRequired:MODULE_BUILD,entityId,present:!!mounted,waitingForApi:false,lastReason:reason,mountedAt:new Date().toISOString()};
+    }catch(error){
+      window[FLAG]={active:true,build:BUILD,moduleBuildRequired:MODULE_BUILD,entityId,present:false,error:String(error?.message||error),lastReason:reason,failedAt:new Date().toISOString()};
+    }finally{
+      inflight=false;
+    }
+  }
+
+  function install(){
+    if(observer)return;
+    const app=document.querySelector('#app');
+    if(!app){setTimeout(install,100);return;}
+    observer=new MutationObserver(()=>schedule('dom-mutation'));
+    observer.observe(app,{childList:true,subtree:true});
+    window[FLAG]={active:true,build:BUILD,moduleBuildRequired:MODULE_BUILD,observer:true,installedAt:new Date().toISOString()};
+    schedule('install',100);
+    [300,1000,2500,5000].forEach(ms=>setTimeout(()=>schedule(`startup-${ms}`,0),ms));
+  }
+
+  install();
+  document.addEventListener('atlas:entity-workspace-ready',()=>schedule('workspace-ready',0));
+  document.addEventListener('atlas:entity-entry-ready',()=>schedule('entry-ready',0));
+  window.addEventListener('load',()=>schedule('window-load',0),{once:true});
 })();
