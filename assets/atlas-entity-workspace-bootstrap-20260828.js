@@ -241,3 +241,67 @@
   script.dataset.atlasSanctionsCharts='0962';
   document.body.appendChild(script);
 })();
+
+/* ATLAS · Entidad 360 Executive loader · 2026-09-03
+ * This bootstrap is part of the active production index, so Entidad 360 is
+ * attached here explicitly instead of depending on dormant legacy loaders.
+ */
+(function atlasEntity360ExecutiveActiveLoader20260903(){
+  const FLAG='__ATLAS_ENTITY360_EXECUTIVE_ACTIVE_LOADER__';
+  if(window[FLAG])return;
+  window[FLAG]={active:true,build:'20260903-e360-active1',installed:false};
+  const cssHref='./assets/atlas-entity360-executive-20260903.css?v=20260903-active1';
+  const jsSrc='./assets/atlas-entity360-executive-20260903.js?v=20260903-active1';
+  const trajectorySrc='./assets/atlas-entity360-trajectory-20260903.js?v=20260903-active1';
+
+  function loadTrajectory(){
+    if(window.__ATLAS_ENTITY360_TRAJECTORY__?.active){window[FLAG].trajectory=true;return;}
+    if(document.querySelector('script[data-atlas-e360-trajectory-active]'))return;
+    const script=document.createElement('script');
+    script.src=trajectorySrc;
+    script.async=false;
+    script.dataset.atlasE360TrajectoryActive='1';
+    script.onload=()=>{window[FLAG].trajectory=!!window.__ATLAS_ENTITY360_TRAJECTORY__?.active;};
+    script.onerror=()=>{window[FLAG].trajectoryError='asset-load-failed';};
+    document.body.appendChild(script);
+  }
+
+  function install(){
+    if(window.__ATLAS_ENTITY360_EXECUTIVE__?.active){
+      window[FLAG].installed=true;
+      loadTrajectory();
+      return;
+    }
+    if(typeof window.v0203RenderEntity!=='function')return false;
+    if(!document.querySelector('link[data-atlas-e360-executive-active]')){
+      const link=document.createElement('link');
+      link.rel='stylesheet';
+      link.href=cssHref;
+      link.dataset.atlasE360ExecutiveActive='1';
+      document.head.appendChild(link);
+    }
+    if(document.querySelector('script[data-atlas-e360-executive-active]'))return true;
+    const script=document.createElement('script');
+    script.src=jsSrc;
+    script.async=false;
+    script.dataset.atlasE360ExecutiveActive='1';
+    script.onload=()=>{
+      window[FLAG].installed=!!window.__ATLAS_ENTITY360_EXECUTIVE__?.active;
+      window[FLAG].loadedAt=new Date().toISOString();
+      loadTrajectory();
+    };
+    script.onerror=()=>{window[FLAG].error='asset-load-failed';};
+    document.body.appendChild(script);
+    return true;
+  }
+
+  let attempts=0;
+  const timer=setInterval(()=>{
+    attempts+=1;
+    if(install()||attempts>=300)clearInterval(timer);
+  },100);
+  install();
+  window.addEventListener('load',install,{once:true});
+  document.addEventListener('atlas:entity-workspace-ready',install);
+  document.addEventListener('atlas:entity-entry-ready',install);
+})();
