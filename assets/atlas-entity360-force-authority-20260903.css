@@ -1,0 +1,26 @@
+/* ATLAS AML · Entidad 360 final production layout authority · 2026-09-03 */
+#atlas-entity360-executive{position:relative}
+.e360-force-production-badge,.e360-force-badge{display:inline-flex;align-items:center;width:max-content;padding:4px 8px;border:1px solid rgba(91,180,245,.34);border-radius:999px;background:rgba(91,180,245,.08);color:#9ed5fb;font-size:8.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase}
+.e360-head-side>.e360-force-production-badge{margin:0 0 7px auto}
+.e360-force-loading{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:20px 22px;border:1px solid var(--atlas-line,#1e3247);border-radius:16px;background:var(--atlas-panel,#0c1725);color:var(--atlas-ink,#e6eef7)}
+.e360-force-loading>div:last-child{min-width:0;text-align:right}.e360-force-loading b,.e360-force-loading small{display:block}.e360-force-loading b{font-size:14px}.e360-force-loading small{margin-top:4px;color:var(--atlas-muted,#8397ad);font-size:10px}
+
+/* The renovated summary is the primary 360 surface. The historical six-lens
+   dossier remains available only when the analyst explicitly opens Advanced. */
+#content .a45.e360-modern>:is(.a45-cover,.a45-lenses,main,.a45-footer){display:none!important}
+#content .a45.e360-modern.e360-advanced-open>main,
+#content .a45.e360-modern.e360-advanced-open>.a45-footer{display:block!important}
+#content .a45.e360-modern.e360-advanced-open>.a45-lenses{display:flex!important;margin-top:8px}
+#content .a45.e360-modern.e360-advanced-open>.a45-cover{display:none!important}
+#content .a45.e360-modern>.e360-advanced-returnbar{display:none}
+#content .a45.e360-modern.e360-advanced-open>.e360-advanced-returnbar{position:sticky;top:8px;z-index:9;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0;padding:7px 9px;border:1px solid var(--atlas-line,#1e3247);border-radius:10px;background:rgba(12,23,37,.96);backdrop-filter:blur(10px)}
+.e360-advanced-returnbar button{border:0;border-radius:8px;background:rgba(255,255,255,.045);color:var(--atlas-ink2,#b3c4d5);padding:7px 9px;font:650 10px/1.2 inherit;cursor:pointer}.e360-advanced-returnbar button:hover{background:rgba(255,255,255,.08);color:var(--atlas-ink,#e6eef7)}
+.e360-advanced-returnbar span{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--atlas-muted,#8397ad)}
+
+/* Remove excess chroma from legacy details when explicitly expanded. */
+#content .a45.e360-modern.e360-advanced-open>.a45-lenses,
+#content .a45.e360-modern.e360-advanced-open>main{filter:saturate(.72)}
+#content .a45.e360-modern.e360-advanced-open .a45-card{box-shadow:none!important}
+
+@media(max-width:780px){.e360-force-loading{align-items:flex-start;flex-direction:column}.e360-force-loading>div:last-child{text-align:left}.e360-head-side>.e360-force-production-badge{margin-left:0}.e360-advanced-returnbar span{display:none}}
+@media(prefers-reduced-motion:reduce){#content .a45.e360-modern.e360-advanced-open>.e360-advanced-returnbar{backdrop-filter:none}}
