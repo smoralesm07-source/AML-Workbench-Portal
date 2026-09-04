@@ -1,10 +1,10 @@
 {
   "schema": "ATLAS_RUNTIME_MANIFEST_V1",
-  "release": "0.96.2",
-  "build": "0962",
+  "release": "0.96.3",
+  "build": "0963",
   "policy": "CANONICAL_SOURCE_MANIFEST_FOR_COMPILED_RUNTIME",
   "publish_mode": "COMPILED_BUNDLES_ONLY",
-  "notes": "0.96.2 keeps Entidad 360 on Historia Inteligente and retires the deferred legacy renderer pin that could repaint the old dossier after the current surface mounted. The final session module now reconciles any late legacy repaint back to the current history variant. OSFL economic/public-funds 0.95 and Sanciones Radiography 0.96 remain active current capabilities.",
+  "notes": "0.96.3 makes Historia Inteligente the persistent Entidad 360 authority. The UAF highlight layer is compiled before Historia with its historical Executive/Trajectory loader removed, and the final session module reconciles any late legacy repaint back to the current history variant. OSFL economic/public-funds 0.95 and Sanciones Radiography 0.96 remain active current capabilities.",
   "styles": [
     "styles.css",
     "v016.css",
@@ -143,6 +143,7 @@
     {"path":"v0402-reconciliation-live.js","type":"classic","role":"uaf-sii-current"},
     {"path":"v038-entity360.js","type":"classic","role":"entity360-base-detail-helper"},
     {"path":"v0391-entity-entry.js","type":"classic","role":"entity360-entry-base-authority"},
+    {"path":"assets/atlas-entity-uaf-highlight-0548.js","type":"classic","role":"entity-uaf-highlight-current-no-e360-loader"},
     {"path":"assets/atlas-entity360-history-20260903.js","type":"classic","role":"entity360-history-current-authority"},
     {"path":"assets/atlas-entity360-polish-20260903.js","type":"classic","role":"entity360-history-current-polish"},
     {"path":"v0344-public-entities.module.js","type":"module","role":"public-entity-context"},
