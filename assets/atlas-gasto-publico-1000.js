@@ -417,8 +417,7 @@
     const win=c.window_start?`${dateCL(c.window_start)} → ${dateCL(c.window_end)}`:'ventana publicada';
     return `<div class="gp10-hero">
       <div><span class="gp10-eyebrow">Atlas · Monitor analítico de compras públicas</span>
-        <h2>Gasto público</h2>
-        <p>Órdenes de Mercado Público clasificadas por industria UNSPSC y cruzadas con Registro de Empresas y Sociedades, registro de sujetos obligados UAF, sanciones, eventos CGR e InfoLobby. Cada filtro recalcula las cinco vistas.</p></div>
+        <h2>Gasto público</h2></div>
       <div class="gp10-health">
         <span class="gp10-pill"><b>${esc(win)}</b></span>
         <span class="gp10-pill"><b>${NF.format(num(c.order_count))}</b>&nbsp;órdenes</span>
