@@ -1,242 +1,73 @@
 'use strict';
 
-/* ATLAS OSFL National Monitor 0.93.1
- * National legal universe -> Atlas observability -> Law 19.913 bridge.
- * Legal status, FATF R.8 context and Law 19.913 proximity are not adverse findings by themselves.
+/* ATLAS OSFL · Radiografía Nacional 1.00
+ * Unified, coverage-aware OSFL workspace.
+ * Legal universe, Atlas observability, SII profile, public-funds context and UAF proximity are kept semantically separate.
  */
-(function atlasOsflNationalMonitor0931(){
-  if(window.__ATLAS_OSFL_NATIONAL_MONITOR_0931__) return;
-  window.__ATLAS_OSFL_NATIONAL_MONITOR_0931__=true;
+(function atlasOsflRadiography1000(){
+  if(window.__ATLAS_OSFL_RADIOGRAPHY_1000__) return;
+  window.__ATLAS_OSFL_RADIOGRAPHY_1000__=true;
 
-  const BUILD='0931';
-  const SUMMARY_VIEW='aml_v_osfl_national_monitor_current';
-  const BRIDGE_VIEW='aml_v_osfl_law19913_bridge_current';
+  const BUILD='1000';
+  const V={summary:'aml_v_osfl_national_monitor_current',regions:'aml_v_osfl_national_region_current',growth:'aml_v_osfl_growth_yearly_current',activity:'aml_v_osfl_activity_distribution_current_v0950',econ:'aml_v_osfl_economic_distribution_current_v0950',funds:'aml_v_osfl_public_funds_summary_current_v0950',bridge:'aml_v_osfl_law19913_bridge_current',entity:'aml_osfl_entity_runtime_snapshot'};
   const nf=new Intl.NumberFormat('es-CL');
-  let activeBridge='POTENTIAL_SUBJECT';
+  const state={data:null,tab:'panorama',territoryMetric:'atlas_observed',explorer:{page:0,limit:60,query:'',region:'',activity:'',uaf:'ALL',registro:'ALL',sanction:'ALL'}};
+  const client=()=>window.sb || (typeof sb!=='undefined'?sb:null);
+  const n=v=>{const x=Number(v);return Number.isFinite(x)?x:0;};
+  const fmt=v=>Number.isFinite(Number(v))?nf.format(Math.round(Number(v))):'—';
+  const pct=(v,d=1)=>Number.isFinite(Number(v))?`${Number(v).toLocaleString('es-CL',{minimumFractionDigits:d,maximumFractionDigits:d})}%`:'—';
+  const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const compact=v=>{const x=n(v);if(Math.abs(x)>=1e6)return `${(x/1e6).toLocaleString('es-CL',{maximumFractionDigits:1})} M`;if(Math.abs(x)>=1e3)return `${(x/1e3).toLocaleString('es-CL',{maximumFractionDigits:1})} mil`;return fmt(x);};
+  const dateCL=v=>{if(!v)return '—';const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleDateString('es-CL');};
 
-  function n(v){const x=Number(v);return Number.isFinite(x)?x:0;}
-  function fmt(v){const x=Number(v);return Number.isFinite(x)?nf.format(x):'—';}
-  function pct(v,d=1){const x=Number(v);return Number.isFinite(x)?`${x.toLocaleString('es-CL',{minimumFractionDigits:d,maximumFractionDigits:d})}%`:'—';}
-  function e(v){return String(v??'').replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));}
-  function dateCL(v){if(!v)return '—';const d=new Date(`${String(v).slice(0,10)}T12:00:00`);return Number.isNaN(d.getTime())?String(v):d.toLocaleDateString('es-CL');}
-
-  function stage(label,value,detail,kind){
-    return `<div class="osfln-stage ${kind||''}"><span>${e(label)}</span><b>${fmt(value)}</b><small>${e(detail)}</small></div>`;
-  }
-
-  function shell(){
-    return `<section class="atlas-osfl-national" data-osfln-root data-osfln-build="${BUILD}">
-      <header class="osfln-head">
-        <div class="osfln-head-copy">
-          <div class="osfln-kicker">MONITOR NACIONAL OSFL · CHILE</div>
-          <h2>Del universo jurídico al perímetro 19.913</h2>
-          <p>Primero medimos cuántas OSFL existen y cuánto observa Atlas. Después separamos enriquecimiento, compatibilidad con actividades reguladas, condición de sujeto obligado y señales analíticas.</p>
-        </div>
-        <div class="osfln-source-state" data-osfln-state><b>Fuente nacional</b><span>Consultando estado del padrón…</span><small>Registro Civil · RNPJSFL</small></div>
-      </header>
-
-      <div class="osfln-funnel" data-osfln-funnel>
-        ${stage('Universo jurídico','—','vigentes en Chile','legal')}
-        ${stage('Observables Atlas','—','identidad tributaria / fuentes Atlas','observed')}
-        ${stage('Enriquecidas','—','≥2 fuentes disponibles','enriched')}
-        ${stage('Núcleo 19.913','—','SO directo + potencial alta compatibilidad','bridge')}
-        ${stage('SO UAF directos','—','coincidencia registral exacta','direct')}
-      </div>
-
-      <div class="osfln-grid">
-        <article class="osfln-card osfln-coverage" data-osfln-coverage>
-          <div class="osfln-card-head"><span>COBERTURA NACIONAL</span><h3>¿Cuánto del universo legal vemos?</h3></div>
-          <div class="osfln-loading">Calculando cobertura…</div>
-        </article>
-
-        <article class="osfln-card osfln-bridge-card" data-osfln-bridge>
-          <div class="osfln-card-head"><span>PUENTE LEY 19.913</span><h3>Compatibilidad antes que sospecha</h3></div>
-          <div class="osfln-loading">Clasificando relación…</div>
-        </article>
-
-        <article class="osfln-card osfln-queue-card">
-          <div class="osfln-card-head"><span>EXPLORACIÓN DIRIGIDA</span><h3>Subconjuntos para revisar</h3></div>
-          <div class="osfln-filterbar" role="tablist" aria-label="Subconjunto OSFL">
-            <button type="button" data-osfln-filter="POTENTIAL_SUBJECT" class="active">Potencial SO</button>
-            <button type="button" data-osfln-filter="DIRECT_OBLIGATED">SO directo</button>
-            <button type="button" data-osfln-filter="AML_ANALYTIC_SIGNAL">Señal AML</button>
-            <button type="button" data-osfln-filter="FATF_R8_CONTEXT">R.8</button>
-          </div>
-          <div class="osfln-queue" data-osfln-queue><div class="osfln-loading">Preparando entidades…</div></div>
-        </article>
-      </div>
-
-      <footer class="osfln-method">
-        <div><b>Regla de interpretación</b><span>El núcleo 19.913 usa condición registral o actividad principal característica con tier alto/medio. No equivale a riesgo, sospecha, incumplimiento ni actividad ilícita.</span></div>
-        <div><b>Vacío de información ≠ bajo riesgo</b><span>La cobertura se muestra separada de la prioridad para que una OSFL poco observable no sea clasificada artificialmente como de bajo interés.</span></div>
-      </footer>
-    </section>`;
-  }
-
-  function relabelLegacyHero(){
-    const hero=document.querySelector('.atlas-osfl-hero');
-    if(!hero)return;
-    const first=hero.querySelector('.atlas-osfl-hero-metrics > div:first-child');
-    if(first){
-      const label=first.querySelector('span');
-      const small=first.querySelector('small');
-      if(label)label.textContent='OSFL observables Atlas';
-      if(small)small.textContent='subconjunto con huella Atlas';
-    }
-    const kicker=hero.querySelector('.v030-kicker');
-    if(kicker)kicker.textContent='OSFL · INTELIGENCIA SOBRE UNIVERSO OBSERVABLE';
-  }
-
-  function install(){
-    const hero=document.querySelector('.v030-hero');
-    if(!hero)return false;
-    relabelLegacyHero();
-    if(!document.querySelector('[data-osfln-root]'))hero.insertAdjacentHTML('afterend',shell());
-    bindFilters();
-    return true;
-  }
-
-  async function summary(){
-    const {data,error}=await sb.from(SUMMARY_VIEW).select('*').limit(1);
-    if(error)throw error;
-    if(!data?.length)throw new Error('El monitor nacional no devolvió un corte vigente.');
-    return data[0];
-  }
-
-  function renderSummary(s){
-    const legal=n(s.legal_universe_count);
-    const observed=n(s.atlas_observed);
-    const enriched=n(s.enriched_2plus);
-    const core=n(s.law19913_core_total);
-    const direct=n(s.direct_obligated);
-    const funnel=document.querySelector('[data-osfln-funnel]');
-    if(funnel)funnel.innerHTML=[
-      stage('Universo jurídico',legal,`vigentes · corte ${dateCL(s.legal_snapshot_date)}`,'legal'),
-      stage('Observables Atlas',observed,`${pct(s.atlas_legal_coverage_pct)} del universo legal`,'observed'),
-      stage('Enriquecidas',enriched,`${pct(s.enriched_pct_observed)} de las observables`,'enriched'),
-      stage('Núcleo 19.913',core,`${fmt(n(s.potential_high))} potencial alta + ${fmt(direct)} SO directos`,'bridge'),
-      stage('SO UAF directos',direct,'identidad exacta en registro UAF','direct')
-    ].join('');
-
-    const state=document.querySelector('[data-osfln-state]');
-    if(state){
-      const complete=String(s.ingestion_status)==='COMPLETE';
-      state.classList.toggle('complete',complete);
-      state.innerHTML=`<b>${complete?'Padrón nacional cargado':'Referencia oficial'}</b><span>${complete?`${fmt(s.loaded_active)} registros vigentes en maestro Atlas`:'Padrón fila a fila pendiente de ingestión'}</span><small>Registro Civil · corte ${e(dateCL(s.legal_snapshot_date))}</small>`;
-    }
-
-    const cov=document.querySelector('[data-osfln-coverage]');
-    if(cov)cov.innerHTML=`
-      <div class="osfln-card-head"><span>COBERTURA NACIONAL</span><h3>¿Cuánto del universo legal vemos?</h3></div>
-      <div class="osfln-big"><b>${pct(s.atlas_legal_coverage_pct,2)}</b><span>${fmt(observed)} de ${fmt(legal)} OSFL</span></div>
-      <progress max="${Math.max(1,legal)}" value="${Math.min(observed,legal)}"></progress>
-      <div class="osfln-coverage-meta">
-        <div><b>${fmt(n(s.evidence_coverage_70plus))}</b><span>con cobertura de evidencia ≥70%</span></div>
-        <div><b>${fmt(Math.max(0,legal-observed))}</b><span>brecha jurídica aún no observable</span></div>
-      </div>
-      <p>${String(s.ingestion_status)==='COMPLETE'?'Cobertura calculada contra el padrón nacional cargado.':'La cifra nacional proviene de referencia oficial; Atlas distingue este total de los registros fila a fila aún no incorporados.'}</p>`;
-
-    const max=Math.max(1,n(s.fatf_r8_context),n(s.potential_exploratory),n(s.potential_medium),n(s.potential_high),direct);
-    const bridgeEl=document.querySelector('[data-osfln-bridge]');
-    if(bridgeEl)bridgeEl.innerHTML=`
-      <div class="osfln-card-head"><span>PUENTE LEY 19.913</span><h3>Compatibilidad antes que sospecha</h3></div>
-      <div class="osfln-bridge-summary"><b>${fmt(core)}</b><span>núcleo fuerte</span><small>${fmt(n(s.law19913_review_total))} incluyendo revisión media · ${fmt(n(s.law19913_bridge_total))} coincidencias amplias</small></div>
-      ${bridgeRow('SO UAF registrado',direct,max,'Coincidencia exacta; condición registral, no riesgo.','direct')}
-      ${bridgeRow('Potencial · alta compatibilidad',n(s.potential_high),max,'Giro principal característico + detección A/B.','potential')}
-      ${bridgeRow('Potencial · revisión media',n(s.potential_medium),max,'Detección A/B con evidencia menos directa.','review')}
-      ${bridgeRow('Potencial · exploratorio',n(s.potential_exploratory),max,'Coincidencia amplia; no priorizar sin corroboración.','exploratory')}
-      ${bridgeRow('Contexto FATF R.8',n(s.fatf_r8_context),max,'Cribado funcional; no puntúa por sí solo.','r8')}`;
-  }
-
-  function bridgeRow(label,value,max,note,kind){
-    return `<div class="osfln-bridge-row ${kind}"><div><b>${e(label)}</b><span>${e(note)}</span></div><strong>${fmt(value)}</strong><progress max="${max}" value="${value}"></progress></div>`;
-  }
-
-  async function loadQueue(kind){
-    const fields='entity_id,rut,name,region,commune,activity_group,bridge_class,bridge_label,bridge_semantics,direct_uaf_sector,potential_uaf_sector,potential_evidence_class,potential_detection_tier,potential_is_actionable,potential_ivo_score,potential_materiality_score,potential_relevance_tier,potential_relevance_rank,potential_matched_activity,potential_type_coherence_class,potential_ivo_credibility_pct,ipa3_score,priority_band_shadow,coverage_index_pct';
-    let q=sb.from(BRIDGE_VIEW).select(fields).eq('bridge_class',kind);
-    if(kind==='POTENTIAL_SUBJECT')q=q.order('potential_relevance_rank',{ascending:true,nullsFirst:false}).order('potential_is_actionable',{ascending:false,nullsFirst:false}).order('potential_ivo_score',{ascending:false,nullsFirst:false}).order('potential_materiality_score',{ascending:false,nullsFirst:false});
-    else if(kind==='AML_ANALYTIC_SIGNAL')q=q.order('ipa3_score',{ascending:false,nullsFirst:false});
-    else q=q.order('coverage_index_pct',{ascending:false,nullsFirst:false});
-    const {data,error}=await q.limit(7);
-    if(error)throw error;
-    return data||[];
-  }
-
-  function relevanceLabel(tier){
-    if(tier==='HIGH')return 'Compatibilidad alta';
-    if(tier==='MEDIUM')return 'Revisión media';
-    if(tier==='EXPLORATORY')return 'Exploratorio';
-    return 'SO registrado';
-  }
-
-  function queueMeta(r){
-    if(r.bridge_class==='DIRECT_OBLIGATED')return [r.direct_uaf_sector||'Sector UAF no informado','SO registrado'];
-    if(r.bridge_class==='POTENTIAL_SUBJECT')return [r.potential_matched_activity||r.potential_uaf_sector||'Actividad compatible',relevanceLabel(r.potential_relevance_tier)];
-    if(r.bridge_class==='AML_ANALYTIC_SIGNAL')return [`IPA ${n(r.ipa3_score).toLocaleString('es-CL',{maximumFractionDigits:1})}`,r.priority_band_shadow||'señal activa'];
-    if(r.bridge_class==='FATF_R8_CONTEXT')return ['FATF R.8','contexto funcional'];
-    return ['OSFL general','contexto'];
-  }
-
-  function renderQueue(rows){
-    const root=document.querySelector('[data-osfln-queue]');if(!root)return;
-    if(!rows.length){root.innerHTML='<div class="osfln-empty">No hay entidades en este subconjunto para el corte actual.</div>';return;}
-    root.innerHTML=rows.map((r,i)=>{
-      const meta=queueMeta(r);
-      return `<button type="button" class="osfln-row" data-osfln-entity="${e(r.entity_id)}">
-        <em>${String(i+1).padStart(2,'0')}</em>
-        <span class="osfln-row-main"><b>${e(r.name||'Entidad')}</b><small>${e(r.rut||'RUT no informado')} · ${e(r.region||'región no informada')}</small><i>${e(meta[0])}</i></span>
-        <span class="osfln-row-tag"><b>${e(meta[1])}</b><small>cobertura ${pct(r.coverage_index_pct,0)}</small></span>
-      </button>`;
-    }).join('');
-    root.querySelectorAll('[data-osfln-entity]').forEach(btn=>btn.addEventListener('click',()=>{
-      if(typeof v030OpenEntity==='function')void v030OpenEntity(btn.dataset.osflnEntity);
-    }));
-  }
-
-  async function hydrateQueue(kind){
-    activeBridge=kind;
-    const root=document.querySelector('[data-osfln-queue]');
-    if(root)root.innerHTML='<div class="osfln-loading">Consultando subconjunto…</div>';
-    try{renderQueue(await loadQueue(kind));}
-    catch(err){if(root)root.innerHTML=`<div class="osfln-error"><b>No fue posible cargar este subconjunto</b><span>${e(err?.message||String(err))}</span></div>`;}
-  }
-
-  function bindFilters(){
-    document.querySelectorAll('[data-osfln-filter]').forEach(btn=>{
-      if(btn.dataset.osflnBound)return;
-      btn.dataset.osflnBound='1';
-      btn.addEventListener('click',()=>{
-        document.querySelectorAll('[data-osfln-filter]').forEach(x=>x.classList.toggle('active',x===btn));
-        void hydrateQueue(btn.dataset.osflnFilter);
-      });
-    });
-  }
-
-  async function hydrate(){
-    if(!document.querySelector('[data-osfln-root]'))return;
-    try{renderSummary(await summary());}
-    catch(err){
-      const cov=document.querySelector('[data-osfln-coverage]');
-      if(cov)cov.innerHTML=`<div class="osfln-card-head"><span>COBERTURA NACIONAL</span><h3>Monitor no disponible</h3></div><div class="osfln-error"><span>${e(err?.message||String(err))}</span></div>`;
-    }
-    await hydrateQueue(activeBridge);
-  }
-
-  function bootCurrent(){if(install())void hydrate();}
-
-  if(typeof v030LoadOsfl==='function'&&!v030LoadOsfl.__osflNational0931){
-    const base=v030LoadOsfl;
-    const wrapped=async function(){
-      const out=await base.apply(this,arguments);
-      install();
-      await hydrate();
-      return out;
-    };
-    wrapped.__osflNational0931=true;
-    v030LoadOsfl=wrapped;
-  }
-
-  setTimeout(bootCurrent,0);
-  setTimeout(bootCurrent,800);
+  function shell(){return `<section class="atlas-osfl-radiography" data-osflr-root data-osflr-build="${BUILD}">
+    <header class="osflr-hero"><div class="osflr-hero-copy"><span class="osflr-kicker">RADIOGRAFÍA OSFL · CHILE</span><h1>Organizaciones sin fines de lucro</h1><p>Una lectura nacional integrada: tamaño y evolución del universo, presencia territorial, actividades, perfil tributario SII, relación con UAF y exposición a registros de fondos públicos.</p></div><div class="osflr-status" data-osflr-status><span class="osflr-pulse"></span><div><b>Actualizando radiografía</b><small>Consultando vistas gobernadas Atlas</small></div></div></header>
+    <div class="osflr-kpis" data-osflr-kpis>${skeletonKpi('Universo nacional')}${skeletonKpi('Observables Atlas')}${skeletonKpi('Inscritas UAF observadas')}${skeletonKpi('Revisión UAF alta')}${skeletonKpi('Registro 19.862')}</div>
+    <nav class="osflr-nav" aria-label="Radiografía OSFL">${tabButton('panorama','Panorama','Visión ejecutiva')}${tabButton('territorio','Territorio','Distribución regional')}${tabButton('sii','Actividad & SII','Giros, ventas y trabajadores')}${tabButton('uaf','UAF & obligación','Inscripción y brechas')}${tabButton('fondos','Fondos públicos','Registro y transferencias')}${tabButton('explorar','Explorar OSFL','Organización por organización')}</nav>
+    <div class="osflr-body">
+      <section class="osflr-view active" data-osflr-view="panorama"><div class="osflr-executive" data-osflr-executive></div><div class="osflr-grid osflr-grid-main"><article class="osflr-card osflr-span-2" data-osflr-growth></article><article class="osflr-card" data-osflr-uaf-snapshot></article><article class="osflr-card" data-osflr-region-top></article><article class="osflr-card" data-osflr-activity-top></article><article class="osflr-card osflr-span-2" data-osflr-quality></article></div></section>
+      <section class="osflr-view" data-osflr-view="territorio"><header class="osflr-viewhead"><div><span>TERRITORIO</span><h2>La huella regional de las OSFL</h2><p>Compara volumen observado, cobertura sobre el universo legal y proximidad al perímetro UAF.</p></div><div class="osflr-segment" data-osflr-territory-controls><button class="active" data-metric="atlas_observed">OSFL observadas</button><button data-metric="potential_subject">Revisión UAF</button><button data-metric="atlas_coverage_pct">Cobertura</button></div></header><div class="osflr-territory-layout"><article class="osflr-card osflr-span-2" data-osflr-territory-chart></article><article class="osflr-card" data-osflr-territory-insight></article></div><article class="osflr-card osflr-table-card" data-osflr-region-table></article></section>
+      <section class="osflr-view" data-osflr-view="sii"><header class="osflr-viewhead"><div><span>ACTIVIDAD & PERFIL TRIBUTARIO</span><h2>¿Qué hacen y qué declaran ante el SII?</h2><p>Caracterización funcional y económica sobre el subconjunto OSFL observable en Atlas.</p></div></header><div class="osflr-grid"><article class="osflr-card osflr-span-2" data-osflr-activity-detail></article><article class="osflr-card" data-osflr-worker-dist></article><article class="osflr-card" data-osflr-sales-dist></article><article class="osflr-card osflr-span-2" data-osflr-sii-method></article></div></section>
+      <section class="osflr-view" data-osflr-view="uaf"><header class="osflr-viewhead"><div><span>UAF & LEY 19.913</span><h2>Inscritas, compatibles y pendientes de corroboración</h2><p>Separa condición registral de señales de compatibilidad. Una candidata analítica no se presenta como obligación jurídica confirmada.</p></div></header><div class="osflr-uaf-funnel" data-osflr-uaf-funnel></div><div class="osflr-grid"><article class="osflr-card" data-osflr-uaf-sectors></article><article class="osflr-card osflr-span-2" data-osflr-uaf-candidates></article></div></section>
+      <section class="osflr-view" data-osflr-view="fondos"><header class="osflr-viewhead"><div><span>FONDOS PÚBLICOS</span><h2>Exposición registral y transferencias</h2><p>Registro 19.862 y transferencias se muestran como fuentes diferentes. Atlas no interpreta ausencia de datos de transferencia como ausencia de financiamiento.</p></div></header><div class="osflr-grid"><article class="osflr-card" data-osflr-funds-summary></article><article class="osflr-card osflr-span-2" data-osflr-funds-activity></article><article class="osflr-card osflr-span-3" data-osflr-funds-method></article></div></section>
+      <section class="osflr-view" data-osflr-view="explorar"><header class="osflr-viewhead"><div><span>EXPLORADOR</span><h2>Ir de la radiografía a la organización</h2><p>Busca por nombre o RUT y filtra por territorio, actividad, vínculo UAF, Registro 19.862 o sanciones observadas.</p></div></header><article class="osflr-card osflr-explorer"><div class="osflr-filters" data-osflr-filters></div><div class="osflr-explorer-results" data-osflr-explorer-results><div class="osflr-loading">Preparando explorador…</div></div></article></section>
+    </div>
+    <footer class="osflr-footer"><div><b>Lectura responsable</b><span>Las métricas de cobertura, inscripción UAF, compatibilidad sectorial, fondos públicos y sanciones representan dimensiones distintas. Ninguna de ellas, por sí sola, implica riesgo o irregularidad.</span></div><div><b>Base analítica</b><span>Radiografía construida sobre vistas gobernadas de Atlas; cada cifra mantiene su denominador y estado de fuente.</span></div></footer>
+  </section>`;}
+  function skeletonKpi(t){return `<div class="osflr-kpi loading"><span>${t}</span><b>—</b><small>cargando</small></div>`;}
+  function tabButton(id,t,sub){return `<button type="button" class="${id==='panorama'?'active':''}" data-osflr-tab="${id}"><b>${t}</b><span>${sub}</span></button>`;}
+  function cardHead(k,t,side=''){return `<header class="osflr-card-head"><div><span>${esc(k)}</span><h3>${esc(t)}</h3></div>${side}</header>`;}
+  function suppressLegacy(){const root=document.querySelector('[data-osflr-root]');if(!root)return;const anchor=document.querySelector('.v030-hero,.atlas-osfl-hero');const selectors=['[data-osflg-root]','[data-osflm-root]','[data-v092-decision]','[data-osfln-root]:not([data-osflr-root])','.atlas-osfl-national','.osflg-card'];document.querySelectorAll(selectors.join(',')).forEach(el=>{if(el!==root&&!root.contains(el))el.dataset.osflrHidden='1';});if(anchor&&!root.contains(anchor))anchor.dataset.osflrHidden='1';const p=root.parentElement;if(p)[...p.children].forEach(el=>{if(el===root)return;const sig=`${el.className||''} ${[...el.attributes].map(a=>a.name).join(' ')}`;if(/\bosfl/i.test(sig))el.dataset.osflrHidden='1';});}
+  function install(){if(document.querySelector('[data-osflr-root]')){suppressLegacy();return true;}const anchor=document.querySelector('.v030-hero,.atlas-osfl-hero');if(!anchor)return false;anchor.insertAdjacentHTML('afterend',shell());suppressLegacy();bindStatic();return true;}
+  function bindStatic(){document.querySelectorAll('[data-osflr-tab]').forEach(btn=>btn.addEventListener('click',()=>activateTab(btn.dataset.osflrTab)));document.querySelectorAll('[data-osflr-territory-controls] button').forEach(btn=>btn.addEventListener('click',()=>{state.territoryMetric=btn.dataset.metric;document.querySelectorAll('[data-osflr-territory-controls] button').forEach(x=>x.classList.toggle('active',x===btn));if(state.data)renderTerritory(state.data.regions);}));}
+  function activateTab(id){state.tab=id;document.querySelectorAll('[data-osflr-tab]').forEach(x=>x.classList.toggle('active',x.dataset.osflrTab===id));document.querySelectorAll('[data-osflr-view]').forEach(x=>x.classList.toggle('active',x.dataset.osflrView===id));if(id==='explorar')void loadExplorer();}
+  async function loadData(){const c=client();if(!c)throw new Error('Cliente de datos no disponible.');const [s,r,g,a,econ,f,bridge]=await Promise.all([c.from(V.summary).select('*').limit(1),c.from(V.regions).select('region,atlas_observed,direct_obligated,potential_subject,aml_analytic_signal,atlas_coverage_pct').order('atlas_observed',{ascending:false}),c.from(V.growth).select('scope,year,stock_year_end,starts,terminations,net_change,growth_pct').eq('scope','CHILE').order('year',{ascending:true}),c.from(V.activity).select('activity_dimension,activity_label,entity_count,with_sii_economic_data,registro19862_count,confirmed_transfer_recipient_count,workers_total,workers_avg,sales_band_rank_avg,share_dimension_pct').eq('activity_dimension','OSFL_ACTIVITY_GROUP').order('entity_count',{ascending:false}),c.from(V.econ).select('distribution_dimension,bucket_key,bucket_label,bucket_order,entity_count,share_dimension_pct').order('bucket_order',{ascending:true}),c.from(V.funds).select('*').limit(1),c.from(V.bridge).select('entity_id,rut,name,region,commune,bridge_class,direct_uaf_sector,potential_uaf_sector,potential_relevance_tier,potential_relevance_rank,potential_is_actionable,potential_matched_activity,coverage_index_pct').in('bridge_class',['DIRECT_OBLIGATED','POTENTIAL_SUBJECT']).limit(5000)]);for(const x of [s,r,g,a,econ,f,bridge])if(x.error)throw x.error;return {summary:s.data?.[0]||{},regions:r.data||[],growth:g.data||[],activity:a.data||[],econ:econ.data||[],funds:f.data?.[0]||{},bridge:bridge.data||[]};}
+  function renderAll(d){state.data=d;renderStatus(d.summary);renderKpis(d);renderExecutive(d);renderGrowth(d.growth);renderUafSnapshot(d.summary);renderRegionTop(d.regions);renderActivityTop(d.activity);renderQuality(d);renderTerritory(d.regions);renderRegionTable(d.regions);renderSii(d.activity,d.econ);renderUaf(d.summary,d.bridge);renderFunds(d.funds,d.activity);renderFilters(d);}
+  function renderStatus(s){const el=document.querySelector('[data-osflr-status]');if(!el)return;const complete=String(s.ingestion_status||'').toUpperCase()==='COMPLETE';el.classList.toggle('ok',complete);el.innerHTML=`<span class="osflr-pulse"></span><div><b>${complete?'Padrón nacional integrado':'Cobertura Atlas controlada'}</b><small>corte ${esc(dateCL(s.legal_snapshot_date||s.refreshed_at))} · build ${BUILD}</small></div>`;}
+  function renderKpis(d){const s=d.summary,f=d.funds;const rows=[['Universo nacional',s.legal_universe_count,'Referencia jurídica vigente','legal'],['Observables Atlas',s.atlas_observed,`${pct(s.atlas_legal_coverage_pct,2)} de cobertura`,'observed'],['Inscritas UAF observadas',s.direct_obligated,'Coincidencia registral exacta','uaf'],['Revisión UAF alta',s.potential_high,'Compatibilidad alta · corroborar','review'],['Registro 19.862',f.registro19862_observed,'Observadas en Atlas','funds']];const root=document.querySelector('[data-osflr-kpis]');if(root)root.innerHTML=rows.map(([t,v,sub,k])=>`<div class="osflr-kpi ${k}"><span>${esc(t)}</span><b>${fmt(v)}</b><small>${esc(sub)}</small></div>`).join('');}
+  function renderExecutive(d){const s=d.summary,observed=n(s.atlas_observed),legal=n(s.legal_universe_count),gap=Math.max(0,legal-observed),latest=d.growth[d.growth.length-1]||{},topRegion=d.regions[0]||{};const el=document.querySelector('[data-osflr-executive]');if(el)el.innerHTML=`<div class="osflr-narrative"><span>LECTURA RÁPIDA</span><p>Atlas observa <b>${fmt(observed)}</b> OSFL frente a una referencia nacional de <b>${fmt(legal)}</b>. La brecha de observabilidad es de <b>${fmt(gap)}</b>, por lo que los análisis económicos y de actividad se interpretan sobre el subconjunto visible, no como un censo completo.</p></div><div class="osflr-mini-insights"><div><span>Último stock SII reconstruido</span><b>${fmt(latest.stock_year_end)}</b><small>${latest.year||'—'} · variación ${pct(latest.growth_pct,1)}</small></div><div><span>Mayor huella Atlas</span><b>${esc(topRegion.region||'—')}</b><small>${fmt(topRegion.atlas_observed)} observadas</small></div><div><span>Núcleo UAF a revisar</span><b>${fmt(n(s.direct_obligated)+n(s.potential_high))}</b><small>directas + alta compatibilidad</small></div></div>`;}
+  function renderGrowth(rows){const el=document.querySelector('[data-osflr-growth]');if(!el)return;const clean=rows.filter(r=>Number.isFinite(Number(r.year))&&n(r.stock_year_end)>0);if(!clean.length){el.innerHTML=emptyCard('EVOLUCIÓN','Crecimiento del universo observable','Sin serie temporal disponible.');return;}const recent=clean.slice(-16),values=recent.map(r=>n(r.stock_year_end)),min=Math.min(...values),max=Math.max(...values),span=Math.max(1,max-min),W=760,H=220,pad={l:24,r:18,t:22,b:30};const pts=recent.map((r,i)=>({x:pad.l+(i/Math.max(1,recent.length-1))*(W-pad.l-pad.r),y:pad.t+(1-(n(r.stock_year_end)-min)/span)*(H-pad.t-pad.b),r}));const path=pts.map((p,i)=>`${i?'L':'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' '),ticks=pts.filter((_,i)=>i===0||i===pts.length-1||i%3===0).map(p=>`<text x="${p.x}" y="${H-8}" text-anchor="middle">${p.r.year}</text>`).join(''),last=clean[clean.length-1]||{},prev=clean[clean.length-2]||{};el.innerHTML=`${cardHead('EVOLUCIÓN','Crecimiento anual del universo observable SII','<span class="osflr-chip">proxy de observabilidad</span>')}<div class="osflr-chart-meta"><div><b>${fmt(last.stock_year_end)}</b><span>stock reconstruido ${last.year||'—'}</span></div><div><b class="${n(last.net_change)>=0?'positive':'negative'}">${n(last.net_change)>=0?'+':''}${fmt(last.net_change)}</b><span>cambio neto anual</span></div><div><b>${pct(last.growth_pct,2)}</b><span>crecimiento interanual</span></div></div><div class="osflr-linechart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolución anual del stock observable OSFL"><defs><linearGradient id="osflrArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-opacity=".28"/><stop offset="1" stop-opacity=".02"/></linearGradient></defs><path class="area" d="${path} L${pts.at(-1).x},${H-pad.b} L${pts[0].x},${H-pad.b} Z"/><path class="line" d="${path}"/>${pts.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="3"><title>${p.r.year}: ${fmt(p.r.stock_year_end)} · altas ${fmt(p.r.starts)} · términos ${fmt(p.r.terminations)}</title></circle>`).join('')}${ticks}</svg></div><div class="osflr-chart-note"><span>Altas ${fmt(last.starts)}</span><span>Términos ${fmt(last.terminations)}</span><span>Comparación previa ${fmt(prev.stock_year_end)}</span></div>`;}
+  function renderUafSnapshot(s){const el=document.querySelector('[data-osflr-uaf-snapshot]');if(!el)return;const direct=n(s.direct_obligated),hi=n(s.potential_high),med=n(s.potential_medium),exp=n(s.potential_exploratory),total=Math.max(1,direct+hi+med+exp);el.innerHTML=`${cardHead('UAF','Del registro a la revisión')}<div class="osflr-donut" style="--p:${Math.min(100,100*(direct+hi)/total)}"><div><b>${fmt(direct+hi)}</b><span>núcleo fuerte</span></div></div><div class="osflr-legend-list">${legendRow('Inscritas observadas',direct,'direct')}${legendRow('Alta compatibilidad',hi,'high')}${legendRow('Revisión media',med,'medium')}${legendRow('Exploratoria',exp,'low')}</div><button type="button" class="osflr-link" data-osflr-jump="uaf">Abrir análisis UAF →</button>`;el.querySelector('[data-osflr-jump]')?.addEventListener('click',()=>activateTab('uaf'));}
+  function legendRow(t,v,k){return `<div class="osflr-legend-row"><i class="${k}"></i><span>${esc(t)}</span><b>${fmt(v)}</b></div>`;}
+  function barList(rows,key,labelKey,opts={}){const max=Math.max(1,...rows.map(r=>n(r[key])));return `<div class="osflr-bars">${rows.map((r,i)=>{const v=n(r[key]),w=Math.max(v?2:0,100*v/max);return `<button type="button" class="osflr-bar-row"><em>${String(i+1).padStart(2,'0')}</em><span title="${esc(r[labelKey])}">${esc(r[labelKey]||'Sin dato')}</span><div><i style="width:${w}%"></i></div><b>${opts.percent?pct(v,1):fmt(v)}</b></button>`;}).join('')}</div>`;}
+  function renderRegionTop(rows){const el=document.querySelector('[data-osflr-region-top]');if(!el)return;el.innerHTML=`${cardHead('TERRITORIO','Dónde se concentra la huella Atlas')}${barList(rows.slice(0,7),'atlas_observed','region')}<button type="button" class="osflr-link" data-osflr-jump="territorio">Explorar territorio →</button>`;el.querySelector('[data-osflr-jump]')?.addEventListener('click',()=>activateTab('territorio'));}
+  function renderActivityTop(rows){const el=document.querySelector('[data-osflr-activity-top]');if(!el)return;el.innerHTML=`${cardHead('ACTIVIDAD','Qué hacen las OSFL observadas')}${barList(rows.slice(0,7),'entity_count','activity_label')}<button type="button" class="osflr-link" data-osflr-jump="sii">Abrir perfil SII →</button>`;el.querySelector('[data-osflr-jump]')?.addEventListener('click',()=>activateTab('sii'));}
+  function renderQuality(d){const s=d.summary,f=d.funds,obs=n(s.atlas_observed),legal=n(s.legal_universe_count),en=n(s.enriched_2plus),el=document.querySelector('[data-osflr-quality]');if(!el)return;const cards=[['Cobertura jurídica',pct(s.atlas_legal_coverage_pct,2),`${fmt(obs)} / ${fmt(legal)}`],['Enriquecidas ≥2 fuentes',fmt(en),`${pct(s.enriched_pct_observed,1)} de observables`],['Evidencia ≥70%',fmt(s.evidence_coverage_70plus),'calidad analítica'],['Transferencias públicas',String(f.transfer_source_status||'').includes('PENDING')?'Pendiente':'Disponible',String(f.transfer_source_status||'sin estado').replaceAll('_',' ').toLowerCase()]];el.innerHTML=`${cardHead('CALIDAD & COBERTURA','Qué sabemos y qué todavía no sabemos')}<div class="osflr-quality-grid">${cards.map(c=>`<div><span>${esc(c[0])}</span><b>${esc(c[1])}</b><small>${esc(c[2])}</small></div>`).join('')}</div>`;}
+  function renderTerritory(rows){const el=document.querySelector('[data-osflr-territory-chart]');if(!el)return;const key=state.territoryMetric,meta=key==='atlas_observed'?['OSFL observadas','Organizaciones visibles en Atlas',false]:key==='potential_subject'?['Revisión UAF','OSFL con compatibilidad analítica amplia',false]:['Cobertura','Cobertura Atlas sobre referencia legal',true],sorted=[...rows].sort((a,b)=>n(b[key])-n(a[key]));el.innerHTML=`${cardHead('RANKING REGIONAL',meta[0],`<span class="osflr-chip">${esc(meta[1])}</span>`)}${barList(sorted,key,'region',{percent:meta[2]})}`;el.querySelectorAll('.osflr-bar-row').forEach((btn,i)=>btn.addEventListener('click',()=>filterExplorerRegion(sorted[i].region)));renderTerritoryInsight(rows);}
+  function renderTerritoryInsight(rows){const el=document.querySelector('[data-osflr-territory-insight]');if(!el)return;const byObs=[...rows].sort((a,b)=>n(b.atlas_observed)-n(a.atlas_observed)),byCov=[...rows].filter(r=>n(r.atlas_observed)>0).sort((a,b)=>n(b.atlas_coverage_pct)-n(a.atlas_coverage_pct)),byPot=[...rows].sort((a,b)=>n(b.potential_subject)-n(a.potential_subject)),total=rows.reduce((s,r)=>s+n(r.atlas_observed),0),top3=byObs.slice(0,3).reduce((s,r)=>s+n(r.atlas_observed),0);el.innerHTML=`${cardHead('LECTURA TERRITORIAL','Concentración y cobertura')}<div class="osflr-insight-stack"><div><span>Región con mayor huella</span><b>${esc(byObs[0]?.region||'—')}</b><small>${fmt(byObs[0]?.atlas_observed)} observadas</small></div><div><span>Mayor cobertura Atlas</span><b>${esc(byCov[0]?.region||'—')}</b><small>${pct(byCov[0]?.atlas_coverage_pct,1)}</small></div><div><span>Mayor universo a revisar UAF</span><b>${esc(byPot[0]?.region||'—')}</b><small>${fmt(byPot[0]?.potential_subject)} candidatas</small></div><div><span>Concentración top 3</span><b>${pct(total?100*top3/total:0,1)}</b><small>de OSFL observadas</small></div></div>`;}
+  function renderRegionTable(rows){const el=document.querySelector('[data-osflr-region-table]');if(!el)return;el.innerHTML=`${cardHead('DETALLE','Cobertura y puente UAF por región')}<div class="osflr-table-wrap"><table><thead><tr><th>Región</th><th>Observadas Atlas</th><th>Cobertura</th><th>UAF directas</th><th>Revisión UAF</th><th>Señal AML</th><th></th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${esc(r.region)}</b></td><td>${fmt(r.atlas_observed)}</td><td><span class="osflr-meter"><i style="width:${Math.min(100,n(r.atlas_coverage_pct))}%"></i></span>${pct(r.atlas_coverage_pct,1)}</td><td>${fmt(r.direct_obligated)}</td><td>${fmt(r.potential_subject)}</td><td>${fmt(r.aml_analytic_signal)}</td><td><button data-region="${esc(r.region)}">Ver OSFL</button></td></tr>`).join('')}</tbody></table></div>`;el.querySelectorAll('button[data-region]').forEach(b=>b.addEventListener('click',()=>filterExplorerRegion(b.dataset.region)));}
+  function filterExplorerRegion(region){state.explorer.region=region||'';state.explorer.page=0;activateTab('explorar');renderFilters(state.data);void loadExplorer();}
+  function renderSii(activity,econ){const detail=document.querySelector('[data-osflr-activity-detail]');if(detail)detail.innerHTML=`${cardHead('ACTIVIDADES','Caracterización funcional del universo observable')}<div class="osflr-activity-grid">${activity.map((r,i)=>`<button class="osflr-activity-tile" data-activity="${esc(r.activity_label)}"><em>${String(i+1).padStart(2,'0')}</em><div><b>${esc(r.activity_label)}</b><span>${fmt(r.entity_count)} OSFL · ${pct(r.share_dimension_pct,1)}</span></div><aside><strong>${fmt(r.with_sii_economic_data)}</strong><small>con perfil SII</small></aside></button>`).join('')}</div>`;detail?.querySelectorAll('[data-activity]').forEach(b=>b.addEventListener('click',()=>{state.explorer.activity=b.dataset.activity;state.explorer.page=0;activateTab('explorar');renderFilters(state.data);void loadExplorer();}));const workers=econ.filter(r=>r.distribution_dimension==='WORKER_BAND'),sales=econ.filter(r=>r.distribution_dimension==='SALES_BAND'),w=document.querySelector('[data-osflr-worker-dist]'),s=document.querySelector('[data-osflr-sales-dist]'),m=document.querySelector('[data-osflr-sii-method]');if(w)w.innerHTML=`${cardHead('TRABAJADORES','Dotación declarada / observada')}${distributionBars(workers)}`;if(s)s.innerHTML=`${cardHead('VENTAS','Tramo de ventas SII')}${distributionBars(sales)}`;if(m)m.innerHTML=`${cardHead('INTERPRETACIÓN','Cómo leer la dimensión tributaria')}<div class="osflr-method-grid"><div><b>Actividad</b><span>La agrupación OSFL resume la actividad principal observada; el detalle de giros permanece disponible a nivel entidad.</span></div><div><b>Ventas</b><span>Se muestra por tramos, evitando atribuir montos que la fuente no entrega de forma homogénea.</span></div><div><b>Trabajadores</b><span>La dotación permite aproximar escala operativa, no finalidad ni riesgo.</span></div><div><b>Vigencia</b><span>Inicio de actividades, término de giro y estado actual se consultan en el explorador y ficha 360.</span></div></div>`;}
+  function distributionBars(rows){if(!rows.length)return '<div class="osflr-empty">Sin distribución disponible.</div>';const total=rows.reduce((s,r)=>s+n(r.entity_count),0)||1;return `<div class="osflr-dist">${rows.map(r=>{const share=Number.isFinite(Number(r.share_dimension_pct))?n(r.share_dimension_pct):100*n(r.entity_count)/total;return `<div><header><span>${esc(r.bucket_label)}</span><b>${fmt(r.entity_count)}</b></header><div><i style="width:${Math.min(100,share)}%"></i></div><small>${pct(share,1)}</small></div>`;}).join('')}</div>`;}
+  function renderUaf(s,bridge){const funnel=document.querySelector('[data-osflr-uaf-funnel]');if(funnel){const stages=[['Inscritas UAF observadas',s.direct_obligated,'Coincidencia registral exacta','direct'],['Alta pertinencia',s.potential_high,'Revisión prioritaria de obligación','high'],['Pertinencia media',s.potential_medium,'Corroboración adicional','medium'],['Exploratoria',s.potential_exploratory,'Coincidencia amplia','low']];funnel.innerHTML=stages.map((x,i)=>`<article class="${x[3]}"><span>${String(i+1).padStart(2,'0')}</span><div><b>${fmt(x[1])}</b><strong>${esc(x[0])}</strong><small>${esc(x[2])}</small></div></article>`).join('');}const groups=new Map();bridge.forEach(r=>{const sector=r.bridge_class==='DIRECT_OBLIGATED'?(r.direct_uaf_sector||'Sector UAF no informado'):(r.potential_uaf_sector||'Sector por corroborar');if(!groups.has(sector))groups.set(sector,{sector,direct:0,potential:0,high:0});const g=groups.get(sector);if(r.bridge_class==='DIRECT_OBLIGATED')g.direct++;else{g.potential++;if(r.potential_relevance_tier==='HIGH')g.high++;}});const sectors=[...groups.values()].sort((a,b)=>(b.direct+b.potential)-(a.direct+a.potential)).slice(0,12),se=document.querySelector('[data-osflr-uaf-sectors]');if(se)se.innerHTML=`${cardHead('SECTORES','Dónde aparece la compatibilidad 19.913')}<div class="osflr-sector-list">${sectors.map(g=>`<div><header><span title="${esc(g.sector)}">${esc(g.sector)}</span><b>${fmt(g.direct+g.potential)}</b></header><div class="osflr-stackbar"><i style="width:${100*g.direct/Math.max(1,g.direct+g.potential)}%"></i><em style="width:${100*g.potential/Math.max(1,g.direct+g.potential)}%"></em></div><small>${fmt(g.direct)} directas · ${fmt(g.high)} alta pertinencia</small></div>`).join('')}</div>`;const candidates=bridge.filter(r=>r.bridge_class==='POTENTIAL_SUBJECT'&&r.potential_relevance_tier==='HIGH').sort((a,b)=>n(a.potential_relevance_rank)-n(b.potential_relevance_rank)).slice(0,16),ce=document.querySelector('[data-osflr-uaf-candidates]');if(ce)ce.innerHTML=`${cardHead('REVISIÓN PRIORITARIA','Candidatas de alta pertinencia',`<span class="osflr-chip warning">${fmt(s.potential_high)} en total</span>`)}<div class="osflr-candidate-list">${candidates.map(r=>`<button data-entity="${esc(r.entity_id)}"><div><b>${esc(r.name||'Entidad')}</b><span>${esc(r.rut||'RUT no informado')} · ${esc(r.region||'sin región')}</span></div><aside><strong>${esc(r.potential_uaf_sector||'sector por corroborar')}</strong><small>${esc(r.potential_matched_activity||'actividad compatible')}</small></aside><em>abrir 360</em></button>`).join('')}</div><div class="osflr-legal-note"><b>Importante</b><span>“Alta pertinencia” significa que Atlas encuentra evidencia compatible con actividades reguladas. La condición de sujeto obligado debe verificarse con antecedentes jurídicos y operativos de la entidad.</span></div>`;ce?.querySelectorAll('[data-entity]').forEach(b=>b.addEventListener('click',()=>openEntity(b.dataset.entity)));}
+  function renderFunds(f,activity){const status=String(f.transfer_source_status||'SIN_ESTADO'),pending=status.includes('PENDING'),s=document.querySelector('[data-osflr-funds-summary]');if(s)s.innerHTML=`${cardHead('REGISTRO 19.862','Presencia observada')}<div class="osflr-funds-number"><b>${fmt(f.registro19862_observed)}</b><span>OSFL observadas en Registro 19.862</span><small>sobre ${fmt(f.atlas_observed_osfl)} OSFL Atlas</small></div><div class="osflr-source-badge ${pending?'pending':'ok'}"><i></i><div><b>${pending?'Transferencias: ingesta pendiente':'Transferencias: fuente disponible'}</b><span>${esc(status.replaceAll('_',' ').toLowerCase())}</span></div></div>`;const top=[...activity].sort((a,b)=>n(b.registro19862_count)-n(a.registro19862_count)).filter(r=>n(r.registro19862_count)>0),a=document.querySelector('[data-osflr-funds-activity]');if(a)a.innerHTML=`${cardHead('DISTRIBUCIÓN','Registro 19.862 por actividad')}${top.length?barList(top,'registro19862_count','activity_label'):'<div class="osflr-empty">Sin distribución disponible.</div>'}`;const m=document.querySelector('[data-osflr-funds-method]');if(m)m.innerHTML=`${cardHead('ESTADO DE FUENTES','No confundir registro con flujo financiero')}<div class="osflr-source-grid"><div><span>Registro 19.862</span><b>${fmt(f.registro19862_observed)}</b><small>señal registral disponible</small></div><div><span>Receptores de transferencias confirmados</span><b>${pending?'—':fmt(f.confirmed_transfer_recipients)}</b><small>${pending?'fila a fila pendiente de carga':'fuente cargada'}</small></div><div><span>Eventos confirmados</span><b>${pending?'—':fmt(f.confirmed_transfer_events)}</b><small>no se infieren ceros cuando falta la ingesta</small></div><div><span>Monto transferido</span><b>${pending?'—':`$${compact(f.confirmed_transfer_amount_clp)}`}</b><small>CLP cuando existe fuente transaccional</small></div></div>`;}
+  function renderFilters(d){const el=document.querySelector('[data-osflr-filters]');if(!el)return;const regions=[...new Set(d.regions.map(r=>r.region).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es')),activities=d.activity.map(r=>r.activity_label).filter(Boolean),x=state.explorer;el.innerHTML=`<label class="search"><span>Buscar</span><input data-f="query" value="${esc(x.query)}" placeholder="Nombre o RUT"/></label><label><span>Región</span><select data-f="region"><option value="">Todo Chile</option>${regions.map(v=>`<option ${x.region===v?'selected':''}>${esc(v)}</option>`).join('')}</select></label><label><span>Actividad</span><select data-f="activity"><option value="">Todas</option>${activities.map(v=>`<option ${x.activity===v?'selected':''}>${esc(v)}</option>`).join('')}</select></label><label><span>UAF</span><select data-f="uaf"><option value="ALL">Todas</option><option value="YES" ${x.uaf==='YES'?'selected':''}>Inscrita observada</option><option value="NO" ${x.uaf==='NO'?'selected':''}>No observada</option></select></label><label><span>Registro 19.862</span><select data-f="registro"><option value="ALL">Todas</option><option value="YES" ${x.registro==='YES'?'selected':''}>Con registro</option><option value="NO" ${x.registro==='NO'?'selected':''}>Sin registro observado</option></select></label><label><span>Sanciones</span><select data-f="sanction"><option value="ALL">Todas</option><option value="YES" ${x.sanction==='YES'?'selected':''}>Con sanción observada</option><option value="NO" ${x.sanction==='NO'?'selected':''}>Sin sanción observada</option></select></label><button type="button" data-osflr-clear>Limpiar</button>`;let timer;el.querySelectorAll('[data-f]').forEach(input=>input.addEventListener(input.tagName==='INPUT'?'input':'change',()=>{clearTimeout(timer);timer=setTimeout(()=>{x[input.dataset.f]=input.value;x.page=0;void loadExplorer();},input.tagName==='INPUT'?280:0);}));el.querySelector('[data-osflr-clear]')?.addEventListener('click',()=>{state.explorer={page:0,limit:60,query:'',region:'',activity:'',uaf:'ALL',registro:'ALL',sanction:'ALL'};renderFilters(d);void loadExplorer();});}
+  async function loadExplorer(){if(!document.querySelector('[data-osflr-view="explorar"].active'))return;const root=document.querySelector('[data-osflr-explorer-results]');if(!root)return;root.innerHTML='<div class="osflr-loading">Consultando organizaciones…</div>';try{const c=client(),x=state.explorer,fields='entity_id,rut,name,region,commune,activity_group,main_activity,sales_band,workers_numeric,current_status,activity_start_date,termination_date,is_uaf_observed,registro19862,sanction_count,coverage_index_pct,source_count';let q=c.from(V.entity).select(fields,{count:'exact'});if(x.region)q=q.eq('region',x.region);if(x.activity)q=q.eq('activity_group',x.activity);if(x.uaf!=='ALL')q=q.eq('is_uaf_observed',x.uaf==='YES');if(x.registro!=='ALL')q=q.eq('registro19862',x.registro==='YES');if(x.sanction==='YES')q=q.gt('sanction_count',0);if(x.sanction==='NO')q=q.or('sanction_count.eq.0,sanction_count.is.null');if(x.query.trim()){const term=x.query.trim().replace(/[,%()]/g,' ');q=q.or(`name.ilike.%${term}%,rut.ilike.%${term}%`);}const from=x.page*x.limit,to=from+x.limit-1;q=q.order('coverage_index_pct',{ascending:false,nullsFirst:false}).range(from,to);const {data,error,count}=await q;if(error)throw error;renderExplorer(data||[],count||0);}catch(err){root.innerHTML=`<div class="osflr-error"><b>No fue posible consultar el explorador</b><span>${esc(err?.message||String(err))}</span></div>`;}}
+  function renderExplorer(rows,count){const root=document.querySelector('[data-osflr-explorer-results]');if(!root)return;const x=state.explorer,pages=Math.max(1,Math.ceil(count/x.limit));root.innerHTML=`<div class="osflr-result-head"><div><b>${fmt(count)}</b><span>organizaciones coinciden con los filtros</span></div><small>Página ${x.page+1} de ${pages}</small></div><div class="osflr-table-wrap"><table class="osflr-entity-table"><thead><tr><th>Organización</th><th>Territorio</th><th>Actividad</th><th>Escala SII</th><th>UAF</th><th>19.862</th><th>Cobertura</th><th></th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${esc(r.name||'Entidad')}</b><small>${esc(r.rut||'RUT no informado')}</small></td><td>${esc(r.region||'—')}<small>${esc(r.commune||'')}</small></td><td>${esc(r.activity_group||r.main_activity||'Sin clasificar')}</td><td>${esc(r.sales_band||'Sin tramo')}<small>${r.workers_numeric==null?'trabajadores s/d':`${fmt(r.workers_numeric)} trabajadores`}</small></td><td><span class="osflr-pill ${r.is_uaf_observed?'yes':'neutral'}">${r.is_uaf_observed?'Observada':'No observada'}</span></td><td><span class="osflr-pill ${r.registro19862?'fund':'neutral'}">${r.registro19862?'Sí':'No obs.'}</span></td><td><span class="osflr-meter compact"><i style="width:${Math.min(100,n(r.coverage_index_pct))}%"></i></span>${pct(r.coverage_index_pct,0)}</td><td><button class="open" data-entity="${esc(r.entity_id)}">Abrir 360</button></td></tr>`).join('')}</tbody></table></div><div class="osflr-pagination"><button data-page="prev" ${x.page<=0?'disabled':''}>← Anterior</button><span>${fmt(Math.min(count,(x.page+1)*x.limit))} de ${fmt(count)}</span><button data-page="next" ${x.page>=pages-1?'disabled':''}>Siguiente →</button></div>`;root.querySelectorAll('[data-entity]').forEach(b=>b.addEventListener('click',()=>openEntity(b.dataset.entity)));root.querySelector('[data-page="prev"]')?.addEventListener('click',()=>{x.page=Math.max(0,x.page-1);void loadExplorer();});root.querySelector('[data-page="next"]')?.addEventListener('click',()=>{x.page=Math.min(pages-1,x.page+1);void loadExplorer();});}
+  function openEntity(id){if(typeof v030OpenEntity==='function')void v030OpenEntity(id);}
+  function emptyCard(k,t,m){return `${cardHead(k,t)}<div class="osflr-empty">${esc(m)}</div>`;}
+  async function hydrate(){const root=document.querySelector('[data-osflr-root]');if(!root)return;try{renderAll(await loadData());}catch(err){const status=document.querySelector('[data-osflr-status]');if(status)status.innerHTML=`<span class="osflr-pulse error"></span><div><b>No fue posible cargar la radiografía</b><small>${esc(err?.message||String(err))}</small></div>`;}}
+  function boot(){if(install())void hydrate();}
+  if(typeof v030LoadOsfl==='function'&&!v030LoadOsfl.__osflRadiography1000){const base=v030LoadOsfl;const wrapped=async function(){const out=await base.apply(this,arguments);if(install())await hydrate();setTimeout(suppressLegacy,700);return out;};wrapped.__osflRadiography1000=true;v030LoadOsfl=wrapped;}
+  setTimeout(boot,0);setTimeout(boot,850);setTimeout(suppressLegacy,1600);
 })();
