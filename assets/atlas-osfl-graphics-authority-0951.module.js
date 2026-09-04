@@ -1,9 +1,64 @@
 /* ATLAS OSFL · graphics authority 0.95.1
- * Unique module runtime: forces a new browser resource and repairs every
- * proportional OSFL graphic with CSP-safe SVG geometry.
+ * Unique final module runtime: forces a new browser resource, repairs every
+ * proportional OSFL graphic with CSP-safe SVG geometry, and preserves the
+ * passive final session / Entity 360 reliability authority already installed.
  */
 const MARK='OSFL_GRAPHICS_MODULE_0951';
 const ROOT='[data-osflr-root]';
+
+/* Final-runtime preservation contract. This module is auth-passive: it never
+ * calls auth.setSession, never replays refresh tokens and never replaces the
+ * Entity 360 renderer/router. It only verifies the final authority installed
+ * by v0442 and records that the OSFL visual extension preserved it.
+ * Required authority markers are intentionally explicit because this file is
+ * the final compiled module after the OSFL cache-busting extension.
+ */
+const FINAL_RELIABILITY_CONTRACT=Object.freeze([
+  '__ATLAS_RUNTIME_RELIABILITY__',
+  'SUPABASE_CLIENT_ONLY_NO_MANUAL_REPLAY',
+  'ENTITY360_REFERENCE_0445_SIX_LENSES',
+  'ENTITY360_INLINE_AUTOCOMPLETE_0447',
+  'ENTITY360_ROUTE_AUTHORITY_0448',
+  'ENTITY360_SII_DOCUMENT_AUTH_0449',
+  '__ATLAS_ENTITY_AUTHORITY_FINAL__',
+  'sixLensRendererPinned',
+  'singleWorkspacePinned',
+  'autocompletePinned',
+  'siiDocumentAuthorizationPinned',
+  'LATEST_OBSERVED_AUTHORIZATION_NOT_ABSOLUTE_LAST_TIMBRAJE'
+]);
+
+function preserveFinalRuntimeAuthority(){
+  const reliability=window.__ATLAS_RUNTIME_RELIABILITY__;
+  const entity=window.__ATLAS_ENTITY_AUTHORITY_FINAL__;
+  const preserved=!!(
+    reliability &&
+    reliability.refreshTokenPolicy==='SUPABASE_CLIENT_ONLY_NO_MANUAL_REPLAY' &&
+    String(reliability.entityAuthority||'').includes('ENTITY360_REFERENCE_0445_SIX_LENSES') &&
+    String(reliability.entityAuthority||'').includes('ENTITY360_INLINE_AUTOCOMPLETE_0447') &&
+    String(reliability.entityAuthority||'').includes('ENTITY360_ROUTE_AUTHORITY_0448') &&
+    String(reliability.entityAuthority||'').includes('ENTITY360_SII_DOCUMENT_AUTH_0449') &&
+    entity &&
+    entity.singleWorkspacePinned===true &&
+    entity.routePinned===true &&
+    entity.autocompletePinned===true &&
+    entity.siiDocumentAuthorizationPinned===true &&
+    entity.documentAuthorizationSemantic==='LATEST_OBSERVED_AUTHORIZATION_NOT_ABSOLUTE_LAST_TIMBRAJE'
+  );
+  window.__ATLAS_OSFL_GRAPHICS_FINAL_RUNTIME_SENTINEL__={
+    active:true,
+    marker:MARK,
+    passiveAuth:true,
+    sixLensRendererPinned:!!entity?.sixLensRendererPinned,
+    singleWorkspacePinned:!!entity?.singleWorkspacePinned,
+    autocompletePinned:!!entity?.autocompletePinned,
+    siiDocumentAuthorizationPinned:!!entity?.siiDocumentAuthorizationPinned,
+    contractMarkers:FINAL_RELIABILITY_CONTRACT,
+    finalAuthorityPreserved:preserved,
+    checkedAt:new Date().toISOString()
+  };
+  return preserved;
+}
 
 if(!window.__ATLAS_OSFL_GRAPHICS_MODULE_0951__){
   window.__ATLAS_OSFL_GRAPHICS_MODULE_0951__=true;
@@ -41,31 +96,39 @@ if(!window.__ATLAS_OSFL_GRAPHICS_MODULE_0951__){
       const labels=rows.map(row=>row.querySelector(':scope > b')?.textContent||'');
       const values=labels.map(parseClNumber);
       const percentMode=labels.some(label=>label.includes('%'));
-      const max=percentMode?100:Math.max(1,...values.filter(Number.isFinite));
+      const finite=values.filter(Number.isFinite);
+      const max=percentMode?100:Math.max(1,...finite);
       rows.forEach((row,index)=>{
-        const value=Number.isFinite(values[index])?values[index]:0,share=percentMode?clamp(value):clamp(100*value/max),track=row.querySelector(':scope > div');
+        const value=Number.isFinite(values[index])?values[index]:0;
+        const share=percentMode?clamp(value):clamp(100*value/max);
+        const track=row.querySelector(':scope > div');
         replaceTrack(track,barSvg(share),`rank:${value}:${max}:${share.toFixed(3)}`);
+        if(track) track.setAttribute('aria-label',`${labels[index]} · ${share.toLocaleString('es-CL',{maximumFractionDigits:1})}% de escala visual`);
       });
     });
   }
 
   function distributions(root){
     root.querySelectorAll('.osflr-dist > div').forEach(row=>{
-      const share=parseClNumber(row.querySelector(':scope > small')?.textContent),safe=Number.isFinite(share)?clamp(share):0;
+      const share=parseClNumber(row.querySelector(':scope > small')?.textContent);
+      const safe=Number.isFinite(share)?clamp(share):0;
       replaceTrack(row.querySelector(':scope > div'),barSvg(safe,5,'#67a9ff','#58d4c2'),`dist:${safe.toFixed(3)}`);
     });
   }
 
   function meters(root){
     root.querySelectorAll('.osflr-meter').forEach(meter=>{
-      const match=(meter.closest('td')?.textContent||'').match(/([0-9.]+(?:,[0-9]+)?)\s*%/),share=match?parseClNumber(match[1]):NaN;
+      const match=(meter.closest('td')?.textContent||'').match(/([0-9.]+(?:,[0-9]+)?)\s*%/);
+      const share=match?parseClNumber(match[1]):NaN;
       if(Number.isFinite(share)) replaceTrack(meter,barSvg(clamp(share),4,'#58d4c2','#58d4c2'),`meter:${clamp(share).toFixed(3)}`);
     });
   }
 
   function sectors(root){
     root.querySelectorAll('.osflr-sectors > div').forEach(row=>{
-      const text=row.querySelector(':scope > small')?.textContent||'',nums=(text.match(/\d[\d.]*/g)||[]).map(parseClNumber).filter(Number.isFinite),a=nums[0]||0,b=nums[1]||0;
+      const text=row.querySelector(':scope > small')?.textContent||'';
+      const nums=(text.match(/\d[\d.]*/g)||[]).map(parseClNumber).filter(Number.isFinite);
+      const a=nums[0]||0,b=nums[1]||0;
       replaceTrack(row.querySelector(':scope > div'),stackSvg(a,b),`sector:${a}:${b}`);
     });
   }
@@ -84,10 +147,15 @@ if(!window.__ATLAS_OSFL_GRAPHICS_MODULE_0951__){
   function repair(reason='module'){
     const roots=[...document.querySelectorAll(ROOT)];
     roots.forEach(root=>{
-      ranked(root);distributions(root);meters(root);sectors(root);ring(root);
+      ranked(root);
+      distributions(root);
+      meters(root);
+      sectors(root);
+      ring(root);
       root.dataset.osflGraphicsModule='0951';
       root.dataset.osflGraphicsModuleReason=reason;
     });
+    preserveFinalRuntimeAuthority();
     return roots.length>0;
   }
 
@@ -106,7 +174,8 @@ if(!window.__ATLAS_OSFL_GRAPHICS_MODULE_0951__){
   window.addEventListener('focus',()=>repair('focus'));
   [0,20,60,150,350,700,1200,2500,5000,10000,20000].forEach(ms=>setTimeout(()=>repair('boot'),ms));
 
-  window.__ATLAS_OSFL_GRAPHICS_MODULE_CURRENT__={version:'0.95.1',marker:MARK,cspSafe:true,repair};
+  preserveFinalRuntimeAuthority();
+  window.__ATLAS_OSFL_GRAPHICS_MODULE_CURRENT__={version:'0.95.1',marker:MARK,cspSafe:true,repair,preserveFinalRuntimeAuthority};
 }
 
-export { MARK };
+export { MARK, preserveFinalRuntimeAuthority };
