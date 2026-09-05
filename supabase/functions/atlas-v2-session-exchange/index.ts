@@ -5,6 +5,7 @@ const CORE_PUBLISHABLE_KEY = "sb_publishable_Nu21dZFBM3NwtIvOwIM8ag_9tyfDJyR";
 const ALLOWED_ORIGIN = "https://smoralesm07-source.github.io";
 const SOURCE_PROJECT = "ldmtlwzqaqmegedktlxr";
 const GRANT_TTL_MS = 10 * 60 * 1000;
+const E2E_EMAIL_RE = /^atlas-v2-e2e-[a-z0-9-]+@example\.invalid$/;
 
 function parseKeySet(name: string) {
   try { return JSON.parse(Deno.env.get(name) || "{}"); } catch (_) { return {}; }
@@ -69,35 +70,73 @@ async function ensureV2User(sb: ReturnType<typeof admin>, email: string) {
   if (link.error || !link.data?.properties?.hashed_token) throw new Error(`V2_LINK_FAILED:${link.error?.message || "missing token hash"}`);
   return link.data;
 }
+async function cleanupE2EMirror(sb: ReturnType<typeof admin>, email: string, explicitUserId = "") {
+  if (!E2E_EMAIL_RE.test(email)) throw new Error("E2E_CLEANUP_EMAIL_DENIED");
+  let v2UserId = explicitUserId;
+  const current = await sb.from("atlas_v2_session_grant").select("v2_user_id").eq("email", email).maybeSingle();
+  if (!v2UserId && !current.error) v2UserId = String(current.data?.v2_user_id || "");
+
+  const grantDelete = await sb.from("atlas_v2_session_grant").delete().eq("email", email);
+  if (grantDelete.error) throw new Error(`V2_E2E_GRANT_CLEANUP_FAILED:${grantDelete.error.message}`);
+  const allowDelete = await sb.from("aml_allowed_users").delete().eq("email", email).like("notes", `federated:${SOURCE_PROJECT}:%`);
+  if (allowDelete.error) throw new Error(`V2_E2E_ALLOWLIST_CLEANUP_FAILED:${allowDelete.error.message}`);
+
+  if (/^[0-9a-f-]{36}$/i.test(v2UserId)) {
+    const deleted = await sb.auth.admin.deleteUser(v2UserId);
+    if (deleted.error && !/not found/i.test(deleted.error.message || "")) throw new Error(`V2_E2E_USER_CLEANUP_FAILED:${deleted.error.message}`);
+  }
+  return true;
+}
+
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin") || "";
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors(origin) });
   if (req.method !== "POST") return respond(req, { error: "METHOD_NOT_ALLOWED" }, 405);
   if (origin && origin !== ALLOWED_ORIGIN) return respond(req, { error: "ORIGIN_NOT_ALLOWED" }, 403);
   try {
+    const body = await req.json().catch(() => ({}));
+    const action = String(body?.action || "issue");
     const coreToken = bearer(req);
     const identity = await coreIdentity(coreToken);
     const access = await coreAccess(coreToken, identity);
-    const role = v2Role(access.role);
     const sbAdmin = admin();
+
+    if (action === "cleanup_e2e") {
+      if (!E2E_EMAIL_RE.test(identity.email)) return respond(req, { error: "E2E_CLEANUP_DENIED" }, 403);
+      await cleanupE2EMirror(sbAdmin, identity.email);
+      return respond(req, { schema: "ATLAS_V2_SESSION_EXCHANGE_V1", action: "cleanup_e2e", ok: true });
+    }
+    if (action !== "issue") return respond(req, { error: "INVALID_ACTION" }, 400);
+
+    const role = v2Role(access.role);
     const linkData = await ensureV2User(sbAdmin, identity.email);
+    let v2UserId = String((linkData as any)?.user?.id || "");
     const issuedAt = new Date();
     const expiresAt = new Date(issuedAt.getTime() + GRANT_TTL_MS);
     const { error: allowError } = await sbAdmin.from("aml_allowed_users").upsert({ email: identity.email, role, enabled: true, notes: `federated:${SOURCE_PROJECT}:${identity.id}` }, { onConflict: "email" });
     if (allowError) throw new Error(`V2_ALLOWLIST_SYNC_FAILED:${allowError.message}`);
-    const { error: grantError } = await sbAdmin.from("atlas_v2_session_grant").upsert({ email: identity.email, core_user_id: identity.id, core_role: access.role, source_project: SOURCE_PROJECT, issued_at: issuedAt.toISOString(), expires_at: expiresAt.toISOString() }, { onConflict: "email" });
+    const grantRow: Record<string, unknown> = { email: identity.email, core_user_id: identity.id, core_role: access.role, source_project: SOURCE_PROJECT, issued_at: issuedAt.toISOString(), expires_at: expiresAt.toISOString() };
+    if (/^[0-9a-f-]{36}$/i.test(v2UserId)) grantRow.v2_user_id = v2UserId;
+    const { error: grantError } = await sbAdmin.from("atlas_v2_session_grant").upsert(grantRow, { onConflict: "email" });
     if (grantError) throw new Error(`V2_GRANT_FAILED:${grantError.message}`);
+
     const sbUser = userClient();
     const verified = await sbUser.auth.verifyOtp({ token_hash: String(linkData.properties?.hashed_token || ""), type: String(linkData.properties?.verification_type || "magiclink") as any });
     const session = verified.data?.session;
+    v2UserId = String(verified.data?.user?.id || v2UserId || "");
     if (verified.error || !session?.access_token) {
-      await sbAdmin.from("atlas_v2_session_grant").delete().eq("email", identity.email);
+      if (E2E_EMAIL_RE.test(identity.email)) await cleanupE2EMirror(sbAdmin, identity.email, v2UserId).catch(() => {});
+      else await sbAdmin.from("atlas_v2_session_grant").delete().eq("email", identity.email);
       throw new Error(`V2_SESSION_MINT_FAILED:${verified.error?.message || "missing access token"}`);
+    }
+    if (/^[0-9a-f-]{36}$/i.test(v2UserId)) {
+      const updated = await sbAdmin.from("atlas_v2_session_grant").update({ v2_user_id: v2UserId }).eq("email", identity.email);
+      if (updated.error) throw new Error(`V2_GRANT_USER_LINK_FAILED:${updated.error.message}`);
     }
     return respond(req, { schema: "ATLAS_V2_SESSION_EXCHANGE_V1", access_token: session.access_token, expires_at: session.expires_at || null, grant_expires_at: expiresAt.toISOString(), identity: { email: identity.email, role } });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    const denied = /CORE_(SESSION|ACCESS|IDENTITY)|ORIGIN/.test(detail);
+    const denied = /CORE_(SESSION|ACCESS|IDENTITY)|ORIGIN|E2E_CLEANUP_(DENIED|EMAIL_DENIED)/.test(detail);
     console.warn("atlas-v2-session-exchange", detail.slice(0, 180));
     return respond(req, { error: denied ? "ACCESS_DENIED" : "SESSION_EXCHANGE_FAILED" }, denied ? 403 : 500);
   }
