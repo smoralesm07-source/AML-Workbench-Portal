@@ -9,8 +9,8 @@ const refreshToken = process.env.ATLAS_E2E_REFRESH_TOKEN || '';
 const expectedEmail = process.env.ATLAS_E2E_EMAIL || '';
 if (!accessToken || !refreshToken || !expectedEmail) throw new Error('E2E session inputs are missing');
 
-const COMPETING_LEGACY_JS_RE = /\/assets\/(?:atlas-public-spend-v2|atlas-public-spend-route-authority-0578|atlas-gasto-publico-1300)\.js(?:\?|$)/i;
-const COMPETING_LEGACY_CSS_RE = /\/assets\/(?:atlas-public-spend-v2|atlas-gasto-publico-1300)\.css(?:\?|$)/i;
+const COMPETING_LEGACY_JS_RE = /\/assets\/(?:atlas-public-spend-v2|atlas-public-spend-mobile-route-0573|atlas-public-spend-route-authority-0578|atlas-public-spend-intelligence-0720|atlas-gasto-publico-1000|atlas-gasto-publico-1300)\.js(?:\?|$)/i;
+const COMPETING_LEGACY_CSS_RE = /\/assets\/(?:atlas-public-spend-v2|atlas-public-spend-intelligence-0720|atlas-gasto-publico-1000|atlas-gasto-publico-1300)\.css(?:\?|$)/i;
 const LEGACY_NAMED_ASSET_RE = /\/assets\/(?:atlas-public-spend|atlas-gasto-publico)[^/?]*(?:\.js|\.css)(?:\?|$)/i;
 const isCompetingLegacyAsset = url => COMPETING_LEGACY_JS_RE.test(url) || COMPETING_LEGACY_CSS_RE.test(url);
 
@@ -47,10 +47,11 @@ function isV2OwnedSignal(entry) {
 
 async function runtimeDiagnostics() {
   return page.evaluate(() => {
-    const competingJs = /\/assets\/(?:atlas-public-spend-v2|atlas-public-spend-route-authority-0578|atlas-gasto-publico-1300)\.js(?:\?|$)/i;
-    const competingCss = /\/assets\/(?:atlas-public-spend-v2|atlas-gasto-publico-1300)\.css(?:\?|$)/i;
+    const competingJs = /\/assets\/(?:atlas-public-spend-v2|atlas-public-spend-mobile-route-0573|atlas-public-spend-route-authority-0578|atlas-public-spend-intelligence-0720|atlas-gasto-publico-1000|atlas-gasto-publico-1300)\.js(?:\?|$)/i;
+    const competingCss = /\/assets\/(?:atlas-public-spend-v2|atlas-public-spend-intelligence-0720|atlas-gasto-publico-1000|atlas-gasto-publico-1300)\.css(?:\?|$)/i;
     const scriptSources = [...document.scripts].map(s => s.src || s.getAttribute('src') || '[inline]');
     const styleSources = [...document.querySelectorAll('link[href]')].map(link => link.href || link.getAttribute('href') || '');
+    const navigateDescriptor = Object.getOwnPropertyDescriptor(window, 'navigate');
     return {
       production: window.__ATLAS_V2_PRODUCTION_CONFIG__ || null,
       cutoverEnabled: window.__ATLAS_V2_PUBLIC_SPEND_CUTOVER__ === true,
@@ -63,11 +64,25 @@ async function runtimeDiagnostics() {
       adapter: window.__ATLAS_V2_PUBLIC_SPEND_ADAPTER__ || null,
       session: window.__ATLAS_V2_SESSION__ || null,
       navigateWrapped: !!window.navigate?.__atlasV2PublicSpendRouteBridge,
+      navigateDescriptor: navigateDescriptor ? {
+        configurable: !!navigateDescriptor.configurable,
+        enumerable: !!navigateDescriptor.enumerable,
+        writable: Object.prototype.hasOwnProperty.call(navigateDescriptor, 'writable') ? !!navigateDescriptor.writable : null,
+        hasGetter: typeof navigateDescriptor.get === 'function',
+        hasSetter: typeof navigateDescriptor.set === 'function',
+      } : null,
       hostPresent: !!document.querySelector('[data-gpv2-host]'),
       styleHref: document.getElementById('atlas-v2-public-spend-adapter-style')?.href || null,
       legacyAuthority: window.__ATLAS_PUBLIC_SPEND_ROUTE_AUTHORITY_0578__ || null,
+      compatibilityFacade: {
+        present: !!window.AtlasPublicSpendV2,
+        v2Owned: window.AtlasPublicSpendV2?.__atlasV2PublicSpendFacade === true,
+        authority: window.AtlasPublicSpendV2?.authority || null,
+      },
       legacyGlobals: {
-        gp2: !!window.AtlasPublicSpendV2,
+        mobile0573: !!window.AtlasPublicSpendMobile0573 || !!window.__ATLAS_PUBLIC_SPEND_MOBILE_0573__,
+        intel0720: !!window.AtlasPublicSpendIntelligence0720 || !!window.__ATLAS_PUBLIC_SPEND_INTEL_0720__,
+        gp12: !!window.AtlasGastoPublico1000 || !!window.__ATLAS_GASTO_PUBLICO_1000__,
         gp13: !!window.AtlasGastoPublico1300,
       },
       scripts: scriptSources.filter(src => /atlas-v2|public-spend|gasto-publico/i.test(src)),
@@ -105,8 +120,15 @@ function assertNoCompetingAuthority(diag, phase) {
   assert.equal(diag.competingLegacyScripts.length, 0, `${phase}: competing legacy Gasto Público scripts must be absent`);
   assert.equal(diag.competingLegacyStyles.length, 0, `${phase}: competing legacy Gasto Público styles must be absent`);
   assert.equal(diag.legacyAuthority, null, `${phase}: legacy public-spend route authority must be absent`);
-  assert.equal(diag.legacyGlobals.gp2, false, `${phase}: GP2 runtime global must be absent`);
-  assert.equal(diag.legacyGlobals.gp13, false, `${phase}: GP13 runtime global must be absent`);
+  assert.equal(diag.compatibilityFacade.present, true, `${phase}: canonical AtlasPublicSpendV2 compatibility surface must exist`);
+  assert.equal(diag.compatibilityFacade.v2Owned, true, `${phase}: AtlasPublicSpendV2 must be owned by Architecture v2`);
+  assert.equal(diag.compatibilityFacade.authority, 'ATLAS_V2_PUBLIC_SPEND', `${phase}: compatibility facade authority mismatch`);
+  assert.equal(diag.legacyGlobals.mobile0573, false, `${phase}: 0573 GP2 bootstrap shim must be absent`);
+  assert.equal(diag.legacyGlobals.intel0720, false, `${phase}: 0720 runtime must be absent`);
+  assert.equal(diag.legacyGlobals.gp12, false, `${phase}: GP12 runtime must be absent`);
+  assert.equal(diag.legacyGlobals.gp13, false, `${phase}: GP13 runtime must be absent`);
+  assert.equal(diag.navigateWrapped, true, `${phase}: canonical navigate must be owned by the v2 route bridge`);
+  assert.notEqual(diag.bridge?.navigateInstallMode, 'failed', `${phase}: navigate takeover must not fail`);
 }
 
 const report = { authMode: 'SUPABASE_EPHEMERAL_CI_CUTOVER_ARTIFACT', startedAt: new Date().toISOString() };
@@ -219,6 +241,28 @@ try {
   await adapterReady('overview');
   assert.ok(await page.locator('.gpv2-kpi').count() >= 4, 'overview KPI cards should render after drill-down round trip');
 
+  report.programmaticNavigate = await page.evaluate(async () => {
+    const result = await window.navigate('public-spend');
+    return {
+      result: result !== false,
+      wrapped: window.navigate?.__atlasV2PublicSpendRouteBridge === true,
+      facade: window.AtlasPublicSpendV2?.__atlasV2PublicSpendFacade === true,
+    };
+  });
+  assert.equal(report.programmaticNavigate.result, true, 'programmatic window.navigate(public-spend) must open v2');
+  assert.equal(report.programmaticNavigate.wrapped, true, 'programmatic navigate must remain wrapped after use');
+  await adapterReady('overview');
+
+  report.canonicalRouterFacade = await page.evaluate(async () => {
+    const api = window.AtlasOperationalRecovery0805;
+    if (!api?.open) return { available: false, result: false };
+    const result = await api.open('public-spend', 'e2e-canonical-router');
+    return { available: true, result: result !== false, facade: window.AtlasPublicSpendV2?.__atlasV2PublicSpendFacade === true };
+  });
+  assert.equal(report.canonicalRouterFacade.available, true, 'canonical route authority must be available');
+  assert.equal(report.canonicalRouterFacade.result, true, 'canonical route authority must delegate public-spend to v2 facade');
+  await adapterReady('overview');
+
   report.finalRuntime = await runtimeDiagnostics();
   assertNoCompetingAuthority(report.finalRuntime, 'final');
 
@@ -238,7 +282,7 @@ try {
   assert.ok(readResponses.length >= 6, 'E2E should exercise multiple real v2 reads');
   assert.equal(readResponses.filter(x => x.status >= 400).length, 0, 'v2 reads must not return HTTP errors');
   assert.equal(failedAssets.length, 0, `v2 assets must load cleanly: ${JSON.stringify(failedAssets)}`);
-  assert.equal(competingLegacyAssetResponses.length, 0, `cutover must never request GP2/GP13 authority assets: ${JSON.stringify(competingLegacyAssetResponses)}`);
+  assert.equal(competingLegacyAssetResponses.length, 0, `cutover must never request legacy GP route-owner/bootstrap assets: ${JSON.stringify(competingLegacyAssetResponses)}`);
   assert.equal(failedSupportAssets.length, 0, `retained shared public-spend support assets must remain available: ${JSON.stringify(failedSupportAssets)}`);
   assert.equal(v2ConsoleErrors.length, 0, `v2-owned console errors: ${JSON.stringify(v2ConsoleErrors)}`);
   assert.equal(v2CspViolations.length, 0, `v2-owned CSP violations: ${JSON.stringify(v2CspViolations)}`);
@@ -262,6 +306,7 @@ try {
     filters: report.filters,
     reads: readResponses.length,
     exchange: exchangeResponses.length,
+    navigateMode: report.finalRuntime.bridge?.navigateInstallMode,
     competingLegacyRequests: competingLegacyAssetResponses.length,
     supportAssetsObserved: supportAssetResponses.length,
     failedSupportAssets: failedSupportAssets.length,
