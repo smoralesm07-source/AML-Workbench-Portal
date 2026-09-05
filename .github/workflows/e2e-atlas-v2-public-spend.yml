@@ -106,7 +106,7 @@ jobs:
           request_url="${ACTIONS_ID_TOKEN_REQUEST_URL}"
           sep='?'
           if [[ "$request_url" == *'?'* ]]; then sep='&'; fi
-          oidc_json="$(curl --fail-with-body --silent --show-error \
+          oidc_json="$(curl --fail-with-body --silent --show-error --retry 3 --retry-delay 1 --retry-all-errors --connect-timeout 10 --max-time 30 \
             -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
             "${request_url}${sep}audience=atlas-v2-e2e")"
           oidc_token="$(jq -er '.value' <<<"$oidc_json")"
@@ -222,7 +222,7 @@ jobs:
           request_url="${ACTIONS_ID_TOKEN_REQUEST_URL}"
           sep='?'
           if [[ "$request_url" == *'?'* ]]; then sep='&'; fi
-          oidc_json="$(curl --fail-with-body --silent --show-error \
+          oidc_json="$(curl --fail-with-body --silent --show-error --retry 3 --retry-delay 1 --retry-all-errors --connect-timeout 10 --max-time 30 \
             -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
             "${request_url}${sep}audience=atlas-v2-e2e")" || exit 1
           oidc_token="$(jq -er '.value' <<<"$oidc_json")" || exit 1
