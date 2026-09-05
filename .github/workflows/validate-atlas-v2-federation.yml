@@ -1,0 +1,105 @@
+name: Validate ATLAS v2 Federation
+
+on:
+  push:
+    branches: [atlas-architecture-v2]
+    paths:
+      - 'src/v2/atlas-v2-data.js'
+      - 'src/v2/atlas-v2-session.js'
+      - 'tools/test_atlas_v2_session.js'
+      - 'tools/e2e_atlas_v2_public_spend.mjs'
+      - 'tools/serve_atlas_v2_e2e.mjs'
+      - 'supabase/functions/atlas-v2-session-exchange/**'
+      - 'supabase/core-functions/atlas-v2-e2e-auth/**'
+      - 'supabase/migrations/*atlas_v2*'
+      - 'supabase/core-migrations/*atlas_v2*'
+      - '.github/workflows/e2e-atlas-v2-public-spend.yml'
+      - '.github/workflows/validate-atlas-v2-federation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  federation-invariants:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Syntax and deterministic federation smoke
+        run: |
+          set -euo pipefail
+          node --check src/v2/atlas-v2-data.js
+          node --check src/v2/atlas-v2-session.js
+          node --check tools/test_atlas_v2_session.js
+          node --check tools/e2e_atlas_v2_public_spend.mjs
+          node --check tools/serve_atlas_v2_e2e.mjs
+          node tools/test_atlas_v2_session.js
+          git diff --check
+
+      - name: Federated authorization invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          client=Path('src/v2/atlas-v2-data.js').read_text()
+          session=Path('src/v2/atlas-v2-session.js').read_text()
+          exchange=Path('supabase/functions/atlas-v2-session-exchange/index.ts').read_text()
+          grant=Path('supabase/migrations/20260905030623_atlas_v2_federated_session_grants.sql').read_text()
+          broker=Path('supabase/core-functions/atlas-v2-e2e-auth/index.ts').read_text()
+          core_guard=Path('supabase/core-migrations/20260905031305_atlas_v2_e2e_ephemeral_principals.sql').read_text()
+          e2e=Path('.github/workflows/e2e-atlas-v2-public-spend.yml').read_text()
+          browser=Path('tools/e2e_atlas_v2_public_spend.mjs').read_text()
+          proxy=Path('tools/serve_atlas_v2_e2e.mjs').read_text()
+
+          assert 'https://bzqxvidggykkdouotylg.supabase.co' in client
+          assert 'sb_publishable_3nrUSbZMWfTYUtXnyjDklg_EjyZIzko' in client
+          assert 'ATLAS_V2_SESSION_EXCHANGE_V1' in session
+          assert 'RENEW_SKEW_MS = 60 * 1000' in session
+          assert 'accessToken' in session and 'refreshToken' not in session
+          assert 'SUPABASE_SECRET_KEYS' in exchange and 'SUPABASE_SERVICE_ROLE_KEY' not in exchange
+          assert 'https://ldmtlwzqaqmegedktlxr.supabase.co' in exchange
+          assert '/auth/v1/user' in exchange and 'aml_allowed_users' in exchange
+          assert 'GRANT_TTL_MS = 10 * 60 * 1000' in exchange
+          assert 'atlas_v2_session_grant' in grant
+          assert "expires_at <= issued_at + interval '15 minutes'" in grant
+          assert 'atlas_v2_is_session_granted' in grant
+          assert 'alter policy atlas_v2_read_model_allowed' in grant
+          assert 'alter policy atlas_v2_model_head_allowed' in grant
+          assert 'atlas_v2_private.is_allowed' in grant
+
+          exact_workflow='smoralesm07-source/AML-Workbench-Portal/.github/workflows/e2e-atlas-v2-public-spend.yml@refs/heads/atlas-architecture-v2'
+          assert exact_workflow in broker
+          assert 'atlas-v2-e2e' in broker
+          assert 'refs/heads/atlas-architecture-v2' in broker
+          assert 'SUPABASE_SECRET_KEYS' in broker and 'SUPABASE_SERVICE_ROLE_KEY' not in broker
+          assert 'createUser({ email, email_confirm: true })' in broker
+          assert 'password' not in broker
+          assert 'generateLink({ type: "magiclink", email })' in broker
+          assert 'deleteUser(userId)' in broker
+          assert 'TTL_MS = 20 * 60 * 1000' in broker
+
+          assert 'atlas_v2_e2e_principal' in core_guard
+          assert "interval '30 minutes'" in core_guard
+          assert "'* * * * *'" in core_guard
+          assert 'delete from public.aml_allowed_users' in core_guard.lower()
+
+          assert 'id-token: write' in e2e
+          assert 'audience=atlas-v2-e2e' in e2e
+          assert 'playwright@${PLAYWRIGHT_VERSION}' in e2e
+          assert "PLAYWRIGHT_VERSION: '1.62.1'" in e2e
+          assert 'secrets.' not in e2e
+          assert 'Revoke ephemeral core principal' in e2e
+          assert 'if: always()' in e2e
+          assert 'sessionExchangeUrl:location.origin+"/__atlas_v2/functions/v1/atlas-v2-session-exchange"' in e2e
+
+          assert "state?.access?.provisional !== true" in browser
+          assert 'SUPABASE_EPHEMERAL_CI' in browser
+          assert 'atlas-v2-session-exchange' in browser and 'atlas-v2-read' in browser
+          assert 'consoleErrors.length, 0' in browser and 'pageErrors.length, 0' in browser
+          assert "GITHUB_PAGES_ORIGIN = 'https://smoralesm07-source.github.io'" in proxy
+          assert "V2_HOST = 'bzqxvidggykkdouotylg.supabase.co'" in proxy
+          print('ATLAS v2 federation invariants OK: two-project identity, short grant, OIDC CI and authenticated E2E')
+          PY
