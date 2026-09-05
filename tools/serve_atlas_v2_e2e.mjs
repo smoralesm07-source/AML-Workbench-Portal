@@ -2,7 +2,6 @@ import http from 'node:http';
 import https from 'node:https';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(process.argv[2] || '_site');
 const port = Number(process.env.PORT || 4173);
@@ -18,6 +17,14 @@ function proxyV2(req, res) {
   const upstreamPath = req.url.replace(/^\/__atlas_v2/, '') || '/';
   const headers = { ...req.headers, host: V2_HOST, origin: GITHUB_PAGES_ORIGIN };
   delete headers['content-length'];
+  /* The proxy deliberately requests an identity-encoded upstream response.
+     Otherwise a browser may send Accept-Encoding, Supabase may compress the body,
+     and stripping Content-Encoding while piping those bytes makes res.json() see
+     an unreadable payload. The preview must preserve HTTP semantics, not merely
+     the status code. */
+  headers['accept-encoding'] = 'identity';
+  delete headers.connection;
+
   const upstream = https.request({ hostname: V2_HOST, port: 443, method: req.method, path: upstreamPath, headers }, upstreamRes => {
     const outHeaders = {};
     for (const name of ['content-type', 'cache-control', 'etag', 'x-atlas-trace-id', 'x-atlas-snapshot', 'server-timing']) {
