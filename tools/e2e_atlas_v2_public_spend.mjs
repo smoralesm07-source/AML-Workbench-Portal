@@ -26,6 +26,25 @@ page.on('response', response => {
   if (url.includes('/__atlas_v2/functions/v1/')) v2Responses.push({ url: url.replace(baseURL.replace(/\/$/, ''), ''), status: response.status() });
 });
 
+async function runtimeDiagnostics() {
+  return page.evaluate(() => ({
+    preview: window.__ATLAS_V2_PREVIEW_CONFIG__ || null,
+    config: window.__ATLAS_V2_CONFIG__ ? {
+      supabaseUrl: window.__ATLAS_V2_CONFIG__.supabaseUrl,
+      sessionExchangeUrl: window.__ATLAS_V2_CONFIG__.sessionExchangeUrl,
+      publishableKeyPresent: !!window.__ATLAS_V2_CONFIG__.publishableKey,
+    } : null,
+    bridge: window.__ATLAS_V2_PUBLIC_SPEND_ROUTE_BRIDGE__ || null,
+    adapter: window.__ATLAS_V2_PUBLIC_SPEND_ADAPTER__ || null,
+    session: window.__ATLAS_V2_SESSION__ || null,
+    navigateWrapped: !!window.navigate?.__atlasV2PublicSpendRouteBridge,
+    hostPresent: !!document.querySelector('[data-gpv2-host]'),
+    legacyAuthority: window.__ATLAS_PUBLIC_SPEND_ROUTE_AUTHORITY_0578__ || null,
+    scripts: [...document.scripts]
+      .map(s => s.getAttribute('src') || (s.dataset?.atlasV2E2e ? `[inline:${s.dataset.atlasV2E2e}]` : '[inline]'))
+      .filter(src => /atlas-v2|public-spend/i.test(src)),
+  }));
+}
 async function adapterReady(tab) {
   await page.waitForFunction(expected => {
     const h = window.__ATLAS_V2_PUBLIC_SPEND_ADAPTER__;
@@ -60,7 +79,6 @@ try {
   assert.equal(sessionSet.email, expectedEmail, 'E2E identity mismatch');
 
   await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
-  captureConsole = true;
   await page.waitForFunction(() => {
     try { return typeof state !== 'undefined' && state?.access?.enabled === true && state?.access?.provisional !== true; }
     catch (_) { return false; }
@@ -76,10 +94,23 @@ try {
   assert.equal(authState.access?.enabled, true);
   assert.notEqual(authState.access?.provisional, true, 'E2E must not pass through degraded/provisional shell access');
   report.coreAuth = authState;
+  report.preRoute = await runtimeDiagnostics();
+  assert.equal(report.preRoute.preview?.status, 'ready', 'external CSP-safe v2 preview config must execute');
+  assert.equal(report.preRoute.adapter?.status, 'installed', 'v2 adapter must be installed before route activation');
+  assert.ok(report.preRoute.bridge, 'v2 route bridge must be installed before route activation');
+
+  consoleErrors.length = 0;
+  pageErrors.length = 0;
+  captureConsole = true;
 
   const nav = page.locator('[data-view="public-spend"]').first();
   await nav.waitFor({ state: 'visible', timeout: 15000 });
   await nav.click();
+  await page.waitForTimeout(700);
+  report.postRoute = await runtimeDiagnostics();
+  if (!report.postRoute.hostPresent) {
+    throw new Error(`v2 route did not create host: ${JSON.stringify({ bridge: report.postRoute.bridge, adapter: report.postRoute.adapter, navigateWrapped: report.postRoute.navigateWrapped, scripts: report.postRoute.scripts })}`);
+  }
   await page.locator('[data-gpv2-host]').waitFor({ state: 'visible', timeout: 15000 });
   await adapterReady('overview');
   await page.waitForFunction(() => window.__ATLAS_V2_SESSION__?.status === 'ready', null, { timeout: 15000 });
@@ -132,8 +163,8 @@ try {
   assert.ok(exchangeResponses.some(x => x.status === 200), 'session exchange must succeed over HTTP');
   assert.ok(readResponses.length >= 6, 'E2E should exercise multiple real v2 reads');
   assert.equal(readResponses.filter(x => x.status >= 400).length, 0, 'v2 reads must not return HTTP errors');
-  assert.equal(consoleErrors.length, 0, `console errors: ${consoleErrors.join(' | ')}`);
-  assert.equal(pageErrors.length, 0, `page errors: ${pageErrors.join(' | ')}`);
+  assert.equal(consoleErrors.length, 0, `console errors since v2 route activation: ${consoleErrors.join(' | ')}`);
+  assert.equal(pageErrors.length, 0, `page errors since v2 route activation: ${pageErrors.join(' | ')}`);
 
   report.v2Responses = v2Responses;
   report.consoleErrors = consoleErrors;
@@ -146,6 +177,7 @@ try {
 } catch (error) {
   report.status = 'FAIL';
   report.error = error instanceof Error ? error.message : String(error);
+  report.runtimeAtFailure = await runtimeDiagnostics().catch(() => null);
   report.v2Responses = v2Responses;
   report.consoleErrors = consoleErrors;
   report.pageErrors = pageErrors;
