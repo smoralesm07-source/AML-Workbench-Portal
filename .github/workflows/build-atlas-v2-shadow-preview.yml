@@ -6,6 +6,7 @@ on:
     paths:
       - 'src/v2/**'
       - 'tools/build_atlas_site.py'
+      - 'tools/test_atlas_v2_data_client.js'
       - 'atlas-runtime-manifest.json'
       - '.github/workflows/build-atlas-v2-shadow-preview.yml'
   workflow_dispatch:
@@ -20,12 +21,14 @@ jobs:
       - name: Checkout v2 branch
         uses: actions/checkout@v4
 
-      - name: Validate v2 preview sources
+      - name: Validate v2 preview sources and client behavior
         run: |
           set -euo pipefail
           node --check src/v2/atlas-v2-data.js
           node --check src/v2/public-spend-shadow.js
           node --check src/v2/public-spend-adapter.js
+          node --check tools/test_atlas_v2_data_client.js
+          node tools/test_atlas_v2_data_client.js
 
       - name: Build canonical site
         run: |
@@ -104,5 +107,3 @@ jobs:
           name: atlas-v2-shadow-preview
           path: _site
           retention-days: 7
-
-# Final branch-only cutover gate: keep preview artifact aligned with the contextual runtime under test.
