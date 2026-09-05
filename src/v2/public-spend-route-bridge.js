@@ -5,8 +5,9 @@
   if (!ACTIVE) return;
 
   const VIEW = 'public-spend';
-  let delegatedNavigate = null;
+  let delegatedNavigate = typeof global.navigate === 'function' ? global.navigate : null;
   let opening = false;
+  let legacyAssignmentsBlocked = 0;
 
   function publish(status, extra = {}) {
     global.__ATLAS_V2_PUBLIC_SPEND_ROUTE_BRIDGE__ = {
@@ -15,6 +16,8 @@
       view: VIEW,
       opening,
       navigateWrapped: !!global.navigate?.__atlasV2PublicSpendRouteBridge,
+      deterministicAuthority: true,
+      legacyAssignmentsBlocked,
       checkedAt: new Date().toISOString(),
       ...extra,
     };
@@ -41,30 +44,60 @@
     }
   }
 
-  function installNavigate(source = 'install') {
-    const current = global.navigate;
-    if (typeof current !== 'function') {
-      publish('navigate-missing', { source });
-      return false;
-    }
-    if (current.__atlasV2PublicSpendRouteBridge) {
+  const wrapper = function atlasV2Navigate(view, ...args) {
+    if (view === VIEW) return open('window.navigate');
+    if (typeof delegatedNavigate !== 'function' || delegatedNavigate === wrapper) return false;
+    return delegatedNavigate.call(this, view, ...args);
+  };
+  Object.defineProperty(wrapper, '__atlasV2PublicSpendRouteBridge', { value: true });
+
+  function isLegacyPublicSpendWrapper(candidate) {
+    return !!(
+      candidate?.__atlasGpAuthority1300 ||
+      candidate?.__atlasPublicSpendRouteAuthority ||
+      candidate?.__atlasPublicSpendV2RouteAuthority
+    );
+  }
+
+  function protectNavigate(source = 'install') {
+    const descriptor = Object.getOwnPropertyDescriptor(global, 'navigate');
+    if (descriptor?.get?.__atlasV2PublicSpendAccessor) {
       publish('authority-confirmed', { source });
       return true;
     }
-    delegatedNavigate = current;
-    const wrapper = function atlasV2Navigate(view, ...args) {
-      if (view === VIEW) return open('window.navigate');
-      return delegatedNavigate.call(this, view, ...args);
-    };
-    Object.defineProperty(wrapper, '__atlasV2PublicSpendRouteBridge', { value: true });
-    global.navigate = wrapper;
-    publish('authority-installed', { source });
-    return true;
+
+    const current = global.navigate;
+    if (typeof current === 'function' && current !== wrapper && !isLegacyPublicSpendWrapper(current)) delegatedNavigate = current;
+
+    const getter = function atlasV2NavigateGetter() { return wrapper; };
+    Object.defineProperty(getter, '__atlasV2PublicSpendAccessor', { value: true });
+    try {
+      Object.defineProperty(global, 'navigate', {
+        configurable: true,
+        enumerable: true,
+        get: getter,
+        set(candidate) {
+          if (candidate === wrapper) return;
+          if (isLegacyPublicSpendWrapper(candidate)) {
+            legacyAssignmentsBlocked += 1;
+            publish('legacy-authority-blocked', { source: 'navigate-setter', legacyAssignmentsBlocked });
+            return;
+          }
+          if (typeof candidate === 'function') delegatedNavigate = candidate;
+        },
+      });
+      publish('authority-installed', { source });
+      return true;
+    } catch (error) {
+      publish('authority-install-error', { source, error: String(error?.message || error) });
+      return false;
+    }
   }
 
-  /* Window capture is intentional. The legacy Gasto Público authority also owns
-     a window-capture listener; this bridge is mounted earlier in the isolated
-     v2 preview so it becomes the sole route authority for public-spend there. */
+  /* The preview is a deterministic cutover simulation. It owns only the
+     public-spend route. Legacy public-spend navigate wrappers are rejected by
+     the accessor above, while every non-public-spend route is delegated to the
+     latest core navigate function assigned by ATLAS. */
   global.addEventListener('click', event => {
     const target = event.target?.closest?.('[data-view="public-spend"],[data-atlas-mobile-view="public-spend"]');
     if (!target) return;
@@ -74,10 +107,16 @@
   }, true);
 
   ['pageshow', 'atlas:nav-refresh', 'atlas:v2-public-spend-adapter-ready'].forEach(name => {
-    global.addEventListener(name, () => installNavigate(name));
+    global.addEventListener(name, () => protectNavigate(name));
   });
-  [0, 120, 400, 1200].forEach(ms => setTimeout(() => installNavigate(`deferred-${ms}`), ms));
 
-  global.AtlasV2PublicSpendRouteBridge = Object.freeze({ open, installNavigate, health: () => global.__ATLAS_V2_PUBLIC_SPEND_ROUTE_BRIDGE__ || null });
+  protectNavigate('initial');
+  [0, 120, 400, 1200].forEach(ms => setTimeout(() => protectNavigate(`deferred-${ms}`), ms));
+
+  global.AtlasV2PublicSpendRouteBridge = Object.freeze({
+    open,
+    installNavigate: protectNavigate,
+    health: () => global.__ATLAS_V2_PUBLIC_SPEND_ROUTE_BRIDGE__ || null,
+  });
   publish('installed');
 })(window);
