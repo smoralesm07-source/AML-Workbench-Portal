@@ -99,7 +99,7 @@ jobs:
           assert 'gpv2-barsvg' in adapter and 'gpv2-note-spaced' in adapter and 'gpv2-detail-title' in adapter
           assert '.gpv2-barsvg' in adapter_css and '.gpv2-note-spaced' in adapter_css and '.gpv2-detail-title' in adapter_css
 
-          # Dedicated builder only retires the five route-owning legacy assets.
+          # Dedicated builder retires every confirmed route owner/bootstrap path, but not support helpers.
           assert 'build_current(out_dir)' in cutover_builder
           assert '--e2e-proxy' in cutover_builder
           assert "location.origin + '/__atlas_v2'" in cutover_builder
@@ -108,7 +108,12 @@ jobs:
           for asset in (
             'assets/atlas-public-spend-v2.css',
             'assets/atlas-public-spend-v2.js',
+            'assets/atlas-public-spend-mobile-route-0573.js',
             'assets/atlas-public-spend-route-authority-0578.js',
+            'assets/atlas-public-spend-intelligence-0720.css',
+            'assets/atlas-public-spend-intelligence-0720.js',
+            'assets/atlas-gasto-publico-1000.css',
+            'assets/atlas-gasto-publico-1000.js',
             'assets/atlas-gasto-publico-1300.css',
             'assets/atlas-gasto-publico-1300.js',
           ):
@@ -158,11 +163,18 @@ jobs:
           assert 'atlas_v2_e2e_principal_deny_all' in core_deny
           assert 'using (false)' in core_deny and 'with check (false)' in core_deny
 
-          # Route interception is deterministic and recognizes displaced authorities.
+          # Route takeover respects the existing global property descriptor and preserves canonical delegation.
           assert "global.addEventListener('click'" in route_bridge
           assert "event.stopImmediatePropagation()" in route_bridge
           assert "if (view === VIEW) return open('window.navigate')" in route_bridge
-          assert "Object.defineProperty(global, 'navigate'" in route_bridge
+          assert "Object.getOwnPropertyDescriptor(global, 'navigate')" in route_bridge
+          assert "descriptor.configurable" in route_bridge
+          assert "descriptor.writable" in route_bridge
+          assert "global.navigate = wrapper" in route_bridge
+          assert "nonconfigurable-writable-assignment" in route_bridge
+          assert "configurable-accessor" in route_bridge
+          assert "__atlasV2PublicSpendFacade" in route_bridge
+          assert "authority: 'ATLAS_V2_PUBLIC_SPEND'" in route_bridge
           assert 'candidate?.__atlasGpAuthority1300' in route_bridge
           assert 'deterministicAuthority: true' in route_bridge
           assert '__ATLAS_V2_PUBLIC_SPEND_ROUTE_BRIDGE__' in route_bridge
@@ -176,7 +188,9 @@ jobs:
           assert 'build_atlas_v2_cutover.py --out _site --e2e-proxy' in e2e
           assert 'atlas-v2-preview-config.js' not in e2e
           assert 'public-spend-cutover-e2e-proxy' in e2e
-          assert "'assets/atlas-public-spend-route-authority-0578.js'" in e2e
+          assert "'assets/atlas-public-spend-mobile-route-0573.js'" in e2e
+          assert "'assets/atlas-public-spend-intelligence-0720.js'" in e2e
+          assert "'assets/atlas-gasto-publico-1000.js'" in e2e
           assert "taxonomy=root/'assets/atlas-public-spend-mark-taxonomy-v4.js'" in e2e
           assert 'public-spend-route-bridge.js' in e2e
           assert 'Revoke ephemeral v2 principal' in e2e
@@ -190,6 +204,10 @@ jobs:
           assert '__ATLAS_V2_PUBLIC_SPEND_CUTOVER__ === true' in browser
           assert 'competingLegacyScripts' in browser and 'competingLegacyStyles' in browser
           assert 'legacyNamedAssetResponses' in browser
+          assert 'mobile0573' in browser and 'intel0720' in browser and 'gp12' in browser and 'gp13' in browser
+          assert 'compatibilityFacade.v2Owned' in browser
+          assert "window.navigate('public-spend')" in browser
+          assert "AtlasOperationalRecovery0805" in browser
           assert 'competingLegacyAssetResponses.length, 0' in browser
           assert 'failedSupportAssets.length, 0' in browser
           assert 'atlas-v2-session-exchange' in browser and 'atlas-v2-read' in browser
@@ -202,5 +220,5 @@ jobs:
           assert "GITHUB_PAGES_ORIGIN = 'https://smoralesm07-source.github.io'" in proxy
           assert "V2_HOST = 'bzqxvidggykkdouotylg.supabase.co'" in proxy
           assert "headers['accept-encoding'] = 'identity'" in proxy
-          print('ATLAS v2 federation invariants OK: generated cutover artifact, explicit five-asset retirement, shared support preserved, deterministic route, two-project identity and cleanup')
+          print('ATLAS v2 federation invariants OK: full legacy GP authority retirement, descriptor-safe navigate takeover, v2 compatibility facade, two-project identity and cleanup')
           PY
