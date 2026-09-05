@@ -1,4 +1,5 @@
 'use strict';
+// Gate trace: full legacy-owner retirement + descriptor-safe canonical route takeover.
 
 (function installAtlasV2PublicSpendRouteBridge(global) {
   const ACTIVE = global.__ATLAS_V2_PREVIEW_MODE__ === 'public-spend' || new URLSearchParams(location.search).get('atlasv2') === 'public-spend';
