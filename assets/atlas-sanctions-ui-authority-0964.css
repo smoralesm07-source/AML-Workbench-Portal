@@ -56,20 +56,51 @@
 .san96 .san96-source{background:rgba(255,255,255,.025)!important;color:inherit!important}
 .san96 .san96-legend button{background:transparent!important;color:var(--s964-muted)!important}
 
-/* Expedientes · readability refinement 0.96.7.
-   Tipo is intentionally removed from the analyst table; the event kind remains
-   available in the sanction detail drawer. Larger type improves long-session reading. */
+/* Expedientes · panel-fit refinement 0.96.8.
+   The analyst table stays inside its panel without horizontal scrolling.
+   Tipo remains intentionally in the sanction detail drawer, as before. */
+.san96 .san96-table-panel{min-width:0!important;overflow:hidden!important}
+.san96 .san96-table-scroll{width:100%!important;max-width:100%!important;min-width:0!important;overflow:hidden!important}
 .san96 .san96-table th:nth-child(8),
 .san96 .san96-table td:nth-child(8){display:none!important}
-.san96 .san96-table{min-width:1020px!important}
+.san96 .san96-table{
+  width:100%!important;max-width:100%!important;min-width:0!important;
+  table-layout:fixed!important
+}
+.san96 .san96-table th,.san96 .san96-table td{
+  min-width:0!important;max-width:100%!important;
+  padding-left:5px!important;padding-right:5px!important;
+  overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important
+}
+.san96 .san96-table th button{
+  display:block!important;width:100%!important;max-width:100%!important;
+  overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;text-align:left!important
+}
+/* Visible analyst columns: Fecha, Entidad, RUT, Supervisor, Región, Sector,
+   Condición UAF, Monto and Documento. Percentages deliberately sum to 100%. */
+.san96 .san96-table th:nth-child(1),.san96 .san96-table td:nth-child(1){width:9%!important}
+.san96 .san96-table th:nth-child(2),.san96 .san96-table td:nth-child(2){width:20%!important}
+.san96 .san96-table th:nth-child(3),.san96 .san96-table td:nth-child(3){width:11%!important}
+.san96 .san96-table th:nth-child(4),.san96 .san96-table td:nth-child(4){width:8%!important}
+.san96 .san96-table th:nth-child(5),.san96 .san96-table td:nth-child(5){width:12%!important}
+.san96 .san96-table th:nth-child(6),.san96 .san96-table td:nth-child(6){width:15%!important}
+.san96 .san96-table th:nth-child(7),.san96 .san96-table td:nth-child(7){width:10%!important}
+.san96 .san96-table th:nth-child(9),.san96 .san96-table td:nth-child(9){width:8%!important}
+.san96 .san96-table th:nth-child(10),.san96 .san96-table td:nth-child(10){width:7%!important}
 .san96 .san96-table td{font-size:10px!important;line-height:1.35!important;padding-top:8px!important;padding-bottom:8px!important}
 .san96 .san96-table th{font-size:9.3px!important;line-height:1.25!important;padding-top:8px!important;padding-bottom:8px!important}
 .san96 .san96-count{font-size:9.5px!important}
 
 @media(max-width:1100px){
   .san96 .san96-region-row,.san96 .san963-region-row{grid-template-columns:26px minmax(150px,1.3fr) minmax(90px,.9fr) 44px 50px!important;gap:7px!important}
+  .san96 .san96-table th,.san96 .san96-table td{padding-left:4px!important;padding-right:4px!important}
+  .san96 .san96-table td{font-size:9px!important}
+  .san96 .san96-table th{font-size:8.4px!important}
 }
 @media(max-width:760px){
   .san96 .san96-region-row,.san96 .san963-region-row{grid-template-columns:24px minmax(0,1fr) 40px 46px!important;gap:6px!important}
   .san96 .san96-region-track,.san96 .san963-region-track{grid-column:2/5!important;margin-top:2px!important}
+  .san96 .san96-table th,.san96 .san96-table td{padding-left:3px!important;padding-right:3px!important}
+  .san96 .san96-table td{font-size:7.8px!important}
+  .san96 .san96-table th{font-size:7.2px!important}
 }
