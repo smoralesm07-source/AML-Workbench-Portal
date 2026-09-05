@@ -56,6 +56,7 @@ jobs:
           cp src/v2/atlas-v2-session.js _site/v2/atlas-v2-session.js
           cp src/v2/public-spend-shadow.js _site/v2/public-spend-shadow.js
           cp src/v2/public-spend-adapter.js _site/v2/public-spend-adapter.js
+          cp src/v2/public-spend-route-bridge.js _site/v2/public-spend-route-bridge.js
           python3 - <<'PY'
           from pathlib import Path
           import re
@@ -75,6 +76,7 @@ jobs:
             '<script src="./v2/atlas-v2-session.js?v=v2-e2e" data-atlas-v2-e2e="session-bridge"></script>\n'
             '<script src="./v2/public-spend-shadow.js?v=v2-e2e" data-atlas-v2-e2e="public-spend-shadow"></script>\n'
             '<script src="./v2/public-spend-adapter.js?v=v2-e2e" data-atlas-v2-e2e="public-spend-adapter"></script>\n'
+            '<script src="./v2/public-spend-route-bridge.js?v=v2-e2e" data-atlas-v2-e2e="public-spend-route-bridge"></script>\n'
           )
           gp=re.search(r'<script[^>]+src=["\'][^"\']*atlas-public-spend-v2\.js[^"\']*["\'][^>]*>\s*</script>', html, flags=re.I)
           if gp:
@@ -85,7 +87,7 @@ jobs:
               html=html[:pos] + tags + html[pos:]
           p.write_text(html,encoding='utf-8')
 
-          ordered=['config','data-client','session-bridge','public-spend-shadow','public-spend-adapter']
+          ordered=['config','data-client','session-bridge','public-spend-shadow','public-spend-adapter','public-spend-route-bridge']
           positions=[html.find(f'data-atlas-v2-e2e="{x}"') for x in ordered]
           assert all(x >= 0 for x in positions),positions
           assert positions == sorted(positions),positions
@@ -173,6 +175,35 @@ jobs:
             /tmp/atlas-v2-e2e-server.log
           if-no-files-found: warn
           retention-days: 7
+
+      - name: Revoke ephemeral v2 principal
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          if [ -z "${ATLAS_E2E_ACCESS_TOKEN:-}" ]; then
+            echo 'No core session was issued; v2 cleanup not required.'
+            exit 0
+          fi
+          if [ -z "${ATLAS_E2E_SERVER_PID:-}" ] || ! kill -0 "$ATLAS_E2E_SERVER_PID" 2>/dev/null; then
+            echo 'Preview proxy unavailable for v2 cleanup; database TTL cleanup remains active.' >&2
+            exit 1
+          fi
+
+          cleanup_file="$(mktemp)"
+          http_code="$(curl --silent --show-error --output "$cleanup_file" --write-out '%{http_code}' \
+            -X POST "${ATLAS_E2E_URL%/}/__atlas_v2/functions/v1/atlas-v2-session-exchange" \
+            -H "Authorization: Bearer $ATLAS_E2E_ACCESS_TOKEN" \
+            -H 'apikey: sb_publishable_3nrUSbZMWfTYUtXnyjDklg_EjyZIzko' \
+            -H 'Content-Type: application/json' \
+            --data '{"action":"cleanup_e2e"}')"
+          ok="$(jq -r '.ok // false' "$cleanup_file" 2>/dev/null)"
+          rm -f "$cleanup_file"
+          if [ "$http_code" != '200' ] || [ "$ok" != 'true' ]; then
+            echo "Ephemeral v2 cleanup failed; automatic TTL cleanup remains active. HTTP=$http_code" >&2
+            exit 1
+          fi
+          echo 'Ephemeral v2 grant, allowlist and Auth mirror revoked.'
 
       - name: Revoke ephemeral core principal
         if: always()
