@@ -6,10 +6,13 @@
   if (!ACTIVE) return;
 
   const VIEW = 'public-spend';
+  const WATCHDOG_MS = 200;
   let delegatedNavigate = typeof global.navigate === 'function' ? global.navigate : null;
   let opening = false;
   let legacyAssignmentsBlocked = 0;
   let navigateInstallMode = 'pending';
+  let watchdogReclaims = 0;
+  let watchdogId = null;
 
   function navigateDescriptor() {
     const descriptor = Object.getOwnPropertyDescriptor(global, 'navigate');
@@ -36,6 +39,9 @@
       deterministicAuthority: true,
       compatibilityFacade: !!global.AtlasPublicSpendV2?.__atlasV2PublicSpendFacade,
       legacyAssignmentsBlocked,
+      watchdogMs: WATCHDOG_MS,
+      watchdogReclaims,
+      watchdogActive: watchdogId !== null,
       checkedAt: new Date().toISOString(),
       ...extra,
     };
@@ -162,38 +168,63 @@
     }
   }
 
+  function ensureNavigateAuthority(source = 'watchdog') {
+    if (global.navigate?.__atlasV2PublicSpendRouteBridge) return true;
+    const before = global.navigate;
+    const ok = protectNavigate(source);
+    if (ok && before !== wrapper && global.navigate === wrapper) {
+      watchdogReclaims += 1;
+      publish('authority-reclaimed', { source, watchdogReclaims });
+    }
+    return ok;
+  }
+
+  function startAuthorityWatchdog() {
+    if (watchdogId !== null) return;
+    watchdogId = global.setInterval(() => {
+      if (global.navigate?.__atlasV2PublicSpendRouteBridge) return;
+      ensureNavigateAuthority('watchdog');
+    }, WATCHDOG_MS);
+    publish('watchdog-started');
+  }
+
   /* Architecture v2 owns only the public-spend route. UI clicks are intercepted
      at window capture before the canonical document router. Programmatic calls
      retain the canonical global navigate contract: configurable properties use
      a guarded accessor, while the shell's non-configurable+writable function is
-     replaced by assignment (legal under the existing descriptor) and delegates
-     every non-public-spend view to the captured canonical function. */
+     reclaimed by assignment if shell hydration refreshes it. Every non-public-
+     spend view continues to delegate to the latest canonical router captured. */
   global.addEventListener('click', event => {
     const target = event.target?.closest?.('[data-view="public-spend"],[data-atlas-mobile-view="public-spend"]');
     if (!target) return;
     event.preventDefault();
     event.stopImmediatePropagation();
+    ensureNavigateAuthority('window-capture-click');
     void open('window-capture-click').catch(() => {});
   }, true);
 
   function protectAfterDispatch(name) {
-    protectNavigate(`${name}:sync`);
-    const run = () => protectNavigate(`${name}:post-dispatch`);
+    ensureNavigateAuthority(`${name}:sync`);
+    const run = () => ensureNavigateAuthority(`${name}:post-dispatch`);
     if (typeof global.queueMicrotask === 'function') global.queueMicrotask(run);
     else Promise.resolve().then(run);
   }
 
-  ['pageshow', 'atlas:nav-refresh', 'atlas:v2-public-spend-adapter-ready'].forEach(name => {
+  ['pageshow', 'focus', 'load', 'atlas:nav-refresh', 'atlas:v2-public-spend-adapter-ready'].forEach(name => {
     global.addEventListener(name, () => protectAfterDispatch(name));
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') protectAfterDispatch('visibilitychange');
   });
 
   installCompatibilityFacade();
-  protectNavigate('initial');
-  [0, 120, 400, 1200].forEach(ms => setTimeout(() => protectNavigate(`deferred-${ms}`), ms));
+  ensureNavigateAuthority('initial');
+  [0, 120, 400, 1200, 2500, 5000].forEach(ms => setTimeout(() => ensureNavigateAuthority(`deferred-${ms}`), ms));
+  startAuthorityWatchdog();
 
   global.AtlasV2PublicSpendRouteBridge = Object.freeze({
     open,
-    installNavigate: protectNavigate,
+    installNavigate: ensureNavigateAuthority,
     health: () => global.__ATLAS_V2_PUBLIC_SPEND_ROUTE_BRIDGE__ || null,
   });
   publish('installed');
