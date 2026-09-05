@@ -7,6 +7,8 @@ on:
       - 'src/v2/atlas-v2-preview-config.js'
       - 'src/v2/atlas-v2-data.js'
       - 'src/v2/atlas-v2-session.js'
+      - 'src/v2/public-spend-adapter.js'
+      - 'src/v2/public-spend-adapter.css'
       - 'src/v2/public-spend-route-bridge.js'
       - 'tools/test_atlas_v2_session.js'
       - 'tools/e2e_atlas_v2_public_spend.mjs'
@@ -34,6 +36,7 @@ jobs:
           node --check src/v2/atlas-v2-preview-config.js
           node --check src/v2/atlas-v2-data.js
           node --check src/v2/atlas-v2-session.js
+          node --check src/v2/public-spend-adapter.js
           node --check src/v2/public-spend-route-bridge.js
           node --check tools/test_atlas_v2_session.js
           node --check tools/e2e_atlas_v2_public_spend.mjs
@@ -51,6 +54,8 @@ jobs:
           preview=Path('src/v2/atlas-v2-preview-config.js').read_text()
           client=Path('src/v2/atlas-v2-data.js').read_text()
           session=Path('src/v2/atlas-v2-session.js').read_text()
+          adapter=Path('src/v2/public-spend-adapter.js').read_text()
+          adapter_css=Path('src/v2/public-spend-adapter.css').read_text()
           route_bridge=Path('src/v2/public-spend-route-bridge.js').read_text()
           exchange=Path('supabase/functions/atlas-v2-session-exchange/index.ts').read_text()
           grant=Path('supabase/migrations/20260905030623_atlas_v2_federated_session_grants.sql').read_text()
@@ -64,11 +69,21 @@ jobs:
           assert "global.__ATLAS_V2_PREVIEW_MODE__ = 'public-spend'" in preview
           assert "supabaseUrl: location.origin + '/__atlas_v2'" in preview
           assert "sessionExchangeUrl: location.origin + '/__atlas_v2/functions/v1/atlas-v2-session-exchange'" in preview
+          assert "new URL('./public-spend-adapter.css?v=v2-csp-2', scriptUrl)" in preview
+          assert "document.createElement('link')" in preview
+          assert 'adapterStyleUrl' in preview
+
           assert 'https://bzqxvidggykkdouotylg.supabase.co' in client
           assert 'sb_publishable_3nrUSbZMWfTYUtXnyjDklg_EjyZIzko' in client
           assert 'ATLAS_V2_SESSION_EXCHANGE_V1' in session
           assert 'RENEW_SKEW_MS = 60 * 1000' in session
           assert 'accessToken' in session and 'refreshToken' not in session
+
+          assert "document.createElement('style')" not in adapter
+          assert 'style="' not in adapter and "style='" not in adapter
+          assert 'gpv2-barsvg' in adapter and 'gpv2-note-spaced' in adapter and 'gpv2-detail-title' in adapter
+          assert '.gpv2-barsvg' in adapter_css and '.gpv2-note-spaced' in adapter_css and '.gpv2-detail-title' in adapter_css
+
           assert 'SUPABASE_SECRET_KEYS' in exchange and 'SUPABASE_SERVICE_ROLE_KEY' not in exchange
           assert 'https://ldmtlwzqaqmegedktlxr.supabase.co' in exchange
           assert '/auth/v1/user' in exchange and 'aml_allowed_users' in exchange
@@ -107,6 +122,9 @@ jobs:
           assert "global.addEventListener('click'" in route_bridge
           assert "event.stopImmediatePropagation()" in route_bridge
           assert "if (view === VIEW) return open('window.navigate')" in route_bridge
+          assert "Object.defineProperty(global, 'navigate'" in route_bridge
+          assert 'candidate?.__atlasGpAuthority1300' in route_bridge
+          assert 'deterministicAuthority: true' in route_bridge
           assert '__ATLAS_V2_PUBLIC_SPEND_ROUTE_BRIDGE__' in route_bridge
 
           assert 'id-token: write' in e2e
@@ -115,6 +133,7 @@ jobs:
           assert "PLAYWRIGHT_VERSION: '1.62.1'" in e2e
           assert 'secrets.' not in e2e
           assert 'atlas-v2-preview-config.js' in e2e
+          assert 'public-spend-adapter.css' in e2e
           assert '<script data-atlas-v2-e2e="config">' not in e2e
           assert 'atlas-public-spend-route-authority-0578' in e2e
           assert 'public-spend-route-bridge.js' in e2e
@@ -126,8 +145,13 @@ jobs:
           assert "state?.access?.provisional !== true" in browser
           assert 'SUPABASE_EPHEMERAL_CI' in browser
           assert 'atlas-v2-session-exchange' in browser and 'atlas-v2-read' in browser
-          assert 'consoleErrors.length, 0' in browser and 'pageErrors.length, 0' in browser
+          assert 'v2ConsoleErrors.length, 0' in browser
+          assert 'v2CspViolations.length, 0' in browser
+          assert 'failedAssets.length, 0' in browser
+          assert 'pageErrors.length, 0' in browser
+          assert 'legacyConsoleErrors' in browser and 'legacyCspViolations' in browser
           assert "GITHUB_PAGES_ORIGIN = 'https://smoralesm07-source.github.io'" in proxy
           assert "V2_HOST = 'bzqxvidggykkdouotylg.supabase.co'" in proxy
-          print('ATLAS v2 federation invariants OK: CSP-safe preview, two-project identity, route authority, short grant, OIDC CI and dual-project cleanup')
+          assert "headers['accept-encoding'] = 'identity'" in proxy
+          print('ATLAS v2 federation invariants OK: CSP-safe adapter, deterministic route, two-project identity, short grant, OIDC CI and dual-project cleanup')
           PY
