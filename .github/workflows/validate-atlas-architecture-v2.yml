@@ -1,0 +1,167 @@
+name: Validate ATLAS Architecture v2
+
+on:
+  push:
+    branches: [atlas-architecture-v2]
+  pull_request:
+    paths:
+      - 'docs/ARCHITECTURE_V2.md'
+      - 'docs/PUBLIC_SPEND_V2_CUTOVER.md'
+      - 'src/v2/**'
+      - 'tools/test_atlas_v2_data_client.js'
+      - 'tools/test_atlas_v2_session.js'
+      - 'supabase/functions/atlas-v2-read/**'
+      - 'supabase/functions/atlas-v2-source-ingest/**'
+      - 'supabase/functions/atlas-v2-session-exchange/**'
+      - 'supabase/migrations/*atlas_architecture_v2*'
+      - 'supabase/migrations/*atlas_v2*'
+      - '.github/workflows/validate-atlas-architecture-v2.yml'
+      - '.github/workflows/build-atlas-v2-shadow-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  architecture-v2:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Syntax and deterministic client smoke
+        run: |
+          set -euo pipefail
+          node --check src/v2/atlas-v2-data.js
+          node --check src/v2/atlas-v2-session.js
+          node --check src/v2/public-spend-shadow.js
+          node --check src/v2/public-spend-adapter.js
+          node --check tools/test_atlas_v2_data_client.js
+          node --check tools/test_atlas_v2_session.js
+          node tools/test_atlas_v2_data_client.js
+          node tools/test_atlas_v2_session.js
+          git diff --check
+
+      - name: Semantic cutover gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          global.window=global;
+          global.addEventListener=()=>{};
+          global.dispatchEvent=()=>{};
+          global.CustomEvent=class { constructor(type,init){ this.type=type; this.detail=init?.detail; } };
+          require('./src/v2/public-spend-shadow.js');
+          const compare=global.AtlasV2PublicSpendShadow.compareBudgetDomain;
+          const legacy={
+            overview:{amountL12Clp:85058018165406,providerAmountL12Clp:25029007376823,transactionsL12:6380834,organizationsL12:255,providersL12:43603,variationL12:0.0505989716576456,providerHhi:0.005190964041125409,top10ProviderShare:0.177535243770024},
+            window:{startMonth:'2025-08',endMonth:'2026-07',monthCount:12}
+          };
+          const budget={
+            overview:{amount_l12_clp:85058018165406,provider_amount_l12_clp:25029007376823,transactions_l12:6380834,organizations_l12:255,providers_l12:43603,variation_l12:0.0505989716576456,provider_hhi:0.005190964041125409,top10_provider_share:0.177535243770024},
+            window:{start_month:'2025-08-01',end_month:'2026-07-01',months:['2025-08','2025-09','2025-10','2025-11','2025-12','2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07']},
+            top_services:[{id:'s'}],top_providers:[{id:'p'}],quality:{detail_mode:'TOP_ONLY'}
+          };
+          const partial=compare(legacy,budget);
+          if(partial.status!=='PARTIAL'||partial.cutoverEligible!==false||partial.detailCoverage!=='TOP_ONLY') throw new Error(JSON.stringify(partial));
+          budget.quality.detail_mode='FULL_BACKEND';
+          const match=compare(legacy,budget);
+          if(match.status!=='MATCH'||match.matchedMetrics!==11||match.mismatchedMetrics!==0||match.cutoverEligible!==true) throw new Error(JSON.stringify(match));
+          budget.overview.amount_l12_clp+=1000000;
+          const mismatch=compare(legacy,budget);
+          if(mismatch.status!=='MISMATCH'||mismatch.cutoverEligible!==false) throw new Error(JSON.stringify(mismatch));
+          console.log('semantic gate OK');
+          NODE
+
+      - name: Architecture invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          migrations = [
+            '20260905010825_atlas_architecture_v2_foundation.sql',
+            '20260905011305_atlas_architecture_v2_job_automation.sql',
+            '20260905011448_atlas_architecture_v2_hardening.sql',
+            '20260905011656_atlas_architecture_v2_model_head_fk_index.sql',
+            '20260905013212_atlas_architecture_v2_public_spend_source_bridge.sql',
+            '20260905013223_atlas_architecture_v2_source_ingest_rpc.sql',
+            '20260905013449_atlas_architecture_v2_public_spend_drilldown.sql',
+            '20260905013657_atlas_architecture_v2_public_spend_search_indexes.sql',
+            '20260905015600_atlas_architecture_v2_budget_detail_backend.sql',
+            '20260905020045_atlas_architecture_v2_queue_privilege_boundary.sql',
+            '20260905021121_atlas_architecture_v2_budget_context.sql',
+            '20260905023655_atlas_architecture_v2_budget_contextual_drilldown.sql',
+            '20260905024011_atlas_architecture_v2_budget_flow_contextual_search.sql',
+          ]
+          session_migration='20260905030623_atlas_v2_federated_session_grants.sql'
+          mdir=Path('supabase/migrations')
+          present=sorted(p.name for p in mdir.glob('*atlas_architecture_v2*.sql'))
+          assert present==migrations,(present,migrations)
+          assert (mdir/session_migration).exists(),session_migration
+
+          doc=Path('docs/ARCHITECTURE_V2.md').read_text()
+          client=Path('src/v2/atlas-v2-data.js').read_text()
+          session=Path('src/v2/atlas-v2-session.js').read_text()
+          shadow=Path('src/v2/public-spend-shadow.js').read_text()
+          adapter=Path('src/v2/public-spend-adapter.js').read_text()
+          smoke=Path('tools/test_atlas_v2_data_client.js').read_text()
+          session_smoke=Path('tools/test_atlas_v2_session.js').read_text()
+          read_edge=Path('supabase/functions/atlas-v2-read/index.ts').read_text()
+          ingest=Path('supabase/functions/atlas-v2-source-ingest/index.ts').read_text()
+          exchange=Path('supabase/functions/atlas-v2-session-exchange/index.ts').read_text()
+          preview=Path('.github/workflows/build-atlas-v2-shadow-preview.yml').read_text()
+          budget=(mdir/migrations[8]).read_text()
+          queue=(mdir/migrations[9]).read_text()
+          context=(mdir/migrations[10]).read_text()
+          contextual=(mdir/migrations[11]).read_text()
+          flow=(mdir/migrations[12]).read_text()
+          grant=(mdir/session_migration).read_text()
+
+          assert 'SOURCE -> LANDING -> NORMALIZE -> FUSION -> ANALYTICS -> READ MODEL -> READ API -> ATLAS -> DRILL-DOWN' in doc
+          assert 'ATLAS_PUBLIC_SPEND_MONITOR_V2' in doc
+          assert 'ATLAS_READ_API_V2' in client and 'ATLAS_PUBLIC_SPEND_QUERY_V2' in client
+          assert 'sb_publishable_3nrUSbZMWfTYUtXnyjDklg_EjyZIzko' in client
+          assert 'budgetServices' in client and 'budgetProviderDetail' in client and 'budgetContext' in client and 'budgetFlowDetail' in client
+          assert 'budgetScope' in client
+          assert 'ATLAS_V2_SESSION_EXCHANGE_V1' in session and 'grantExpiresAt' in session and 'RENEW_SKEW_MS' in session
+          assert 'sessionExchangeUrl' in session and '__ATLAS_V2_CONFIG__' in session
+          assert 'exchange, grant reuse, identity isolation, fail-closed sign-out' in session_smoke
+          assert 'ETag/304' in smoke and 'TIMEOUT_OR_CANCELLED' in smoke and 'budget_services' in smoke
+          assert 'raw.githubusercontent.com' not in client and 'raw.githubusercontent.com' not in shadow and 'raw.githubusercontent.com' not in adapter
+          assert 'compareBudgetDomain' in shadow and "detailMode === 'FULL_BACKEND'" in shadow
+          assert "status === 'MATCH' && detailCoverage === 'READY'" in shadow
+          assert 'shadow_parity:public_spend' in shadow
+          assert 'data-atlas-v2-preview' in preview and 'session-bridge' in preview and 'actions/deploy-pages' not in preview
+          assert "detail_mode !== 'FULL_BACKEND'" in adapter
+          assert 'budgetContext' in adapter and 'data-gpv2-filter' in adapter and 'facetOptions' in adapter
+          assert 'budgetServices' in adapter and 'budgetProviderDetail' in adapter and 'budgetFlowDetail' in adapter
+          assert 'filters: S.filters' in adapter
+          assert 'data-gpv2-methodology' in adapter and 'Metodología' in adapter
+          assert 'public_spend_query' in read_edge and 'SUPABASE_SERVICE_ROLE_KEY' not in read_edge
+          assert 'x-atlas-trace-id' in read_edge and 'server-timing' in read_edge
+          assert 'SUPABASE_SECRET_KEYS' in exchange and 'SUPABASE_SERVICE_ROLE_KEY' not in exchange
+          assert 'https://ldmtlwzqaqmegedktlxr.supabase.co' in exchange and '/auth/v1/user' in exchange and 'aml_allowed_users' in exchange
+          assert 'GRANT_TTL_MS = 10 * 60 * 1000' in exchange and 'ATLAS_V2_SESSION_EXCHANGE_V1' in exchange
+          assert 'atlas_v2_session_grant' in grant and "interval '15 minutes'" in grant
+          assert 'atlas_v2_is_session_granted' in grant and 'alter policy atlas_v2_read_model_allowed' in grant
+          assert 'alter policy atlas_v2_model_head_allowed' in grant and 'atlas_v2_private.is_allowed' in grant
+          assert 'budget_detail_state' in budget and 'ingest_budget_detail_batch' in budget
+          assert 'finalize_budget_detail' in budget and 'budget_query' in budget
+          assert 'atlas_v2_ingest_budget_detail' in ingest and 'budget_detail_finalize' in ingest
+          assert 'https://token.actions.githubusercontent.com' in ingest
+          assert 'smoralesm07-source/Rada_Presupuesto_Abierto' in ingest
+          assert 'security definer' in queue.lower()
+          assert 'grant usage on schema pgmq to service_role' not in queue.lower()
+          assert 'ingest_source_snapshot' in queue and 'finalize_budget_detail' in queue
+          assert 'budget_context' in context
+          assert "'top_services'" in context and "'top_providers'" in context and "'top_relations'" in context
+          assert "'options'" in context and "'regions'" in context and "'categories'" in context and "'months'" in context
+          assert "kind','budget_context'" in context
+          assert '_context_amount' in contextual and 'v_region' in contextual and 'v_category' in contextual and 'v_month' in contextual
+          assert 'budget_service_detail' in contextual and 'budget_provider_detail' in contextual
+          assert 'budget_flow_query' in flow and 'budget_flow_detail' in flow
+          assert 'provider_name' in flow and "coalesce(p.rut,'') ilike" in flow
+          assert "in ('budget_flows','budget_flow_detail')" in flow
+          print('ATLAS Architecture v2 invariants OK: data, parity, federation and grant boundary')
+          PY

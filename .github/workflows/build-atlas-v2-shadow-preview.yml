@@ -1,0 +1,119 @@
+name: Build ATLAS v2 shadow preview
+
+on:
+  push:
+    branches: [atlas-architecture-v2]
+    paths:
+      - 'src/v2/**'
+      - 'tools/build_atlas_site.py'
+      - 'tools/test_atlas_v2_data_client.js'
+      - 'tools/test_atlas_v2_session.js'
+      - 'atlas-runtime-manifest.json'
+      - '.github/workflows/build-atlas-v2-shadow-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout v2 branch
+        uses: actions/checkout@v4
+
+      - name: Validate v2 preview sources and client behavior
+        run: |
+          set -euo pipefail
+          node --check src/v2/atlas-v2-data.js
+          node --check src/v2/atlas-v2-session.js
+          node --check src/v2/public-spend-shadow.js
+          node --check src/v2/public-spend-adapter.js
+          node --check tools/test_atlas_v2_data_client.js
+          node --check tools/test_atlas_v2_session.js
+          node tools/test_atlas_v2_data_client.js
+          node tools/test_atlas_v2_session.js
+
+      - name: Build canonical site
+        run: |
+          set -euo pipefail
+          python3 tools/build_atlas_site.py --out _site
+
+      - name: Mount Architecture v2 only in preview artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p _site/v2
+          cp src/v2/atlas-v2-data.js _site/v2/atlas-v2-data.js
+          cp src/v2/atlas-v2-session.js _site/v2/atlas-v2-session.js
+          cp src/v2/public-spend-shadow.js _site/v2/public-spend-shadow.js
+          cp src/v2/public-spend-adapter.js _site/v2/public-spend-adapter.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p=Path('_site/index.html')
+          html=p.read_text(encoding='utf-8')
+          marker='data-atlas-v2-preview="public-spend-adapter"'
+          assert marker not in html, 'v2 preview scripts already mounted'
+          tags=(
+            '<script data-atlas-v2-preview="mode">window.__ATLAS_V2_PREVIEW_MODE__="public-spend";</script>\n'
+            '<script src="./v2/atlas-v2-data.js?v=v2-preview" data-atlas-v2-preview="data-client"></script>\n'
+            '<script src="./v2/atlas-v2-session.js?v=v2-preview" data-atlas-v2-preview="session-bridge"></script>\n'
+            '<script src="./v2/public-spend-shadow.js?v=v2-preview" data-atlas-v2-preview="public-spend-shadow"></script>\n'
+            '<script src="./v2/public-spend-adapter.js?v=v2-preview" data-atlas-v2-preview="public-spend-adapter"></script>\n'
+          )
+          gp=re.search(r'<script[^>]+src=["\'][^"\']*atlas-public-spend-v2\.js[^"\']*["\'][^>]*>\s*</script>', html, flags=re.I)
+          if gp:
+              html=html[:gp.start()] + tags + html[gp.start():]
+          elif '</body>' in html.lower():
+              pos=html.lower().rfind('</body>')
+              html=html[:pos] + tags + html[pos:]
+          else:
+              raise SystemExit('Unable to find safe v2 preview mount point')
+          p.write_text(html, encoding='utf-8')
+          PY
+
+      - name: Validate preview isolation and ordering
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          html=Path('_site/index.html').read_text(encoding='utf-8')
+          for marker in ['mode','data-client','session-bridge','public-spend-shadow','public-spend-adapter']:
+              assert html.count(f'data-atlas-v2-preview="{marker}"') == 1, marker
+          assert 'window.__ATLAS_V2_PREVIEW_MODE__="public-spend"' in html
+          data_pos=html.find('./v2/atlas-v2-data.js?v=v2-preview')
+          session_pos=html.find('./v2/atlas-v2-session.js?v=v2-preview')
+          adapter_pos=html.find('./v2/public-spend-adapter.js?v=v2-preview')
+          assert 0 <= data_pos < session_pos < adapter_pos, 'federated session bridge must wrap the data client before adapter creation'
+          gp=re.search(r'atlas-public-spend-v2\.js', html)
+          if gp:
+              assert adapter_pos < gp.start(), 'v2 adapter must capture navigation before current GP2 runtime'
+          for f in ['atlas-v2-data.js','atlas-v2-session.js','public-spend-shadow.js','public-spend-adapter.js']:
+              assert Path('_site/v2',f).exists(), f
+          client_text=Path('_site/v2/atlas-v2-data.js').read_text(encoding='utf-8')
+          session_text=Path('_site/v2/atlas-v2-session.js').read_text(encoding='utf-8')
+          adapter_text=Path('_site/v2/public-spend-adapter.js').read_text(encoding='utf-8')
+          assert 'sb_publishable_3nrUSbZMWfTYUtXnyjDklg_EjyZIzko' in client_text
+          assert 'ATLAS_V2_SESSION_EXCHANGE_V1' in session_text and 'grantExpiresAt' in session_text
+          assert 'raw.githubusercontent.com' not in client_text and 'raw.githubusercontent.com' not in adapter_text
+          assert 'budgetContext' in client_text and 'budgetFlowDetail' in client_text
+          assert 'budgetContext' in adapter_text and 'data-gpv2-filter' in adapter_text
+          assert 'budgetServices' in adapter_text and 'budgetProviderDetail' in adapter_text and 'budgetFlowDetail' in adapter_text
+          assert 'filters: S.filters' in adapter_text
+          assert 'data-gpv2-methodology' in adapter_text and 'Metodología' in adapter_text
+          assert "detail_mode !== 'FULL_BACKEND'" in adapter_text
+          assert 'contextMs' in adapter_text and 'traceId' in adapter_text
+          print('ATLAS v2 preview mounted with federated session bridge; branch-only, no production manifest changes')
+          PY
+
+      - name: Upload preview artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-v2-shadow-preview
+          path: _site
+          retention-days: 7
