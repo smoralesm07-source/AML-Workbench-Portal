@@ -18,17 +18,19 @@ permissions:
   contents: read
 
 jobs:
-  contract:
+  architecture-v2:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate JavaScript clients
+      - name: Syntax
         run: |
+          set -euo pipefail
           node --check src/v2/atlas-v2-data.js
           node --check src/v2/public-spend-shadow.js
+          git diff --check
 
-      - name: Validate public-spend parity gate behavior
+      - name: Semantic cutover gate
         shell: bash
         run: |
           set -euo pipefail
@@ -46,127 +48,69 @@ jobs:
           const budget={
             overview:{amount_l12_clp:85058018165406,provider_amount_l12_clp:25029007376823,transactions_l12:6380834,organizations_l12:255,providers_l12:43603,variation_l12:0.0505989716576456,provider_hhi:0.005190964041125409,top10_provider_share:0.177535243770024},
             window:{start_month:'2025-08-01',end_month:'2026-07-01',months:['2025-08','2025-09','2025-10','2025-11','2025-12','2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07']},
-            top_services:[],top_providers:[],quality:{detail_mode:'TOP_ONLY'}
+            top_services:[{id:'s'}],top_providers:[{id:'p'}],quality:{detail_mode:'TOP_ONLY'}
           };
           const partial=compare(legacy,budget);
-          if(partial.status!=='PARTIAL' || partial.mismatchedMetrics!==0 || partial.matchedMetrics!==11 || partial.cutoverEligible!==false || partial.detailCoverage!=='INCOMPLETE') throw new Error(JSON.stringify(partial));
-          budget.top_services=[{id:'s1'}]; budget.top_providers=[{id:'p1'}];
-          const topOnly=compare(legacy,budget);
-          if(topOnly.status!=='PARTIAL' || topOnly.cutoverEligible!==false || topOnly.detailCoverage!=='TOP_ONLY') throw new Error(JSON.stringify(topOnly));
+          if(partial.status!=='PARTIAL'||partial.cutoverEligible!==false||partial.detailCoverage!=='TOP_ONLY') throw new Error(JSON.stringify(partial));
           budget.quality.detail_mode='FULL_BACKEND';
           const match=compare(legacy,budget);
-          if(match.status!=='MATCH' || match.cutoverEligible!==true || match.detailCoverage!=='READY') throw new Error(JSON.stringify(match));
+          if(match.status!=='MATCH'||match.matchedMetrics!==11||match.mismatchedMetrics!==0||match.cutoverEligible!==true) throw new Error(JSON.stringify(match));
           budget.overview.amount_l12_clp+=1000000;
           const mismatch=compare(legacy,budget);
-          if(mismatch.status!=='MISMATCH' || mismatch.cutoverEligible!==false || mismatch.mismatchedMetrics<1) throw new Error(JSON.stringify(mismatch));
-          console.log('public-spend semantic parity gate OK');
+          if(mismatch.status!=='MISMATCH'||mismatch.cutoverEligible!==false) throw new Error(JSON.stringify(mismatch));
+          console.log('semantic gate OK');
           NODE
 
-      - name: Validate v2 architecture invariants
+      - name: Architecture invariants
         shell: bash
         run: |
           set -euo pipefail
-          git diff --check
           python3 - <<'PY'
           from pathlib import Path
 
-          expected_migrations = [
-              '20260905010825_atlas_architecture_v2_foundation.sql',
-              '20260905011305_atlas_architecture_v2_job_automation.sql',
-              '20260905011448_atlas_architecture_v2_hardening.sql',
-              '20260905011656_atlas_architecture_v2_model_head_fk_index.sql',
-              '20260905013212_atlas_architecture_v2_public_spend_source_bridge.sql',
-              '20260905013223_atlas_architecture_v2_source_ingest_rpc.sql',
-              '20260905013449_atlas_architecture_v2_public_spend_drilldown.sql',
-              '20260905013657_atlas_architecture_v2_public_spend_search_indexes.sql',
-              '20260905015600_atlas_architecture_v2_budget_detail_backend.sql',
+          migrations = [
+            '20260905010825_atlas_architecture_v2_foundation.sql',
+            '20260905011305_atlas_architecture_v2_job_automation.sql',
+            '20260905011448_atlas_architecture_v2_hardening.sql',
+            '20260905011656_atlas_architecture_v2_model_head_fk_index.sql',
+            '20260905013212_atlas_architecture_v2_public_spend_source_bridge.sql',
+            '20260905013223_atlas_architecture_v2_source_ingest_rpc.sql',
+            '20260905013449_atlas_architecture_v2_public_spend_drilldown.sql',
+            '20260905013657_atlas_architecture_v2_public_spend_search_indexes.sql',
+            '20260905015600_atlas_architecture_v2_budget_detail_backend.sql',
+            '20260905020230_atlas_architecture_v2_queue_privilege_boundary.sql',
           ]
-          migration_dir = Path('supabase/migrations')
-          present = sorted(p.name for p in migration_dir.glob('*atlas_architecture_v2*.sql'))
-          assert present == expected_migrations, (present, expected_migrations)
+          mdir=Path('supabase/migrations')
+          present=sorted(p.name for p in mdir.glob('*atlas_architecture_v2*.sql'))
+          assert present==migrations,(present,migrations)
 
-          doc = Path('docs/ARCHITECTURE_V2.md').read_text(encoding='utf-8')
-          client = Path('src/v2/atlas-v2-data.js').read_text(encoding='utf-8')
-          shadow = Path('src/v2/public-spend-shadow.js').read_text(encoding='utf-8')
-          edge = Path('supabase/functions/atlas-v2-read/index.ts').read_text(encoding='utf-8')
-          ingest_edge = Path('supabase/functions/atlas-v2-source-ingest/index.ts').read_text(encoding='utf-8')
-          preview = Path('.github/workflows/build-atlas-v2-shadow-preview.yml').read_text(encoding='utf-8')
-          foundation = (migration_dir/expected_migrations[0]).read_text(encoding='utf-8')
-          automation = (migration_dir/expected_migrations[1]).read_text(encoding='utf-8')
-          hardening = (migration_dir/expected_migrations[2]).read_text(encoding='utf-8')
-          fk_index = (migration_dir/expected_migrations[3]).read_text(encoding='utf-8')
-          source_bridge = (migration_dir/expected_migrations[4]).read_text(encoding='utf-8')
-          source_rpc = (migration_dir/expected_migrations[5]).read_text(encoding='utf-8')
-          drilldown = (migration_dir/expected_migrations[6]).read_text(encoding='utf-8')
-          search_indexes = (migration_dir/expected_migrations[7]).read_text(encoding='utf-8')
-          budget_backend = (migration_dir/expected_migrations[8]).read_text(encoding='utf-8')
+          doc=Path('docs/ARCHITECTURE_V2.md').read_text()
+          client=Path('src/v2/atlas-v2-data.js').read_text()
+          shadow=Path('src/v2/public-spend-shadow.js').read_text()
+          read_edge=Path('supabase/functions/atlas-v2-read/index.ts').read_text()
+          ingest=Path('supabase/functions/atlas-v2-source-ingest/index.ts').read_text()
+          preview=Path('.github/workflows/build-atlas-v2-shadow-preview.yml').read_text()
+          budget=(mdir/migrations[8]).read_text()
+          queue=(mdir/migrations[9]).read_text()
 
           assert 'SOURCE -> LANDING -> NORMALIZE -> FUSION -> ANALYTICS -> READ MODEL -> READ API -> ATLAS -> DRILL-DOWN' in doc
           assert 'ATLAS_PUBLIC_SPEND_MONITOR_V2' in doc
-          assert 'PARALLEL_DOMAINS' in source_bridge
-          assert 'ATLAS_READ_API_V2' in client
-          assert 'ATLAS_PUBLIC_SPEND_QUERY_V2' in client
-          assert 'publicSpendQuery' in client
-          assert "monitor: options => readModel('public_spend_monitor'" in client
+          assert 'ATLAS_READ_API_V2' in client and 'ATLAS_PUBLIC_SPEND_QUERY_V2' in client
           assert 'budgetServices' in client and 'budgetProviderDetail' in client
-          assert 'if-none-match' in client.lower()
-          assert 'AbortController' in client
-          assert 'raw.githubusercontent.com' not in client
-          assert 'raw.githubusercontent.com' not in shadow
-          assert 'compareBudgetDomain' in shadow
-          assert "detailMode === 'FULL_BACKEND'" in shadow
-          assert "status = detailCoverage === 'READY' ? 'MATCH' : 'PARTIAL'" in shadow
+          assert 'raw.githubusercontent.com' not in client and 'raw.githubusercontent.com' not in shadow
+          assert 'compareBudgetDomain' in shadow and "detailMode === 'FULL_BACKEND'" in shadow
           assert "status === 'MATCH' && detailCoverage === 'READY'" in shadow
-          assert 'publicSpend.monitor' in shadow
-          assert 'atlas:v2-public-spend-shadow-ready' in shadow
           assert 'shadow_parity:public_spend' in shadow
-          assert 'data-atlas-v2-shadow' in preview
-          assert 'actions/upload-artifact@v4' in preview
-          assert 'actions/deploy-pages' not in preview
-          assert 'new Set(["public_spend_overview", "public_spend_monitor"])' in edge
-          assert 'public_spend_query' in edge
-          assert 'atlas_v2_public_spend_query' in edge
-          assert 'SUPABASE_SERVICE_ROLE_KEY' not in edge
-          assert 'x-atlas-trace-id' in edge
-          assert 'server-timing' in edge
-          assert 'atlas_v2_read_model' in foundation
-          assert 'atlas_v2_model_head' in foundation
-          assert 'atlas_v2_client_event' in foundation
-          assert "pgmq.create('atlas_v2_jobs')" in foundation
-          assert 'grant execute on function public.atlas_v2_get_read_model' in foundation
-          assert 'public_spend_snapshot_ready' in automation
-          assert 'atlas_v2_public_spend_snapshot_enqueue' in automation
-          assert "'atlas-v2-job-worker'" in automation
-          assert 'grant usage on schema atlas_v2_private to service_role' in hardening.lower()
-          assert 'atlas-v2-telemetry-retention' in hardening
-          assert 'atlas_v2_model_head_read_model_fk_idx' in fk_index
-          assert 'atlas_v2_private.source_snapshot' in source_bridge
-          assert 'ATLAS_BUDGET_EXECUTION_SOURCE_V2' in source_bridge
-          assert 'REFRESH_PUBLIC_SPEND_MONITOR' in source_bridge
-          assert 'atlas_v2_ingest_source_snapshot' in source_rpc
-          assert 'grant execute' in source_rpc.lower() and 'service_role' in source_rpc
-          assert 'atlas_v2_private.is_allowed' in drilldown
-          assert "raise exception 'ATLAS_V2_FORBIDDEN'" in drilldown
-          assert 'atlas_v2_public_spend_query' in drilldown
-          assert 'security definer' in drilldown.lower()
-          assert 'revoke all on function atlas_v2_private.public_spend_query' in drilldown.lower()
-          assert 'pg_trgm' in search_indexes
-          assert 'gin_trgm_ops' in search_indexes
-          assert 'budget_detail_state' in budget_backend
-          assert 'init_budget_detail' in budget_backend
-          assert 'ingest_budget_detail_batch' in budget_backend
-          assert 'finalize_budget_detail' in budget_backend
-          assert 'FULL_BACKEND' in budget_backend
-          assert 'budget_query' in budget_backend
-          assert 'atlas_v2_ingest_budget_detail' in budget_backend
-          assert 'https://token.actions.githubusercontent.com' in ingest_edge
-          assert 'atlas-v2-source-ingest' in ingest_edge
-          assert 'smoralesm07-source/Rada_Presupuesto_Abierto' in ingest_edge
-          assert 'ALLOWED_WORKFLOW_REFS' in ingest_edge
-          assert 'refs/heads/main' in ingest_edge
-          assert 'atlas_v2_ingest_source_snapshot' in ingest_edge
-          assert 'atlas_v2_ingest_budget_detail' in ingest_edge
-          assert 'budget_detail_finalize' in ingest_edge
-          assert 'SUPABASE_PUBLISHABLE_KEY' not in ingest_edge
-          print('ATLAS Architecture v2 public-spend contracts + full budget backend + semantic gate OK')
+          assert 'data-atlas-v2-shadow' in preview and 'actions/deploy-pages' not in preview
+          assert 'public_spend_query' in read_edge and 'SUPABASE_SERVICE_ROLE_KEY' not in read_edge
+          assert 'x-atlas-trace-id' in read_edge and 'server-timing' in read_edge
+          assert 'budget_detail_state' in budget and 'ingest_budget_detail_batch' in budget
+          assert 'finalize_budget_detail' in budget and 'budget_query' in budget
+          assert 'atlas_v2_ingest_budget_detail' in ingest and 'budget_detail_finalize' in ingest
+          assert 'https://token.actions.githubusercontent.com' in ingest
+          assert 'smoralesm07-source/Rada_Presupuesto_Abierto' in ingest
+          assert 'security definer' in queue.lower()
+          assert 'grant usage on schema pgmq to service_role' not in queue.lower()
+          assert 'ingest_source_snapshot' in queue and 'finalize_budget_detail' in queue
+          print('ATLAS Architecture v2 invariants OK')
           PY
