@@ -1,0 +1,210 @@
+name: E2E ATLAS v2 Gasto Público
+
+on:
+  push:
+    branches: [atlas-architecture-v2]
+    paths:
+      - 'src/v2/**'
+      - 'tools/e2e_atlas_v2_public_spend.mjs'
+      - 'tools/serve_atlas_v2_e2e.mjs'
+      - 'tools/build_atlas_site.py'
+      - 'supabase/functions/atlas-v2-session-exchange/**'
+      - 'supabase/core-functions/atlas-v2-e2e-auth/**'
+      - 'supabase/migrations/*atlas_v2*'
+      - 'supabase/core-migrations/*atlas_v2*'
+      - '.github/workflows/e2e-atlas-v2-public-spend.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: atlas-v2-public-spend-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  authenticated-browser-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CORE_E2E_BROKER: https://ldmtlwzqaqmegedktlxr.supabase.co/functions/v1/atlas-v2-e2e-auth
+      ATLAS_E2E_URL: http://127.0.0.1:4173/
+      PLAYWRIGHT_VERSION: '1.62.1'
+    steps:
+      - name: Checkout Architecture v2
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pinned browser runtime
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock "playwright@${PLAYWRIGHT_VERSION}"
+          npx playwright install --with-deps chromium
+
+      - name: Build isolated Architecture v2 preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/build_atlas_site.py --out _site
+          mkdir -p _site/v2
+          cp src/v2/atlas-v2-data.js _site/v2/atlas-v2-data.js
+          cp src/v2/atlas-v2-session.js _site/v2/atlas-v2-session.js
+          cp src/v2/public-spend-shadow.js _site/v2/public-spend-shadow.js
+          cp src/v2/public-spend-adapter.js _site/v2/public-spend-adapter.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p=Path('_site/index.html')
+          html=p.read_text(encoding='utf-8')
+          assert 'data-atlas-v2-e2e="public-spend-adapter"' not in html
+          tags=(
+            '<script data-atlas-v2-e2e="config">'
+            'window.__ATLAS_V2_PREVIEW_MODE__="public-spend";'
+            'window.__ATLAS_V2_CONFIG__={'
+            'supabaseUrl:location.origin+"/__atlas_v2",'
+            'publishableKey:"sb_publishable_3nrUSbZMWfTYUtXnyjDklg_EjyZIzko",'
+            'sessionExchangeUrl:location.origin+"/__atlas_v2/functions/v1/atlas-v2-session-exchange"};'
+            '</script>\n'
+            '<script src="./v2/atlas-v2-data.js?v=v2-e2e" data-atlas-v2-e2e="data-client"></script>\n'
+            '<script src="./v2/atlas-v2-session.js?v=v2-e2e" data-atlas-v2-e2e="session-bridge"></script>\n'
+            '<script src="./v2/public-spend-shadow.js?v=v2-e2e" data-atlas-v2-e2e="public-spend-shadow"></script>\n'
+            '<script src="./v2/public-spend-adapter.js?v=v2-e2e" data-atlas-v2-e2e="public-spend-adapter"></script>\n'
+          )
+          gp=re.search(r'<script[^>]+src=["\'][^"\']*atlas-public-spend-v2\.js[^"\']*["\'][^>]*>\s*</script>', html, flags=re.I)
+          if gp:
+              html=html[:gp.start()] + tags + html[gp.start():]
+          else:
+              pos=html.lower().rfind('</body>')
+              if pos < 0: raise SystemExit('No safe v2 E2E mount point')
+              html=html[:pos] + tags + html[pos:]
+          p.write_text(html,encoding='utf-8')
+
+          ordered=['config','data-client','session-bridge','public-spend-shadow','public-spend-adapter']
+          positions=[html.find(f'data-atlas-v2-e2e="{x}"') for x in ordered]
+          assert all(x >= 0 for x in positions),positions
+          assert positions == sorted(positions),positions
+          legacy=html.find('atlas-public-spend-v2.js')
+          if legacy >= 0: assert positions[-1] < legacy
+          print('isolated v2 E2E preview ready')
+          PY
+
+      - name: Mint GitHub OIDC token and ephemeral core session
+        shell: bash
+        run: |
+          set -euo pipefail
+          request_url="${ACTIONS_ID_TOKEN_REQUEST_URL}"
+          sep='?'
+          if [[ "$request_url" == *'?'* ]]; then sep='&'; fi
+          oidc_json="$(curl --fail-with-body --silent --show-error \
+            -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${request_url}${sep}audience=atlas-v2-e2e")"
+          oidc_token="$(jq -er '.value' <<<"$oidc_json")"
+          echo "::add-mask::$oidc_token"
+
+          issue_file="$(mktemp)"
+          http_code="$(curl --silent --show-error --output "$issue_file" --write-out '%{http_code}' \
+            -X POST "$CORE_E2E_BROKER" \
+            -H "Authorization: Bearer $oidc_token" \
+            -H 'Content-Type: application/json' \
+            --data '{"action":"issue"}')"
+          if [[ "$http_code" != '200' ]]; then
+            echo "E2E broker issue failed with HTTP $http_code" >&2
+            jq -c '{error:(.error // "unknown")}' "$issue_file" >&2 || true
+            rm -f "$issue_file"
+            exit 1
+          fi
+
+          schema="$(jq -er '.schema' "$issue_file")"
+          [[ "$schema" == 'ATLAS_V2_E2E_AUTH_V1' ]]
+          email="$(jq -er '.email' "$issue_file")"
+          user_id="$(jq -er '.user_id' "$issue_file")"
+          access_token="$(jq -er '.access_token' "$issue_file")"
+          refresh_token="$(jq -er '.refresh_token' "$issue_file")"
+          expires_at="$(jq -er '.expires_at' "$issue_file")"
+          rm -f "$issue_file"
+
+          echo "::add-mask::$email"
+          echo "::add-mask::$user_id"
+          echo "::add-mask::$access_token"
+          echo "::add-mask::$refresh_token"
+          {
+            echo "ATLAS_E2E_EMAIL=$email"
+            echo "ATLAS_E2E_USER_ID=$user_id"
+            echo "ATLAS_E2E_ACCESS_TOKEN=$access_token"
+            echo "ATLAS_E2E_REFRESH_TOKEN=$refresh_token"
+            echo "ATLAS_E2E_PRINCIPAL_EXPIRES_AT=$expires_at"
+          } >> "$GITHUB_ENV"
+          echo 'Ephemeral core principal issued through GitHub OIDC.'
+
+      - name: Start isolated preview server
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/serve_atlas_v2_e2e.mjs _site > /tmp/atlas-v2-e2e-server.log 2>&1 &
+          echo "ATLAS_E2E_SERVER_PID=$!" >> "$GITHUB_ENV"
+          for _ in $(seq 1 30); do
+            if curl -fsS "$ATLAS_E2E_URL" >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/atlas-v2-e2e-server.log >&2 || true
+          exit 1
+
+      - name: Run authenticated browser E2E against real v2 backend
+        run: |
+          set -euo pipefail
+          node tools/e2e_atlas_v2_public_spend.mjs
+
+      - name: Upload E2E evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-v2-public-spend-e2e-${{ github.run_id }}
+          path: |
+            e2e-atlas-v2-public-spend.json
+            e2e-atlas-v2-public-spend.png
+            /tmp/atlas-v2-e2e-server.log
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Revoke ephemeral core principal
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          if [ -n "${ATLAS_E2E_SERVER_PID:-}" ]; then kill "$ATLAS_E2E_SERVER_PID" 2>/dev/null || true; fi
+          if [ -z "${ATLAS_E2E_USER_ID:-}" ] || [ -z "${ATLAS_E2E_EMAIL:-}" ]; then
+            echo 'No ephemeral principal was issued; cleanup not required.'
+            exit 0
+          fi
+
+          request_url="${ACTIONS_ID_TOKEN_REQUEST_URL}"
+          sep='?'
+          if [[ "$request_url" == *'?'* ]]; then sep='&'; fi
+          oidc_json="$(curl --fail-with-body --silent --show-error \
+            -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${request_url}${sep}audience=atlas-v2-e2e")" || exit 1
+          oidc_token="$(jq -er '.value' <<<"$oidc_json")" || exit 1
+          echo "::add-mask::$oidc_token"
+          cleanup_payload="$(jq -nc --arg uid "$ATLAS_E2E_USER_ID" --arg email "$ATLAS_E2E_EMAIL" \
+            '{action:"cleanup",user_id:$uid,email:$email}')"
+          cleanup_file="$(mktemp)"
+          http_code="$(curl --silent --show-error --output "$cleanup_file" --write-out '%{http_code}' \
+            -X POST "$CORE_E2E_BROKER" \
+            -H "Authorization: Bearer $oidc_token" \
+            -H 'Content-Type: application/json' \
+            --data "$cleanup_payload")"
+          ok="$(jq -r '.ok // false' "$cleanup_file" 2>/dev/null)"
+          rm -f "$cleanup_file"
+          if [ "$http_code" != '200' ] || [ "$ok" != 'true' ]; then
+            echo "Ephemeral principal cleanup failed; automatic TTL revocation remains active. HTTP=$http_code" >&2
+            exit 1
+          fi
+          echo 'Ephemeral core principal revoked and Auth user deleted.'
