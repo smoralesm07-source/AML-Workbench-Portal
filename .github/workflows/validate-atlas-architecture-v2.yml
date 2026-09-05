@@ -21,8 +21,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate JavaScript client
-        run: node --check src/v2/atlas-v2-data.js
+      - name: Validate JavaScript clients
+        run: |
+          node --check src/v2/atlas-v2-data.js
+          node --check src/v2/public-spend-shadow.js
 
       - name: Validate v2 architecture invariants
         shell: bash
@@ -34,14 +36,19 @@ jobs:
 
           doc=Path('docs/ARCHITECTURE_V2.md').read_text(encoding='utf-8')
           client=Path('src/v2/atlas-v2-data.js').read_text(encoding='utf-8')
+          shadow=Path('src/v2/public-spend-shadow.js').read_text(encoding='utf-8')
           edge=Path('supabase/functions/atlas-v2-read/index.ts').read_text(encoding='utf-8')
           foundation=Path('supabase/migrations/20260905010825_atlas_architecture_v2_foundation.sql').read_text(encoding='utf-8')
           automation=Path('supabase/migrations/20260905011600_atlas_architecture_v2_job_automation.sql').read_text(encoding='utf-8')
+          hardening=Path('supabase/migrations/20260905011900_atlas_architecture_v2_hardening.sql').read_text(encoding='utf-8')
 
           assert 'SOURCE -> LANDING -> NORMALIZE -> FUSION -> ANALYTICS -> READ MODEL -> READ API -> ATLAS -> DRILL-DOWN' in doc
           assert 'ATLAS_READ_API_V2' in client
           assert 'if-none-match' in client.lower()
           assert 'AbortController' in client
+          assert "public_spend_overview" in shadow
+          assert "semanticParity: 'NOT_ASSERTED'" in shadow
+          assert 'atlas:v2-public-spend-shadow-ready' in shadow
           assert 'ALLOWED_MODELS = new Set(["public_spend_overview"])' in edge
           assert 'Authorization: auth' in edge
           assert 'SUPABASE_SERVICE_ROLE_KEY' not in edge
@@ -60,5 +67,8 @@ jobs:
           assert "'atlas-v2-job-worker'" in automation
           assert "select public.atlas_v2_process_jobs(5);" in automation
           assert "revoke all on schema atlas_v2_private from public, anon, authenticated" in automation.lower()
-          print('ATLAS Architecture v2 foundation + automation contract OK')
+          assert 'grant usage on schema atlas_v2_private to service_role' in hardening.lower()
+          assert 'atlas-v2-telemetry-retention' in hardening
+          assert "interval '30 days'" in hardening
+          print('ATLAS Architecture v2 foundation + automation + shadow contract OK')
           PY
