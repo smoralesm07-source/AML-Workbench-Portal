@@ -59,7 +59,7 @@
           authorization: `Bearer ${token}`,
           apikey: publishableKey,
           'content-type': 'application/json',
-          'x-client-info': 'atlas-v2-data/2.2',
+          'x-client-info': 'atlas-v2-data/2.3',
         };
         if (options.etag) headers['if-none-match'] = options.etag;
 
@@ -199,6 +199,16 @@
       };
     }
 
+    function budgetScope(filters = {}) {
+      return {
+        region: clean(filters.region, 40) || undefined,
+        category: clean(filters.category, 180) || undefined,
+        month: clean(filters.month, 20) || undefined,
+        service_id: clean(filters.serviceId || filters.service_id, 180) || undefined,
+        provider_id: clean(filters.providerId || filters.provider_id, 180) || undefined,
+      };
+    }
+
     const publicSpend = Object.freeze({
       monitor: options => readModel('public_spend_monitor', options),
       overview: options => readModel('public_spend_overview', options),
@@ -212,17 +222,23 @@
       budgetContext: (filters = {}, options = {}) => publicSpendQuery({
         domain: 'budget_execution',
         kind: 'budget_context',
-        region: clean(filters.region, 40) || undefined,
-        category: clean(filters.category, 180) || undefined,
-        month: clean(filters.month, 20) || undefined,
-        service_id: clean(filters.serviceId || filters.service_id, 180) || undefined,
-        provider_id: clean(filters.providerId || filters.provider_id, 180) || undefined,
+        ...budgetScope(filters),
       }, options),
-      budgetServices: (options = {}) => publicSpendQuery({ domain: 'budget_execution', kind: 'budget_services', ...options.query }, options),
-      budgetProviders: (options = {}) => publicSpendQuery({ domain: 'budget_execution', kind: 'budget_providers', ...options.query }, options),
-      budgetFlows: (options = {}) => publicSpendQuery({ domain: 'budget_execution', kind: 'budget_flows', ...options.query }, options),
-      budgetServiceDetail: (serviceId, options = {}) => publicSpendQuery({ domain: 'budget_execution', kind: 'budget_service_detail', service_id: clean(serviceId, 180) }, options),
-      budgetProviderDetail: (providerId, options = {}) => publicSpendQuery({ domain: 'budget_execution', kind: 'budget_provider_detail', provider_id: clean(providerId, 180) }, options),
+      budgetServices: (options = {}) => publicSpendQuery({
+        domain: 'budget_execution', kind: 'budget_services', ...budgetScope(options.filters), ...options.query,
+      }, options),
+      budgetProviders: (options = {}) => publicSpendQuery({
+        domain: 'budget_execution', kind: 'budget_providers', ...budgetScope(options.filters), ...options.query,
+      }, options),
+      budgetFlows: (options = {}) => publicSpendQuery({
+        domain: 'budget_execution', kind: 'budget_flows', ...budgetScope(options.filters), ...options.query,
+      }, options),
+      budgetServiceDetail: (serviceId, options = {}) => publicSpendQuery({
+        domain: 'budget_execution', kind: 'budget_service_detail', ...budgetScope(options.filters), service_id: clean(serviceId, 180),
+      }, options),
+      budgetProviderDetail: (providerId, options = {}) => publicSpendQuery({
+        domain: 'budget_execution', kind: 'budget_provider_detail', ...budgetScope(options.filters), provider_id: clean(providerId, 180),
+      }, options),
     });
 
     function invalidate(modelName, scope = 'global') {
