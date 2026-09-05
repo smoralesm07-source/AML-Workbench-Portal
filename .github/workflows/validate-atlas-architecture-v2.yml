@@ -1,0 +1,57 @@
+name: Validate ATLAS Architecture v2
+
+on:
+  push:
+    branches: [atlas-architecture-v2]
+  pull_request:
+    paths:
+      - 'docs/ARCHITECTURE_V2.md'
+      - 'src/v2/**'
+      - 'supabase/functions/atlas-v2-read/**'
+      - 'supabase/migrations/*atlas_architecture_v2*'
+      - '.github/workflows/validate-atlas-architecture-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate JavaScript client
+        run: node --check src/v2/atlas-v2-data.js
+
+      - name: Validate v2 architecture invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          python3 - <<'PY'
+          from pathlib import Path
+
+          doc=Path('docs/ARCHITECTURE_V2.md').read_text(encoding='utf-8')
+          client=Path('src/v2/atlas-v2-data.js').read_text(encoding='utf-8')
+          edge=Path('supabase/functions/atlas-v2-read/index.ts').read_text(encoding='utf-8')
+          migration=Path('supabase/migrations/20260905010825_atlas_architecture_v2_foundation.sql').read_text(encoding='utf-8')
+
+          assert 'SOURCE -> LANDING -> NORMALIZE -> FUSION -> ANALYTICS -> READ MODEL -> READ API -> ATLAS -> DRILL-DOWN' in doc
+          assert 'ATLAS_READ_API_V2' in client
+          assert 'if-none-match' in client.lower()
+          assert 'AbortController' in client
+          assert 'ALLOWED_MODELS = new Set(["public_spend_overview"])' in edge
+          assert 'Authorization: auth' in edge
+          assert 'SUPABASE_SERVICE_ROLE_KEY' not in edge
+          assert 'x-atlas-trace-id' in edge
+          assert 'server-timing' in edge
+          assert 'atlas_v2_read_model' in migration
+          assert 'atlas_v2_model_head' in migration
+          assert 'atlas_v2_client_event' in migration
+          assert "pgmq.create('atlas_v2_jobs')" in migration
+          assert 'security invoker' in migration.lower()
+          assert 'grant execute on function public.atlas_v2_get_read_model' in migration
+          assert 'grant execute on function public.atlas_v2_materialize_public_spend_overview(text) to service_role' in migration
+          print('ATLAS Architecture v2 foundation contract OK')
+          PY
