@@ -8,6 +8,7 @@ on:
       - 'tools/e2e_atlas_v2_public_spend.mjs'
       - 'tools/serve_atlas_v2_e2e.mjs'
       - 'tools/build_atlas_site.py'
+      - 'tools/build_atlas_v2_cutover.py'
       - 'supabase/functions/atlas-v2-session-exchange/**'
       - 'supabase/core-functions/atlas-v2-e2e-auth/**'
       - 'supabase/migrations/*atlas_v2*'
@@ -46,61 +47,30 @@ jobs:
           npm install --no-save --no-package-lock "playwright@${PLAYWRIGHT_VERSION}"
           npx playwright install --with-deps chromium
 
-      - name: Build isolated Architecture v2 preview
+      - name: Build isolated Architecture v2 cutover artifact
         shell: bash
         run: |
           set -euo pipefail
-          python3 tools/build_atlas_site.py --out _site
-          mkdir -p _site/v2
-          cp src/v2/atlas-v2-preview-config.js _site/v2/atlas-v2-preview-config.js
-          cp src/v2/atlas-v2-data.js _site/v2/atlas-v2-data.js
-          cp src/v2/atlas-v2-session.js _site/v2/atlas-v2-session.js
-          cp src/v2/public-spend-shadow.js _site/v2/public-spend-shadow.js
-          cp src/v2/public-spend-adapter.js _site/v2/public-spend-adapter.js
-          cp src/v2/public-spend-adapter.css _site/v2/public-spend-adapter.css
-          cp src/v2/public-spend-route-bridge.js _site/v2/public-spend-route-bridge.js
+          python3 tools/build_atlas_v2_cutover.py --out _site --e2e-proxy
           python3 - <<'PY'
           from pathlib import Path
+          import json
           import re
 
-          p=Path('_site/index.html')
-          html=p.read_text(encoding='utf-8')
-          assert 'data-atlas-v2-e2e="public-spend-adapter"' not in html
-          tags=(
-            '<script src="./v2/atlas-v2-preview-config.js?v=v2-e2e" data-atlas-v2-e2e="config"></script>\n'
-            '<script src="./v2/atlas-v2-data.js?v=v2-e2e" data-atlas-v2-e2e="data-client"></script>\n'
-            '<script src="./v2/atlas-v2-session.js?v=v2-e2e" data-atlas-v2-e2e="session-bridge"></script>\n'
-            '<script src="./v2/public-spend-shadow.js?v=v2-e2e" data-atlas-v2-e2e="public-spend-shadow"></script>\n'
-            '<script src="./v2/public-spend-adapter.js?v=v2-e2e" data-atlas-v2-e2e="public-spend-adapter"></script>\n'
-            '<script src="./v2/public-spend-route-bridge.js?v=v2-e2e" data-atlas-v2-e2e="public-spend-route-bridge"></script>\n'
-          )
-          authority_patterns=(
-            r'<script[^>]+src=["\'][^"\']*atlas-public-spend-route-authority-0578\.js[^"\']*["\'][^>]*>\s*</script>',
-            r'<script[^>]+src=["\'][^"\']*atlas-public-spend-v2\.js[^"\']*["\'][^>]*>\s*</script>',
-          )
-          matches=[]
-          for pattern in authority_patterns:
-              match=re.search(pattern, html, flags=re.I)
-              if match: matches.append(match)
-          if matches:
-              mount=min(match.start() for match in matches)
-              html=html[:mount] + tags + html[mount:]
-          else:
-              pos=html.lower().rfind('</body>')
-              if pos < 0: raise SystemExit('No safe v2 E2E mount point')
-              html=html[:pos] + tags + html[pos:]
-          p.write_text(html,encoding='utf-8')
+          root=Path('_site')
+          html=(root/'index.html').read_text(encoding='utf-8')
+          report=json.loads((root/'atlas-runtime-report.json').read_text(encoding='utf-8'))
+          config=(root/'v2/atlas-v2-production-config.js').read_text(encoding='utf-8')
 
-          ordered=['config','data-client','session-bridge','public-spend-shadow','public-spend-adapter','public-spend-route-bridge']
-          positions=[html.find(f'data-atlas-v2-e2e="{x}"') for x in ordered]
-          assert all(x >= 0 for x in positions),positions
-          assert positions == sorted(positions),positions
-          for legacy_name in ('atlas-public-spend-route-authority-0578.js','atlas-public-spend-v2.js'):
-              legacy=html.find(legacy_name)
-              if legacy >= 0: assert positions[-1] < legacy,(legacy_name,positions[-1],legacy)
-          assert 'window.__ATLAS_V2_PREVIEW_MODE__="public-spend"' not in html
-          assert Path('_site/v2/public-spend-adapter.css').is_file()
-          print('isolated CSP-safe v2 E2E preview ready')
+          assert report['public_spend_cutover'] == 'ARCHITECTURE_V2'
+          assert report['public_spend_e2e_proxy'] is True
+          assert report['public_spend_source'] == 'BACKEND_READ_MODELS'
+          assert "location.origin + '/__atlas_v2'" in config
+          assert 'public-spend-cutover-e2e-proxy' in config
+          assert not re.search(r'\.\/assets\/(?:atlas-public-spend|atlas-gasto-publico)', html, re.I)
+          assert 'atlas-v2-production-config.js' in html
+          assert 'public-spend-route-bridge.js' in html
+          print('authenticated E2E will exercise the generated cutover artifact')
           PY
 
       - name: Mint GitHub OIDC token and ephemeral core session
@@ -151,7 +121,7 @@ jobs:
           } >> "$GITHUB_ENV"
           echo 'Ephemeral core principal issued through GitHub OIDC.'
 
-      - name: Start isolated preview server
+      - name: Start isolated cutover server
         shell: bash
         run: |
           set -euo pipefail
@@ -166,7 +136,7 @@ jobs:
           cat /tmp/atlas-v2-e2e-server.log >&2 || true
           exit 1
 
-      - name: Run authenticated browser E2E against real v2 backend
+      - name: Run authenticated browser E2E against cutover artifact and real v2 backend
         run: |
           set -euo pipefail
           node tools/e2e_atlas_v2_public_spend.mjs
@@ -193,7 +163,7 @@ jobs:
             exit 0
           fi
           if [ -z "${ATLAS_E2E_SERVER_PID:-}" ] || ! kill -0 "$ATLAS_E2E_SERVER_PID" 2>/dev/null; then
-            echo 'Preview proxy unavailable for v2 cleanup; database TTL cleanup remains active.' >&2
+            echo 'Cutover proxy unavailable for v2 cleanup; database TTL cleanup remains active.' >&2
             exit 1
           fi
 
