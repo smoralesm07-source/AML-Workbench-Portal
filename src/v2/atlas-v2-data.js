@@ -59,7 +59,7 @@
           authorization: `Bearer ${token}`,
           apikey: publishableKey,
           'content-type': 'application/json',
-          'x-client-info': 'atlas-v2-data/2.1',
+          'x-client-info': 'atlas-v2-data/2.2',
         };
         if (options.etag) headers['if-none-match'] = options.etag;
 
@@ -190,6 +190,7 @@
         items: Array.isArray(body.items) ? body.items : [],
         detail: body.detail ?? null,
         page: body.page ?? null,
+        data: body,
         meta: {
           ...out.meta,
           snapshot: out.meta.snapshot || body.snapshot_id || null,
@@ -208,6 +209,15 @@
       buyerDetail: (buyerId, options = {}) => publicSpendQuery({ kind: 'buyer_detail', buyer_id: clean(buyerId, 180) }, options),
       supplierDetail: (supplierId, options = {}) => publicSpendQuery({ kind: 'supplier_detail', supplier_id: clean(supplierId, 180) }, options),
       pairDetail: (pairId, options = {}) => publicSpendQuery({ kind: 'pair_detail', pair_id: clean(pairId, 260) }, options),
+      budgetContext: (filters = {}, options = {}) => publicSpendQuery({
+        domain: 'budget_execution',
+        kind: 'budget_context',
+        region: clean(filters.region, 40) || undefined,
+        category: clean(filters.category, 180) || undefined,
+        month: clean(filters.month, 20) || undefined,
+        service_id: clean(filters.serviceId || filters.service_id, 180) || undefined,
+        provider_id: clean(filters.providerId || filters.provider_id, 180) || undefined,
+      }, options),
       budgetServices: (options = {}) => publicSpendQuery({ domain: 'budget_execution', kind: 'budget_services', ...options.query }, options),
       budgetProviders: (options = {}) => publicSpendQuery({ domain: 'budget_execution', kind: 'budget_providers', ...options.query }, options),
       budgetFlows: (options = {}) => publicSpendQuery({ domain: 'budget_execution', kind: 'budget_flows', ...options.query }, options),
