@@ -22,20 +22,30 @@ V2_FILES = [
     "public-spend-adapter.css",
 ]
 
-# Only these files can own or directly bootstrap the visible Gasto Público route.
-# Shared public-spend support assets (taxonomy, intelligence helpers, etc.) are
-# deliberately preserved because other ATLAS runtime fragments may consume them.
+# These files either own the visible Gasto Público route, publish the legacy
+# AtlasPublicSpendV2 API, or can bootstrap GP2 back into the page. Shared
+# analytical support assets (taxonomy, audit, peers, prices, context, etc.) stay.
 COMPETING_PUBLIC_SPEND_ASSETS = (
     "assets/atlas-public-spend-v2.css",
     "assets/atlas-public-spend-v2.js",
+    "assets/atlas-public-spend-mobile-route-0573.js",
     "assets/atlas-public-spend-route-authority-0578.js",
+    "assets/atlas-public-spend-intelligence-0720.css",
+    "assets/atlas-public-spend-intelligence-0720.js",
+    "assets/atlas-gasto-publico-1000.css",
+    "assets/atlas-gasto-publico-1000.js",
     "assets/atlas-gasto-publico-1300.css",
     "assets/atlas-gasto-publico-1300.js",
 )
 CORE_COMPETING_PUBLIC_SPEND_ASSETS = {
     "assets/atlas-public-spend-v2.css",
     "assets/atlas-public-spend-v2.js",
+    "assets/atlas-public-spend-mobile-route-0573.js",
     "assets/atlas-public-spend-route-authority-0578.js",
+    "assets/atlas-public-spend-intelligence-0720.css",
+    "assets/atlas-public-spend-intelligence-0720.js",
+    "assets/atlas-gasto-publico-1000.css",
+    "assets/atlas-gasto-publico-1000.js",
 }
 
 
