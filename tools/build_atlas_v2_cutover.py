@@ -21,15 +21,32 @@ V2_FILES = [
     "public-spend-adapter.css",
 ]
 
+# Only these files can own or directly bootstrap the visible Gasto Público route.
+# Shared public-spend support assets (taxonomy, intelligence helpers, etc.) are
+# deliberately preserved because other ATLAS runtime fragments may consume them.
+COMPETING_PUBLIC_SPEND_ASSETS = (
+    "assets/atlas-public-spend-v2.css",
+    "assets/atlas-public-spend-v2.js",
+    "assets/atlas-public-spend-route-authority-0578.js",
+    "assets/atlas-gasto-publico-1300.css",
+    "assets/atlas-gasto-publico-1300.js",
+)
+CORE_COMPETING_PUBLIC_SPEND_ASSETS = {
+    "assets/atlas-public-spend-v2.css",
+    "assets/atlas-public-spend-v2.js",
+    "assets/atlas-public-spend-route-authority-0578.js",
+}
+
 
 def _strip_legacy_public_spend_tags(html: str) -> str:
     # Architecture v2 becomes the only Gasto Público route authority in this
-    # opt-in artifact. Other ATLAS modules remain owned by the canonical builder.
-    patterns = [
-        r"\s*<link[^>]+href=['\"]\.\/assets\/(?:atlas-public-spend|atlas-gasto-publico)[^'\"]*['\"][^>]*>\s*",
-        r"\s*<script[^>]+src=['\"]\.\/assets\/(?:atlas-public-spend|atlas-gasto-publico)[^'\"]*['\"][^>]*>\s*<\/script>\s*",
-    ]
-    for pattern in patterns:
+    # opt-in artifact. Shared helpers with a public-spend name remain available.
+    for asset in COMPETING_PUBLIC_SPEND_ASSETS:
+        escaped = re.escape(asset)
+        if asset.endswith(".css"):
+            pattern = rf"\s*<link[^>]+href=['\"]\./{escaped}(?:\?[^'\"]*)?['\"][^>]*>\s*"
+        else:
+            pattern = rf"\s*<script[^>]+src=['\"]\./{escaped}(?:\?[^'\"]*)?['\"][^>]*>\s*</script>\s*"
         html = re.sub(pattern, "\n", html, flags=re.I)
     return html
 
@@ -89,15 +106,12 @@ def _copy_v2_runtime(out_dir: Path, *, e2e_proxy: bool = False) -> list[str]:
 
 
 def _remove_legacy_public_spend_assets(out_dir: Path) -> list[str]:
-    assets = out_dir / "assets"
     removed = []
-    if not assets.exists():
-        return removed
-    for pattern in ("atlas-public-spend*", "atlas-gasto-publico*"):
-        for path in assets.glob(pattern):
-            if path.is_file():
-                removed.append(str(path.relative_to(out_dir)))
-                path.unlink()
+    for asset in COMPETING_PUBLIC_SPEND_ASSETS:
+        path = out_dir / asset
+        if path.is_file():
+            removed.append(asset)
+            path.unlink()
     return sorted(removed)
 
 
@@ -127,8 +141,6 @@ def _mount_v2(html: str) -> str:
 
 
 def _validate_cutover(out_dir: Path, html: str, removed_assets: list[str], *, e2e_proxy: bool = False) -> None:
-    if re.search(r"\.\/assets\/(?:atlas-public-spend|atlas-gasto-publico)", html, flags=re.I):
-        raise SystemExit("cutover build: competing Gasto Público asset remains mounted")
     if V2_HOST not in html:
         raise SystemExit("cutover build: v2 Supabase host missing from CSP")
 
@@ -157,18 +169,25 @@ def _validate_cutover(out_dir: Path, html: str, removed_assets: list[str], *, e2
     elif "const PROJECT_URL = 'https://bzqxvidggykkdouotylg.supabase.co';" not in config:
         raise SystemExit("cutover build: production config no longer points at the v2 project")
 
-    for pattern in ("atlas-public-spend*", "atlas-gasto-publico*"):
-        leftovers = [str(path.relative_to(out_dir)) for path in (out_dir / "assets").glob(pattern) if path.is_file()]
-        if leftovers:
-            raise SystemExit(f"cutover build: legacy public-spend assets remain publishable: {leftovers[:10]}")
+    for asset in COMPETING_PUBLIC_SPEND_ASSETS:
+        if (out_dir / asset).is_file():
+            raise SystemExit(f"cutover build: competing Gasto Público asset remains publishable: {asset}")
+        if f"./{asset}" in html:
+            raise SystemExit(f"cutover build: competing Gasto Público asset remains mounted: {asset}")
 
-    if not removed_assets:
-        raise SystemExit("cutover build: no legacy public-spend assets were retired; source contract may have drifted")
+    retired = set(removed_assets)
+    if not CORE_COMPETING_PUBLIC_SPEND_ASSETS.issubset(retired):
+        missing_core = sorted(CORE_COMPETING_PUBLIC_SPEND_ASSETS - retired)
+        raise SystemExit(f"cutover build: canonical competing assets were not retired: {missing_core}")
+    unexpected = retired - set(COMPETING_PUBLIC_SPEND_ASSETS)
+    if unexpected:
+        raise SystemExit(f"cutover build: non-authority support assets were retired: {sorted(unexpected)}")
 
 
 def _update_report(out_dir: Path, published_v2: list[str], removed_assets: list[str], *, e2e_proxy: bool = False) -> None:
     path = out_dir / "atlas-runtime-report.json"
     report = json.loads(path.read_text(encoding="utf-8"))
+    retired = set(removed_assets)
     report["public_spend_cutover"] = "ARCHITECTURE_V2"
     report["public_spend_runtime"] = f"v2/public-spend-adapter.js?v={V2_VERSION}"
     report["public_spend_authority"] = f"v2/public-spend-route-bridge.js?v={V2_VERSION}"
@@ -176,12 +195,10 @@ def _update_report(out_dir: Path, published_v2: list[str], removed_assets: list[
     report["public_spend_e2e_proxy"] = e2e_proxy
     report["public_spend_legacy_assets_retired"] = removed_assets
     report["published_css"] = [
-        item for item in report.get("published_css", [])
-        if "atlas-public-spend" not in item and "atlas-gasto-publico" not in item
+        item for item in report.get("published_css", []) if item not in retired
     ] + ["v2/public-spend-adapter.css"]
     report["published_js"] = [
-        item for item in report.get("published_js", [])
-        if "atlas-public-spend" not in item and "atlas-gasto-publico" not in item
+        item for item in report.get("published_js", []) if item not in retired
     ] + [item for item in published_v2 if item.endswith(".js")]
     path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -202,8 +219,10 @@ def build_cutover(out_dir: Path, *, e2e_proxy: bool = False) -> None:
         "cutover": "ARCHITECTURE_V2",
         "public_spend_authority": "v2/public-spend-route-bridge.js",
         "published_v2": published_v2,
+        "retired_legacy_assets": removed_assets,
         "retired_legacy_asset_count": len(removed_assets),
         "e2e_proxy": e2e_proxy,
+        "shared_support_assets_preserved": True,
         "main_build_default_unchanged": True,
     }, ensure_ascii=False))
 
