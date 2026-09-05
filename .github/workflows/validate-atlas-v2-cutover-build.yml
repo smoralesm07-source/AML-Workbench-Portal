@@ -67,14 +67,17 @@ jobs:
             'assets/atlas-gasto-publico-1300.css',
             'assets/atlas-gasto-publico-1300.js',
           }
-          core_competing=competing-{
-            'assets/atlas-gasto-publico-1300.css',
-            'assets/atlas-gasto-publico-1300.js',
+          expected_active={
+            'assets/atlas-public-spend-v2.css',
+            'assets/atlas-public-spend-v2.js',
+            'assets/atlas-public-spend-route-authority-0578.js',
           }
 
           # The canonical build remains unchanged unless the dedicated builder is selected.
           assert 'public_spend_cutover' not in default_report
-          assert core_competing <= set(default_report['published_css'] + default_report['published_js'])
+          default_published=set(default_report['published_css'] + default_report['published_js'])
+          active_legacy=competing & default_published
+          assert active_legacy == expected_active, active_legacy
           assert not (default/'v2').exists()
 
           # The opt-in build publishes exactly one Gasto Público authority family: Architecture v2.
@@ -83,7 +86,7 @@ jobs:
           assert cutover_report['public_spend_authority'].startswith('v2/public-spend-route-bridge.js')
           assert cutover_report['public_spend_runtime'].startswith('v2/public-spend-adapter.js')
           retired=set(cutover_report['public_spend_legacy_assets_retired'])
-          assert core_competing <= retired
+          assert active_legacy <= retired
           assert retired <= competing
           assert 'https://bzqxvidggykkdouotylg.supabase.co' in cutover_html
 
@@ -142,6 +145,6 @@ jobs:
           assert 'v2-preview' not in adapter
           assert 'v2-preview' not in bridge
           assert '__ATLAS_V2_PREVIEW_MODE__' not in config
-          print(f'ATLAS v2 cutover build invariants PASS; retired={len(retired)} preserved shared support assets={len(preserved)}')
+          print(f'ATLAS v2 cutover build invariants PASS; active legacy={len(active_legacy)} retired={len(retired)} preserved shared support assets={len(preserved)}')
           PY
           git diff --check
