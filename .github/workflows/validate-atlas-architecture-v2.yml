@@ -6,6 +6,7 @@ on:
   pull_request:
     paths:
       - 'docs/ARCHITECTURE_V2.md'
+      - 'docs/PUBLIC_SPEND_V2_CUTOVER.md'
       - 'src/v2/**'
       - 'supabase/functions/atlas-v2-read/**'
       - 'supabase/functions/atlas-v2-source-ingest/**'
@@ -81,6 +82,8 @@ jobs:
             '20260905015600_atlas_architecture_v2_budget_detail_backend.sql',
             '20260905020045_atlas_architecture_v2_queue_privilege_boundary.sql',
             '20260905021121_atlas_architecture_v2_budget_context.sql',
+            '20260905023655_atlas_architecture_v2_budget_contextual_drilldown.sql',
+            '20260905024011_atlas_architecture_v2_budget_flow_contextual_search.sql',
           ]
           mdir=Path('supabase/migrations')
           present=sorted(p.name for p in mdir.glob('*atlas_architecture_v2*.sql'))
@@ -96,19 +99,24 @@ jobs:
           budget=(mdir/migrations[8]).read_text()
           queue=(mdir/migrations[9]).read_text()
           context=(mdir/migrations[10]).read_text()
+          contextual=(mdir/migrations[11]).read_text()
+          flow=(mdir/migrations[12]).read_text()
 
           assert 'SOURCE -> LANDING -> NORMALIZE -> FUSION -> ANALYTICS -> READ MODEL -> READ API -> ATLAS -> DRILL-DOWN' in doc
           assert 'ATLAS_PUBLIC_SPEND_MONITOR_V2' in doc
           assert 'ATLAS_READ_API_V2' in client and 'ATLAS_PUBLIC_SPEND_QUERY_V2' in client
-          assert 'budgetServices' in client and 'budgetProviderDetail' in client and 'budgetContext' in client
+          assert 'budgetServices' in client and 'budgetProviderDetail' in client and 'budgetContext' in client and 'budgetFlowDetail' in client
+          assert 'budgetScope' in client
           assert 'raw.githubusercontent.com' not in client and 'raw.githubusercontent.com' not in shadow and 'raw.githubusercontent.com' not in adapter
           assert 'compareBudgetDomain' in shadow and "detailMode === 'FULL_BACKEND'" in shadow
           assert "status === 'MATCH' && detailCoverage === 'READY'" in shadow
           assert 'shadow_parity:public_spend' in shadow
           assert 'data-atlas-v2-preview' in preview and 'public-spend-adapter' in preview and 'actions/deploy-pages' not in preview
           assert "detail_mode !== 'FULL_BACKEND'" in adapter
-          assert 'budgetContext' in adapter and 'data-gpv2-filter' in adapter
-          assert 'budgetServices' in adapter and 'budgetProviderDetail' in adapter
+          assert 'budgetContext' in adapter and 'data-gpv2-filter' in adapter and 'facetOptions' in adapter
+          assert 'budgetServices' in adapter and 'budgetProviderDetail' in adapter and 'budgetFlowDetail' in adapter
+          assert 'filters: S.filters' in adapter
+          assert 'data-gpv2-methodology' in adapter and 'Metodología' in adapter
           assert 'public_spend_query' in read_edge and 'SUPABASE_SERVICE_ROLE_KEY' not in read_edge
           assert 'x-atlas-trace-id' in read_edge and 'server-timing' in read_edge
           assert 'budget_detail_state' in budget and 'ingest_budget_detail_batch' in budget
@@ -123,5 +131,10 @@ jobs:
           assert "'top_services'" in context and "'top_providers'" in context and "'top_relations'" in context
           assert "'options'" in context and "'regions'" in context and "'categories'" in context and "'months'" in context
           assert "kind','budget_context'" in context
+          assert '_context_amount' in contextual and 'v_region' in contextual and 'v_category' in contextual and 'v_month' in contextual
+          assert 'budget_service_detail' in contextual and 'budget_provider_detail' in contextual
+          assert 'budget_flow_query' in flow and 'budget_flow_detail' in flow
+          assert 'provider_name' in flow and "coalesce(p.rut,'') ilike" in flow
+          assert "in ('budget_flows','budget_flow_detail')" in flow
           print('ATLAS Architecture v2 invariants OK')
           PY
