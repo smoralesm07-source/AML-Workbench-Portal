@@ -52,6 +52,7 @@ jobs:
           set -euo pipefail
           python3 tools/build_atlas_site.py --out _site
           mkdir -p _site/v2
+          cp src/v2/atlas-v2-preview-config.js _site/v2/atlas-v2-preview-config.js
           cp src/v2/atlas-v2-data.js _site/v2/atlas-v2-data.js
           cp src/v2/atlas-v2-session.js _site/v2/atlas-v2-session.js
           cp src/v2/public-spend-shadow.js _site/v2/public-spend-shadow.js
@@ -65,22 +66,24 @@ jobs:
           html=p.read_text(encoding='utf-8')
           assert 'data-atlas-v2-e2e="public-spend-adapter"' not in html
           tags=(
-            '<script data-atlas-v2-e2e="config">'
-            'window.__ATLAS_V2_PREVIEW_MODE__="public-spend";'
-            'window.__ATLAS_V2_CONFIG__={'
-            'supabaseUrl:location.origin+"/__atlas_v2",'
-            'publishableKey:"sb_publishable_3nrUSbZMWfTYUtXnyjDklg_EjyZIzko",'
-            'sessionExchangeUrl:location.origin+"/__atlas_v2/functions/v1/atlas-v2-session-exchange"};'
-            '</script>\n'
+            '<script src="./v2/atlas-v2-preview-config.js?v=v2-e2e" data-atlas-v2-e2e="config"></script>\n'
             '<script src="./v2/atlas-v2-data.js?v=v2-e2e" data-atlas-v2-e2e="data-client"></script>\n'
             '<script src="./v2/atlas-v2-session.js?v=v2-e2e" data-atlas-v2-e2e="session-bridge"></script>\n'
             '<script src="./v2/public-spend-shadow.js?v=v2-e2e" data-atlas-v2-e2e="public-spend-shadow"></script>\n'
             '<script src="./v2/public-spend-adapter.js?v=v2-e2e" data-atlas-v2-e2e="public-spend-adapter"></script>\n'
             '<script src="./v2/public-spend-route-bridge.js?v=v2-e2e" data-atlas-v2-e2e="public-spend-route-bridge"></script>\n'
           )
-          gp=re.search(r'<script[^>]+src=["\'][^"\']*atlas-public-spend-v2\.js[^"\']*["\'][^>]*>\s*</script>', html, flags=re.I)
-          if gp:
-              html=html[:gp.start()] + tags + html[gp.start():]
+          authority_patterns=(
+            r'<script[^>]+src=["\'][^"\']*atlas-public-spend-route-authority-0578\.js[^"\']*["\'][^>]*>\s*</script>',
+            r'<script[^>]+src=["\'][^"\']*atlas-public-spend-v2\.js[^"\']*["\'][^>]*>\s*</script>',
+          )
+          matches=[]
+          for pattern in authority_patterns:
+              match=re.search(pattern, html, flags=re.I)
+              if match: matches.append(match)
+          if matches:
+              mount=min(match.start() for match in matches)
+              html=html[:mount] + tags + html[mount:]
           else:
               pos=html.lower().rfind('</body>')
               if pos < 0: raise SystemExit('No safe v2 E2E mount point')
@@ -91,9 +94,11 @@ jobs:
           positions=[html.find(f'data-atlas-v2-e2e="{x}"') for x in ordered]
           assert all(x >= 0 for x in positions),positions
           assert positions == sorted(positions),positions
-          legacy=html.find('atlas-public-spend-v2.js')
-          if legacy >= 0: assert positions[-1] < legacy
-          print('isolated v2 E2E preview ready')
+          for legacy_name in ('atlas-public-spend-route-authority-0578.js','atlas-public-spend-v2.js'):
+              legacy=html.find(legacy_name)
+              if legacy >= 0: assert positions[-1] < legacy,(legacy_name,positions[-1],legacy)
+          assert 'window.__ATLAS_V2_PREVIEW_MODE__="public-spend"' not in html
+          print('isolated CSP-safe v2 E2E preview ready')
           PY
 
       - name: Mint GitHub OIDC token and ephemeral core session
