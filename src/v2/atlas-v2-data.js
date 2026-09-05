@@ -233,6 +233,10 @@
       budgetFlows: (options = {}) => publicSpendQuery({
         domain: 'budget_execution', kind: 'budget_flows', ...budgetScope(options.filters), ...options.query,
       }, options),
+      budgetFlowDetail: (serviceId, providerId, options = {}) => publicSpendQuery({
+        domain: 'budget_execution', kind: 'budget_flow_detail', ...budgetScope(options.filters),
+        service_id: clean(serviceId, 180), provider_id: clean(providerId, 180),
+      }, options),
       budgetServiceDetail: (serviceId, options = {}) => publicSpendQuery({
         domain: 'budget_execution', kind: 'budget_service_detail', ...budgetScope(options.filters), service_id: clean(serviceId, 180),
       }, options),
