@@ -57,6 +57,7 @@ jobs:
           cp src/v2/atlas-v2-session.js _site/v2/atlas-v2-session.js
           cp src/v2/public-spend-shadow.js _site/v2/public-spend-shadow.js
           cp src/v2/public-spend-adapter.js _site/v2/public-spend-adapter.js
+          cp src/v2/public-spend-adapter.css _site/v2/public-spend-adapter.css
           cp src/v2/public-spend-route-bridge.js _site/v2/public-spend-route-bridge.js
           python3 - <<'PY'
           from pathlib import Path
@@ -98,6 +99,7 @@ jobs:
               legacy=html.find(legacy_name)
               if legacy >= 0: assert positions[-1] < legacy,(legacy_name,positions[-1],legacy)
           assert 'window.__ATLAS_V2_PREVIEW_MODE__="public-spend"' not in html
+          assert Path('_site/v2/public-spend-adapter.css').is_file()
           print('isolated CSP-safe v2 E2E preview ready')
           PY
 
