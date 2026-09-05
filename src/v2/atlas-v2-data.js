@@ -2,7 +2,7 @@
 
 (function installAtlasV2Data(global) {
   const DEFAULT_URL = 'https://bzqxvidggykkdouotylg.supabase.co';
-  const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_Nu21dZFBM3NwtIvOwIM8ag_9tyfDJyR';
+  const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_3nrUSbZMWfTYUtXnyjDklg_EjyZIzko';
   const ENDPOINT = '/functions/v1/atlas-v2-read';
   const DEFAULT_TIMEOUT_MS = 8000;
   const cache = new Map();
