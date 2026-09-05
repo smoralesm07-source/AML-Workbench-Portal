@@ -48,7 +48,7 @@ jobs:
           node tools/test_atlas_v2_session.js
           git diff --check
 
-      - name: Federated authorization invariants
+      - name: Federated authorization and cutover invariants
         shell: bash
         run: |
           set -euo pipefail
@@ -74,7 +74,7 @@ jobs:
           browser=Path('tools/e2e_atlas_v2_public_spend.mjs').read_text()
           proxy=Path('tools/serve_atlas_v2_e2e.mjs').read_text()
 
-          # Preview remains available for non-cutover diagnostics but is no longer the browser gate artifact.
+          # Preview remains diagnostic-only; production cutover is explicit.
           assert "global.__ATLAS_V2_PREVIEW_MODE__ = 'public-spend'" in preview
           assert "supabaseUrl: location.origin + '/__atlas_v2'" in preview
           assert "sessionExchangeUrl: location.origin + '/__atlas_v2/functions/v1/atlas-v2-session-exchange'" in preview
@@ -82,7 +82,6 @@ jobs:
           assert "document.createElement('link')" in preview
           assert 'adapterStyleUrl' in preview
 
-          # Source production config must never contain localhost/proxy routing.
           assert "const PROJECT_URL = 'https://bzqxvidggykkdouotylg.supabase.co';" in production
           assert "global.__ATLAS_V2_PUBLIC_SPEND_CUTOVER__ = true" in production
           assert "mode: 'public-spend-cutover'" in production
@@ -100,15 +99,26 @@ jobs:
           assert 'gpv2-barsvg' in adapter and 'gpv2-note-spaced' in adapter and 'gpv2-detail-title' in adapter
           assert '.gpv2-barsvg' in adapter_css and '.gpv2-note-spaced' in adapter_css and '.gpv2-detail-title' in adapter_css
 
-          # Cutover builder is opt-in, removes the competing legacy authority and rewrites endpoints only in E2E output.
+          # Dedicated builder only retires the five route-owning legacy assets.
           assert 'build_current(out_dir)' in cutover_builder
           assert '--e2e-proxy' in cutover_builder
           assert "location.origin + '/__atlas_v2'" in cutover_builder
           assert "const PROJECT_URL = 'https://bzqxvidggykkdouotylg.supabase.co';" in cutover_builder
-          assert 'atlas-public-spend*' in cutover_builder and 'atlas-gasto-publico*' in cutover_builder
+          assert 'COMPETING_PUBLIC_SPEND_ASSETS' in cutover_builder
+          for asset in (
+            'assets/atlas-public-spend-v2.css',
+            'assets/atlas-public-spend-v2.js',
+            'assets/atlas-public-spend-route-authority-0578.js',
+            'assets/atlas-gasto-publico-1300.css',
+            'assets/atlas-gasto-publico-1300.js',
+          ):
+            assert f'"{asset}"' in cutover_builder, asset
+          assert 'CORE_COMPETING_PUBLIC_SPEND_ASSETS' in cutover_builder
+          assert 'shared_support_assets_preserved' in cutover_builder
           assert 'public_spend_cutover' in cutover_builder
           assert 'main_build_default_unchanged' in cutover_builder
 
+          # Federated v2 authorization remains short-lived and fail-closed.
           assert 'SUPABASE_SECRET_KEYS' in exchange and 'SUPABASE_SERVICE_ROLE_KEY' not in exchange
           assert 'https://ldmtlwzqaqmegedktlxr.supabase.co' in exchange
           assert '/auth/v1/user' in exchange and 'aml_allowed_users' in exchange
@@ -127,6 +137,7 @@ jobs:
           assert "'* * * * *'" in mirror_cleanup
           assert 'delete from auth.users' in mirror_cleanup.lower()
 
+          # Core CI identity is GitHub-OIDC constrained and self-cleaning.
           assert 'const REPOSITORY = "smoralesm07-source/AML-Workbench-Portal"' in broker
           assert 'const REF = "refs/heads/atlas-architecture-v2"' in broker
           assert 'const WORKFLOW_REF = `${REPOSITORY}/.github/workflows/e2e-atlas-v2-public-spend.yml@${REF}`' in broker
@@ -138,7 +149,6 @@ jobs:
           assert 'generateLink({ type: "magiclink", email })' in broker
           assert 'deleteUser(userId)' in broker
           assert 'TTL_MS = 20 * 60 * 1000' in broker
-
           assert 'atlas_v2_e2e_principal' in core_guard
           assert "interval '30 minutes'" in core_guard
           assert "'* * * * *'" in core_guard
@@ -148,6 +158,7 @@ jobs:
           assert 'atlas_v2_e2e_principal_deny_all' in core_deny
           assert 'using (false)' in core_deny and 'with check (false)' in core_deny
 
+          # Route interception is deterministic and recognizes displaced authorities.
           assert "global.addEventListener('click'" in route_bridge
           assert "event.stopImmediatePropagation()" in route_bridge
           assert "if (view === VIEW) return open('window.navigate')" in route_bridge
@@ -156,6 +167,7 @@ jobs:
           assert 'deterministicAuthority: true' in route_bridge
           assert '__ATLAS_V2_PUBLIC_SPEND_ROUTE_BRIDGE__' in route_bridge
 
+          # Browser gate exercises the generated cutover artifact, not an injected preview.
           assert 'id-token: write' in e2e
           assert 'audience=atlas-v2-e2e' in e2e
           assert 'playwright@${PLAYWRIGHT_VERSION}' in e2e
@@ -164,7 +176,8 @@ jobs:
           assert 'build_atlas_v2_cutover.py --out _site --e2e-proxy' in e2e
           assert 'atlas-v2-preview-config.js' not in e2e
           assert 'public-spend-cutover-e2e-proxy' in e2e
-          assert 'atlas-public-spend-route-authority-0578' not in e2e
+          assert "'assets/atlas-public-spend-route-authority-0578.js'" in e2e
+          assert "taxonomy=root/'assets/atlas-public-spend-mark-taxonomy-v4.js'" in e2e
           assert 'public-spend-route-bridge.js' in e2e
           assert 'Revoke ephemeral v2 principal' in e2e
           assert 'cleanup_e2e' in e2e
@@ -175,15 +188,19 @@ jobs:
           assert 'SUPABASE_EPHEMERAL_CI_CUTOVER_ARTIFACT' in browser
           assert '__ATLAS_V2_PRODUCTION_CONFIG__' in browser
           assert '__ATLAS_V2_PUBLIC_SPEND_CUTOVER__ === true' in browser
-          assert 'legacyScripts' in browser and 'legacyAuthority' in browser
+          assert 'competingLegacyScripts' in browser and 'competingLegacyStyles' in browser
+          assert 'legacyNamedAssetResponses' in browser
+          assert 'competingLegacyAssetResponses.length, 0' in browser
+          assert 'failedSupportAssets.length, 0' in browser
           assert 'atlas-v2-session-exchange' in browser and 'atlas-v2-read' in browser
           assert 'v2ConsoleErrors.length, 0' in browser
           assert 'v2CspViolations.length, 0' in browser
           assert 'failedAssets.length, 0' in browser
           assert 'pageErrors.length, 0' in browser
           assert 'legacyConsoleErrors' in browser and 'legacyCspViolations' in browser
+
           assert "GITHUB_PAGES_ORIGIN = 'https://smoralesm07-source.github.io'" in proxy
           assert "V2_HOST = 'bzqxvidggykkdouotylg.supabase.co'" in proxy
           assert "headers['accept-encoding'] = 'identity'" in proxy
-          print('ATLAS v2 federation invariants OK: generated cutover artifact, deterministic route, two-project identity, short grant, OIDC CI and dual-project cleanup')
+          print('ATLAS v2 federation invariants OK: generated cutover artifact, explicit five-asset retirement, shared support preserved, deterministic route, two-project identity and cleanup')
           PY
