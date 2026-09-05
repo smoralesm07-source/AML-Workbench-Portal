@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Gate trace: run build, federation and authenticated browser validation on one HEAD.
 from __future__ import annotations
 
 import argparse
