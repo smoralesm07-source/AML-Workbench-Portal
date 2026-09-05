@@ -65,8 +65,9 @@
         endMonth: normalizeMonth(windowData.end_month || windowData.months?.[windowData.months?.length - 1]),
         monthCount: Array.isArray(windowData.months) ? windowData.months.length : null,
       },
-      topServices: Array.isArray(data?.services) ? data.services.length : null,
-      topProviders: Array.isArray(data?.providers) ? data.providers.length : null,
+      serviceRows: Array.isArray(data?.services) ? data.services.length : null,
+      providerRows: Array.isArray(data?.providers) ? data.providers.length : null,
+      flowRows: Array.isArray(data?.flows) ? data.flows.length : null,
     };
   }
 
@@ -110,7 +111,10 @@
     const mismatches = comparable.filter(x => x.status === 'MISMATCH');
     const sourceTopServices = Array.isArray(budget?.top_services) ? budget.top_services.length : null;
     const sourceTopProviders = Array.isArray(budget?.top_providers) ? budget.top_providers.length : null;
-    const detailCoverage = sourceTopServices > 0 && sourceTopProviders > 0 ? 'READY' : 'INCOMPLETE';
+    const detailMode = String(budget?.quality?.detail_mode || '').toUpperCase() || null;
+    const detailCoverage = detailMode === 'FULL_BACKEND'
+      ? 'READY'
+      : (sourceTopServices > 0 || sourceTopProviders > 0) ? 'TOP_ONLY' : 'INCOMPLETE';
 
     let status = 'NOT_ASSERTED';
     if (comparable.length && mismatches.length === 0) status = detailCoverage === 'READY' ? 'MATCH' : 'PARTIAL';
@@ -121,13 +125,14 @@
       comparableMetrics: comparable.length,
       matchedMetrics: comparable.filter(x => x.status === 'MATCH').length,
       mismatchedMetrics: mismatches.length,
+      detailMode,
       detailCoverage,
       sourceTopServices,
       sourceTopProviders,
       metrics,
       cutoverEligible: status === 'MATCH' && detailCoverage === 'READY',
       cutoverBlocker: status === 'PARTIAL'
-        ? 'Budget overview matches, but the v2 budget source does not yet publish service/provider drill-down coverage.'
+        ? 'Budget overview matches, but full governed budget drill-down is not ready yet.'
         : status === 'MISMATCH'
           ? 'One or more comparable budget metrics differ between GP2 and Architecture v2.'
           : status === 'MATCH' ? null : 'Semantic parity has not been established.',
@@ -149,6 +154,7 @@
         cutover_eligible: parity.cutoverEligible,
         matched_metrics: parity.matchedMetrics,
         mismatched_metrics: parity.mismatchedMetrics,
+        detail_mode: parity.detailMode,
         detail_coverage: parity.detailCoverage,
         monitor_snapshot: monitor?.snapshotId || null,
         legacy_schema: legacy.schema,
@@ -182,6 +188,7 @@
           comparableMetrics: 0,
           matchedMetrics: 0,
           mismatchedMetrics: 0,
+          detailMode: null,
           detailCoverage: 'UNAVAILABLE',
           cutoverEligible: false,
           cutoverBlocker: 'Budget execution domain is unavailable in the v2 monitor.',
