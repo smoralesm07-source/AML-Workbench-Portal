@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.111.0";
 
-const ALLOWED_MODELS = new Set(["public_spend_overview"]);
+const ALLOWED_MODELS = new Set(["public_spend_overview", "public_spend_monitor"]);
 const CORS = {
   "access-control-allow-origin": "https://smoralesm07-source.github.io",
   "access-control-allow-headers": "authorization, x-client-info, apikey, content-type, if-none-match",
@@ -26,6 +26,13 @@ function clean(value: unknown, max = 120) {
   return s && s.length <= max ? s : "";
 }
 
+function userClient(url: string, key: string, auth: string) {
+  return createClient(url, key, {
+    global: { headers: { Authorization: auth } },
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return response({ error: "METHOD_NOT_ALLOWED" }, 405);
@@ -34,31 +41,69 @@ Deno.serve(async (req: Request) => {
   const traceId = crypto.randomUUID();
   const auth = req.headers.get("authorization") || "";
   const url = Deno.env.get("SUPABASE_URL") || "";
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "";
+  const publishableKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY") || "";
 
   if (!auth.startsWith("Bearer ")) return response({ error: "MISSING_AUTH", trace_id: traceId }, 401, { "x-atlas-trace-id": traceId });
-  if (!url || !anonKey) return response({ error: "SERVER_CONFIG", trace_id: traceId }, 500, { "x-atlas-trace-id": traceId });
+  if (!url || !publishableKey) return response({ error: "SERVER_CONFIG", trace_id: traceId }, 500, { "x-atlas-trace-id": traceId });
 
   try {
     const body = await req.json().catch(() => ({}));
-    const model = clean(body?.model);
-    const scope = clean(body?.scope || "global");
+    const operation = clean(body?.operation || "read_model", 80);
     const route = clean(body?.route || "unknown", 120) || "unknown";
+    const sb = userClient(url, publishableKey, auth);
 
-    if (!ALLOWED_MODELS.has(model) || !scope) {
-      return response({ error: "INVALID_MODEL", trace_id: traceId }, 400, { "x-atlas-trace-id": traceId });
+    if (operation === "public_spend_query") {
+      const query = body?.query && typeof body.query === "object" ? body.query : {};
+      const kind = clean(query?.kind, 80);
+      if (!kind) return response({ error: "INVALID_QUERY", trace_id: traceId }, 400, { "x-atlas-trace-id": traceId });
+
+      const dbStarted = performance.now();
+      const { data, error } = await sb.rpc("atlas_v2_public_spend_query", { p_request: query });
+      const dbMs = Math.round(performance.now() - dbStarted);
+      const totalMs = Math.round(performance.now() - started);
+
+      if (error) {
+        console.error(JSON.stringify({ type: "atlas_v2_read", trace_id: traceId, operation, kind, route, status: "ERROR", db_ms: dbMs, total_ms: totalMs, code: error.code }));
+        const status = error.code === "42501" ? 403 : 500;
+        return response({ error: status === 403 ? "FORBIDDEN" : "PUBLIC_SPEND_QUERY_ERROR", trace_id: traceId }, status, {
+          "x-atlas-trace-id": traceId,
+          "server-timing": `db;dur=${dbMs}, total;dur=${totalMs}`,
+          "cache-control": "private, no-store",
+        });
+      }
+
+      const snapshotId = String(data?.snapshot_id || "");
+      const event = {
+        trace_id: traceId,
+        route,
+        operation: `public_spend_query:${kind}`,
+        phase: "edge_read",
+        duration_ms: totalMs,
+        status: "OK",
+        metadata: { kind, snapshot_id: snapshotId, db_ms: dbMs, contract: "ATLAS_PUBLIC_SPEND_QUERY_V2" },
+      };
+      const telemetry = sb.from("atlas_v2_client_event").insert(event).then(({ error: telemetryError }) => {
+        if (telemetryError) console.warn(JSON.stringify({ type: "atlas_v2_telemetry", trace_id: traceId, code: telemetryError.code }));
+      }).catch(() => undefined);
+      const edgeRuntime = (globalThis as any).EdgeRuntime;
+      if (edgeRuntime?.waitUntil) edgeRuntime.waitUntil(telemetry);
+
+      return response({ ...data, trace_id: traceId }, 200, {
+        "x-atlas-trace-id": traceId,
+        "x-atlas-snapshot": snapshotId,
+        "server-timing": `db;dur=${dbMs}, total;dur=${totalMs}`,
+        "cache-control": "private, no-store",
+      });
     }
 
-    const sb = createClient(url, anonKey, {
-      global: { headers: { Authorization: auth } },
-      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-    });
+    if (operation !== "read_model") return response({ error: "INVALID_OPERATION", trace_id: traceId }, 400, { "x-atlas-trace-id": traceId });
+
+    const model = clean(body?.model);
+    const scope = clean(body?.scope || "global");
+    if (!ALLOWED_MODELS.has(model) || !scope) return response({ error: "INVALID_MODEL", trace_id: traceId }, 400, { "x-atlas-trace-id": traceId });
 
     const dbStarted = performance.now();
-    const { data, error } = await sb.rpc("atlas_v2_get_read_model", {
-      p_model_key: model,
-      p_scope_key: scope,
-    });
+    const { data, error } = await sb.rpc("atlas_v2_get_read_model", { p_model_key: model, p_scope_key: scope });
     const dbMs = Math.round(performance.now() - dbStarted);
 
     if (error) {
@@ -105,7 +150,6 @@ Deno.serve(async (req: Request) => {
       "server-timing": `db;dur=${dbMs}, total;dur=${totalMs}`,
     };
     if (etag) headers.etag = etag;
-
     if (etag && ifNoneMatch === etag) return response(null, 304, headers);
     return response({ ...data, trace_id: traceId }, 200, headers);
   } catch (e) {
