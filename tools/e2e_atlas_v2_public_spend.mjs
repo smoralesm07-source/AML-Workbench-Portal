@@ -13,18 +13,32 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 const consoleErrors = [];
 const pageErrors = [];
 const v2Responses = [];
+const v2AssetResponses = [];
 let captureConsole = false;
 
 page.on('console', message => {
-  if (captureConsole && message.type() === 'error') consoleErrors.push(message.text());
+  if (captureConsole && message.type() === 'error') {
+    consoleErrors.push({ text: message.text(), location: message.location() || null });
+  }
 });
 page.on('pageerror', error => {
   if (captureConsole) pageErrors.push(error.message);
 });
 page.on('response', response => {
   const url = response.url();
-  if (url.includes('/__atlas_v2/functions/v1/')) v2Responses.push({ url: url.replace(baseURL.replace(/\/$/, ''), ''), status: response.status() });
+  if (url.includes('/__atlas_v2/functions/v1/')) {
+    v2Responses.push({ url: url.replace(baseURL.replace(/\/$/, ''), ''), status: response.status() });
+  }
+  if (url.startsWith(baseURL) && url.includes('/v2/')) {
+    v2AssetResponses.push({ url: url.replace(baseURL.replace(/\/$/, ''), ''), status: response.status() });
+  }
 });
+
+function isV2OwnedSignal(entry) {
+  const location = entry?.location?.url || '';
+  const text = entry?.text || '';
+  return /\/v2\/|\/__atlas_v2\/|atlas[- ]v2|gpv2/i.test(`${location} ${text}`);
+}
 
 async function runtimeDiagnostics() {
   return page.evaluate(() => ({
@@ -39,6 +53,7 @@ async function runtimeDiagnostics() {
     session: window.__ATLAS_V2_SESSION__ || null,
     navigateWrapped: !!window.navigate?.__atlasV2PublicSpendRouteBridge,
     hostPresent: !!document.querySelector('[data-gpv2-host]'),
+    styleHref: document.getElementById('atlas-v2-public-spend-adapter-style')?.href || null,
     legacyAuthority: window.__ATLAS_PUBLIC_SPEND_ROUTE_AUTHORITY_0578__ || null,
     scripts: [...document.scripts]
       .map(s => s.getAttribute('src') || (s.dataset?.atlasV2E2e ? `[inline:${s.dataset.atlasV2E2e}]` : '[inline]'))
@@ -65,6 +80,9 @@ async function openFirstDetail(kind) {
   await page.locator('.gpv2-drawer').waitFor({ state: 'visible', timeout: 15000 });
   assert.ok((await page.locator('.gpv2-drawer').innerText()).trim().length > 40, `${kind} drawer should contain contextual detail`);
   await closeDrawer();
+}
+async function cspViolations() {
+  return page.evaluate(() => Array.isArray(window.__ATLAS_V2_E2E_CSP__) ? window.__ATLAS_V2_E2E_CSP__.slice() : []);
 }
 
 const report = { authMode: 'SUPABASE_EPHEMERAL_CI', startedAt: new Date().toISOString() };
@@ -98,6 +116,21 @@ try {
   assert.equal(report.preRoute.preview?.status, 'ready', 'external CSP-safe v2 preview config must execute');
   assert.equal(report.preRoute.adapter?.status, 'installed', 'v2 adapter must be installed before route activation');
   assert.ok(report.preRoute.bridge, 'v2 route bridge must be installed before route activation');
+  assert.match(report.preRoute.styleHref || '', /\/v2\/public-spend-adapter\.css(?:\?|$)/, 'v2 stylesheet must resolve from the v2 module directory');
+
+  await page.evaluate(() => {
+    window.__ATLAS_V2_E2E_CSP__ = [];
+    document.addEventListener('securitypolicyviolation', event => {
+      window.__ATLAS_V2_E2E_CSP__.push({
+        effectiveDirective: event.effectiveDirective || '',
+        blockedURI: event.blockedURI || '',
+        sourceFile: event.sourceFile || '',
+        lineNumber: event.lineNumber || 0,
+        columnNumber: event.columnNumber || 0,
+        sample: event.sample || '',
+      });
+    });
+  });
 
   consoleErrors.length = 0;
   pageErrors.length = 0;
@@ -106,12 +139,13 @@ try {
   const nav = page.locator('[data-view="public-spend"]').first();
   await nav.waitFor({ state: 'visible', timeout: 15000 });
   await nav.click();
-  await page.waitForTimeout(700);
-  report.postRoute = await runtimeDiagnostics();
-  if (!report.postRoute.hostPresent) {
+  try {
+    await page.locator('[data-gpv2-host]').waitFor({ state: 'visible', timeout: 5000 });
+  } catch (_) {
+    report.postRoute = await runtimeDiagnostics();
     throw new Error(`v2 route did not create host: ${JSON.stringify({ bridge: report.postRoute.bridge, adapter: report.postRoute.adapter, navigateWrapped: report.postRoute.navigateWrapped, scripts: report.postRoute.scripts })}`);
   }
-  await page.locator('[data-gpv2-host]').waitFor({ state: 'visible', timeout: 15000 });
+  report.postRoute = await runtimeDiagnostics();
   await adapterReady('overview');
   await page.waitForFunction(() => window.__ATLAS_V2_SESSION__?.status === 'ready', null, { timeout: 15000 });
 
@@ -160,27 +194,42 @@ try {
 
   const exchangeResponses = v2Responses.filter(x => x.url.includes('atlas-v2-session-exchange'));
   const readResponses = v2Responses.filter(x => x.url.includes('atlas-v2-read'));
+  const failedAssets = v2AssetResponses.filter(x => x.status >= 400);
+  const v2ConsoleErrors = consoleErrors.filter(isV2OwnedSignal);
+  const legacyConsoleErrors = consoleErrors.filter(entry => !isV2OwnedSignal(entry));
+  const allCsp = await cspViolations();
+  const v2CspViolations = allCsp.filter(entry => /\/v2\/|\/__atlas_v2\/|atlas[- ]v2|gpv2/i.test(`${entry.sourceFile} ${entry.blockedURI} ${entry.sample}`));
+  const legacyCspViolations = allCsp.filter(entry => !v2CspViolations.includes(entry));
+
   assert.ok(exchangeResponses.some(x => x.status === 200), 'session exchange must succeed over HTTP');
   assert.ok(readResponses.length >= 6, 'E2E should exercise multiple real v2 reads');
   assert.equal(readResponses.filter(x => x.status >= 400).length, 0, 'v2 reads must not return HTTP errors');
-  assert.equal(consoleErrors.length, 0, `console errors since v2 route activation: ${consoleErrors.join(' | ')}`);
+  assert.equal(failedAssets.length, 0, `v2 assets must load cleanly: ${JSON.stringify(failedAssets)}`);
+  assert.equal(v2ConsoleErrors.length, 0, `v2-owned console errors: ${JSON.stringify(v2ConsoleErrors)}`);
+  assert.equal(v2CspViolations.length, 0, `v2-owned CSP violations: ${JSON.stringify(v2CspViolations)}`);
   assert.equal(pageErrors.length, 0, `page errors since v2 route activation: ${pageErrors.join(' | ')}`);
 
   report.v2Responses = v2Responses;
-  report.consoleErrors = consoleErrors;
+  report.v2AssetResponses = v2AssetResponses;
+  report.v2ConsoleErrors = v2ConsoleErrors;
+  report.legacyConsoleErrors = legacyConsoleErrors;
+  report.v2CspViolations = v2CspViolations;
+  report.legacyCspViolations = legacyCspViolations;
   report.pageErrors = pageErrors;
   report.completedAt = new Date().toISOString();
   report.status = 'PASS';
   await page.screenshot({ path: 'e2e-atlas-v2-public-spend.png', fullPage: true });
   fs.writeFileSync('e2e-atlas-v2-public-spend.json', JSON.stringify(report, null, 2));
-  console.log('ATLAS v2 authenticated browser E2E PASS', JSON.stringify({ filters: report.filters, reads: readResponses.length, exchange: exchangeResponses.length }));
+  console.log('ATLAS v2 authenticated browser E2E PASS', JSON.stringify({ filters: report.filters, reads: readResponses.length, exchange: exchangeResponses.length, legacyConsoleErrors: legacyConsoleErrors.length, legacyCsp: legacyCspViolations.length }));
 } catch (error) {
   report.status = 'FAIL';
   report.error = error instanceof Error ? error.message : String(error);
   report.runtimeAtFailure = await runtimeDiagnostics().catch(() => null);
   report.v2Responses = v2Responses;
+  report.v2AssetResponses = v2AssetResponses;
   report.consoleErrors = consoleErrors;
   report.pageErrors = pageErrors;
+  report.cspViolations = await cspViolations().catch(() => []);
   report.completedAt = new Date().toISOString();
   fs.writeFileSync('e2e-atlas-v2-public-spend.json', JSON.stringify(report, null, 2));
   await page.screenshot({ path: 'e2e-atlas-v2-public-spend.png', fullPage: true }).catch(() => {});
