@@ -34,13 +34,24 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
 
+          expected_migrations = [
+              '20260905010825_atlas_architecture_v2_foundation.sql',
+              '20260905011305_atlas_architecture_v2_job_automation.sql',
+              '20260905011448_atlas_architecture_v2_hardening.sql',
+              '20260905011656_atlas_architecture_v2_model_head_fk_index.sql',
+          ]
+          migration_dir=Path('supabase/migrations')
+          present=sorted(p.name for p in migration_dir.glob('*atlas_architecture_v2*.sql'))
+          assert present == expected_migrations, (present, expected_migrations)
+
           doc=Path('docs/ARCHITECTURE_V2.md').read_text(encoding='utf-8')
           client=Path('src/v2/atlas-v2-data.js').read_text(encoding='utf-8')
           shadow=Path('src/v2/public-spend-shadow.js').read_text(encoding='utf-8')
           edge=Path('supabase/functions/atlas-v2-read/index.ts').read_text(encoding='utf-8')
-          foundation=Path('supabase/migrations/20260905010825_atlas_architecture_v2_foundation.sql').read_text(encoding='utf-8')
-          automation=Path('supabase/migrations/20260905011600_atlas_architecture_v2_job_automation.sql').read_text(encoding='utf-8')
-          hardening=Path('supabase/migrations/20260905011900_atlas_architecture_v2_hardening.sql').read_text(encoding='utf-8')
+          foundation=(migration_dir/expected_migrations[0]).read_text(encoding='utf-8')
+          automation=(migration_dir/expected_migrations[1]).read_text(encoding='utf-8')
+          hardening=(migration_dir/expected_migrations[2]).read_text(encoding='utf-8')
+          fk_index=(migration_dir/expected_migrations[3]).read_text(encoding='utf-8')
 
           assert 'SOURCE -> LANDING -> NORMALIZE -> FUSION -> ANALYTICS -> READ MODEL -> READ API -> ATLAS -> DRILL-DOWN' in doc
           assert 'ATLAS_READ_API_V2' in client
@@ -70,5 +81,6 @@ jobs:
           assert 'grant usage on schema atlas_v2_private to service_role' in hardening.lower()
           assert 'atlas-v2-telemetry-retention' in hardening
           assert "interval '30 days'" in hardening
-          print('ATLAS Architecture v2 foundation + automation + shadow contract OK')
+          assert 'atlas_v2_model_head_read_model_fk_idx' in fk_index
+          print('ATLAS Architecture v2 foundation + automation + shadow + migration versions OK')
           PY
