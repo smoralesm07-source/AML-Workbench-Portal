@@ -1,3 +1,4 @@
+// Gate trace: execute the authenticated v2 browser test on the exact branch HEAD.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { chromium } from 'playwright';
