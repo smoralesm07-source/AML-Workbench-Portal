@@ -28,6 +28,7 @@ jobs:
           set -euo pipefail
           node --check src/v2/atlas-v2-data.js
           node --check src/v2/public-spend-shadow.js
+          node --check src/v2/public-spend-adapter.js
           git diff --check
 
       - name: Semantic cutover gate
@@ -87,6 +88,7 @@ jobs:
           doc=Path('docs/ARCHITECTURE_V2.md').read_text()
           client=Path('src/v2/atlas-v2-data.js').read_text()
           shadow=Path('src/v2/public-spend-shadow.js').read_text()
+          adapter=Path('src/v2/public-spend-adapter.js').read_text()
           read_edge=Path('supabase/functions/atlas-v2-read/index.ts').read_text()
           ingest=Path('supabase/functions/atlas-v2-source-ingest/index.ts').read_text()
           preview=Path('.github/workflows/build-atlas-v2-shadow-preview.yml').read_text()
@@ -97,11 +99,13 @@ jobs:
           assert 'ATLAS_PUBLIC_SPEND_MONITOR_V2' in doc
           assert 'ATLAS_READ_API_V2' in client and 'ATLAS_PUBLIC_SPEND_QUERY_V2' in client
           assert 'budgetServices' in client and 'budgetProviderDetail' in client
-          assert 'raw.githubusercontent.com' not in client and 'raw.githubusercontent.com' not in shadow
+          assert 'raw.githubusercontent.com' not in client and 'raw.githubusercontent.com' not in shadow and 'raw.githubusercontent.com' not in adapter
           assert 'compareBudgetDomain' in shadow and "detailMode === 'FULL_BACKEND'" in shadow
           assert "status === 'MATCH' && detailCoverage === 'READY'" in shadow
           assert 'shadow_parity:public_spend' in shadow
-          assert 'data-atlas-v2-shadow' in preview and 'actions/deploy-pages' not in preview
+          assert 'data-atlas-v2-preview' in preview and 'public-spend-adapter' in preview and 'actions/deploy-pages' not in preview
+          assert "detail_mode!=='FULL_BACKEND'" in adapter
+          assert 'budgetServices' in adapter and 'budgetProviderDetail' in adapter
           assert 'public_spend_query' in read_edge and 'SUPABASE_SERVICE_ROLE_KEY' not in read_edge
           assert 'x-atlas-trace-id' in read_edge and 'server-timing' in read_edge
           assert 'budget_detail_state' in budget and 'ingest_budget_detail_batch' in budget
