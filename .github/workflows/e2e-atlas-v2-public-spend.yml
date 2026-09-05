@@ -63,14 +63,18 @@ jobs:
           competing={
             'assets/atlas-public-spend-v2.css',
             'assets/atlas-public-spend-v2.js',
+            'assets/atlas-public-spend-mobile-route-0573.js',
             'assets/atlas-public-spend-route-authority-0578.js',
+            'assets/atlas-public-spend-intelligence-0720.css',
+            'assets/atlas-public-spend-intelligence-0720.js',
+            'assets/atlas-gasto-publico-1000.css',
+            'assets/atlas-gasto-publico-1000.js',
             'assets/atlas-gasto-publico-1300.css',
             'assets/atlas-gasto-publico-1300.js',
           }
-          core_competing={
-            'assets/atlas-public-spend-v2.css',
-            'assets/atlas-public-spend-v2.js',
-            'assets/atlas-public-spend-route-authority-0578.js',
+          core_competing=competing-{
+            'assets/atlas-gasto-publico-1300.css',
+            'assets/atlas-gasto-publico-1300.js',
           }
 
           assert report['public_spend_cutover'] == 'ARCHITECTURE_V2'
@@ -87,9 +91,12 @@ jobs:
           taxonomy=root/'assets/atlas-public-spend-mark-taxonomy-v4.js'
           if taxonomy.is_file():
             assert taxonomy.stat().st_size > 0
+          audit=root/'assets/atlas-public-spend-audit-0550.js'
+          if audit.is_file():
+            assert audit.stat().st_size > 0
           assert 'atlas-v2-production-config.js' in html
           assert 'public-spend-route-bridge.js' in html
-          print('authenticated E2E will exercise the generated cutover artifact with shared support assets preserved')
+          print('authenticated E2E will exercise the generated cutover artifact with all legacy route owners retired and shared support preserved')
           PY
 
       - name: Mint GitHub OIDC token and ephemeral core session
