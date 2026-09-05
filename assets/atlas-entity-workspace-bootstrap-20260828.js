@@ -3,7 +3,8 @@
 /* ATLAS · Entity workspace compatibility bootstrap · current
  * 2026-09-04: the Entity 360 renderer is no longer loaded here.
  * The canonical Historia Inteligente authority is compiled before v0447.
- * This compatibility file preserves only press adapters and sanctions charts.
+ * This compatibility file preserves press adapters, sanctions charts and
+ * the cross-route Conciliación UAF↔SII → Entity 360 entry bridge.
  */
 (function atlasEntityWorkspaceCompatibilityCurrent(){
   const BOOT_FLAG='__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_20260828__';
@@ -16,7 +17,7 @@
   const PRESS_SEARCH_RACEFIX_SRC='./assets/atlas-entity-press-search-racefix-20260828.js?v=20260904-current1';
   const PRESS_VIEW_JS_SRC='./assets/atlas-entity-press-view-0951.js?v=20260904-current1';
   const PRESS_VIEW_CSS_SRC='./assets/atlas-entity-press-view-0951.css?v=20260904-current1';
-  const BUILD='20260904-entity-compat-current1';
+  const BUILD='20260904-entity-compat-current2';
 
   if(window[BOOT_FLAG])return;
   window[BOOT_FLAG]=true;
@@ -32,6 +33,7 @@
       pressSearchBridge:!!window.__ATLAS_ENTITY_PRESS_SEARCH_BRIDGE_20260828__,
       pressSearchRacefix:!!window.__ATLAS_ENTITY_PRESS_SEARCH_RACEFIX__,
       pressView0951:!!window.__ATLAS_ENTITY_PRESS_VIEW_0951__,
+      reconciliationEntityBridge:!!window.__ATLAS_RECONCILIATION_ENTITY360_BRIDGE_20260904__?.active,
       ...extra
     };
   }
@@ -139,4 +141,90 @@
   script.async=false;
   script.dataset.atlasSanctionsCharts='0962';
   document.body.appendChild(script);
+})();
+
+/* Conciliación UAF↔SII → Entidad 360 bridge · 2026-09-04
+ * v0434 was authored before the current Entity 360 route authorities and still
+ * preferred v0203OpenEntity. That bypassed ENTRY.open, so state remained in the
+ * reconciliation route while Historia Inteligente correctly refused to paint
+ * outside an entity view, leaving #content blank. This bridge keeps the old
+ * reconciliation DOM/data contract but routes every entity click through the
+ * live canonical entry at click time. No identity, RLS, score or data semantics
+ * are changed.
+ */
+(function atlasReconciliationEntity360Bridge20260904(){
+  const FLAG='__ATLAS_RECONCILIATION_ENTITY360_BRIDGE_20260904__';
+  const BUILD='20260904-recon-e360-1';
+
+  function stateObjects(){
+    const rows=[];
+    try{if(typeof state!=='undefined'&&state)rows.push(state);}catch(_error){}
+    try{if(window.state)rows.push(window.state);}catch(_error){}
+    try{if(window.amlState)rows.push(window.amlState);}catch(_error){}
+    return [...new Set(rows.filter(Boolean))];
+  }
+
+  function activateEntityRoute(id){
+    for(const s of stateObjects()){
+      try{s.view='entities';s.selectedEntity=id;}catch(_error){}
+    }
+  }
+
+  async function openCanonicalEntity(id,meta=null){
+    if(!id)return false;
+    const entityId=String(id);
+    const liveMeta=meta?.entity_id?meta:{...(meta||{}),entity_id:entityId};
+    const entry=window.__ATLAS_ENTITY_ENTRY__;
+
+    if(entry&&typeof entry.open==='function'){
+      try{
+        await entry.open(entityId,liveMeta);
+        window[FLAG]={active:true,build:BUILD,lastEntityId:entityId,lastPath:'ENTITY_ENTRY',openedAt:new Date().toISOString()};
+        return true;
+      }catch(error){
+        console.error('[ATLAS] Conciliación → Entidad 360 · canonical entry failed',error);
+      }
+    }
+
+    /* Fail-soft only. The current history authority can render independently
+       from its governed sources once the route state is made explicit. */
+    activateEntityRoute(entityId);
+    const history=window.__ATLAS_ENTITY360_EXECUTIVE__;
+    if(history&&typeof history.open==='function'){
+      try{
+        await history.open(entityId,liveMeta);
+        window[FLAG]={active:true,build:BUILD,lastEntityId:entityId,lastPath:'HISTORY_FALLBACK',openedAt:new Date().toISOString()};
+        return true;
+      }catch(error){
+        console.error('[ATLAS] Conciliación → Entidad 360 · history fallback failed',error);
+      }
+    }
+
+    /* Last compatibility path. Deliberately after the governed entry/history;
+       this must never again be the preferred route from reconciliation. */
+    if(typeof window.openEntity==='function'){
+      try{
+        await window.openEntity(entityId);
+        window[FLAG]={active:true,build:BUILD,lastEntityId:entityId,lastPath:'WINDOW_OPEN_COMPAT',openedAt:new Date().toISOString()};
+        return true;
+      }catch(error){
+        console.error('[ATLAS] Conciliación → Entidad 360 · compatibility open failed',error);
+      }
+    }
+    return false;
+  }
+
+  function install(){
+    const hadLegacy=typeof window.v0434OpenEntity==='function';
+    window.v0434OpenEntity=openCanonicalEntity;
+    try{v0434OpenEntity=openCanonicalEntity;}catch(_error){}
+    window[FLAG]={active:true,build:BUILD,legacyHandlerReplaced:hadLegacy,canonicalEntryAvailable:typeof window.__ATLAS_ENTITY_ENTRY__?.open==='function',installedAt:new Date().toISOString()};
+    const boot=window.__ATLAS_ENTITY_WORKSPACE_BOOTSTRAP_STATE__;
+    if(boot)boot.reconciliationEntityBridge=true;
+  }
+
+  install();
+  document.addEventListener('atlas:entity-entry-ready',install);
+  document.addEventListener('atlas:entity-workspace-ready',install);
+  window.addEventListener('pageshow',install);
 })();
