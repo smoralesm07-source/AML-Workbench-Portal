@@ -88,12 +88,14 @@ jobs:
           client_text=Path('_site/v2/atlas-v2-data.js').read_text(encoding='utf-8')
           adapter_text=Path('_site/v2/public-spend-adapter.js').read_text(encoding='utf-8')
           assert 'raw.githubusercontent.com' not in client_text and 'raw.githubusercontent.com' not in adapter_text
-          assert 'budgetContext' in client_text
+          assert 'budgetContext' in client_text and 'budgetFlowDetail' in client_text
           assert 'budgetContext' in adapter_text and 'data-gpv2-filter' in adapter_text
-          assert 'budgetServices' in adapter_text and 'budgetProviderDetail' in adapter_text
+          assert 'budgetServices' in adapter_text and 'budgetProviderDetail' in adapter_text and 'budgetFlowDetail' in adapter_text
+          assert 'filters: S.filters' in adapter_text
+          assert 'data-gpv2-methodology' in adapter_text and 'Metodología' in adapter_text
           assert "detail_mode !== 'FULL_BACKEND'" in adapter_text
           assert 'contextMs' in adapter_text and 'traceId' in adapter_text
-          print('ATLAS v2 preview mounted: synchronized budget context, branch-only adapter, no production manifest changes')
+          print('ATLAS v2 preview mounted: contextual filters, lists and relation detail; branch-only, no production manifest changes')
           PY
 
       - name: Upload preview artifact
