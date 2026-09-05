@@ -55,22 +55,41 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import json
-          import re
 
           root=Path('_site')
           html=(root/'index.html').read_text(encoding='utf-8')
           report=json.loads((root/'atlas-runtime-report.json').read_text(encoding='utf-8'))
           config=(root/'v2/atlas-v2-production-config.js').read_text(encoding='utf-8')
+          competing={
+            'assets/atlas-public-spend-v2.css',
+            'assets/atlas-public-spend-v2.js',
+            'assets/atlas-public-spend-route-authority-0578.js',
+            'assets/atlas-gasto-publico-1300.css',
+            'assets/atlas-gasto-publico-1300.js',
+          }
+          core_competing={
+            'assets/atlas-public-spend-v2.css',
+            'assets/atlas-public-spend-v2.js',
+            'assets/atlas-public-spend-route-authority-0578.js',
+          }
 
           assert report['public_spend_cutover'] == 'ARCHITECTURE_V2'
           assert report['public_spend_e2e_proxy'] is True
           assert report['public_spend_source'] == 'BACKEND_READ_MODELS'
+          retired=set(report['public_spend_legacy_assets_retired'])
+          assert core_competing <= retired
+          assert retired <= competing
           assert "location.origin + '/__atlas_v2'" in config
           assert 'public-spend-cutover-e2e-proxy' in config
-          assert not re.search(r'\.\/assets\/(?:atlas-public-spend|atlas-gasto-publico)', html, re.I)
+          for asset in competing:
+            assert not (root/asset).is_file(), asset
+            assert f'./{asset}' not in html, asset
+          taxonomy=root/'assets/atlas-public-spend-mark-taxonomy-v4.js'
+          if taxonomy.is_file():
+            assert taxonomy.stat().st_size > 0
           assert 'atlas-v2-production-config.js' in html
           assert 'public-spend-route-bridge.js' in html
-          print('authenticated E2E will exercise the generated cutover artifact')
+          print('authenticated E2E will exercise the generated cutover artifact with shared support assets preserved')
           PY
 
       - name: Mint GitHub OIDC token and ephemeral core session
