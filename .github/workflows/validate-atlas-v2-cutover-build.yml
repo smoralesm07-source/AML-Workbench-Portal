@@ -58,14 +58,18 @@ jobs:
           competing={
             'assets/atlas-public-spend-v2.css',
             'assets/atlas-public-spend-v2.js',
+            'assets/atlas-public-spend-mobile-route-0573.js',
             'assets/atlas-public-spend-route-authority-0578.js',
+            'assets/atlas-public-spend-intelligence-0720.css',
+            'assets/atlas-public-spend-intelligence-0720.js',
+            'assets/atlas-gasto-publico-1000.css',
+            'assets/atlas-gasto-publico-1000.js',
             'assets/atlas-gasto-publico-1300.css',
             'assets/atlas-gasto-publico-1300.js',
           }
-          core_competing={
-            'assets/atlas-public-spend-v2.css',
-            'assets/atlas-public-spend-v2.js',
-            'assets/atlas-public-spend-route-authority-0578.js',
+          core_competing=competing-{
+            'assets/atlas-gasto-publico-1300.css',
+            'assets/atlas-gasto-publico-1300.js',
           }
 
           # The canonical build remains unchanged unless the dedicated builder is selected.
@@ -87,8 +91,7 @@ jobs:
             assert not (cutover/asset).is_file(), asset
             assert f'./{asset}' not in cutover_html, asset
 
-          # Any public-spend/gasto-publico support asset that is not an authority/runtime
-          # must survive the cutover byte-for-byte. This protects taxonomy/intelligence helpers.
+          # Named support assets that are not route owners/bootstrap paths remain byte-for-byte.
           default_named=[]
           for pattern in ('atlas-public-spend*','atlas-gasto-publico*'):
             default_named.extend(p for p in (default/'assets').glob(pattern) if p.is_file())
@@ -134,9 +137,11 @@ jobs:
           assert '__ATLAS_V2_PUBLIC_SPEND_CUTOVER__ === true' in adapter
           assert '__ATLAS_V2_PUBLIC_SPEND_CUTOVER__ === true' in bridge
           assert '__ATLAS_V2_PUBLIC_SPEND_CUTOVER__ = true' in config
+          assert '__atlasV2PublicSpendFacade' in bridge
+          assert 'nonconfigurable-writable-assignment' in bridge
           assert 'v2-preview' not in adapter
           assert 'v2-preview' not in bridge
           assert '__ATLAS_V2_PREVIEW_MODE__' not in config
-          print(f'ATLAS v2 cutover build invariants PASS; preserved shared support assets={len(preserved)}')
+          print(f'ATLAS v2 cutover build invariants PASS; retired={len(retired)} preserved shared support assets={len(preserved)}')
           PY
           git diff --check
