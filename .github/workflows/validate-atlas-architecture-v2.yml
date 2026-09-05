@@ -79,7 +79,8 @@ jobs:
             '20260905013449_atlas_architecture_v2_public_spend_drilldown.sql',
             '20260905013657_atlas_architecture_v2_public_spend_search_indexes.sql',
             '20260905015600_atlas_architecture_v2_budget_detail_backend.sql',
-            '20260905020230_atlas_architecture_v2_queue_privilege_boundary.sql',
+            '20260905020045_atlas_architecture_v2_queue_privilege_boundary.sql',
+            '20260905021121_atlas_architecture_v2_budget_context.sql',
           ]
           mdir=Path('supabase/migrations')
           present=sorted(p.name for p in mdir.glob('*atlas_architecture_v2*.sql'))
@@ -94,17 +95,19 @@ jobs:
           preview=Path('.github/workflows/build-atlas-v2-shadow-preview.yml').read_text()
           budget=(mdir/migrations[8]).read_text()
           queue=(mdir/migrations[9]).read_text()
+          context=(mdir/migrations[10]).read_text()
 
           assert 'SOURCE -> LANDING -> NORMALIZE -> FUSION -> ANALYTICS -> READ MODEL -> READ API -> ATLAS -> DRILL-DOWN' in doc
           assert 'ATLAS_PUBLIC_SPEND_MONITOR_V2' in doc
           assert 'ATLAS_READ_API_V2' in client and 'ATLAS_PUBLIC_SPEND_QUERY_V2' in client
-          assert 'budgetServices' in client and 'budgetProviderDetail' in client
+          assert 'budgetServices' in client and 'budgetProviderDetail' in client and 'budgetContext' in client
           assert 'raw.githubusercontent.com' not in client and 'raw.githubusercontent.com' not in shadow and 'raw.githubusercontent.com' not in adapter
           assert 'compareBudgetDomain' in shadow and "detailMode === 'FULL_BACKEND'" in shadow
           assert "status === 'MATCH' && detailCoverage === 'READY'" in shadow
           assert 'shadow_parity:public_spend' in shadow
           assert 'data-atlas-v2-preview' in preview and 'public-spend-adapter' in preview and 'actions/deploy-pages' not in preview
-          assert "detail_mode!=='FULL_BACKEND'" in adapter
+          assert "detail_mode !== 'FULL_BACKEND'" in adapter
+          assert 'budgetContext' in adapter and 'data-gpv2-filter' in adapter
           assert 'budgetServices' in adapter and 'budgetProviderDetail' in adapter
           assert 'public_spend_query' in read_edge and 'SUPABASE_SERVICE_ROLE_KEY' not in read_edge
           assert 'x-atlas-trace-id' in read_edge and 'server-timing' in read_edge
@@ -116,5 +119,9 @@ jobs:
           assert 'security definer' in queue.lower()
           assert 'grant usage on schema pgmq to service_role' not in queue.lower()
           assert 'ingest_source_snapshot' in queue and 'finalize_budget_detail' in queue
+          assert 'budget_context' in context
+          assert "'top_services'" in context and "'top_providers'" in context and "'top_relations'" in context
+          assert "'options'" in context and "'regions'" in context and "'categories'" in context and "'months'" in context
+          assert "kind','budget_context'" in context
           print('ATLAS Architecture v2 invariants OK')
           PY
