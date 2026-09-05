@@ -8,6 +8,7 @@ on:
       - 'docs/ARCHITECTURE_V2.md'
       - 'docs/PUBLIC_SPEND_V2_CUTOVER.md'
       - 'src/v2/**'
+      - 'tools/test_atlas_v2_data_client.js'
       - 'supabase/functions/atlas-v2-read/**'
       - 'supabase/functions/atlas-v2-source-ingest/**'
       - 'supabase/migrations/*atlas_architecture_v2*'
@@ -24,12 +25,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Syntax
+      - name: Syntax and deterministic client smoke
         run: |
           set -euo pipefail
           node --check src/v2/atlas-v2-data.js
           node --check src/v2/public-spend-shadow.js
           node --check src/v2/public-spend-adapter.js
+          node --check tools/test_atlas_v2_data_client.js
+          node tools/test_atlas_v2_data_client.js
           git diff --check
 
       - name: Semantic cutover gate
@@ -93,6 +96,7 @@ jobs:
           client=Path('src/v2/atlas-v2-data.js').read_text()
           shadow=Path('src/v2/public-spend-shadow.js').read_text()
           adapter=Path('src/v2/public-spend-adapter.js').read_text()
+          smoke=Path('tools/test_atlas_v2_data_client.js').read_text()
           read_edge=Path('supabase/functions/atlas-v2-read/index.ts').read_text()
           ingest=Path('supabase/functions/atlas-v2-source-ingest/index.ts').read_text()
           preview=Path('.github/workflows/build-atlas-v2-shadow-preview.yml').read_text()
@@ -107,6 +111,7 @@ jobs:
           assert 'ATLAS_READ_API_V2' in client and 'ATLAS_PUBLIC_SPEND_QUERY_V2' in client
           assert 'budgetServices' in client and 'budgetProviderDetail' in client and 'budgetContext' in client and 'budgetFlowDetail' in client
           assert 'budgetScope' in client
+          assert 'ETag/304' in smoke and 'TIMEOUT_OR_CANCELLED' in smoke and 'budget_services' in smoke
           assert 'raw.githubusercontent.com' not in client and 'raw.githubusercontent.com' not in shadow and 'raw.githubusercontent.com' not in adapter
           assert 'compareBudgetDomain' in shadow and "detailMode === 'FULL_BACKEND'" in shadow
           assert "status === 'MATCH' && detailCoverage === 'READY'" in shadow
