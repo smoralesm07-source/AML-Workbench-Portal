@@ -9,12 +9,18 @@ const refreshToken = process.env.ATLAS_E2E_REFRESH_TOKEN || '';
 const expectedEmail = process.env.ATLAS_E2E_EMAIL || '';
 if (!accessToken || !refreshToken || !expectedEmail) throw new Error('E2E session inputs are missing');
 
+const COMPETING_LEGACY_JS_RE = /\/assets\/(?:atlas-public-spend-v2|atlas-public-spend-route-authority-0578|atlas-gasto-publico-1300)\.js(?:\?|$)/i;
+const COMPETING_LEGACY_CSS_RE = /\/assets\/(?:atlas-public-spend-v2|atlas-gasto-publico-1300)\.css(?:\?|$)/i;
+const LEGACY_NAMED_ASSET_RE = /\/assets\/(?:atlas-public-spend|atlas-gasto-publico)[^/?]*(?:\.js|\.css)(?:\?|$)/i;
+const isCompetingLegacyAsset = url => COMPETING_LEGACY_JS_RE.test(url) || COMPETING_LEGACY_CSS_RE.test(url);
+
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 const consoleErrors = [];
 const pageErrors = [];
 const v2Responses = [];
 const v2AssetResponses = [];
+const legacyNamedAssetResponses = [];
 let captureConsole = false;
 
 page.on('console', message => {
@@ -27,12 +33,10 @@ page.on('pageerror', error => {
 });
 page.on('response', response => {
   const url = response.url();
-  if (url.includes('/__atlas_v2/functions/v1/')) {
-    v2Responses.push({ url: url.replace(baseURL.replace(/\/$/, ''), ''), status: response.status() });
-  }
-  if (url.startsWith(baseURL) && url.includes('/v2/')) {
-    v2AssetResponses.push({ url: url.replace(baseURL.replace(/\/$/, ''), ''), status: response.status() });
-  }
+  const normalized = url.replace(baseURL.replace(/\/$/, ''), '');
+  if (url.includes('/__atlas_v2/functions/v1/')) v2Responses.push({ url: normalized, status: response.status() });
+  if (url.startsWith(baseURL) && url.includes('/v2/')) v2AssetResponses.push({ url: normalized, status: response.status() });
+  if (url.startsWith(baseURL) && LEGACY_NAMED_ASSET_RE.test(url)) legacyNamedAssetResponses.push({ url: normalized, status: response.status() });
 });
 
 function isV2OwnedSignal(entry) {
@@ -43,7 +47,10 @@ function isV2OwnedSignal(entry) {
 
 async function runtimeDiagnostics() {
   return page.evaluate(() => {
-    const scriptSources = [...document.scripts].map(s => s.getAttribute('src') || '[inline]');
+    const competingJs = /\/assets\/(?:atlas-public-spend-v2|atlas-public-spend-route-authority-0578|atlas-gasto-publico-1300)\.js(?:\?|$)/i;
+    const competingCss = /\/assets\/(?:atlas-public-spend-v2|atlas-gasto-publico-1300)\.css(?:\?|$)/i;
+    const scriptSources = [...document.scripts].map(s => s.src || s.getAttribute('src') || '[inline]');
+    const styleSources = [...document.querySelectorAll('link[href]')].map(link => link.href || link.getAttribute('href') || '');
     return {
       production: window.__ATLAS_V2_PRODUCTION_CONFIG__ || null,
       cutoverEnabled: window.__ATLAS_V2_PUBLIC_SPEND_CUTOVER__ === true,
@@ -59,11 +66,17 @@ async function runtimeDiagnostics() {
       hostPresent: !!document.querySelector('[data-gpv2-host]'),
       styleHref: document.getElementById('atlas-v2-public-spend-adapter-style')?.href || null,
       legacyAuthority: window.__ATLAS_PUBLIC_SPEND_ROUTE_AUTHORITY_0578__ || null,
+      legacyGlobals: {
+        gp2: !!window.AtlasPublicSpendV2,
+        gp13: !!window.AtlasGastoPublico1300,
+      },
       scripts: scriptSources.filter(src => /atlas-v2|public-spend|gasto-publico/i.test(src)),
-      legacyScripts: scriptSources.filter(src => /\/assets\/(?:atlas-public-spend|atlas-gasto-publico)/i.test(src)),
+      competingLegacyScripts: scriptSources.filter(src => competingJs.test(src)),
+      competingLegacyStyles: styleSources.filter(src => competingCss.test(src)),
     };
   });
 }
+
 async function adapterReady(tab) {
   await page.waitForFunction(expected => {
     const h = window.__ATLAS_V2_PUBLIC_SPEND_ADAPTER__;
@@ -87,6 +100,13 @@ async function openFirstDetail(kind) {
 }
 async function cspViolations() {
   return page.evaluate(() => Array.isArray(window.__ATLAS_V2_E2E_CSP__) ? window.__ATLAS_V2_E2E_CSP__.slice() : []);
+}
+function assertNoCompetingAuthority(diag, phase) {
+  assert.equal(diag.competingLegacyScripts.length, 0, `${phase}: competing legacy Gasto Público scripts must be absent`);
+  assert.equal(diag.competingLegacyStyles.length, 0, `${phase}: competing legacy Gasto Público styles must be absent`);
+  assert.equal(diag.legacyAuthority, null, `${phase}: legacy public-spend route authority must be absent`);
+  assert.equal(diag.legacyGlobals.gp2, false, `${phase}: GP2 runtime global must be absent`);
+  assert.equal(diag.legacyGlobals.gp13, false, `${phase}: GP13 runtime global must be absent`);
 }
 
 const report = { authMode: 'SUPABASE_EPHEMERAL_CI_CUTOVER_ARTIFACT', startedAt: new Date().toISOString() };
@@ -116,6 +136,7 @@ try {
   assert.equal(authState.access?.enabled, true);
   assert.notEqual(authState.access?.provisional, true, 'E2E must not pass through degraded/provisional shell access');
   report.coreAuth = authState;
+
   report.preRoute = await runtimeDiagnostics();
   assert.equal(report.preRoute.production?.status, 'ready', 'v2 production cutover config must execute');
   assert.match(report.preRoute.production?.mode || '', /^public-spend-cutover/, 'production cutover mode must be active');
@@ -124,9 +145,8 @@ try {
   assert.match(report.preRoute.config?.sessionExchangeUrl || '', /\/__atlas_v2\/functions\/v1\/atlas-v2-session-exchange$/, 'session exchange must use the E2E proxy');
   assert.equal(report.preRoute.adapter?.status, 'installed', 'v2 adapter must be installed before route activation');
   assert.ok(report.preRoute.bridge, 'v2 route bridge must be installed before route activation');
-  assert.equal(report.preRoute.legacyScripts.length, 0, `cutover artifact must not load legacy public-spend scripts: ${JSON.stringify(report.preRoute.legacyScripts)}`);
-  assert.equal(report.preRoute.legacyAuthority, null, 'legacy public-spend route authority must not exist in cutover artifact');
   assert.match(report.preRoute.styleHref || '', /\/v2\/public-spend-adapter\.css(?:\?|$)/, 'v2 stylesheet must resolve from the cutover v2 directory');
+  assertNoCompetingAuthority(report.preRoute, 'pre-route');
 
   await page.evaluate(() => {
     window.__ATLAS_V2_E2E_CSP__ = [];
@@ -156,8 +176,7 @@ try {
     throw new Error(`v2 route did not create host: ${JSON.stringify({ bridge: report.postRoute.bridge, adapter: report.postRoute.adapter, navigateWrapped: report.postRoute.navigateWrapped, scripts: report.postRoute.scripts })}`);
   }
   report.postRoute = await runtimeDiagnostics();
-  assert.equal(report.postRoute.legacyScripts.length, 0, 'legacy public-spend scripts must remain absent after route activation');
-  assert.equal(report.postRoute.legacyAuthority, null, 'legacy public-spend authority must remain absent after route activation');
+  assertNoCompetingAuthority(report.postRoute, 'post-route');
   await adapterReady('overview');
   await page.waitForFunction(() => window.__ATLAS_V2_SESSION__?.status === 'ready', null, { timeout: 15000 });
 
@@ -186,27 +205,29 @@ try {
   await page.locator('[data-gpv2-tab="services"]').click();
   await adapterReady('services');
   await openFirstDetail('service');
-
   await page.locator('[data-gpv2-tab="providers"]').click();
   await adapterReady('providers');
   await openFirstDetail('provider');
-
   await page.locator('[data-gpv2-tab="relations"]').click();
   await adapterReady('relations');
   await openFirstDetail('flow');
-
   await page.locator('[data-gpv2-tab="method"]').click();
   await adapterReady('method');
   await page.locator('[data-gpv2-methodology]').waitFor({ state: 'visible', timeout: 10000 });
   assert.match(await page.locator('[data-gpv2-methodology]').innerText(), /Ejecución vs\. flujo|HHI de proveedores|Drill-down contextual/);
-
   await page.locator('[data-gpv2-tab="overview"]').click();
   await adapterReady('overview');
   assert.ok(await page.locator('.gpv2-kpi').count() >= 4, 'overview KPI cards should render after drill-down round trip');
 
+  report.finalRuntime = await runtimeDiagnostics();
+  assertNoCompetingAuthority(report.finalRuntime, 'final');
+
   const exchangeResponses = v2Responses.filter(x => x.url.includes('atlas-v2-session-exchange'));
   const readResponses = v2Responses.filter(x => x.url.includes('atlas-v2-read'));
   const failedAssets = v2AssetResponses.filter(x => x.status >= 400);
+  const competingLegacyAssetResponses = legacyNamedAssetResponses.filter(x => isCompetingLegacyAsset(x.url));
+  const supportAssetResponses = legacyNamedAssetResponses.filter(x => !isCompetingLegacyAsset(x.url));
+  const failedSupportAssets = supportAssetResponses.filter(x => x.status >= 400);
   const v2ConsoleErrors = consoleErrors.filter(isV2OwnedSignal);
   const legacyConsoleErrors = consoleErrors.filter(entry => !isV2OwnedSignal(entry));
   const allCsp = await cspViolations();
@@ -217,12 +238,17 @@ try {
   assert.ok(readResponses.length >= 6, 'E2E should exercise multiple real v2 reads');
   assert.equal(readResponses.filter(x => x.status >= 400).length, 0, 'v2 reads must not return HTTP errors');
   assert.equal(failedAssets.length, 0, `v2 assets must load cleanly: ${JSON.stringify(failedAssets)}`);
+  assert.equal(competingLegacyAssetResponses.length, 0, `cutover must never request GP2/GP13 authority assets: ${JSON.stringify(competingLegacyAssetResponses)}`);
+  assert.equal(failedSupportAssets.length, 0, `retained shared public-spend support assets must remain available: ${JSON.stringify(failedSupportAssets)}`);
   assert.equal(v2ConsoleErrors.length, 0, `v2-owned console errors: ${JSON.stringify(v2ConsoleErrors)}`);
   assert.equal(v2CspViolations.length, 0, `v2-owned CSP violations: ${JSON.stringify(v2CspViolations)}`);
   assert.equal(pageErrors.length, 0, `page errors since v2 route activation: ${pageErrors.join(' | ')}`);
 
   report.v2Responses = v2Responses;
   report.v2AssetResponses = v2AssetResponses;
+  report.competingLegacyAssetResponses = competingLegacyAssetResponses;
+  report.supportAssetResponses = supportAssetResponses;
+  report.failedSupportAssets = failedSupportAssets;
   report.v2ConsoleErrors = v2ConsoleErrors;
   report.legacyConsoleErrors = legacyConsoleErrors;
   report.v2CspViolations = v2CspViolations;
@@ -232,13 +258,23 @@ try {
   report.status = 'PASS';
   await page.screenshot({ path: 'e2e-atlas-v2-public-spend.png', fullPage: true });
   fs.writeFileSync('e2e-atlas-v2-public-spend.json', JSON.stringify(report, null, 2));
-  console.log('ATLAS v2 cutover artifact authenticated E2E PASS', JSON.stringify({ filters: report.filters, reads: readResponses.length, exchange: exchangeResponses.length, legacyScripts: report.postRoute.legacyScripts.length, legacyConsoleErrors: legacyConsoleErrors.length, legacyCsp: legacyCspViolations.length }));
+  console.log('ATLAS v2 cutover artifact authenticated E2E PASS', JSON.stringify({
+    filters: report.filters,
+    reads: readResponses.length,
+    exchange: exchangeResponses.length,
+    competingLegacyRequests: competingLegacyAssetResponses.length,
+    supportAssetsObserved: supportAssetResponses.length,
+    failedSupportAssets: failedSupportAssets.length,
+    legacyConsoleErrors: legacyConsoleErrors.length,
+    legacyCsp: legacyCspViolations.length,
+  }));
 } catch (error) {
   report.status = 'FAIL';
   report.error = error instanceof Error ? error.message : String(error);
   report.runtimeAtFailure = await runtimeDiagnostics().catch(() => null);
   report.v2Responses = v2Responses;
   report.v2AssetResponses = v2AssetResponses;
+  report.legacyNamedAssetResponses = legacyNamedAssetResponses;
   report.consoleErrors = consoleErrors;
   report.pageErrors = pageErrors;
   report.cspViolations = await cspViolations().catch(() => []);
