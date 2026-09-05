@@ -35,7 +35,8 @@ jobs:
           doc=Path('docs/ARCHITECTURE_V2.md').read_text(encoding='utf-8')
           client=Path('src/v2/atlas-v2-data.js').read_text(encoding='utf-8')
           edge=Path('supabase/functions/atlas-v2-read/index.ts').read_text(encoding='utf-8')
-          migration=Path('supabase/migrations/20260905010825_atlas_architecture_v2_foundation.sql').read_text(encoding='utf-8')
+          foundation=Path('supabase/migrations/20260905010825_atlas_architecture_v2_foundation.sql').read_text(encoding='utf-8')
+          automation=Path('supabase/migrations/20260905011600_atlas_architecture_v2_job_automation.sql').read_text(encoding='utf-8')
 
           assert 'SOURCE -> LANDING -> NORMALIZE -> FUSION -> ANALYTICS -> READ MODEL -> READ API -> ATLAS -> DRILL-DOWN' in doc
           assert 'ATLAS_READ_API_V2' in client
@@ -46,12 +47,18 @@ jobs:
           assert 'SUPABASE_SERVICE_ROLE_KEY' not in edge
           assert 'x-atlas-trace-id' in edge
           assert 'server-timing' in edge
-          assert 'atlas_v2_read_model' in migration
-          assert 'atlas_v2_model_head' in migration
-          assert 'atlas_v2_client_event' in migration
-          assert "pgmq.create('atlas_v2_jobs')" in migration
-          assert 'security invoker' in migration.lower()
-          assert 'grant execute on function public.atlas_v2_get_read_model' in migration
-          assert 'grant execute on function public.atlas_v2_materialize_public_spend_overview(text) to service_role' in migration
-          print('ATLAS Architecture v2 foundation contract OK')
+          assert 'atlas_v2_read_model' in foundation
+          assert 'atlas_v2_model_head' in foundation
+          assert 'atlas_v2_client_event' in foundation
+          assert "pgmq.create('atlas_v2_jobs')" in foundation
+          assert 'security invoker' in foundation.lower()
+          assert 'grant execute on function public.atlas_v2_get_read_model' in foundation
+          assert 'grant execute on function public.atlas_v2_materialize_public_spend_overview(text) to service_role' in foundation
+          assert 'public_spend_snapshot_ready' in automation
+          assert 'atlas_v2_public_spend_snapshot_enqueue' in automation
+          assert "cron.schedule(" in automation
+          assert "'atlas-v2-job-worker'" in automation
+          assert "select public.atlas_v2_process_jobs(5);" in automation
+          assert "revoke all on schema atlas_v2_private from public, anon, authenticated" in automation.lower()
+          print('ATLAS Architecture v2 foundation + automation contract OK')
           PY
