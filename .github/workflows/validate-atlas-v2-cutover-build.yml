@@ -1,0 +1,150 @@
+name: Validate ATLAS v2 Cutover Build
+
+on:
+  push:
+    branches: [atlas-architecture-v2]
+    paths:
+      - 'src/v2/atlas-v2-production-config.js'
+      - 'src/v2/atlas-v2-data.js'
+      - 'src/v2/atlas-v2-session.js'
+      - 'src/v2/public-spend-adapter.js'
+      - 'src/v2/public-spend-route-bridge.js'
+      - 'src/v2/public-spend-adapter.css'
+      - 'tools/build_atlas_site.py'
+      - 'tools/build_atlas_v2_cutover.py'
+      - '.github/workflows/validate-atlas-v2-cutover-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cutover-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build unchanged default artifact
+        run: |
+          set -euo pipefail
+          python3 tools/build_atlas_site.py --out _site-default
+
+      - name: Build opt-in Gasto Público v2 artifact
+        run: |
+          set -euo pipefail
+          python3 tools/build_atlas_v2_cutover.py --out _site-v2-cutover
+
+      - name: Validate cutover invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check _site-v2-cutover/v2/atlas-v2-production-config.js
+          node --check _site-v2-cutover/v2/atlas-v2-data.js
+          node --check _site-v2-cutover/v2/atlas-v2-session.js
+          node --check _site-v2-cutover/v2/public-spend-adapter.js
+          node --check _site-v2-cutover/v2/public-spend-route-bridge.js
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+
+          default=Path('_site-default')
+          cutover=Path('_site-v2-cutover')
+          default_html=(default/'index.html').read_text(encoding='utf-8')
+          cutover_html=(cutover/'index.html').read_text(encoding='utf-8')
+          default_report=json.loads((default/'atlas-runtime-report.json').read_text(encoding='utf-8'))
+          cutover_report=json.loads((cutover/'atlas-runtime-report.json').read_text(encoding='utf-8'))
+
+          competing={
+            'assets/atlas-public-spend-v2.css',
+            'assets/atlas-public-spend-v2.js',
+            'assets/atlas-public-spend-mobile-route-0573.js',
+            'assets/atlas-public-spend-route-authority-0578.js',
+            'assets/atlas-public-spend-intelligence-0720.css',
+            'assets/atlas-public-spend-intelligence-0720.js',
+            'assets/atlas-gasto-publico-1000.css',
+            'assets/atlas-gasto-publico-1000.js',
+            'assets/atlas-gasto-publico-1300.css',
+            'assets/atlas-gasto-publico-1300.js',
+          }
+          expected_active={
+            'assets/atlas-public-spend-v2.css',
+            'assets/atlas-public-spend-v2.js',
+            'assets/atlas-public-spend-route-authority-0578.js',
+          }
+
+          # The canonical build remains unchanged unless the dedicated builder is selected.
+          assert 'public_spend_cutover' not in default_report
+          default_published=set(default_report['published_css'] + default_report['published_js'])
+          active_legacy=competing & default_published
+          assert active_legacy == expected_active, active_legacy
+          assert not (default/'v2').exists()
+
+          # The opt-in build publishes exactly one Gasto Público authority family: Architecture v2.
+          assert cutover_report['public_spend_cutover'] == 'ARCHITECTURE_V2'
+          assert cutover_report['public_spend_source'] == 'BACKEND_READ_MODELS'
+          assert cutover_report['public_spend_authority'].startswith('v2/public-spend-route-bridge.js')
+          assert cutover_report['public_spend_runtime'].startswith('v2/public-spend-adapter.js')
+          retired=set(cutover_report['public_spend_legacy_assets_retired'])
+          assert active_legacy <= retired
+          assert retired <= competing
+          assert 'https://bzqxvidggykkdouotylg.supabase.co' in cutover_html
+
+          for asset in competing:
+            assert not (cutover/asset).is_file(), asset
+            assert f'./{asset}' not in cutover_html, asset
+
+          # Named support assets that are not route owners/bootstrap paths remain byte-for-byte.
+          default_named=[]
+          for pattern in ('atlas-public-spend*','atlas-gasto-publico*'):
+            default_named.extend(p for p in (default/'assets').glob(pattern) if p.is_file())
+          preserved=[]
+          for src in sorted(set(default_named)):
+            rel=str(src.relative_to(default))
+            if rel in competing:
+              continue
+            dst=cutover/rel
+            assert dst.is_file(), f'shared support asset missing after cutover: {rel}'
+            assert src.read_bytes() == dst.read_bytes(), f'shared support asset changed during cutover: {rel}'
+            preserved.append(rel)
+          assert preserved, 'expected at least one shared public-spend support asset to remain'
+          taxonomy='assets/atlas-public-spend-mark-taxonomy-v4.js'
+          if (default/taxonomy).is_file():
+            assert taxonomy in preserved
+
+          required=[
+            'atlas-v2-production-config.js',
+            'atlas-v2-data.js',
+            'atlas-v2-session.js',
+            'public-spend-adapter.js',
+            'public-spend-route-bridge.js',
+            'public-spend-adapter.css',
+          ]
+          for name in required:
+            assert (cutover/'v2'/name).is_file(), name
+
+          order=[
+            'atlas-v2-production-config.js',
+            'atlas-v2-data.js',
+            'atlas-v2-session.js',
+            'public-spend-adapter.js',
+            'public-spend-route-bridge.js',
+          ]
+          positions=[cutover_html.find(f'./v2/{name}') for name in order]
+          assert all(pos >= 0 for pos in positions), positions
+          assert positions == sorted(positions), positions
+
+          adapter=(cutover/'v2/public-spend-adapter.js').read_text(encoding='utf-8')
+          bridge=(cutover/'v2/public-spend-route-bridge.js').read_text(encoding='utf-8')
+          config=(cutover/'v2/atlas-v2-production-config.js').read_text(encoding='utf-8')
+          assert '__ATLAS_V2_PUBLIC_SPEND_CUTOVER__ === true' in adapter
+          assert '__ATLAS_V2_PUBLIC_SPEND_CUTOVER__ === true' in bridge
+          assert '__ATLAS_V2_PUBLIC_SPEND_CUTOVER__ = true' in config
+          assert '__atlasV2PublicSpendFacade' in bridge
+          assert 'nonconfigurable-writable-assignment' in bridge
+          assert 'v2-preview' not in adapter
+          assert 'v2-preview' not in bridge
+          assert '__ATLAS_V2_PREVIEW_MODE__' not in config
+          print(f'ATLAS v2 cutover build invariants PASS; active legacy={len(active_legacy)} retired={len(retired)} preserved shared support assets={len(preserved)}')
+          PY
+          git diff --check
