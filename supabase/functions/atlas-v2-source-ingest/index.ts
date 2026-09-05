@@ -63,36 +63,69 @@ Deno.serve(async (req: Request) => {
   try {
     const p = await principal(req);
     const body = await req.json().catch(() => ({}));
-    const sourceKey = clean(body?.source_key, 120);
-    const snapshotId = clean(body?.snapshot_id, 180);
-    const contract = clean(body?.contract, 120);
-    const generatedAt = clean(body?.generated_at, 80);
-    const payload = body?.payload;
-    const sourceVersions = body?.source_versions && typeof body.source_versions === "object" ? body.source_versions : {};
-
-    if (sourceKey !== "presupuesto_abierto_l12") return respond({ error: "INVALID_SOURCE" }, 400);
-    if (contract !== "ATLAS_BUDGET_EXECUTION_SOURCE_V2") return respond({ error: "INVALID_CONTRACT" }, 400);
-    if (!snapshotId || !generatedAt || !payload || typeof payload !== "object") return respond({ error: "INVALID_PAYLOAD" }, 400);
-    if (payload.contract !== contract) return respond({ error: "PAYLOAD_CONTRACT_MISMATCH" }, 400);
-
+    const operation = clean(body?.operation || "source_snapshot", 80);
     const sb = admin();
-    const { data, error } = await sb.rpc("atlas_v2_ingest_source_snapshot", {
-      p_source_key: sourceKey,
-      p_snapshot_id: snapshotId,
-      p_contract: contract,
-      p_generated_at: generatedAt,
-      p_payload: payload,
-      p_source_versions: {
-        ...sourceVersions,
-        github_repository: p.repository,
-        github_ref: p.ref,
-        github_sha: p.sha,
-        github_event: p.event_name,
-        github_workflow_ref: p.workflow_ref,
-      },
-    });
-    if (error) throw new Error(`${error.code || "RPC"}:${error.message}`);
-    return respond({ ok: true, ingest: data });
+
+    if (operation === "source_snapshot") {
+      const sourceKey = clean(body?.source_key, 120);
+      const snapshotId = clean(body?.snapshot_id, 180);
+      const contract = clean(body?.contract, 120);
+      const generatedAt = clean(body?.generated_at, 80);
+      const payload = body?.payload;
+      const sourceVersions = body?.source_versions && typeof body.source_versions === "object" ? body.source_versions : {};
+
+      if (sourceKey !== "presupuesto_abierto_l12") return respond({ error: "INVALID_SOURCE" }, 400);
+      if (contract !== "ATLAS_BUDGET_EXECUTION_SOURCE_V2") return respond({ error: "INVALID_CONTRACT" }, 400);
+      if (!snapshotId || !generatedAt || !payload || typeof payload !== "object") return respond({ error: "INVALID_PAYLOAD" }, 400);
+      if (payload.contract !== contract) return respond({ error: "PAYLOAD_CONTRACT_MISMATCH" }, 400);
+
+      const { data, error } = await sb.rpc("atlas_v2_ingest_source_snapshot", {
+        p_source_key: sourceKey,
+        p_snapshot_id: snapshotId,
+        p_contract: contract,
+        p_generated_at: generatedAt,
+        p_payload: payload,
+        p_source_versions: {
+          ...sourceVersions,
+          github_repository: p.repository,
+          github_ref: p.ref,
+          github_sha: p.sha,
+          github_event: p.event_name,
+          github_workflow_ref: p.workflow_ref,
+        },
+      });
+      if (error) throw new Error(`${error.code || "RPC"}:${error.message}`);
+      return respond({ ok: true, operation, ingest: data });
+    }
+
+    if (["budget_detail_init", "budget_detail_batch", "budget_detail_finalize"].includes(operation)) {
+      const snapshotId = clean(body?.snapshot_id, 180);
+      if (!snapshotId) return respond({ error: "INVALID_SNAPSHOT" }, 400);
+      const request: Record<string, unknown> = {
+        operation: operation === "budget_detail_init" ? "init" : operation === "budget_detail_batch" ? "batch" : "finalize",
+        snapshot_id: snapshotId,
+      };
+      if (operation === "budget_detail_init") {
+        for (const key of ["expected_services", "expected_providers", "expected_flows"]) {
+          const n = Number(body?.[key]);
+          if (!Number.isInteger(n) || n < 0) return respond({ error: "INVALID_EXPECTED_COUNTS" }, 400);
+          request[key] = n;
+        }
+      } else if (operation === "budget_detail_batch") {
+        const kind = clean(body?.kind, 40);
+        const rows = body?.rows;
+        if (!["services", "providers", "flows"].includes(kind)) return respond({ error: "INVALID_DETAIL_KIND" }, 400);
+        if (!Array.isArray(rows) || rows.length < 1 || rows.length > 500) return respond({ error: "INVALID_BATCH" }, 400);
+        request.kind = kind;
+        request.rows = rows;
+      }
+
+      const { data, error } = await sb.rpc("atlas_v2_ingest_budget_detail", { p_request: request });
+      if (error) throw new Error(`${error.code || "RPC"}:${error.message}`);
+      return respond({ ok: true, operation, ingest: data });
+    }
+
+    return respond({ error: "INVALID_OPERATION" }, 400);
   } catch (e) {
     const detail = e instanceof Error ? e.message : String(e);
     console.error("atlas-v2-source-ingest", detail);
