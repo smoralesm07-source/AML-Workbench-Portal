@@ -4,6 +4,7 @@ on:
   push:
     branches: [atlas-architecture-v2]
     paths:
+      - 'src/v2/atlas-v2-preview-config.js'
       - 'src/v2/atlas-v2-data.js'
       - 'src/v2/atlas-v2-session.js'
       - 'src/v2/public-spend-route-bridge.js'
@@ -30,6 +31,7 @@ jobs:
       - name: Syntax and deterministic federation smoke
         run: |
           set -euo pipefail
+          node --check src/v2/atlas-v2-preview-config.js
           node --check src/v2/atlas-v2-data.js
           node --check src/v2/atlas-v2-session.js
           node --check src/v2/public-spend-route-bridge.js
@@ -46,6 +48,7 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
 
+          preview=Path('src/v2/atlas-v2-preview-config.js').read_text()
           client=Path('src/v2/atlas-v2-data.js').read_text()
           session=Path('src/v2/atlas-v2-session.js').read_text()
           route_bridge=Path('src/v2/public-spend-route-bridge.js').read_text()
@@ -58,6 +61,9 @@ jobs:
           browser=Path('tools/e2e_atlas_v2_public_spend.mjs').read_text()
           proxy=Path('tools/serve_atlas_v2_e2e.mjs').read_text()
 
+          assert "global.__ATLAS_V2_PREVIEW_MODE__ = 'public-spend'" in preview
+          assert "supabaseUrl: location.origin + '/__atlas_v2'" in preview
+          assert "sessionExchangeUrl: location.origin + '/__atlas_v2/functions/v1/atlas-v2-session-exchange'" in preview
           assert 'https://bzqxvidggykkdouotylg.supabase.co' in client
           assert 'sb_publishable_3nrUSbZMWfTYUtXnyjDklg_EjyZIzko' in client
           assert 'ATLAS_V2_SESSION_EXCHANGE_V1' in session
@@ -108,12 +114,14 @@ jobs:
           assert 'playwright@${PLAYWRIGHT_VERSION}' in e2e
           assert "PLAYWRIGHT_VERSION: '1.62.1'" in e2e
           assert 'secrets.' not in e2e
+          assert 'atlas-v2-preview-config.js' in e2e
+          assert '<script data-atlas-v2-e2e="config">' not in e2e
+          assert 'atlas-public-spend-route-authority-0578' in e2e
           assert 'public-spend-route-bridge.js' in e2e
           assert 'Revoke ephemeral v2 principal' in e2e
           assert 'cleanup_e2e' in e2e
           assert 'Revoke ephemeral core principal' in e2e
           assert 'if: always()' in e2e
-          assert 'sessionExchangeUrl:location.origin+"/__atlas_v2/functions/v1/atlas-v2-session-exchange"' in e2e
 
           assert "state?.access?.provisional !== true" in browser
           assert 'SUPABASE_EPHEMERAL_CI' in browser
@@ -121,5 +129,5 @@ jobs:
           assert 'consoleErrors.length, 0' in browser and 'pageErrors.length, 0' in browser
           assert "GITHUB_PAGES_ORIGIN = 'https://smoralesm07-source.github.io'" in proxy
           assert "V2_HOST = 'bzqxvidggykkdouotylg.supabase.co'" in proxy
-          print('ATLAS v2 federation invariants OK: two-project identity, route authority, short grant, OIDC CI and dual-project cleanup')
+          print('ATLAS v2 federation invariants OK: CSP-safe preview, two-project identity, route authority, short grant, OIDC CI and dual-project cleanup')
           PY
