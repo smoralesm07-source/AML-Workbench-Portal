@@ -75,8 +75,9 @@
       .gpv2-trend{height:190px;display:flex;align-items:flex-end;gap:8px;padding:12px 4px 0;border-top:1px solid #eef1f3}.gpv2-trend-col{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:5px}.gpv2-barbox{height:145px;width:100%;display:flex;align-items:flex-end;justify-content:center}.gpv2-bar{width:min(24px,72%);min-height:2px;border-radius:7px 7px 2px 2px;background:#c76b26}.gpv2-trend-col span{font-size:9px;color:#73808a;white-space:nowrap}.gpv2-trend-col b{font-size:9px;font-weight:650;color:#45535d;white-space:nowrap}
       .gpv2-relation{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;border-top:1px solid #eef1f3;padding:9px 2px}.gpv2-relation:first-child{border-top:0}.gpv2-relation small{display:block;color:#68747d}.gpv2-relation strong{white-space:nowrap;font-size:12px}
       .gpv2-drawer{position:fixed;z-index:9999;right:18px;top:18px;bottom:18px;width:min(520px,calc(100vw - 36px));overflow:auto;background:#fff;border:1px solid #d7dfe4;border-radius:16px;box-shadow:0 18px 55px rgba(0,0,0,.18);padding:20px}.gpv2-close{float:right;border:0;background:#eef1f3;border-radius:999px;width:34px;height:34px;cursor:pointer}.gpv2-detail-list{margin-top:12px;display:grid;gap:7px}.gpv2-detail-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.gpv2-detail-actions button{border:1px solid #ccd5db;background:#fff;border-radius:9px;padding:8px 10px;cursor:pointer}
+      .gpv2-method{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.gpv2-method code{display:block;margin-top:9px;padding:9px 10px;border-radius:9px;background:#f4f6f7;color:#394750;font-size:11px;white-space:normal}.gpv2-method p{font-size:12px;line-height:1.55}
       @media(max-width:1000px){.gpv2-filters{grid-template-columns:1fr 1fr}.gpv2-filter-actions{align-self:end}}
-      @media(max-width:900px){.gpv2-kpis{grid-template-columns:1fr 1fr}.gpv2-grid{grid-template-columns:1fr}.gpv2-hero{display:block}.gpv2-health{margin-top:12px}.gpv2-toolbar{align-items:stretch}.gpv2-toolbar input{flex:1}}
+      @media(max-width:900px){.gpv2-kpis{grid-template-columns:1fr 1fr}.gpv2-grid,.gpv2-method{grid-template-columns:1fr}.gpv2-hero{display:block}.gpv2-health{margin-top:12px}.gpv2-toolbar{align-items:stretch}.gpv2-toolbar input{flex:1}}
       @media(max-width:620px){.gpv2-filters{grid-template-columns:1fr}.gpv2-kpis{grid-template-columns:1fr}.gpv2-trend{gap:3px}.gpv2-trend-col b{display:none}}
     `;
     document.head.appendChild(style);
@@ -137,8 +138,14 @@
     health('error', { error: msg, traceId: error?.traceId || null });
   }
 
+  function facetOptions(values, selected) {
+    const out = Array.isArray(values) ? values.slice() : [];
+    if (selected && !out.some(value => String(value) === String(selected))) out.unshift(selected);
+    return out;
+  }
+
   function selectOptions(values, selected, formatter = value => value) {
-    return (Array.isArray(values) ? values : []).map(value => `<option value="${esc(value)}" ${String(value) === String(selected) ? 'selected' : ''}>${esc(formatter(value))}</option>`).join('');
+    return facetOptions(values, selected).map(value => `<option value="${esc(value)}" ${String(value) === String(selected) ? 'selected' : ''}>${esc(formatter(value))}</option>`).join('');
   }
 
   function filterPanel() {
@@ -160,11 +167,12 @@
     const q = b.quality || {};
     const availability = S.monitor?.data?.availability || {};
     const contextTiming = S.context?.meta?.serverTiming || '';
+    const tabs = [['overview', 'Resumen'], ['services', 'Servicios'], ['providers', 'Proveedores'], ['relations', 'Relaciones'], ['method', 'Metodología']];
     return `<div class="gpv2-hero"><div><span class="gpv2-eyebrow">ATLAS · Architecture v2 preview</span><h2>Gasto Público</h2><p>Contexto analítico preparado en backend · filtros sincronizados · sin reconstrucción masiva en el navegador</p></div><div class="gpv2-health"><b>${q.detail_mode === 'FULL_BACKEND' ? 'Backend listo' : 'Backend parcial'}</b><span>Monitor ${esc(S.monitor?.snapshotId || 'sin snapshot')}</span><span>Presupuesto ${esc(S.context?.snapshotId || 'sin snapshot')}</span><span>${esc(contextTiming)}</span></div></div>
-      <div class="gpv2-nav">${[['overview', 'Resumen'], ['services', 'Servicios'], ['providers', 'Proveedores'], ['relations', 'Relaciones']].map(([k, l]) => `<button data-gpv2-tab="${k}" class="${S.tab === k ? 'active' : ''}">${l}</button>`).join('')}</div>
+      <div class="gpv2-nav">${tabs.map(([k, l]) => `<button data-gpv2-tab="${k}" class="${S.tab === k ? 'active' : ''}">${l}</button>`).join('')}</div>
       ${filterPanel()}
-      ${S.tab === 'overview' ? '' : `<div class="gpv2-toolbar"><input id="gpv2-search" type="search" value="${esc(S.search)}" placeholder="Exploración global del backend…"><button data-gpv2-clear>Limpiar búsqueda</button></div>`}
-      <div class="gpv2-note"><strong>Dominios separados:</strong> <span class="gpv2-domain ${availability.budget_execution === 'READY' ? 'live' : ''}">Ejecución presupuestaria</span> <span class="gpv2-domain ${availability.procurement === 'READY' ? 'live' : ''}">Compras públicas</span>. Los filtros gobiernan el tablero de ejecución presupuestaria; las pestañas de exploración conservan búsqueda global para drill-down.</div>`;
+      ${S.tab === 'overview' || S.tab === 'method' ? '' : `<div class="gpv2-toolbar"><input id="gpv2-search" type="search" value="${esc(S.search)}" placeholder="Buscar dentro del contexto activo…"><button data-gpv2-clear>Limpiar búsqueda</button></div>`}
+      <div class="gpv2-note"><strong>Contexto único:</strong> <span class="gpv2-domain ${availability.budget_execution === 'READY' ? 'live' : ''}">Ejecución presupuestaria</span> <span class="gpv2-domain ${availability.procurement === 'READY' ? 'live' : ''}">Compras públicas</span>. Región, clasificador, período, servicio y proveedor gobiernan Resumen y exploración. ChileCompra se mantiene como dominio paralelo para evitar mezclar definiciones.</div>`;
   }
 
   function rowAmount(row) {
@@ -175,12 +183,14 @@
     if (kind === 'service') {
       const id = row.organization_id || row.buyer_id || row.id || '';
       const name = row.organization_name || row.buyer_name || row.name || id;
-      return `<div class="gpv2-row"><span><b>${esc(name)}</b><small>${esc(regionLabel(row.main_region || row.region))} · ${esc(row.dominant_subtitle || row.category || '')}</small>${contextual ? `<div class="gpv2-row-actions"><button data-gpv2-focus-service="${esc(id)}">Fijar contexto</button><button data-gpv2-detail="service" data-key="${esc(id)}">Detalle</button></div>` : `<div class="gpv2-row-actions"><button data-gpv2-detail="service" data-key="${esc(id)}">Detalle</button></div>`}</span><strong>${money(rowAmount(row))}</strong></div>`;
+      const relations = row._context_provider_count ?? row.provider_count;
+      return `<div class="gpv2-row"><span><b>${esc(name)}</b><small>${esc(regionLabel(row.main_region || row.region))} · ${esc(row.dominant_subtitle || row.category || '')}${relations != null ? ' · ' + NF.format(num(relations)) + ' proveedores' : ''}</small>${contextual ? `<div class="gpv2-row-actions"><button data-gpv2-focus-service="${esc(id)}">Fijar contexto</button><button data-gpv2-detail="service" data-key="${esc(id)}">Detalle</button></div>` : `<div class="gpv2-row-actions"><button data-gpv2-detail="service" data-key="${esc(id)}">Detalle</button></div>`}</span><strong>${money(rowAmount(row))}</strong></div>`;
     }
     if (kind === 'provider') {
       const id = row.provider_id || row.supplier_id || row.id || '';
       const name = row.provider_name || row.supplier_name || row.name || id;
-      return `<div class="gpv2-row"><span><b>${esc(name)}</b><small>${esc(row.rut || '')} ${row.variation_l12 != null ? '· var. ' + pct(row.variation_l12) : ''}</small>${contextual ? `<div class="gpv2-row-actions"><button data-gpv2-focus-provider="${esc(id)}">Fijar contexto</button><button data-gpv2-detail="provider" data-key="${esc(id)}">Detalle</button></div>` : `<div class="gpv2-row-actions"><button data-gpv2-detail="provider" data-key="${esc(id)}">Detalle</button></div>`}</span><strong>${money(rowAmount(row))}</strong></div>`;
+      const relations = row._context_service_count ?? row.service_count;
+      return `<div class="gpv2-row"><span><b>${esc(name)}</b><small>${esc(row.rut || '')}${relations != null ? ' · ' + NF.format(num(relations)) + ' servicios' : ''}</small>${contextual ? `<div class="gpv2-row-actions"><button data-gpv2-focus-provider="${esc(id)}">Fijar contexto</button><button data-gpv2-detail="provider" data-key="${esc(id)}">Detalle</button></div>` : `<div class="gpv2-row-actions"><button data-gpv2-detail="provider" data-key="${esc(id)}">Detalle</button></div>`}</span><strong>${money(rowAmount(row))}</strong></div>`;
     }
     const sid = row.organization_id || row.buyer_id || '';
     const pid = row.provider_id || row.supplier_id || '';
@@ -230,6 +240,19 @@
     return `${contextSummary()}${procurementParallel()}`;
   }
 
+  function methodology() {
+    return `<div class="gpv2-method" data-gpv2-methodology>
+      <section class="gpv2-card"><h3>Contexto analítico único</h3><p>Todos los KPIs, la serie temporal, rankings y pestañas de exploración usan el mismo foco activo: período, región, clasificador, servicio y proveedor.</p><code>Contexto = período × región × clasificador × servicio × proveedor</code></section>
+      <section class="gpv2-card"><h3>Ejecución vs. flujo</h3><p>La ejecución visible de servicios y el flujo materializado a proveedores son medidas distintas. ATLAS no rellena diferencias ni atribuye a proveedores montos que no estén presentes en las relaciones publicadas.</p><code>Ejecución servicio ≠ necesariamente Σ flujo proveedor</code></section>
+      <section class="gpv2-card"><h3>Top 10 proveedores</h3><p>Participación de los diez proveedores de mayor monto dentro del flujo a proveedores del contexto activo. Describe concentración agregada, no riesgo individual.</p><code>Top10 = Σ monto 10 mayores / flujo total</code></section>
+      <section class="gpv2-card"><h3>HHI de proveedores</h3><p>Suma de cuadrados de la participación de cada proveedor sobre el flujo visible. Se acerca a 1 cuando el flujo está concentrado en pocas contrapartes.</p><code>HHI = Σ (monto proveedor / flujo total)²</code></section>
+      <section class="gpv2-card"><h3>Regla temporal v2</h3><p>Sin foco proveedor, la serie sigue la ejecución mensual de los servicios seleccionados. Con foco proveedor, sigue el flujo mensual materializado hacia ese proveedor. Esto evita mezclar bases distintas dentro de un mismo gráfico.</p><code>Serie = ejecución de servicio; con proveedor = flujo relacionado</code></section>
+      <section class="gpv2-card"><h3>Drill-down contextual</h3><p>Servicios, proveedores, relaciones y sus detalles heredan los filtros activos y son servidos en páginas acotadas desde backend. El navegador deja de reconstruir el universo completo.</p><code>Backend calcula → publica → navegador presenta</code></section>
+      <section class="gpv2-card"><h3>Dominios de fuente</h3><p>Presupuesto Abierto alimenta ejecución presupuestaria. ChileCompra alimenta compras públicas. Se presentan juntos en el monitor, pero no se fusionan métricas con definiciones incompatibles.</p></section>
+      <section class="gpv2-card"><h3>Regla de interpretación</h3><p>Concentración, materialidad y variación son señales de priorización analítica. No constituyen por sí solas evidencia de irregularidad, fraude, conflicto de interés ni LA/FT.</p></section>
+    </div>`;
+  }
+
   async function loadContext() {
     const serial = ++contextSerial;
     const out = await api().publicSpend.budgetContext(S.filters, { route: 'public-spend:v2-preview:budget-context' });
@@ -239,15 +262,16 @@
   }
 
   async function loadTab() {
-    if (S.tab === 'overview') {
+    if (S.tab === 'overview' || S.tab === 'method') {
       S.result = null;
       return;
     }
     const query = { search: S.search || undefined, offset: S.offset, limit: S.limit };
+    const options = { filters: S.filters, query };
     const a = api();
-    if (S.tab === 'services') S.result = await a.publicSpend.budgetServices({ query, route: 'public-spend:v2-preview:services' });
-    else if (S.tab === 'providers') S.result = await a.publicSpend.budgetProviders({ query, route: 'public-spend:v2-preview:providers' });
-    else S.result = await a.publicSpend.budgetFlows({ query, route: 'public-spend:v2-preview:flows' });
+    if (S.tab === 'services') S.result = await a.publicSpend.budgetServices({ ...options, route: 'public-spend:v2-preview:services' });
+    else if (S.tab === 'providers') S.result = await a.publicSpend.budgetProviders({ ...options, route: 'public-spend:v2-preview:providers' });
+    else S.result = await a.publicSpend.budgetFlows({ ...options, route: 'public-spend:v2-preview:flows' });
   }
 
   function list() {
@@ -255,7 +279,7 @@
     const rows = S.result?.items || [];
     const page = S.result?.page || {};
     const title = S.tab === 'services' ? 'Servicios públicos' : S.tab === 'providers' ? 'Proveedores' : 'Relaciones servicio–proveedor';
-    return `<section class="gpv2-card"><div class="gpv2-card-head"><div><h3>${title}</h3><small>Explorador global servido por backend; el tablero filtrado permanece en Resumen.</small></div></div><div class="gpv2-list">${rows.map(x => topRow(x, kind, false)).join('') || '<div class="gpv2-empty">Sin resultados.</div>'}</div><div class="gpv2-pager"><button data-gpv2-page="prev" ${S.offset === 0 ? 'disabled' : ''}>← Anterior</button><span>${rows.length ? NF.format(S.offset + 1) + '–' + NF.format(S.offset + rows.length) : '0'}</span><button data-gpv2-page="next" ${page.has_more ? '' : 'disabled'}>Siguiente →</button></div></section>`;
+    return `<section class="gpv2-card"><div class="gpv2-card-head"><div><h3>${title}</h3><small>Exploración contextual servida por backend · ${NF.format(activeFilterCount())} filtros activos.</small></div></div><div class="gpv2-list">${rows.map(x => topRow(x, kind, false)).join('') || '<div class="gpv2-empty">Sin resultados.</div>'}</div><div class="gpv2-pager"><button data-gpv2-page="prev" ${S.offset === 0 ? 'disabled' : ''}>← Anterior</button><span>${rows.length ? NF.format(S.offset + 1) + '–' + NF.format(S.offset + rows.length) : '0'}</span><button data-gpv2-page="next" ${page.has_more ? '' : 'disabled'}>Siguiente →</button></div></section>`;
   }
 
   function drawer() {
@@ -264,13 +288,19 @@
     const isService = S.detail.type === 'service';
     const name = isService ? (entity.organization_name || entity.buyer_name || entity.name || S.detail.key) : (entity.provider_name || entity.supplier_name || entity.name || S.detail.key);
     const focusButton = isService ? `<button data-gpv2-focus-service="${esc(S.detail.key)}">Usar servicio como filtro</button>` : `<button data-gpv2-focus-provider="${esc(S.detail.key)}">Usar proveedor como filtro</button>`;
-    return `<aside class="gpv2-drawer"><button class="gpv2-close" data-gpv2-close>×</button><span class="gpv2-eyebrow">Detalle servido por backend</span><h3>${esc(name)}</h3><p>${isService ? esc(regionLabel(entity.main_region || entity.region)) : esc(entity.rut || '')}</p><div class="gpv2-detail-actions">${focusButton}</div><div class="gpv2-kpi"><small>Monto L12</small><b>${money(entity.amount_l12 ?? entity.amount_clp)}</b><span>snapshot ${esc(S.detail.snapshotId || '')}</span></div><h3 style="margin-top:18px">Relaciones visibles (${NF.format(flows.length)})</h3><div class="gpv2-detail-list">${flows.slice(0, 100).map(x => topRow(x, 'flow')).join('') || '<div class="gpv2-empty">Sin relaciones visibles en este snapshot.</div>'}</div></aside>`;
+    return `<aside class="gpv2-drawer"><button class="gpv2-close" data-gpv2-close>×</button><span class="gpv2-eyebrow">Detalle contextual servido por backend</span><h3>${esc(name)}</h3><p>${isService ? esc(regionLabel(entity.main_region || entity.region)) : esc(entity.rut || '')}</p><div class="gpv2-detail-actions">${focusButton}</div><div class="gpv2-kpi"><small>Monto del contexto</small><b>${money(rowAmount(entity))}</b><span>snapshot ${esc(S.detail.snapshotId || '')}</span></div><h3 style="margin-top:18px">Relaciones visibles (${NF.format(flows.length)})</h3><div class="gpv2-detail-list">${flows.slice(0, 100).map(x => topRow(x, 'flow')).join('') || '<div class="gpv2-empty">Sin relaciones visibles en este contexto.</div>'}</div></aside>`;
+  }
+
+  function body() {
+    if (S.tab === 'overview') return overview();
+    if (S.tab === 'method') return methodology();
+    return list();
   }
 
   function render() {
     const h = host(false);
     if (!h || !S.monitor || !S.context) return;
-    h.innerHTML = `<div class="gpv2">${header()}${S.tab === 'overview' ? overview() : list()}${drawer()}</div>`;
+    h.innerHTML = `<div class="gpv2">${header()}${body()}${drawer()}</div>`;
     bind();
     health('ready', {
       detailMode: S.monitor?.data?.domains?.budget_execution?.quality?.detail_mode || null,
@@ -282,9 +312,10 @@
 
   async function showDetail(type, key) {
     try {
+      const options = { filters: S.filters, route: `public-spend:v2-preview:${type}-detail` };
       const out = type === 'service'
-        ? await api().publicSpend.budgetServiceDetail(key, { route: 'public-spend:v2-preview:service-detail' })
-        : await api().publicSpend.budgetProviderDetail(key, { route: 'public-spend:v2-preview:provider-detail' });
+        ? await api().publicSpend.budgetServiceDetail(key, options)
+        : await api().publicSpend.budgetProviderDetail(key, options);
       S.detail = { type, key, data: out.detail || {}, snapshotId: out.snapshotId };
       render();
     } catch (e) {
@@ -335,12 +366,15 @@
         S.filters.providerId = '';
       }
       S.tab = 'overview';
+      S.offset = 0;
       S.detail = null;
       await refreshContext('Recalculando contexto filtrado…');
     }));
 
     root.querySelector('[data-gpv2-reset-filters]')?.addEventListener('click', async () => {
       S.filters = EMPTY_FILTERS();
+      S.search = '';
+      S.offset = 0;
       S.detail = null;
       S.tab = 'overview';
       await refreshContext('Restableciendo contexto…');
@@ -348,6 +382,7 @@
 
     root.querySelectorAll('[data-gpv2-clear-focus]').forEach(button => button.addEventListener('click', async () => {
       S.filters[button.dataset.gpv2ClearFocus] = '';
+      S.offset = 0;
       await refreshContext('Quitando foco analítico…');
     }));
 
@@ -360,7 +395,7 @@
       clearTimeout(searchTimer);
       searchTimer = setTimeout(async () => {
         S.offset = 0;
-        loading('Buscando en backend…');
+        loading('Buscando en el contexto…');
         try {
           await loadTab();
           render();
