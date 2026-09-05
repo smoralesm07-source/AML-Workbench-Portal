@@ -85,11 +85,15 @@ jobs:
               assert adapter < gp.start(), 'v2 adapter must capture navigation before current GP2 runtime'
           for f in ['atlas-v2-data.js','public-spend-shadow.js','public-spend-adapter.js']:
               assert Path('_site/v2',f).exists(), f
+          client_text=Path('_site/v2/atlas-v2-data.js').read_text(encoding='utf-8')
           adapter_text=Path('_site/v2/public-spend-adapter.js').read_text(encoding='utf-8')
-          assert 'raw.githubusercontent.com' not in adapter_text
+          assert 'raw.githubusercontent.com' not in client_text and 'raw.githubusercontent.com' not in adapter_text
+          assert 'budgetContext' in client_text
+          assert 'budgetContext' in adapter_text and 'data-gpv2-filter' in adapter_text
           assert 'budgetServices' in adapter_text and 'budgetProviderDetail' in adapter_text
-          assert "detail_mode!=='FULL_BACKEND'" in adapter_text
-          print('ATLAS v2 preview mounted: branch-only adapter, no production manifest changes')
+          assert "detail_mode !== 'FULL_BACKEND'" in adapter_text
+          assert 'contextMs' in adapter_text and 'traceId' in adapter_text
+          print('ATLAS v2 preview mounted: synchronized budget context, branch-only adapter, no production manifest changes')
           PY
 
       - name: Upload preview artifact
