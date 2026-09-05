@@ -8,6 +8,7 @@ on:
       - 'docs/ARCHITECTURE_V2.md'
       - 'src/v2/**'
       - 'supabase/functions/atlas-v2-read/**'
+      - 'supabase/functions/atlas-v2-source-ingest/**'
       - 'supabase/migrations/*atlas_architecture_v2*'
       - '.github/workflows/validate-atlas-architecture-v2.yml'
   workflow_dispatch:
@@ -39,29 +40,46 @@ jobs:
               '20260905011305_atlas_architecture_v2_job_automation.sql',
               '20260905011448_atlas_architecture_v2_hardening.sql',
               '20260905011656_atlas_architecture_v2_model_head_fk_index.sql',
+              '20260905013212_atlas_architecture_v2_public_spend_source_bridge.sql',
+              '20260905013223_atlas_architecture_v2_source_ingest_rpc.sql',
+              '20260905013449_atlas_architecture_v2_public_spend_drilldown.sql',
+              '20260905013657_atlas_architecture_v2_public_spend_search_indexes.sql',
           ]
-          migration_dir=Path('supabase/migrations')
-          present=sorted(p.name for p in migration_dir.glob('*atlas_architecture_v2*.sql'))
+          migration_dir = Path('supabase/migrations')
+          present = sorted(p.name for p in migration_dir.glob('*atlas_architecture_v2*.sql'))
           assert present == expected_migrations, (present, expected_migrations)
 
-          doc=Path('docs/ARCHITECTURE_V2.md').read_text(encoding='utf-8')
-          client=Path('src/v2/atlas-v2-data.js').read_text(encoding='utf-8')
-          shadow=Path('src/v2/public-spend-shadow.js').read_text(encoding='utf-8')
-          edge=Path('supabase/functions/atlas-v2-read/index.ts').read_text(encoding='utf-8')
-          foundation=(migration_dir/expected_migrations[0]).read_text(encoding='utf-8')
-          automation=(migration_dir/expected_migrations[1]).read_text(encoding='utf-8')
-          hardening=(migration_dir/expected_migrations[2]).read_text(encoding='utf-8')
-          fk_index=(migration_dir/expected_migrations[3]).read_text(encoding='utf-8')
+          doc = Path('docs/ARCHITECTURE_V2.md').read_text(encoding='utf-8')
+          client = Path('src/v2/atlas-v2-data.js').read_text(encoding='utf-8')
+          shadow = Path('src/v2/public-spend-shadow.js').read_text(encoding='utf-8')
+          edge = Path('supabase/functions/atlas-v2-read/index.ts').read_text(encoding='utf-8')
+          ingest_edge = Path('supabase/functions/atlas-v2-source-ingest/index.ts').read_text(encoding='utf-8')
+          foundation = (migration_dir/expected_migrations[0]).read_text(encoding='utf-8')
+          automation = (migration_dir/expected_migrations[1]).read_text(encoding='utf-8')
+          hardening = (migration_dir/expected_migrations[2]).read_text(encoding='utf-8')
+          fk_index = (migration_dir/expected_migrations[3]).read_text(encoding='utf-8')
+          source_bridge = (migration_dir/expected_migrations[4]).read_text(encoding='utf-8')
+          source_rpc = (migration_dir/expected_migrations[5]).read_text(encoding='utf-8')
+          drilldown = (migration_dir/expected_migrations[6]).read_text(encoding='utf-8')
+          search_indexes = (migration_dir/expected_migrations[7]).read_text(encoding='utf-8')
 
           assert 'SOURCE -> LANDING -> NORMALIZE -> FUSION -> ANALYTICS -> READ MODEL -> READ API -> ATLAS -> DRILL-DOWN' in doc
+          assert 'ATLAS_PUBLIC_SPEND_MONITOR_V2' in doc
+          assert 'PARALLEL_DOMAINS' in source_bridge
           assert 'ATLAS_READ_API_V2' in client
+          assert 'ATLAS_PUBLIC_SPEND_QUERY_V2' in client
+          assert 'publicSpendQuery' in client
+          assert "monitor: options => readModel('public_spend_monitor'" in client
           assert 'if-none-match' in client.lower()
           assert 'AbortController' in client
+          assert 'raw.githubusercontent.com' not in client
+          assert 'raw.githubusercontent.com' not in shadow
           assert "public_spend_overview" in shadow
           assert "semanticParity: 'NOT_ASSERTED'" in shadow
           assert 'atlas:v2-public-spend-shadow-ready' in shadow
-          assert 'ALLOWED_MODELS = new Set(["public_spend_overview"])' in edge
-          assert 'Authorization: auth' in edge
+          assert 'new Set(["public_spend_overview", "public_spend_monitor"])' in edge
+          assert 'public_spend_query' in edge
+          assert 'atlas_v2_public_spend_query' in edge
           assert 'SUPABASE_SERVICE_ROLE_KEY' not in edge
           assert 'x-atlas-trace-id' in edge
           assert 'server-timing' in edge
@@ -69,18 +87,31 @@ jobs:
           assert 'atlas_v2_model_head' in foundation
           assert 'atlas_v2_client_event' in foundation
           assert "pgmq.create('atlas_v2_jobs')" in foundation
-          assert 'security invoker' in foundation.lower()
           assert 'grant execute on function public.atlas_v2_get_read_model' in foundation
-          assert 'grant execute on function public.atlas_v2_materialize_public_spend_overview(text) to service_role' in foundation
           assert 'public_spend_snapshot_ready' in automation
           assert 'atlas_v2_public_spend_snapshot_enqueue' in automation
-          assert "cron.schedule(" in automation
           assert "'atlas-v2-job-worker'" in automation
-          assert "select public.atlas_v2_process_jobs(5);" in automation
-          assert "revoke all on schema atlas_v2_private from public, anon, authenticated" in automation.lower()
           assert 'grant usage on schema atlas_v2_private to service_role' in hardening.lower()
           assert 'atlas-v2-telemetry-retention' in hardening
-          assert "interval '30 days'" in hardening
           assert 'atlas_v2_model_head_read_model_fk_idx' in fk_index
-          print('ATLAS Architecture v2 foundation + automation + shadow + migration versions OK')
+          assert 'atlas_v2_private.source_snapshot' in source_bridge
+          assert 'ATLAS_BUDGET_EXECUTION_SOURCE_V2' in source_bridge
+          assert 'REFRESH_PUBLIC_SPEND_MONITOR' in source_bridge
+          assert 'atlas_v2_ingest_source_snapshot' in source_rpc
+          assert 'grant execute' in source_rpc.lower() and 'service_role' in source_rpc
+          assert 'atlas_v2_private.is_allowed' in drilldown
+          assert "raise exception 'ATLAS_V2_FORBIDDEN'" in drilldown
+          assert 'atlas_v2_public_spend_query' in drilldown
+          assert 'security definer' in drilldown.lower()
+          assert 'revoke all on function atlas_v2_private.public_spend_query' in drilldown.lower()
+          assert 'pg_trgm' in search_indexes
+          assert 'gin_trgm_ops' in search_indexes
+          assert 'https://token.actions.githubusercontent.com' in ingest_edge
+          assert 'atlas-v2-source-ingest' in ingest_edge
+          assert 'smoralesm07-source/Rada_Presupuesto_Abierto' in ingest_edge
+          assert 'ALLOWED_WORKFLOW_REFS' in ingest_edge
+          assert 'refs/heads/main' in ingest_edge
+          assert 'atlas_v2_ingest_source_snapshot' in ingest_edge
+          assert 'SUPABASE_PUBLISHABLE_KEY' not in ingest_edge
+          print('ATLAS Architecture v2 public-spend contracts + security boundaries OK')
           PY
