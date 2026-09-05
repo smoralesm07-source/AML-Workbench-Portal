@@ -176,8 +176,15 @@
     void open('window-capture-click').catch(() => {});
   }, true);
 
+  function protectAfterDispatch(name) {
+    protectNavigate(`${name}:sync`);
+    const run = () => protectNavigate(`${name}:post-dispatch`);
+    if (typeof global.queueMicrotask === 'function') global.queueMicrotask(run);
+    else Promise.resolve().then(run);
+  }
+
   ['pageshow', 'atlas:nav-refresh', 'atlas:v2-public-spend-adapter-ready'].forEach(name => {
-    global.addEventListener(name, () => protectNavigate(name));
+    global.addEventListener(name, () => protectAfterDispatch(name));
   });
 
   installCompatibilityFacade();
