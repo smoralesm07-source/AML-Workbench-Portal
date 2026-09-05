@@ -59,7 +59,7 @@
           authorization: `Bearer ${token}`,
           apikey: publishableKey,
           'content-type': 'application/json',
-          'x-client-info': 'atlas-v2-data/2.0',
+          'x-client-info': 'atlas-v2-data/2.1',
         };
         if (options.etag) headers['if-none-match'] = options.etag;
 
@@ -184,6 +184,7 @@
 
       return {
         contract: body.schema,
+        domain: body.domain || (String(query.domain || '') || 'procurement'),
         snapshotId: body.snapshot_id,
         kind: body.kind,
         items: Array.isArray(body.items) ? body.items : [],
@@ -207,6 +208,11 @@
       buyerDetail: (buyerId, options = {}) => publicSpendQuery({ kind: 'buyer_detail', buyer_id: clean(buyerId, 180) }, options),
       supplierDetail: (supplierId, options = {}) => publicSpendQuery({ kind: 'supplier_detail', supplier_id: clean(supplierId, 180) }, options),
       pairDetail: (pairId, options = {}) => publicSpendQuery({ kind: 'pair_detail', pair_id: clean(pairId, 260) }, options),
+      budgetServices: (options = {}) => publicSpendQuery({ domain: 'budget_execution', kind: 'budget_services', ...options.query }, options),
+      budgetProviders: (options = {}) => publicSpendQuery({ domain: 'budget_execution', kind: 'budget_providers', ...options.query }, options),
+      budgetFlows: (options = {}) => publicSpendQuery({ domain: 'budget_execution', kind: 'budget_flows', ...options.query }, options),
+      budgetServiceDetail: (serviceId, options = {}) => publicSpendQuery({ domain: 'budget_execution', kind: 'budget_service_detail', service_id: clean(serviceId, 180) }, options),
+      budgetProviderDetail: (providerId, options = {}) => publicSpendQuery({ domain: 'budget_execution', kind: 'budget_provider_detail', provider_id: clean(providerId, 180) }, options),
     });
 
     function invalidate(modelName, scope = 'global') {
