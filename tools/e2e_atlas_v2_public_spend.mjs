@@ -1,4 +1,4 @@
-// Gate trace: execute the authenticated v2 browser test on the exact branch HEAD.
+// Gate trace: authenticated browser test of the generated Architecture v2 cutover artifact.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { chromium } from 'playwright';
@@ -42,24 +42,27 @@ function isV2OwnedSignal(entry) {
 }
 
 async function runtimeDiagnostics() {
-  return page.evaluate(() => ({
-    preview: window.__ATLAS_V2_PREVIEW_CONFIG__ || null,
-    config: window.__ATLAS_V2_CONFIG__ ? {
-      supabaseUrl: window.__ATLAS_V2_CONFIG__.supabaseUrl,
-      sessionExchangeUrl: window.__ATLAS_V2_CONFIG__.sessionExchangeUrl,
-      publishableKeyPresent: !!window.__ATLAS_V2_CONFIG__.publishableKey,
-    } : null,
-    bridge: window.__ATLAS_V2_PUBLIC_SPEND_ROUTE_BRIDGE__ || null,
-    adapter: window.__ATLAS_V2_PUBLIC_SPEND_ADAPTER__ || null,
-    session: window.__ATLAS_V2_SESSION__ || null,
-    navigateWrapped: !!window.navigate?.__atlasV2PublicSpendRouteBridge,
-    hostPresent: !!document.querySelector('[data-gpv2-host]'),
-    styleHref: document.getElementById('atlas-v2-public-spend-adapter-style')?.href || null,
-    legacyAuthority: window.__ATLAS_PUBLIC_SPEND_ROUTE_AUTHORITY_0578__ || null,
-    scripts: [...document.scripts]
-      .map(s => s.getAttribute('src') || (s.dataset?.atlasV2E2e ? `[inline:${s.dataset.atlasV2E2e}]` : '[inline]'))
-      .filter(src => /atlas-v2|public-spend/i.test(src)),
-  }));
+  return page.evaluate(() => {
+    const scriptSources = [...document.scripts].map(s => s.getAttribute('src') || '[inline]');
+    return {
+      production: window.__ATLAS_V2_PRODUCTION_CONFIG__ || null,
+      cutoverEnabled: window.__ATLAS_V2_PUBLIC_SPEND_CUTOVER__ === true,
+      config: window.__ATLAS_V2_CONFIG__ ? {
+        supabaseUrl: window.__ATLAS_V2_CONFIG__.supabaseUrl,
+        sessionExchangeUrl: window.__ATLAS_V2_CONFIG__.sessionExchangeUrl,
+        publishableKeyPresent: !!window.__ATLAS_V2_CONFIG__.publishableKey,
+      } : null,
+      bridge: window.__ATLAS_V2_PUBLIC_SPEND_ROUTE_BRIDGE__ || null,
+      adapter: window.__ATLAS_V2_PUBLIC_SPEND_ADAPTER__ || null,
+      session: window.__ATLAS_V2_SESSION__ || null,
+      navigateWrapped: !!window.navigate?.__atlasV2PublicSpendRouteBridge,
+      hostPresent: !!document.querySelector('[data-gpv2-host]'),
+      styleHref: document.getElementById('atlas-v2-public-spend-adapter-style')?.href || null,
+      legacyAuthority: window.__ATLAS_PUBLIC_SPEND_ROUTE_AUTHORITY_0578__ || null,
+      scripts: scriptSources.filter(src => /atlas-v2|public-spend|gasto-publico/i.test(src)),
+      legacyScripts: scriptSources.filter(src => /\/assets\/(?:atlas-public-spend|atlas-gasto-publico)/i.test(src)),
+    };
+  });
 }
 async function adapterReady(tab) {
   await page.waitForFunction(expected => {
@@ -86,7 +89,7 @@ async function cspViolations() {
   return page.evaluate(() => Array.isArray(window.__ATLAS_V2_E2E_CSP__) ? window.__ATLAS_V2_E2E_CSP__.slice() : []);
 }
 
-const report = { authMode: 'SUPABASE_EPHEMERAL_CI', startedAt: new Date().toISOString() };
+const report = { authMode: 'SUPABASE_EPHEMERAL_CI_CUTOVER_ARTIFACT', startedAt: new Date().toISOString() };
 try {
   await page.goto(baseURL, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.waitForFunction(() => typeof sb !== 'undefined' && !!sb?.auth?.setSession, null, { timeout: 15000 });
@@ -114,10 +117,16 @@ try {
   assert.notEqual(authState.access?.provisional, true, 'E2E must not pass through degraded/provisional shell access');
   report.coreAuth = authState;
   report.preRoute = await runtimeDiagnostics();
-  assert.equal(report.preRoute.preview?.status, 'ready', 'external CSP-safe v2 preview config must execute');
+  assert.equal(report.preRoute.production?.status, 'ready', 'v2 production cutover config must execute');
+  assert.match(report.preRoute.production?.mode || '', /^public-spend-cutover/, 'production cutover mode must be active');
+  assert.equal(report.preRoute.cutoverEnabled, true, 'generated artifact must explicitly enable public-spend cutover');
+  assert.match(report.preRoute.config?.supabaseUrl || '', /\/__atlas_v2$/, 'E2E cutover artifact must use the local v2 proxy');
+  assert.match(report.preRoute.config?.sessionExchangeUrl || '', /\/__atlas_v2\/functions\/v1\/atlas-v2-session-exchange$/, 'session exchange must use the E2E proxy');
   assert.equal(report.preRoute.adapter?.status, 'installed', 'v2 adapter must be installed before route activation');
   assert.ok(report.preRoute.bridge, 'v2 route bridge must be installed before route activation');
-  assert.match(report.preRoute.styleHref || '', /\/v2\/public-spend-adapter\.css(?:\?|$)/, 'v2 stylesheet must resolve from the v2 module directory');
+  assert.equal(report.preRoute.legacyScripts.length, 0, `cutover artifact must not load legacy public-spend scripts: ${JSON.stringify(report.preRoute.legacyScripts)}`);
+  assert.equal(report.preRoute.legacyAuthority, null, 'legacy public-spend route authority must not exist in cutover artifact');
+  assert.match(report.preRoute.styleHref || '', /\/v2\/public-spend-adapter\.css(?:\?|$)/, 'v2 stylesheet must resolve from the cutover v2 directory');
 
   await page.evaluate(() => {
     window.__ATLAS_V2_E2E_CSP__ = [];
@@ -147,6 +156,8 @@ try {
     throw new Error(`v2 route did not create host: ${JSON.stringify({ bridge: report.postRoute.bridge, adapter: report.postRoute.adapter, navigateWrapped: report.postRoute.navigateWrapped, scripts: report.postRoute.scripts })}`);
   }
   report.postRoute = await runtimeDiagnostics();
+  assert.equal(report.postRoute.legacyScripts.length, 0, 'legacy public-spend scripts must remain absent after route activation');
+  assert.equal(report.postRoute.legacyAuthority, null, 'legacy public-spend authority must remain absent after route activation');
   await adapterReady('overview');
   await page.waitForFunction(() => window.__ATLAS_V2_SESSION__?.status === 'ready', null, { timeout: 15000 });
 
@@ -221,7 +232,7 @@ try {
   report.status = 'PASS';
   await page.screenshot({ path: 'e2e-atlas-v2-public-spend.png', fullPage: true });
   fs.writeFileSync('e2e-atlas-v2-public-spend.json', JSON.stringify(report, null, 2));
-  console.log('ATLAS v2 authenticated browser E2E PASS', JSON.stringify({ filters: report.filters, reads: readResponses.length, exchange: exchangeResponses.length, legacyConsoleErrors: legacyConsoleErrors.length, legacyCsp: legacyCspViolations.length }));
+  console.log('ATLAS v2 cutover artifact authenticated E2E PASS', JSON.stringify({ filters: report.filters, reads: readResponses.length, exchange: exchangeResponses.length, legacyScripts: report.postRoute.legacyScripts.length, legacyConsoleErrors: legacyConsoleErrors.length, legacyCsp: legacyCspViolations.length }));
 } catch (error) {
   report.status = 'FAIL';
   report.error = error instanceof Error ? error.message : String(error);
