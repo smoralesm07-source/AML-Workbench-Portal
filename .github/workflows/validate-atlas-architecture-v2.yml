@@ -79,6 +79,7 @@ jobs:
               '20260905013223_atlas_architecture_v2_source_ingest_rpc.sql',
               '20260905013449_atlas_architecture_v2_public_spend_drilldown.sql',
               '20260905013657_atlas_architecture_v2_public_spend_search_indexes.sql',
+              '20260905015600_atlas_architecture_v2_budget_detail_backend.sql',
           ]
           migration_dir = Path('supabase/migrations')
           present = sorted(p.name for p in migration_dir.glob('*atlas_architecture_v2*.sql'))
@@ -98,6 +99,7 @@ jobs:
           source_rpc = (migration_dir/expected_migrations[5]).read_text(encoding='utf-8')
           drilldown = (migration_dir/expected_migrations[6]).read_text(encoding='utf-8')
           search_indexes = (migration_dir/expected_migrations[7]).read_text(encoding='utf-8')
+          budget_backend = (migration_dir/expected_migrations[8]).read_text(encoding='utf-8')
 
           assert 'SOURCE -> LANDING -> NORMALIZE -> FUSION -> ANALYTICS -> READ MODEL -> READ API -> ATLAS -> DRILL-DOWN' in doc
           assert 'ATLAS_PUBLIC_SPEND_MONITOR_V2' in doc
@@ -106,6 +108,7 @@ jobs:
           assert 'ATLAS_PUBLIC_SPEND_QUERY_V2' in client
           assert 'publicSpendQuery' in client
           assert "monitor: options => readModel('public_spend_monitor'" in client
+          assert 'budgetServices' in client and 'budgetProviderDetail' in client
           assert 'if-none-match' in client.lower()
           assert 'AbortController' in client
           assert 'raw.githubusercontent.com' not in client
@@ -149,12 +152,21 @@ jobs:
           assert 'revoke all on function atlas_v2_private.public_spend_query' in drilldown.lower()
           assert 'pg_trgm' in search_indexes
           assert 'gin_trgm_ops' in search_indexes
+          assert 'budget_detail_state' in budget_backend
+          assert 'init_budget_detail' in budget_backend
+          assert 'ingest_budget_detail_batch' in budget_backend
+          assert 'finalize_budget_detail' in budget_backend
+          assert 'FULL_BACKEND' in budget_backend
+          assert 'budget_query' in budget_backend
+          assert 'atlas_v2_ingest_budget_detail' in budget_backend
           assert 'https://token.actions.githubusercontent.com' in ingest_edge
           assert 'atlas-v2-source-ingest' in ingest_edge
           assert 'smoralesm07-source/Rada_Presupuesto_Abierto' in ingest_edge
           assert 'ALLOWED_WORKFLOW_REFS' in ingest_edge
           assert 'refs/heads/main' in ingest_edge
           assert 'atlas_v2_ingest_source_snapshot' in ingest_edge
+          assert 'atlas_v2_ingest_budget_detail' in ingest_edge
+          assert 'budget_detail_finalize' in ingest_edge
           assert 'SUPABASE_PUBLISHABLE_KEY' not in ingest_edge
-          print('ATLAS Architecture v2 public-spend contracts + semantic gate + security boundaries OK')
+          print('ATLAS Architecture v2 public-spend contracts + full budget backend + semantic gate OK')
           PY
