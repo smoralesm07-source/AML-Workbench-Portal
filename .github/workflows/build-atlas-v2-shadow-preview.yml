@@ -104,3 +104,5 @@ jobs:
           name: atlas-v2-shadow-preview
           path: _site
           retention-days: 7
+
+# Final branch-only cutover gate: keep preview artifact aligned with the contextual runtime under test.
