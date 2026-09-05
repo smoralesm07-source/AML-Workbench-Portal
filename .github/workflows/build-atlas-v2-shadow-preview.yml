@@ -20,35 +20,39 @@ jobs:
       - name: Checkout v2 branch
         uses: actions/checkout@v4
 
-      - name: Validate shadow sources
+      - name: Validate v2 preview sources
         run: |
           set -euo pipefail
           node --check src/v2/atlas-v2-data.js
           node --check src/v2/public-spend-shadow.js
+          node --check src/v2/public-spend-adapter.js
 
       - name: Build canonical site
         run: |
           set -euo pipefail
           python3 tools/build_atlas_site.py --out _site
 
-      - name: Mount Architecture v2 shadow only in preview artifact
+      - name: Mount Architecture v2 only in preview artifact
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p _site/v2
           cp src/v2/atlas-v2-data.js _site/v2/atlas-v2-data.js
           cp src/v2/public-spend-shadow.js _site/v2/public-spend-shadow.js
+          cp src/v2/public-spend-adapter.js _site/v2/public-spend-adapter.js
           python3 - <<'PY'
           from pathlib import Path
           import re
 
           p=Path('_site/index.html')
           html=p.read_text(encoding='utf-8')
-          marker='data-atlas-v2-shadow="public-spend"'
+          marker='data-atlas-v2-preview="public-spend-adapter"'
           assert marker not in html, 'v2 preview scripts already mounted'
           tags=(
-            '<script src="./v2/atlas-v2-data.js?v=shadow-preview" data-atlas-v2-shadow="data-client"></script>\n'
-            '<script src="./v2/public-spend-shadow.js?v=shadow-preview" data-atlas-v2-shadow="public-spend"></script>\n'
+            '<script data-atlas-v2-preview="mode">window.__ATLAS_V2_PREVIEW_MODE__="public-spend";</script>\n'
+            '<script src="./v2/atlas-v2-data.js?v=v2-preview" data-atlas-v2-preview="data-client"></script>\n'
+            '<script src="./v2/public-spend-shadow.js?v=v2-preview" data-atlas-v2-preview="public-spend-shadow"></script>\n'
+            '<script src="./v2/public-spend-adapter.js?v=v2-preview" data-atlas-v2-preview="public-spend-adapter"></script>\n'
           )
           gp=re.search(r'<script[^>]+src=["\'][^"\']*atlas-public-spend-v2\.js[^"\']*["\'][^>]*>\s*</script>', html, flags=re.I)
           if gp:
@@ -57,7 +61,7 @@ jobs:
               pos=html.lower().rfind('</body>')
               html=html[:pos] + tags + html[pos:]
           else:
-              raise SystemExit('Unable to find safe v2 shadow mount point')
+              raise SystemExit('Unable to find safe v2 preview mount point')
           p.write_text(html, encoding='utf-8')
           PY
 
@@ -70,18 +74,22 @@ jobs:
           import re
 
           html=Path('_site/index.html').read_text(encoding='utf-8')
-          assert html.count('data-atlas-v2-shadow="data-client"') == 1
-          assert html.count('data-atlas-v2-shadow="public-spend"') == 1
-          assert './v2/atlas-v2-data.js?v=shadow-preview' in html
-          assert './v2/public-spend-shadow.js?v=shadow-preview' in html
+          for marker in ['mode','data-client','public-spend-shadow','public-spend-adapter']:
+              assert html.count(f'data-atlas-v2-preview="{marker}"') == 1, marker
+          assert 'window.__ATLAS_V2_PREVIEW_MODE__="public-spend"' in html
+          assert './v2/atlas-v2-data.js?v=v2-preview' in html
+          assert './v2/public-spend-adapter.js?v=v2-preview' in html
           gp=re.search(r'atlas-public-spend-v2\.js', html)
-          shadow=html.find('./v2/public-spend-shadow.js?v=shadow-preview')
+          adapter=html.find('./v2/public-spend-adapter.js?v=v2-preview')
           if gp:
-              assert shadow < gp.start(), 'shadow listener must mount before current GP2 runtime'
-          assert Path('_site/v2/atlas-v2-data.js').exists()
-          assert Path('_site/v2/public-spend-shadow.js').exists()
-          assert 'semanticParity' in Path('_site/v2/public-spend-shadow.js').read_text(encoding='utf-8')
-          print('ATLAS v2 shadow preview isolated from production manifest and mounted successfully')
+              assert adapter < gp.start(), 'v2 adapter must capture navigation before current GP2 runtime'
+          for f in ['atlas-v2-data.js','public-spend-shadow.js','public-spend-adapter.js']:
+              assert Path('_site/v2',f).exists(), f
+          adapter_text=Path('_site/v2/public-spend-adapter.js').read_text(encoding='utf-8')
+          assert 'raw.githubusercontent.com' not in adapter_text
+          assert 'budgetServices' in adapter_text and 'budgetProviderDetail' in adapter_text
+          assert "detail_mode!=='FULL_BACKEND'" in adapter_text
+          print('ATLAS v2 preview mounted: branch-only adapter, no production manifest changes')
           PY
 
       - name: Upload preview artifact
