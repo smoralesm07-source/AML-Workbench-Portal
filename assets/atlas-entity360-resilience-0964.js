@@ -3,12 +3,14 @@
  * Corrección del bloqueo observado en el loader legado de Entidad 360.
  * - Renderiza inmediatamente una ficha válida, sin esperar al renderer legado.
  * - Consulta fuentes en paralelo con timeout por fuente y degradación parcial.
+ * - Resuelve RUT desde el entity_id cuando viene materializado como ENT-RUT-*.
+ * - Dispara UAF en paralelo desde el primer tick cuando el RUT es inferible.
  * - Nunca deja la vista bloqueada si una fuente demora o falla.
  * - Reaplica la ficha si un renderer tardío intenta sobrescribirla.
  * - Conserva RLS, cruces exactos y semántica vacío != ausencia/cero.
  */
 (function atlasEntity360Resilience0964(){
-  const BUILD='0964-e360-resilience-2';
+  const BUILD='0964-e360-resilience-3';
   const MASTER='aml_entity_master_v0553';
   const TAX='aml_entity_tax_profile';
   const UAF='aml_uaf_entity_profile';
@@ -18,7 +20,7 @@
   const CACHE_TTL=5*60*1000;
   const SOURCE_TIMEOUT=2800;
   const MASTER_TIMEOUT=1500;
-  const HARD_LOADING_TIMEOUT=4300;
+  const HARD_LOADING_TIMEOUT=3200;
   if(window.__ATLAS_ENTITY360_RESILIENCE_0964__?.build===BUILD)return;
 
   const CACHE=new Map();
@@ -35,6 +37,12 @@
   function idValue(value){
     if(value&&typeof value==='object')return String(value.entity_id||value.entityId||value.id||'');
     return String(value||'');
+  }
+
+  function rutFromEntityId(value){
+    const id=String(value||'').trim().toUpperCase();
+    const match=id.match(/^ENT-RUT-(\d+)-([0-9K])$/);
+    return match?`${match[1]}-${match[2]}`:'';
   }
 
   function domSelection(){
@@ -61,7 +69,7 @@
       ...(extra||{}),
       entity_id:id,
       name:extra?.name||extra?.legal_name||dom.name||id,
-      rut:extra?.rut||dom.rut||null
+      rut:extra?.rut||dom.rut||rutFromEntityId(id)||null
     };
   }
 
@@ -148,9 +156,6 @@
     if(!inEntities()||String(selected()||id)!==String(id))return false;
     api.mount(id,meta,data);
     decorate();
-    /* Executive renderer replaces #content descendants. Re-attach the loading
-       authority after every progressive paint so preliminary empty values can
-       never be mistaken for a completed dossier. */
     if(loadingId===String(id))showLoader(id,loadingMeta||meta);
     return true;
   }
@@ -170,20 +175,26 @@
       cacheAndMount(id,meta,data);hideLoader(id);return data;
     }
 
+    const initialRut=meta?.rut||rutFromEntityId(id)||'';
     const masterP=timed('Identidad',()=>client.from(MASTER).select('*').eq('entity_id',id).maybeSingle(),MASTER_TIMEOUT);
     const taxP=timed('SII',()=>client.from(TAX).select('entity_id,commercial_year,sales_band,sales_band_code,sales_band_rank,workers_numeric,region,province,commune,economic_sector,economic_subsector,main_activity,taxpayer_type,taxpayer_subtype,activity_start_date,termination_date,current_status,activity_count,activity_codes,activity_names,address_count,current_address_count,communes,address_regions,ownership_edge_count,legal_entity_partner_count,societies_as_partner_count,signal_count,signal_types,updated_at').eq('entity_id',id).maybeSingle());
     const sanP=timed('Sanciones',()=>client.from(SAN).select('*').eq('entity_id',id).maybeSingle());
     const spendP=timed('Compras públicas',()=>client.from(SPEND).select('supplier_rut,supplier_name,order_count,buyer_count,total_clp,first_order_date,last_order_date,direct_order_count,entity_id,region,commune,lobby_count,cgr_count,presupuesto_signal_count,attention_score,signal_codes').eq('entity_id',id).limit(1).maybeSingle());
     const historyP=timed('Historia SII',()=>client.from(HISTORY).select('*').eq('entity_id',id).order('commercial_year',{ascending:false}).limit(8));
+    let uafP=initialRut?timed('UAF',()=>client.from(UAF).select('*').in('rut',rutVariants(initialRut)).limit(1).maybeSingle()):null;
 
     const master=await masterP;
     if(runToken!==token)return null;
     data.master=master.data||null;
-    data.entity={...(data.master||{}),...(meta||{}),entity_id:id,name:meta?.name||data.master?.name||data.master?.res_legal_name||id,rut:meta?.rut||data.master?.rut||null};
+    data.entity={...(data.master||{}),...(meta||{}),entity_id:id,name:meta?.name||data.master?.name||data.master?.res_legal_name||id,rut:initialRut||data.master?.rut||null};
     if(master.error)data.errors.push(master.error);
     cacheAndMount(id,data.entity,data);
 
-    const uafP=data.entity.rut?timed('UAF',()=>client.from(UAF).select('*').in('rut',rutVariants(data.entity.rut)).limit(1).maybeSingle()):Promise.resolve({data:null,error:null});
+    if(!uafP&&data.entity.rut){
+      uafP=timed('UAF',()=>client.from(UAF).select('*').in('rut',rutVariants(data.entity.rut)).limit(1).maybeSingle());
+    }
+    if(!uafP)uafP=Promise.resolve({data:null,error:null});
+
     const names=['tax','sanctions','spend','history','uaf'];
     const results=await Promise.allSettled([taxP,sanP,spendP,historyP,uafP]);
     if(runToken!==token)return null;
@@ -200,7 +211,7 @@
     data.partial=data.errors.length>0;
     cacheAndMount(id,data.entity,data);
     hideLoader(id);
-    window.dispatchEvent(new CustomEvent('atlas:entity360-ready',{detail:{entityId:id,partial:data.partial,errors:[...data.errors],build:BUILD}}));
+    window.dispatchEvent(new CustomEvent('atlas:entity360-ready',{detail:{entityId:id,partial:data.partial,errors:[...data.errors],build:BUILD,parallelUaf:!!initialRut}}));
     return data;
   }
 
@@ -266,7 +277,7 @@
       try{result=base.apply(this,[entityId,meta,...rest]);}catch(error){console.warn('[ATLAS E360 0964] base open failed; resilient dossier remains active',error);return Promise.resolve(false);}
       return Promise.race([
         Promise.resolve(result).catch(error=>{console.warn('[ATLAS E360 0964] legacy open rejected; resilient dossier remains active',error);return false;}),
-        new Promise(resolve=>setTimeout(()=>resolve(true),3600))
+        new Promise(resolve=>setTimeout(()=>resolve(true),3200))
       ]);
     };
     Object.defineProperty(wrapped,'__atlasE360Resilience0964',{value:true});
