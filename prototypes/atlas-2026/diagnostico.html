@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Atlas · Diagnóstico y Rediseño</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ground:#eef1f0; --surface:#ffffff; --surface-2:#e6eae9; --surface-3:#dde3e2;
+  --line:#d0d8d7; --line-soft:#e2e7e6;
+  --ink:#101718; --ink-2:#44514f; --muted:#6d7b79; --faint:#93a09e;
+  --accent:#0d6a66; --accent-2:#0a4f4c; --accent-soft:#dbeceb; --accent-line:#a9cfcd;
+  --ok:#2c6a4d; --ok-soft:#dcece3;
+  --watch:#8a5d0c; --watch-soft:#f6ebd4;
+  --crit:#a13629; --crit-soft:#f7e2de; --crit-line:#e5b3a8;
+  --info:#43518c; --info-soft:#e2e5f4;
+  --shadow:0 1px 2px rgba(16,23,24,.06),0 8px 24px rgba(16,23,24,.06);
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:"Archivo",system-ui,-apple-system,Segoe UI,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0b1113; --surface:#121a1c; --surface-2:#182225; --surface-3:#1f2b2e;
+    --line:#263336; --line-soft:#1d282b;
+    --ink:#e5ecec; --ink-2:#a8b7b7; --muted:#7b8a8a; --faint:#5d6c6c;
+    --accent:#3fbdb2; --accent-2:#6ad6cb; --accent-soft:#11312f; --accent-line:#255450;
+    --ok:#5cb98a; --ok-soft:#122a20;
+    --watch:#d6a03c; --watch-soft:#2c2312;
+    --crit:#e0715e; --crit-soft:#301a17; --crit-line:#5f2f26;
+    --info:#8ea1e2; --info-soft:#1a1f36;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0b1113; --surface:#121a1c; --surface-2:#182225; --surface-3:#1f2b2e;
+  --line:#263336; --line-soft:#1d282b;
+  --ink:#e5ecec; --ink-2:#a8b7b7; --muted:#7b8a8a; --faint:#5d6c6c;
+  --accent:#3fbdb2; --accent-2:#6ad6cb; --accent-soft:#11312f; --accent-line:#255450;
+  --ok:#5cb98a; --ok-soft:#122a20;
+  --watch:#d6a03c; --watch-soft:#2c2312;
+  --crit:#e0715e; --crit-soft:#301a17; --crit-line:#5f2f26;
+  --info:#8ea1e2; --info-soft:#1a1f36;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font:400 15px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+button,a{font:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+.bar{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--ground) 90%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.barin{max-width:1000px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:12px}
+.barin b{font-size:14px;font-weight:600}
+.barin .k{font:500 10px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+.barin .sp{flex:1}
+.tbtn{background:var(--surface);border:1px solid var(--line);border-radius:7px;height:30px;padding:0 10px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:var(--ink-2);font-size:12.5px}
+.tbtn:hover{border-color:var(--accent-line);color:var(--accent)}
+.tbtn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round}
+
+.doc{max-width:1000px;margin:0 auto;padding:0 24px 90px}
+.hero{padding:52px 0 34px;border-bottom:2px solid var(--ink)}
+.kick{font:600 10.5px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+.hero h1{margin:15px 0 0;font-size:clamp(34px,5.4vw,52px);font-weight:600;letter-spacing:-.035em;line-height:1.03;text-wrap:balance;max-width:19ch}
+.hero .lede{margin:19px 0 0;font-size:18px;line-height:1.55;color:var(--ink-2);max-width:60ch}
+.hero .meta{margin-top:26px;display:flex;gap:26px;flex-wrap:wrap;font:500 11px/1.5 var(--mono);color:var(--muted);letter-spacing:.05em}
+.hero .meta b{display:block;color:var(--ink-2);text-transform:uppercase;letter-spacing:.11em;font-size:9.5px;margin-bottom:3px}
+
+h2{margin:56px 0 0;font-size:11px;font-family:var(--mono);font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);padding-bottom:9px;border-bottom:1px solid var(--line)}
+h3{margin:30px 0 0;font-size:22px;font-weight:600;letter-spacing:-.021em;line-height:1.25;text-wrap:balance}
+h4{margin:24px 0 0;font-size:16px;font-weight:600;letter-spacing:-.012em}
+p{margin:13px 0 0;max-width:68ch}
+p.wide{max-width:none}
+ul.pl{margin:13px 0 0;padding:0;list-style:none;max-width:68ch;display:flex;flex-direction:column;gap:9px}
+ul.pl li{padding-left:19px;position:relative;line-height:1.55}
+ul.pl li::before{content:"";position:absolute;left:2px;top:11px;width:5px;height:5px;border-radius:50%;background:var(--accent)}
+ul.pl li b{font-weight:600}
+code{font:500 13px/1 var(--mono);background:var(--surface-2);border:1px solid var(--line-soft);padding:2px 5px;border-radius:4px}
+em.q{font-style:normal;color:var(--muted)}
+
+/* verdict block */
+.verdict{margin-top:26px;border:1px solid var(--line);border-left:4px solid var(--crit);border-radius:0 12px 12px 0;background:var(--surface);padding:22px 24px;box-shadow:var(--shadow)}
+.verdict .t{font:600 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--crit)}
+.verdict p{font-size:16.5px;line-height:1.6;margin-top:11px}
+.verdict p:first-of-type{font-size:18px;font-weight:500;color:var(--ink)}
+
+/* metric grid */
+.mgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-top:22px}
+.mgrid div{background:var(--surface);padding:15px 16px}
+.mgrid .l{font:600 9.5px/1.3 var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+.mgrid .v{font:600 30px/1.05 var(--sans);letter-spacing:-.032em;font-variant-numeric:tabular-nums;margin-top:8px}
+.mgrid .v.bad{color:var(--crit)} .mgrid .v.warn{color:var(--watch)} .mgrid .v.good{color:var(--ok)}
+.mgrid .s{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.4}
+
+/* chart */
+.fig{margin-top:24px;border:1px solid var(--line);border-radius:11px;background:var(--surface);overflow:hidden}
+.fig > header{padding:14px 17px 11px;border-bottom:1px solid var(--line-soft)}
+.fig > header b{font-size:14px;font-weight:600;display:block}
+.fig > header span{font-size:12.5px;color:var(--muted)}
+.fig .body{padding:17px}
+.fcap{padding:0 17px 15px;font-size:12.5px;color:var(--muted);line-height:1.5}
+.fcap b{color:var(--ink-2)}
+
+.hbar{display:flex;flex-direction:column;gap:11px}
+.hb{display:grid;grid-template-columns:1fr auto;gap:4px 12px}
+.hb .n{font-size:13px;color:var(--ink-2)}
+.hb .v{font:600 12.5px/1 var(--mono);font-variant-numeric:tabular-nums;color:var(--ink)}
+.hb .tr{grid-column:1/-1;height:9px;border-radius:5px;background:var(--surface-3);overflow:hidden;display:flex}
+.hb .tr i{display:block;height:100%}
+
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:11px;height:11px;border-radius:3px;display:block}
+
+/* table */
+.tw{overflow-x:auto;margin-top:22px;border:1px solid var(--line);border-radius:11px;background:var(--surface)}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:600px}
+th,td{text-align:left;padding:11px 15px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+th{font:600 9.5px/1.3 var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--muted);background:var(--surface-2);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.num{font:500 13px/1 var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+td b{font-weight:600}
+.pill{display:inline-block;font:600 9.5px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:4px 7px;border-radius:5px;white-space:nowrap}
+.pill.a{background:var(--crit-soft);color:var(--crit)}
+.pill.b{background:var(--watch-soft);color:var(--watch)}
+.pill.c{background:var(--accent-soft);color:var(--accent)}
+.pill.d{background:var(--surface-3);color:var(--ink-2)}
+
+/* before/after */
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:22px}
+@media (max-width:760px){.ba{grid-template-columns:1fr}}
+.bacol{border:1px solid var(--line);border-radius:11px;background:var(--surface);overflow:hidden}
+.bacol > header{padding:11px 15px;border-bottom:1px solid var(--line-soft);font:600 9.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase}
+.bacol.now > header{background:var(--crit-soft);color:var(--crit)}
+.bacol.next > header{background:var(--accent-soft);color:var(--accent)}
+.bacol ul{margin:0;padding:12px 15px;list-style:none;display:flex;flex-direction:column;gap:0}
+.bacol li{padding:8px 0;border-bottom:1px dashed var(--line-soft);font-size:13.5px;line-height:1.45}
+.bacol li:last-child{border-bottom:0}
+.bacol li span{display:block;font:500 10.5px/1.4 var(--mono);color:var(--muted);margin-top:3px;letter-spacing:.02em}
+
+/* demo cards */
+.demos{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px}
+@media (max-width:860px){.demos{grid-template-columns:1fr}}
+.demo{border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.demo .num{font:600 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent);padding:15px 16px 0}
+.demo h4{margin:9px 16px 0;font-size:18px;letter-spacing:-.018em}
+.demo p{margin:9px 16px 0;font-size:13.5px;color:var(--ink-2);line-height:1.5;flex:1}
+.demo ul{margin:12px 16px 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.demo ul li{font-size:12.5px;color:var(--muted);padding-left:15px;position:relative;line-height:1.4}
+.demo ul li::before{content:"→";position:absolute;left:0;color:var(--accent);font-size:11px;top:1px}
+.demo .go{margin:16px;border:1px solid var(--accent);background:var(--accent);color:var(--surface);border-radius:8px;padding:9px;text-align:center;text-decoration:none;font-size:13.5px;font-weight:500;display:block}
+.demo .go:hover{background:var(--accent-2);border-color:var(--accent-2)}
+
+/* roadmap */
+.wave{margin-top:20px;border:1px solid var(--line);border-radius:11px;background:var(--surface);overflow:hidden}
+.wave > header{display:flex;align-items:baseline;gap:12px;padding:13px 17px;border-bottom:1px solid var(--line-soft);background:var(--surface-2)}
+.wave > header b{font-size:15px;font-weight:600}
+.wave > header .w{font:600 9.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.wave > header .t{margin-left:auto;font:500 11px/1 var(--mono);color:var(--muted);letter-spacing:.05em}
+.wave ul{margin:0;padding:12px 17px 15px;list-style:none;display:flex;flex-direction:column;gap:9px}
+.wave li{display:grid;grid-template-columns:auto 1fr;gap:11px;font-size:13.5px;line-height:1.5;align-items:start}
+.wave li .ix{font:600 10px/1.6 var(--mono);color:var(--faint)}
+
+.closing{margin-top:52px;padding:26px 0 0;border-top:2px solid var(--ink)}
+.closing p{font-size:16.5px;line-height:1.65;max-width:66ch}
+.foot{margin-top:34px;font:500 11px/1.6 var(--mono);color:var(--faint);letter-spacing:.05em}
+</style>
+</head>
+<body>
+<div class="bar"><div class="barin">
+  <b>Atlas</b><span class="k">Diagnóstico · septiembre 2026</span>
+  <span class="sp"></span>
+  <button class="tbtn" id="theme"><svg viewBox="0 0 24 24" id="themeIcon"></svg>Tema</button>
+</div></div>
+
+<div class="doc">
+
+  <header class="hero">
+    <div class="kick">Revisión técnica y de experiencia</div>
+    <h1>Atlas sabe mucho. Cuesta demasiado usarlo.</h1>
+    <p class="lede">El motor analítico de Atlas es serio, honesto y difícil de replicar. La capa que lo muestra
+    lleva 44 versiones acumulándose sin que nunca se retirara la anterior. Este documento mide ese costo y
+    propone tres pantallas para salir.</p>
+    <div class="meta">
+      <div><b>Ámbito</b>AML-Workbench-Portal<br>+ 14 repositorios productores</div>
+      <div><b>Release revisado</b>0.96.2 · build 0964</div>
+      <div><b>Método</b>Lectura de código y<br>medición del bundle compilado</div>
+      <div><b>Entregables</b>Diagnóstico<br>+ 3 demos operativas</div>
+    </div>
+  </header>
+
+  <h2>Veredicto</h2>
+  <div class="verdict">
+    <div class="t">Lo esencial en tres frases</div>
+    <p>El problema de Atlas no es de funcionalidad: es de <b>sedimentación</b>. Cada mejora se publicó como una
+    capa nueva sobre la anterior, y ninguna se retiró.</p>
+    <p>Hoy el navegador descarga y ejecuta <b>169 fragmentos</b> de las versiones 0.16 a 1.00 antes de mostrar el
+    primer dato — 600 KB comprimidos y 2,4 MB de código a interpretar — y 34 de esos archivos se disputan la misma
+    función global <code>shell</code>. Nadie es dueño de la pantalla.</p>
+    <p>La consecuencia visible para el fiscalizador no es la lentitud, aunque exista. Es que Atlas
+    <b>no recuerda dónde estaba, no se puede compartir un enlace, y el menú está ordenado por quién produce el dato
+    en lugar de por qué pregunta responde</b>. Tres cosas que se arreglan sin tocar el motor analítico.</p>
+  </div>
+
+  <h2>1 · Cómo llegó Atlas hasta aquí</h2>
+  <h3>El patrón de la capa nueva</h3>
+  <p>El repositorio muestra un patrón consistente y perfectamente racional caso a caso: cuando algo falla o se
+  quiere mejorar, se agrega un archivo <code>vNNN-loquesea.js</code> que parchea en tiempo de ejecución lo que hizo
+  el anterior. Los nombres lo declaran solos: <code>-hotfix</code>, <code>-hardening</code>, <code>-recovery</code>,
+  <code>-authority</code>, <code>-restore</code>, <code>-fix</code>, <code>-stability</code>,
+  <code>-force-authority</code>.</p>
+  <p>El resultado es que el runtime en producción contiene, simultáneamente y activas, cuatro generaciones de la
+  aplicación:</p>
+
+  <div class="fig">
+    <header><b>169 fragmentos activos en el runtime compilado</b><span>por generación de versión, release 0.96.2</span></header>
+    <div class="body"><div class="hbar" id="gen"></div></div>
+    <div class="fcap">Ninguna generación reemplazó a la anterior: <b>todas se ejecutan en el mismo arranque</b>.
+    El propio <code>docs/ARCHITECTURE_V2.md</code> ya lo nombra como regla nº 9 —
+    <em class="q">«un módulo v2 no está completo mientras el renderizador antiguo siga siendo una autoridad
+    competidora»</em>— pero la eliminación es justamente el paso que nunca ocurre.</div>
+  </div>
+
+  <div class="mgrid">
+    <div><span class="l">Archivos que redefinen<br><code>shell</code></span><span class="v bad">34</span><span class="s">cada uno cree ser el dueño del layout</span></div>
+    <div><span class="l">Globales en <code>window</code></span><span class="v bad">247</span><span class="s">sin módulos ni espacios de nombre</span></div>
+    <div><span class="l">MutationObserver simultáneos</span><span class="v bad">26</span><span class="s">reconstruyen el DOM que otros escriben</span></div>
+    <div><span class="l">Asignaciones <code>innerHTML</code></span><span class="v warn">343</span><span class="s">plantillas en cadenas, sin componentes</span></div>
+    <div><span class="l">Bloques <code>catch{}</code> vacíos</span><span class="v warn">42</span><span class="s">errores que nadie ve nunca</span></div>
+    <div><span class="l">Workflows de CI</span><span class="v warn">59</span><span class="s">casi uno por funcionalidad publicada</span></div>
+  </div>
+
+  <p>Los 59 workflows son el síntoma más elocuente. Existe <code>validate-entity-explorer-0512.yml</code>,
+  <code>validate-public-spend-guided-0570.yml</code>, <code>validate-osfl-economic-0950.yml</code>. Se validan
+  funcionalidades una por una porque no hay una arquitectura común que se pueda validar de una vez. Es disciplina
+  de ingeniería aplicada al lugar equivocado: mucho esfuerzo sosteniendo un diseño que conviene cambiar.</p>
+
+  <h2>2 · Rendimiento</h2>
+  <h3>600 KB antes de la primera fila de datos</h3>
+  <p class="wide">El build (<code>tools/build_atlas_site.py</code>) concatena los 169 fragmentos en cinco bundles
+  clásicos y una hoja de estilo. No hay minificación, ni división por ruta, ni carga diferida. <b>Todo usuario
+  descarga el código de todas las secciones</b>, aunque sólo entre a una.</p>
+
+  <div class="fig">
+    <header><b>Carga inicial · medida sobre el artefacto compilado</b><span>bytes reales, sin red</span></header>
+    <div class="body"><div class="hbar" id="bundle"></div>
+      <div class="legend">
+        <span><i style="background:var(--crit)"></i>Runtime Atlas (todas las secciones)</span>
+        <span><i style="background:var(--watch)"></i>Estilos (todas las secciones)</span>
+        <span><i style="background:var(--info)"></i>SDK Supabase</span>
+      </div>
+    </div>
+    <div class="fcap"><b>1,82 MB de JavaScript y 564 KB de CSS sin comprimir</b> — cerca de 600 KB tras gzip.
+    A eso se suma que el arranque es secuencial: guardián de release, tema, SDK, preflight de autenticación,
+    y recién después las 169 piezas. El primer render útil ocurre tras ejecutar todo eso.</div>
+  </div>
+
+  <h4>Y el problema no termina en la descarga</h4>
+  <ul class="pl">
+    <li><b>220 consultas directas a la base desde el navegador</b>, con 84 de ellas pidiendo <code>select('*')</code>.
+    La regla nº 3 de la arquitectura v2 —<em class="q">«navegador delgado»</em>— aún no rige en las rutas vivas.</li>
+    <li><b>21 URLs de <code>raw.githubusercontent.com</code> usadas como base de datos en vivo</b> desde el cliente:
+    sanciones, CEAD, SII, UAF, Presupuesto Abierto, Context Hub. Sin autenticación, sin RLS, sin control de versión
+    del payload, sin límite de tamaño y con la disponibilidad de GitHub como dependencia dura.</li>
+    <li><b>Navegar destruye la pantalla completa.</b> <code>shell()</code> reasigna <code>app.innerHTML</code> en
+    cada cambio de sección: se borran barra lateral, encabezado y contenido, y acto seguido 26 observadores los
+    reconstruyen. Cambiar de pestaña cuesta lo mismo que recargar.</li>
+    <li><b>Datos cocidos en el código.</b> Varios módulos llevan series anuales fijas en arreglos JavaScript. Cuando
+    la fuente se actualiza, la pantalla no.</li>
+  </ul>
+
+  <h2>3 · Diseño gráfico</h2>
+  <h3>Existe un sistema de diseño. Dos tercios de la aplicación lo ignoran.</h3>
+  <p><code>v040-theme-system.css</code> define un sistema correcto: 89 tokens, escala de superficies, colores
+  semánticos separados del acento, y un tema claro completo. El problema es la adopción.</p>
+
+  <div class="fig">
+    <header><b>Adopción de tokens en la hoja compilada</b><span>literales de color frente a referencias <code>var(--…)</code></span></header>
+    <div class="body"><div class="hbar" id="tok"></div></div>
+    <div class="fcap">Sólo el <b>35% de las decisiones de color</b> pasa por un token. Las otras 4.138 son literales
+    escritos a mano — <b>2.460 valores hexadecimales distintos</b> conviviendo en la misma hoja.</div>
+  </div>
+
+  <div class="mgrid">
+    <div><span class="l">Hojas sin ninguna regla<br>de tema claro</span><span class="v bad">38<span style="font-size:17px;color:var(--muted)"> / 64</span></span><span class="s">el interruptor de tema es una promesa rota</span></div>
+    <div><span class="l">Tamaños de fuente distintos</span><span class="v bad">85</span><span class="s">no hay escala tipográfica</span></div>
+    <div><span class="l">Radios de esquina distintos</span><span class="v warn">43</span><span class="s">cada módulo eligió el suyo</span></div>
+    <div><span class="l">Declaraciones <code>!important</code></span><span class="v bad">1.094</span><span class="s">las capas pelean por la cascada</span></div>
+    <div><span class="l">Familias de clase<br>independientes</span><span class="v bad">14+</span><span class="s"><code>.v019-</code> <code>.v030-</code> <code>.v032-</code> <code>.san96-</code>…</span></div>
+    <div><span class="l">Formas distintas de<br>hacer pestañas</span><span class="v bad">13</span><span class="s">y ~20 familias de panel lateral</span></div>
+  </div>
+
+  <p><b>El dato más accionable de esta sección es el primero.</b> Atlas ofrece un botón de tema claro que funciona
+  en el shell y en las superficies nuevas, y deja de funcionar en Territorio, OSFL, Gasto público, Radar integrado
+  y el tablero. Son 38 hojas con miles de colores fijos y cero reglas para tema claro. Un fiscalizador que active
+  el tema claro obtiene texto claro sobre fondo claro en la mitad de la aplicación. Es la clase de defecto que
+  destruye la confianza en todo lo demás, y su costo de reparación es mecánico, no de diseño.</p>
+
+  <h2>4 · Navegación y experiencia</h2>
+  <h3>El menú está ordenado por quién produce el dato</h3>
+  <p>La navegación actual agrupa así: <em class="q">Explorar</em> (Radar integrado, Entidades, Universo SO,
+  Territorio) · <em class="q">Analítica</em> (Empresas RES, OSFL, Gasto público) · <em class="q">Radares</em>
+  (Sanciones) · <em class="q">Análisis</em> (Preguntas).</p>
+  <p>Ocho de esas nueve etiquetas nombran <b>una fuente o un radar</b>: UAF, SII, OSFL, RES, Sanciones, Gasto
+  público. Ninguna nombra lo que el fiscalizador quiere hacer. Y las categorías «Explorar», «Analítica» y
+  «Análisis» no distinguen nada entre sí: son tres nombres para la misma actividad.</p>
+  <p>La consecuencia es que la organización interna de Atlas —qué equipo construyó qué radar— quedó impresa en la
+  pantalla. Para quien entra a trabajar, el mapa correcto no es el de los productores sino el de las preguntas.</p>
+
+  <div class="ba">
+    <div class="bacol now">
+      <header>Hoy · 9 entradas, 4 grupos</header>
+      <ul>
+        <li>Radar integrado <span>¿es el inicio, o una sección más?</span></li>
+        <li>Entidades <span>el expediente, la pantalla más usada</span></li>
+        <li>Universo SO <span>padrón + potenciales, dos cosas distintas</span></li>
+        <li>Territorio <span>contexto, no sujeto de fiscalización</span></li>
+        <li>Empresas (RES) · OSFL · Gasto público <span>tres fuentes bajo «Analítica»</span></li>
+        <li>Sanciones <span>solo, bajo «Radares»</span></li>
+        <li>Preguntas <span>bajo «Análisis», que es lo mismo que «Explorar»</span></li>
+      </ul>
+    </div>
+    <div class="bacol next">
+      <header>Propuesto · 10 entradas, 4 grupos con sentido</header>
+      <ul>
+        <li><b>Mi trabajo</b> — Turno · Cola de revisión · Bitácora <span>lo que hoy no existe: el estado del fiscalizador</span></li>
+        <li><b>Preguntar al universo</b> — Entidad · Universo SO · Territorio · Gasto público <span>exploración dirigida por pregunta</span></li>
+        <li><b>Vigilancia continua</b> — Alertas <span>reglas guardadas que avisan solas</span></li>
+        <li><b>Método y datos</b> — Fuentes y frescura · Cómo se calcula <span>la explicabilidad deja de estar escondida en cada tarjeta</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <h4>Cuatro ausencias que un analista nota el primer día</h4>
+  <div class="tw"><table>
+    <thead><tr><th>Falta</th><th>Evidencia en el código</th><th>Qué cuesta</th><th>Esfuerzo</th></tr></thead>
+    <tbody>
+      <tr><td><b>Estado en la URL</b></td>
+        <td class="num">0 usos de<br>pushState / hash / URLSearchParams</td>
+        <td>No se comparte un caso por correo. El botón «atrás» sale de la aplicación. Recargar te devuelve al inicio.</td>
+        <td><span class="pill c">bajo</span></td></tr>
+      <tr><td><b>Buscador de comandos</b></td>
+        <td class="num">0 atajos de teclado<br>en 169 fragmentos</td>
+        <td>Toda navegación es con el mouse. Para una herramienta de uso intensivo diario, es el mayor impuesto oculto.</td>
+        <td><span class="pill c">bajo</span></td></tr>
+      <tr><td><b>Estados de carga</b></td>
+        <td class="num">2 «skeleton»<br>vs 15 «Cargando…»</td>
+        <td>La pantalla se ve rota mientras carga. No se distingue lento de caído.</td>
+        <td><span class="pill c">bajo</span></td></tr>
+      <tr><td><b>Captura de la decisión</b></td>
+        <td class="num">existe en Universo SO,<br>no en el resto</td>
+        <td>Atlas muestra prioridades pero casi nunca aprende de lo que el fiscalizador concluye. Es la brecha de producto más importante.</td>
+        <td><span class="pill b">medio</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>5 · La brecha que el propio Atlas ya documentó</h2>
+  <h3>El backtest dice qué construir después</h3>
+  <p>El repositorio <code>atlas-aml-methodology</code> contiene el hallazgo más importante de todo el ecosistema,
+  y está escrito con una honestidad poco común:</p>
+  <div class="verdict" style="border-left-color:var(--accent)">
+    <div class="t" style="color:var(--accent)">Del backtest, citado</div>
+    <p style="font-weight:400;font-size:16px">Precisión@10 del catálogo completo: <b>30,0%</b>. Precisión@10 sin las
+    tipologías de historial sancionatorio: <b>0,0%</b>.</p>
+    <p style="font-size:15px">El 100% del poder predictivo viene de «ya fue sancionado». Es autocorrelación de
+    atención supervisora: el modelo redescubre que a las entidades muy supervisadas se las sanciona seguido.
+    Las tipologías estructurales no quedan invalidadas — queda demostrado que la sanción administrativa es la
+    etiqueta equivocada para ellas.</p>
+    <p style="font-size:15px">La conclusión del propio documento: <b>capturar el desenlace del triage pasa de
+    deseable a prerrequisito</b>. Es el único etiquetado posible para el grueso del catálogo, y sólo se acumula
+    si se empieza ahora.</p>
+  </div>
+  <p>Eso es una especificación de producto, no una nota metodológica. Significa que la próxima pantalla importante
+  de Atlas no es otro tablero: es <b>la mesa donde el fiscalizador decide y su decisión queda registrada</b>.
+  Universo SO ya lo hace para sus candidatos; la propuesta es convertirlo en la columna vertebral de toda la
+  aplicación.</p>
+
+  <h2>6 · Tres demos operativas</h2>
+  <p>Las tres funcionan de verdad en el navegador, comparten un solo sistema de tokens y responden a las tres
+  preguntas del diagnóstico: cómo se navega, cómo se lee una entidad, y dónde queda la decisión.</p>
+
+  <div class="demos">
+    <article class="demo">
+      <div class="num">Demo 1 · Navegación</div>
+      <h4>Consola Atlas</h4>
+      <p>El shell rediseñado. Menú por pregunta y no por productor, buscador de comandos, y un inicio que
+      responde «qué cambió desde tu última sesión» en vez de apilar diez tarjetas de indicadores.</p>
+      <ul>
+        <li>Ruta en la URL, con historial del navegador</li>
+        <li><b>⌘K</b> busca entidades, secciones y preguntas</li>
+        <li>Tema claro real en todas las superficies</li>
+        <li>Esqueletos de carga en lugar de «Consultando…»</li>
+      </ul>
+      <a class="go" href="https://claude.ai/code/artifact/dd8d33cb-67bb-4af4-bb08-ef11f08fc926" target="_blank" rel="noopener">Abrir la demo →</a>
+    </article>
+
+    <article class="demo">
+      <div class="num">Demo 2 · Lectura</div>
+      <h4>Expediente 360</h4>
+      <p>La pantalla más usada, reordenada por divulgación progresiva: primero la conclusión en una frase,
+      después la evidencia, y sólo si se pide, el cálculo completo con su cascada de componentes.</p>
+      <ul>
+        <li>El puntaje llega con su credibilidad al lado</li>
+        <li>Cascada IPF con el componente sin evidencia visible</li>
+        <li>Una línea de tiempo para todas las fuentes</li>
+        <li>Guardarraíles en un panel, no bajo cada tarjeta</li>
+      </ul>
+      <a class="go" href="https://claude.ai/code/artifact/8c954932-c13e-4107-b01b-a182b8c16341" target="_blank" rel="noopener">Abrir la demo →</a>
+    </article>
+
+    <article class="demo">
+      <div class="num">Demo 3 · Decisión</div>
+      <h4>Mesa de triage</h4>
+      <p>La pantalla que falta. Convierte la cola de prioridad en trabajo cerrable con teclado, y guarda cada
+      decisión con su fundamento: el etiquetado que el backtest declaró prerrequisito.</p>
+      <ul>
+        <li>Teclado completo: <b>j k r s d u</b></li>
+        <li>Descartar exige motivo; sin motivo no se guarda</li>
+        <li>Bitácora de sólo anexado, persistente</li>
+        <li>IVO y materialidad separados, nunca sumados</li>
+      </ul>
+      <a class="go" href="https://claude.ai/code/artifact/6b09cbbc-f11b-4d54-889a-2a796bfd4348" target="_blank" rel="noopener">Abrir la demo →</a>
+    </article>
+  </div>
+
+  <h2>7 · Plan por olas</h2>
+  <p>Ordenado por relación entre lo que se gana y lo que cuesta. Ninguna ola requiere detener la operación ni
+  reescribir el motor analítico.</p>
+
+  <div class="wave">
+    <header><span class="w">Ola 1</span><b>Deuda visible que se paga rápido</b><span class="t">2–3 semanas</span></header>
+    <ul>
+      <li><span class="ix">1.1</span><b>Reparar el tema claro.</b> Sustituir los literales de color de las 38 hojas sin reglas de tema por los tokens que ya existen. Es sustitución mecánica y elimina de inmediato el defecto más visible.</li>
+      <li><span class="ix">1.2</span><b>Poner la ruta en la URL.</b> <code>#/seccion/id</code> con <code>pushState</code> y <code>popstate</code>. Habilita compartir un caso, volver atrás y recargar sin perder el sitio.</li>
+      <li><span class="ix">1.3</span><b>Buscador de comandos.</b> <code>⌘K</code> sobre entidades, secciones y preguntas frecuentes, con navegación por flechas.</li>
+      <li><span class="ix">1.4</span><b>Minificar y comprimir el bundle.</b> Sin cambiar una línea de lógica, ~40% menos de bytes.</li>
+      <li><span class="ix">1.5</span><b>Cerrar los <code>catch{}</code> vacíos</b> con un canal de error visible y un identificador de traza.</li>
+    </ul>
+  </div>
+
+  <div class="wave">
+    <header><span class="w">Ola 2</span><b>Reordenar la experiencia</b><span class="t">4–6 semanas</span></header>
+    <ul>
+      <li><span class="ix">2.1</span><b>Adoptar la nueva arquitectura de información</b> — cuatro grupos por pregunta, con «Mi trabajo» arriba.</li>
+      <li><span class="ix">2.2</span><b>Inicio = Turno.</b> Reemplazar el mosaico de indicadores por lo que cambió desde la última sesión y los casos que esperan.</li>
+      <li><span class="ix">2.3</span><b>Unificar pestañas y paneles laterales.</b> De 13 formas de hacer pestañas a una; de ~20 familias de panel a una.</li>
+      <li><span class="ix">2.4</span><b>Congelar la escala tipográfica y de espaciado.</b> De 85 tamaños a 7; de 43 radios a 4.</li>
+      <li><span class="ix">2.5</span><b>Extender la captura de decisión</b> desde Universo SO a Entidad, Sanciones y OSFL, con la bitácora como objeto de primera clase.</li>
+    </ul>
+  </div>
+
+  <div class="wave">
+    <header><span class="w">Ola 3</span><b>Retirar capas, no agregarlas</b><span class="t">un trimestre</span></header>
+    <ul>
+      <li><span class="ix">3.1</span><b>Un dueño por pantalla.</b> Aplicar la regla nº 9 de la arquitectura v2 y borrar la autoridad antigua al migrar cada módulo. La meta es que <code>shell</code> tenga un solo autor, no 34.</li>
+      <li><span class="ix">3.2</span><b>Retirar los 26 <code>MutationObserver</code></b> a medida que cada módulo deja de necesitar que otro le arregle el DOM.</li>
+      <li><span class="ix">3.3</span><b>Cortar las 21 dependencias de <code>raw.githubusercontent.com</code></b> y llevarlas al contrato de lectura ya construido (<code>atlas-v2-read</code>), que ya tiene ETag, traza y autorización.</li>
+      <li><span class="ix">3.4</span><b>División de código por ruta.</b> Que entrar a Sanciones no cargue OSFL, Territorio y Gasto público.</li>
+      <li><span class="ix">3.5</span><b>Consolidar los 59 workflows</b> en un contrato de validación por módulo, siguiendo la estructura ya definida en la arquitectura v2.</li>
+    </ul>
+  </div>
+
+  <div class="closing">
+    <p>Nada de lo anterior cuestiona el trabajo analítico. Los guardarraíles de Atlas —prioridad no es probabilidad,
+    ausencia de dato no es cero, contexto no se hereda, sanción administrativa no es LA/FT— son mejores que los de
+    la mayoría de las plataformas comerciales del rubro, y el backtest publicado con su propia refutación es una
+    señal de seriedad poco frecuente.</p>
+    <p style="margin-top:16px">El problema es que ese rigor está envuelto en 44 capas que compiten entre sí. La
+    propuesta es simple: <b>una capa, con dueño, que se pueda enlazar, buscar por teclado y leer en cualquier tema</b>
+    — y una mesa donde el juicio del fiscalizador quede registrado, porque el propio backtest ya demostró que ese
+    es el dato que falta.</p>
+    <div class="foot">Medido sobre el release 0.96.2 · build 0964 · artefacto compilado por <code>tools/build_atlas_site.py</code></div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+function bars(el,rows,fmt){
+  const max=Math.max(...rows.map(r=>r.v));
+  el.innerHTML=rows.map(r=>`
+    <div class="hb">
+      <span class="n">${r.n}</span>
+      <span class="v">${fmt(r)}</span>
+      <span class="tr">${(r.seg||[{w:r.v,c:r.c||"var(--accent)"}]).map(s=>
+        `<i style="width:${(s.w/max*100).toFixed(1)}%;background:${s.c}"></i>`).join("")}</span>
+    </div>`).join("");
+}
+
+bars($("#gen"),[
+  {n:"v0.16 – v0.19  ·  el shell original y su primera reescritura", v:27, c:"var(--crit)"},
+  {n:"v0.20 – v0.29  ·  tablero, territorio, conciliación, IPA3",   v:45, c:"var(--crit)"},
+  {n:"v0.30 – v0.39  ·  OSFL, sanciones, gasto público, Entidad 360",v:36, c:"var(--watch)"},
+  {n:"v0.40 – v0.44  ·  sistema de tema, autenticación, workspace",  v:21, c:"var(--watch)"},
+  {n:"v0.45 – v1.00  ·  la generación actual, en assets/",           v:36, c:"var(--accent)"},
+  {n:"base  ·  estilos y app originales",                            v:4,  c:"var(--info)"}
+],r=>r.v+" fragmentos");
+
+bars($("#bundle"),[
+  {n:"atlas-runtime-current-01.js", v:818783, c:"var(--crit)"},
+  {n:"atlas-runtime-current.css",   v:564493, c:"var(--watch)"},
+  {n:"atlas-runtime-current-03.js", v:382580, c:"var(--crit)"},
+  {n:"atlas-runtime-current-02.js", v:255725, c:"var(--crit)"},
+  {n:"supabase-js-2.111.0.umd.js",  v:210547, c:"var(--info)"},
+  {n:"atlas-runtime-current-04.js + 05 + módulos", v:115229, c:"var(--crit)"}
+],r=>(r.v/1024).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,".")+" KB");
+
+bars($("#tok"),[
+  {n:"Referencias a un token  var(--…)", v:2239, c:"var(--accent)"},
+  {n:"Literales de color escritos a mano", v:4138, c:"var(--crit)"},
+  {n:"— de ellos, hexadecimales distintos", v:2460, c:"var(--watch)"}
+],r=>r.v.toLocaleString("es-CL"));
+
+const SUN='<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+const MOON='<path d="M20 15.4A8.5 8.5 0 0 1 8.6 4 8.5 8.5 0 1 0 20 15.4Z"/>';
+const cur=()=>document.documentElement.getAttribute("data-theme")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");
+const paint=()=>{$("#themeIcon").innerHTML=cur()==="dark"?SUN:MOON;};
+$("#theme").addEventListener("click",()=>{document.documentElement.setAttribute("data-theme",cur()==="dark"?"light":"dark");paint();});
+paint();
+})();
+</script>
+</body>
+</html>

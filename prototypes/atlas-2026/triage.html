@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Mesa de Triage</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ground:#eef1f0; --surface:#ffffff; --surface-2:#e6eae9; --surface-3:#dde3e2;
+  --line:#d0d8d7; --line-soft:#e2e7e6;
+  --ink:#101718; --ink-2:#44514f; --muted:#6d7b79; --faint:#93a09e;
+  --accent:#0d6a66; --accent-2:#0a4f4c; --accent-soft:#dbeceb; --accent-line:#a9cfcd;
+  --ok:#2c6a4d; --ok-soft:#dcece3; --ok-line:#a8ceb9;
+  --watch:#8a5d0c; --watch-soft:#f6ebd4; --watch-line:#e0c894;
+  --crit:#a13629; --crit-soft:#f7e2de; --crit-line:#e5b3a8;
+  --info:#43518c; --info-soft:#e2e5f4;
+  --none:#93a09e; --none-soft:#e9edec;
+  --shadow:0 1px 2px rgba(16,23,24,.06),0 8px 24px rgba(16,23,24,.06);
+  --shadow-lift:0 2px 6px rgba(16,23,24,.10),0 24px 60px rgba(16,23,24,.16);
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:"Archivo",system-ui,-apple-system,Segoe UI,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0b1113; --surface:#121a1c; --surface-2:#182225; --surface-3:#1f2b2e;
+    --line:#263336; --line-soft:#1d282b;
+    --ink:#e5ecec; --ink-2:#a8b7b7; --muted:#7b8a8a; --faint:#5d6c6c;
+    --accent:#3fbdb2; --accent-2:#6ad6cb; --accent-soft:#11312f; --accent-line:#255450;
+    --ok:#5cb98a; --ok-soft:#122a20; --ok-line:#255a3f;
+    --watch:#d6a03c; --watch-soft:#2c2312; --watch-line:#5c4718;
+    --crit:#e0715e; --crit-soft:#301a17; --crit-line:#5f2f26;
+    --info:#8ea1e2; --info-soft:#1a1f36;
+    --none:#5d6c6c; --none-soft:#1a2325;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);
+    --shadow-lift:0 2px 6px rgba(0,0,0,.5),0 24px 60px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0b1113; --surface:#121a1c; --surface-2:#182225; --surface-3:#1f2b2e;
+  --line:#263336; --line-soft:#1d282b;
+  --ink:#e5ecec; --ink-2:#a8b7b7; --muted:#7b8a8a; --faint:#5d6c6c;
+  --accent:#3fbdb2; --accent-2:#6ad6cb; --accent-soft:#11312f; --accent-line:#255450;
+  --ok:#5cb98a; --ok-soft:#122a20; --ok-line:#255a3f;
+  --watch:#d6a03c; --watch-soft:#2c2312; --watch-line:#5c4718;
+  --crit:#e0715e; --crit-soft:#301a17; --crit-line:#5f2f26;
+  --info:#8ea1e2; --info-soft:#1a1f36;
+  --none:#5d6c6c; --none-soft:#1a2325;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);
+  --shadow-lift:0 2px 6px rgba(0,0,0,.5),0 24px 60px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font:400 14px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+button,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+.top{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--ground) 90%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.topin{max-width:1340px;margin:0 auto;padding:11px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.ttl{display:flex;align-items:baseline;gap:10px}
+.ttl b{font-size:16px;font-weight:600;letter-spacing:-.015em}
+.ttl span{font:500 10.5px/1 var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.sp{flex:1}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:20px;padding:5px 11px;font-size:12.5px;color:var(--ink-2);cursor:pointer}
+.chip:hover{border-color:var(--accent-line)}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent);font-weight:500}
+.iconbtn{background:var(--surface);border:1px solid var(--line);border-radius:7px;height:30px;padding:0 10px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:var(--ink-2);font-size:12.5px}
+.iconbtn:hover{border-color:var(--accent-line);color:var(--accent)}
+.iconbtn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round}
+
+.layout{max-width:1340px;margin:0 auto;padding:20px 22px 80px;display:grid;grid-template-columns:1fr 372px;gap:20px;align-items:start}
+@media (max-width:1080px){.layout{grid-template-columns:1fr}}
+
+/* progress ribbon */
+.prog{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:18px}
+.prog div{background:var(--surface);padding:12px 14px;display:flex;flex-direction:column}
+.prog .l{font:600 9.5px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+.prog .v{font:600 24px/1.05 var(--sans);letter-spacing:-.025em;font-variant-numeric:tabular-nums;margin-top:6px}
+.prog .s{font-size:11.5px;color:var(--muted);margin-top:2px}
+.prog .v.a{color:var(--accent)} .prog .v.o{color:var(--ok)} .prog .v.w{color:var(--watch)}
+
+/* queue */
+.queue{border:1px solid var(--line);border-radius:11px;background:var(--surface);overflow:hidden}
+.qhead{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface-2)}
+.qhead b{font:600 10px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--ink-2)}
+.qhead .cnt{font:500 11px/1 var(--mono);color:var(--muted);margin-left:auto}
+
+.case{display:grid;grid-template-columns:6px 44px minmax(0,1fr) 142px;gap:0 13px;align-items:center;padding:0;border-bottom:1px solid var(--line-soft);cursor:pointer;position:relative}
+.case:last-child{border-bottom:0}
+.case .stripe{align-self:stretch;background:var(--line)}
+.case.crit .stripe{background:var(--crit)} .case.watch .stripe{background:var(--watch)} .case.info .stripe{background:var(--info)}
+.case > *:not(.stripe){padding-top:13px;padding-bottom:13px}
+.case:hover{background:var(--surface-2)}
+.case[data-cur="1"]{background:var(--accent-soft)}
+.case[data-cur="1"]::after{content:"";position:absolute;inset:0;border:1.5px solid var(--accent);border-radius:2px;pointer-events:none}
+.case.done{opacity:.42}
+.case.done .cmain b{text-decoration:line-through;text-decoration-color:var(--faint)}
+.cid{font:600 12px/1 var(--mono);color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
+.cmain b{display:block;font-size:14px;font-weight:600;letter-spacing:-.005em;line-height:1.3}
+.cmain p{margin:3px 0 0;font-size:12.5px;color:var(--muted);line-height:1.4}
+.tags{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap;align-items:center}
+.tag{font:500 10px/1 var(--mono);letter-spacing:.04em;padding:4px 6px;border-radius:4px;background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line-soft);text-transform:uppercase}
+.tag.rut{color:var(--accent);background:var(--accent-soft);border-color:var(--accent-line)}
+.tag.dec{border-color:var(--ok-line);background:var(--ok-soft);color:var(--ok)}
+.tag.dec.disc{border-color:var(--crit-line);background:var(--crit-soft);color:var(--crit)}
+.tag.dec.rev{border-color:var(--line);background:var(--surface-3);color:var(--ink-2)}
+.cend{text-align:right;padding-right:14px;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.cend .sc{font:600 20px/1 var(--sans);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.cend .cl{font:500 9.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.cend .cred{font:500 10px/1.4 var(--mono);color:var(--muted);margin-top:5px;white-space:nowrap}
+.cov{display:flex;gap:2px;margin-top:5px}
+.cov i{width:11px;height:4px;border-radius:2px;background:var(--line);display:block}
+.cov i.on{background:var(--accent)}
+
+.qempty{padding:44px 20px;text-align:center;color:var(--muted)}
+.qempty b{display:block;font-size:16px;color:var(--ink);font-weight:600;margin-bottom:6px}
+
+/* decision panel */
+.side{position:sticky;top:76px;display:flex;flex-direction:column;gap:16px}
+.panel{border:1px solid var(--line);border-radius:11px;background:var(--surface);overflow:hidden}
+.panel > header{padding:12px 15px 10px;border-bottom:1px solid var(--line-soft)}
+.panel > header b{font-size:13px;font-weight:600;display:block}
+.panel > header span{font-size:11.5px;color:var(--muted)}
+.panel .body{padding:14px 15px}
+
+.dcase{font-size:12.5px;color:var(--muted);line-height:1.45}
+.dcase b{display:block;font-size:14.5px;color:var(--ink);font-weight:600;line-height:1.3;margin-bottom:4px}
+.dcase .m{font:500 11.5px/1.5 var(--mono);color:var(--ink-2);margin-top:6px}
+
+.acts{display:flex;flex-direction:column;gap:7px;margin-top:14px}
+.act{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:var(--surface);cursor:pointer;text-align:left;width:100%}
+.act:hover{border-color:var(--accent-line);background:var(--surface-2)}
+.act .k{font:600 11px/1 var(--mono);border:1px solid var(--line);border-radius:4px;padding:4px 6px;color:var(--muted);background:var(--surface-2);flex:none}
+.act b{font-size:13px;font-weight:500;display:block}
+.act small{display:block;font-size:11.5px;color:var(--muted);line-height:1.35}
+.act.rev:hover{border-color:var(--line)}
+.act.sel:hover{border-color:var(--ok-line)}
+.act.disc:hover{border-color:var(--crit-line)}
+
+.reason{margin-top:12px;display:none}
+.reason.on{display:block}
+.reason label{font:600 9.5px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px}
+.reason select,.reason textarea{width:100%;border:1px solid var(--line);border-radius:7px;padding:8px 10px;background:var(--surface-2);font-size:13px;outline:none}
+.reason select:focus,.reason textarea:focus{border-color:var(--accent-line)}
+.reason textarea{margin-top:8px;resize:vertical;min-height:64px;font-family:var(--sans)}
+.reason .go{margin-top:9px;width:100%;background:var(--accent);border:1px solid var(--accent);color:var(--surface);border-radius:7px;padding:8px;font-weight:500;font-size:13px;cursor:pointer}
+.reason .go:disabled{opacity:.45;cursor:not-allowed}
+
+/* ledger */
+.led{display:flex;flex-direction:column;gap:0;max-height:290px;overflow:auto}
+.ledrow{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line-soft);align-items:start}
+.ledrow:last-child{border-bottom:0}
+.ledrow .b{width:8px;height:8px;border-radius:2px;margin-top:5px;flex:none}
+.ledrow .b.sel{background:var(--ok)} .ledrow .b.disc{background:var(--crit)} .ledrow .b.rev{background:var(--none)}
+.ledrow b{font-size:12.5px;font-weight:600;display:block;line-height:1.3}
+.ledrow p{margin:2px 0 0;font-size:11.5px;color:var(--muted);line-height:1.4}
+.ledrow .t{font:500 10px/1 var(--mono);color:var(--faint);letter-spacing:.05em;margin-top:4px;display:block}
+.ledempty{padding:20px 0;color:var(--muted);font-size:12.5px;text-align:center;line-height:1.5}
+
+.why{border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0;padding:12px 14px;font-size:12.5px;color:var(--ink-2);line-height:1.55}
+.why b{display:block;font:600 9.5px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--accent);margin-bottom:7px}
+
+.keys{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px}
+.keys span{font:500 10px/1 var(--mono);border:1px solid var(--line);border-radius:4px;padding:4px 6px;color:var(--muted);background:var(--surface-2)}
+
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(90px);background:var(--ink);color:var(--ground);padding:11px 16px;border-radius:9px;font-size:13px;z-index:70;box-shadow:var(--shadow-lift);transition:transform .22s cubic-bezier(.2,.8,.3,1);display:flex;gap:12px;align-items:center}
+.toast.on{transform:translateX(-50%) translateY(0)}
+.toast button{background:rgba(127,127,127,.3);border:0;border-radius:6px;padding:5px 9px;font-size:12px;cursor:pointer;color:inherit}
+
+.note{margin-top:12px;font-size:12px;color:var(--muted);line-height:1.55}
+.note b{color:var(--ink-2)}
+</style>
+</head>
+<body>
+<div class="top"><div class="topin">
+  <div class="ttl"><b>Mesa de triage</b><span>Universo SO · potenciales sujetos obligados</span></div>
+  <div class="sp"></div>
+  <button class="chip" data-f="todos" aria-pressed="true">Todos</button>
+  <button class="chip" data-f="pendientes" aria-pressed="false">Pendientes</button>
+  <button class="chip" data-f="crit" aria-pressed="false">Banda A</button>
+  <button class="chip" data-f="cerrados" aria-pressed="false">Cerrados</button>
+  <button class="iconbtn" id="reset"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg>Reiniciar demo</button>
+  <button class="iconbtn" id="theme"><svg viewBox="0 0 24 24" id="themeIcon"></svg></button>
+</div></div>
+
+<div class="layout">
+  <div>
+    <div class="prog" id="prog"></div>
+    <div class="queue">
+      <div class="qhead"><b>Cola · orden por IVO</b><span class="cnt" id="qcnt"></span></div>
+      <div id="qlist"></div>
+    </div>
+    <p class="note"><b>Por qué el orden es por IVO y no por materialidad.</b> El índice de verosimilitud de obligación y la
+    materialidad de incorporación son dos ejes separados: mezclarlos los vuelve indistinguibles. La cola ordena por
+    verosimilitud; la materialidad decide a cuáles de las verosímiles vale la pena ir a buscar. Plausible no es incorporable.</p>
+  </div>
+
+  <aside class="side">
+    <section class="panel">
+      <header><b>Decisión</b><span>caso en foco · sólo anexado</span></header>
+      <div class="body" id="dec"></div>
+    </section>
+
+    <section class="panel">
+      <header><b>Bitácora de la sesión</b><span id="ledcnt"></span></header>
+      <div class="body"><div class="led" id="led"></div></div>
+    </section>
+
+    <div class="why">
+      <b>Por qué esta pantalla existe</b>
+      El backtest del catálogo demostró que el 100% del poder predictivo contra sanción futura viene de «ya fue
+      sancionado»: es autocorrelación de atención supervisora, no descubrimiento. Las tipologías estructurales
+      —sociedad instrumental, constitución reciente, patrimonio negativo— no se validan contra esa etiqueta porque
+      son fenómenos distintos. El único etiquetado viable es el juicio del fiscalizador, y sólo se acumula si se
+      empieza a capturar ahora.
+      <div class="keys"><span>j / k mover</span><span>r revisada</span><span>s seleccionar</span><span>d descartar</span><span>u deshacer</span></div>
+    </div>
+  </aside>
+</div>
+
+<div class="toast" id="toast"><span id="toastMsg"></span><button id="undo">Deshacer · U</button></div>
+
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const KEY="atlas-triage-demo-v1";
+
+/* Universe: the 64 legible candidates that survived calibration from 1.027 raw.
+   Ten of them, with the real evidence classes from docs/potential-subjects-0580.md */
+const CASES=[
+ {i:1,id:"ENT-RUT-77012884",n:"Automotriz Del Valle Comercial SpA",rut:"77.012.884-3",sev:"crit",ivo:88,mat:71,cred:"92%",src:4,
+  ev:"Sancionada por la UAF sin figurar en el padrón",sector:"Concesionarios de automóviles",reg:"O'Higgins",
+  why:"Aparece como sujeto sancionado en la serie UAF y no figura en el corte público del padrón. Es la clase de evidencia más concluyente del catálogo."},
+ {i:2,id:"ENT-RUT-76998001",n:"Cambios y Envíos Cordillera Ltda.",rut:"76.998.001-2",sev:"crit",ivo:84,mat:66,cred:"88%",src:4,
+  ev:"Sancionada por la UAF sin figurar en el padrón",sector:"Casas de cambio",reg:"Tarapacá",
+  why:"Giro principal característico del sector más 2 eventos sancionatorios atribuidos. Alta concentración medida sobre los propios inscritos."},
+ {i:3,id:"ENT-RUT-77450223",n:"Corredora Patrimonial Los Andes SpA",rut:"77.450.223-8",sev:"crit",ivo:81,mat:74,cred:"90%",src:3,
+  ev:"Giro principal característico",sector:"Corredores de propiedades",reg:"Metropolitana",
+  why:"Giro principal con soporte alto dentro del sector y escala tributaria T8. Materialidad de incorporación por sobre la mediana."},
+ {i:4,id:"ENT-RUT-96112447",n:"Banco Regional del Sur S.A.",rut:"96.112.447-1",sev:"watch",ivo:79,mat:12,cred:"94%",src:5,
+  ev:"Giro principal característico",sector:"Instituciones financieras",reg:"Los Lagos",
+  why:"Plausiblemente sujeto obligado por giro, y aun así no es candidato a inscripción: tiene término de giro publicado. La accionabilidad se declara aparte del índice.",
+  flag:"No incorporable"},
+ {i:5,id:"ENT-RUT-77661903",n:"Factoring Comercial Norte Grande SpA",rut:"77.661.903-K",sev:"watch",ivo:72,mat:63,cred:"85%",src:3,
+  ev:"Giro principal característico",sector:"Empresas de factoraje",reg:"Antofagasta",
+  why:"Giro principal con soporte medio y coherencia de tipo de entidad. Sin eventos sancionatorios observados."},
+ {i:6,id:"ENT-RUT-65224118",n:"Fundación Puente Solidario",rut:"65.224.118-4",sev:"watch",ivo:68,mat:58,cred:"79%",src:3,
+  ev:"Giro secundario",sector:"OSFL con transferencias públicas",reg:"Biobío",
+  why:"Giro secundario compatible y presencia en el Registro 19.862. La compatibilidad analítica no es condición registral."},
+ {i:7,id:"ENT-RUT-78220774",n:"Martillero Público Central Ltda.",rut:"78.220.774-6",sev:"watch",ivo:64,mat:55,cred:"81%",src:2,
+  ev:"Giro principal característico",sector:"Martilleros",reg:"Valparaíso",
+  why:"Sector con alta concentración observada entre los inscritos, sin eventos sancionatorios ni brechas registrales."},
+ {i:8,id:"ENT-RUT-77004512",n:"Inmobiliaria Costa Serena SpA",rut:"77.004.512-9",sev:"info",ivo:57,mat:49,cred:"74%",src:2,
+  ev:"Giro secundario",sector:"Corredores de propiedades",reg:"Coquimbo",
+  why:"Giro secundario con soporte bajo dentro del sector. La coherencia de tipo de entidad pasa, la de actividad no."},
+ {i:9,id:"ENT-RUT-76330995",n:"Servicios de Cobranza Araucanía Ltda.",rut:"76.330.995-7",sev:"info",ivo:52,mat:44,cred:"71%",src:2,
+  ev:"Giro secundario",sector:"Empresas de factoraje",reg:"Araucanía",
+  why:"Giro secundario y escala pequeña. Se incluye porque el sector concentra inscritos, no porque la entidad muestre una brecha."},
+ {i:10,id:"ENT-RUT-77889012",n:"Comercial Zona Franca Iquique SpA",rut:"77.889.012-5",sev:"info",ivo:48,mat:41,cred:"68%",src:2,
+  ev:"Giro secundario",sector:"Usuarios de zona franca",reg:"Tarapacá",
+  why:"Compatibilidad por giro secundario, sin historial de supervisión ni brecha registral observada."}
+];
+const REASONS=[
+ "Giro no corresponde al sector obligado",
+ "Entidad ya inscrita en un corte posterior",
+ "Término de giro vigente · no incorporable",
+ "Persona natural fuera del perímetro",
+ "Identidad no conciliada · evidencia insuficiente",
+ "Duplicado de otro caso de la cola"
+];
+const LABEL={rev:"Revisada",sel:"Seleccionada para inscripción",disc:"Descartada"};
+
+let state=load(), cur=0, filter="todos", pendingDec=null, lastAction=null, toastTimer=null;
+
+function load(){try{return JSON.parse(localStorage.getItem(KEY))||{d:{},log:[]};}catch{return {d:{},log:[]};}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch{}}
+
+function visible(){
+  return CASES.filter(c=>{
+    const d=state.d[c.id];
+    if(filter==="pendientes")return !d;
+    if(filter==="cerrados")return !!d;
+    if(filter==="crit")return c.sev==="crit";
+    return true;
+  });
+}
+
+function cov(n){return `<span class="cov">${Array.from({length:5},(_,i)=>`<i class="${i<n?"on":""}"></i>`).join("")}</span>`;}
+
+function renderProg(){
+  const total=CASES.length, done=Object.keys(state.d).length;
+  const sel=Object.values(state.d).filter(x=>x.dec==="sel").length;
+  const disc=Object.values(state.d).filter(x=>x.dec==="disc").length;
+  $("#prog").innerHTML=`
+    <div><span class="l">Universo legible</span><span class="v">64</span><span class="s">de 1.027 candidatas brutas, tras calibrar</span></div>
+    <div><span class="l">En esta cola</span><span class="v a">${total}</span><span class="s">${total-done} sin decisión</span></div>
+    <div><span class="l">Seleccionadas</span><span class="v o">${sel}</span><span class="s">a buscar para inscribir</span></div>
+    <div><span class="l">Descartadas</span><span class="v w">${disc}</span><span class="s">con motivo obligatorio</span></div>`;
+}
+
+function renderQueue(){
+  const list=visible();
+  $("#qcnt").textContent=`${list.length} de ${CASES.length}`;
+  if(!list.length){
+    $("#qlist").innerHTML=`<div class="qempty"><b>Nada pendiente en este filtro</b>Cambia el filtro o reinicia la demo para volver a empezar.</div>`;
+    return;
+  }
+  if(cur>=list.length) cur=list.length-1;
+  if(cur<0) cur=0;
+  $("#qlist").innerHTML=list.map((c,idx)=>{
+    const d=state.d[c.id];
+    const decTag=d?`<span class="tag dec ${d.dec==="disc"?"disc":d.dec==="rev"?"rev":""}">${esc(LABEL[d.dec])}</span>`:"";
+    return `<div class="case ${c.sev}${d?" done":""}" data-idx="${idx}" data-cur="${idx===cur?1:0}">
+      <span class="stripe"></span>
+      <span class="cid">${c.i}</span>
+      <span class="cmain">
+        <b>${esc(c.n)}</b>
+        <p>${esc(c.why)}</p>
+        <span class="tags">
+          <span class="tag rut">${esc(c.rut)}</span>
+          <span class="tag">${esc(c.ev)}</span>
+          <span class="tag">${esc(c.reg)}</span>
+          ${c.flag?`<span class="tag" style="border-color:var(--watch-line);background:var(--watch-soft);color:var(--watch)">${esc(c.flag)}</span>`:""}
+          ${decTag}
+        </span>
+      </span>
+      <span class="cend">
+        <span class="sc">${c.ivo}</span><span class="cl">IVO</span>
+        <span class="cred">mat. ${c.mat} · cred. ${esc(c.cred)}</span>
+        ${cov(c.src)}
+      </span>
+    </div>`;
+  }).join("");
+  document.querySelectorAll(".case").forEach(el=>el.addEventListener("click",()=>{cur=+el.dataset.idx;renderAll();}));
+  document.querySelector('.case[data-cur="1"]')?.scrollIntoView({block:"nearest"});
+}
+
+function renderDec(){
+  const list=visible(), c=list[cur];
+  if(!c){$("#dec").innerHTML=`<div class="ledempty">Sin caso en foco.</div>`;return;}
+  const d=state.d[c.id];
+  $("#dec").innerHTML=`
+    <div class="dcase">
+      <b>${esc(c.n)}</b>
+      <span style="font-family:var(--mono);font-size:11.5px">${esc(c.rut)} · ${esc(c.id)}</span>
+      <div class="m">IVO ${c.ivo} · materialidad ${c.mat} · credibilidad ${esc(c.cred)}<br>${esc(c.sector)} · ${esc(c.ev)}</div>
+      ${c.flag?`<div style="margin-top:9px;border:1px solid var(--watch-line);background:var(--watch-soft);color:var(--watch);border-radius:7px;padding:9px 11px;font-size:12px;line-height:1.45"><b style="display:block;font:600 9.5px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;margin-bottom:5px">Accionabilidad</b>Plausiblemente obligado y aun así no incorporable. Esto se declara aparte del índice: el IVO no se corrige por ello.</div>`:""}
+    </div>
+    ${d?`<div style="margin-top:14px;border:1px solid var(--line);border-radius:8px;padding:11px 13px;background:var(--surface-2)">
+        <div style="font:600 9.5px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--muted)">Ya decidido</div>
+        <div style="margin-top:7px;font-size:13px;font-weight:500">${esc(LABEL[d.dec])}</div>
+        ${d.reason?`<div style="margin-top:4px;font-size:12px;color:var(--muted)">${esc(d.reason)}</div>`:""}
+        ${d.note?`<div style="margin-top:5px;font-size:12px;color:var(--ink-2);line-height:1.45">“${esc(d.note)}”</div>`:""}
+        <div style="margin-top:7px;font:500 10.5px/1 var(--mono);color:var(--faint)">${esc(d.at)} · fiscalizador</div>
+        <div style="margin-top:9px;font-size:11.5px;color:var(--muted);line-height:1.45">Sólo anexado: esta anotación no se edita ni se borra. Una nueva lectura se agrega encima.</div>
+      </div>`
+    :`<div class="acts">
+        <button class="act rev" data-dec="rev"><span class="k">R</span><span><b>Revisada · sin acción</b><small>La miré y no hay nada que hacer hoy</small></span></button>
+        <button class="act sel" data-dec="sel"><span class="k">S</span><span><b>Seleccionar para inscripción</b><small>Ir a buscarla en terreno</small></span></button>
+        <button class="act disc" data-dec="disc"><span class="k">D</span><span><b>Descartar</b><small>Exige motivo — sin motivo no se guarda</small></span></button>
+      </div>
+      <div class="reason${pendingDec?" on":""}" id="reason">
+        <label for="rsel">Motivo del descarte</label>
+        <select id="rsel"><option value="">Elige un motivo…</option>${REASONS.map(r=>`<option>${esc(r)}</option>`).join("")}</select>
+        <textarea id="rnote" placeholder="Fundamento (opcional). Se guarda tal cual y queda asociado al IVO del momento."></textarea>
+        <button class="go" id="rgo" disabled>Guardar en la bitácora</button>
+      </div>`}`;
+
+  document.querySelectorAll("[data-dec]").forEach(b=>b.addEventListener("click",()=>decide(b.dataset.dec)));
+  const sel=$("#rsel"), go=$("#rgo");
+  if(sel){
+    sel.addEventListener("change",()=>{go.disabled=!sel.value;});
+    go.addEventListener("click",()=>commit(c,"disc",sel.value,$("#rnote").value.trim()));
+  }
+}
+
+function renderLed(){
+  $("#ledcnt").textContent=state.log.length?`${state.log.length} anotaciones`:"vacía";
+  if(!state.log.length){
+    $("#led").innerHTML=`<div class="ledempty">Aún no has decidido nada.<br>Cada decisión que registres es una etiqueta que hoy el sistema no tiene.</div>`;
+    return;
+  }
+  $("#led").innerHTML=state.log.slice().reverse().map(l=>`
+    <div class="ledrow">
+      <span class="b ${l.dec}"></span>
+      <span>
+        <b>${esc(l.name)}</b>
+        <p>${esc(LABEL[l.dec])}${l.reason?" · "+esc(l.reason):""}</p>
+        ${l.note?`<p style="color:var(--ink-2)">“${esc(l.note)}”</p>`:""}
+        <span class="t">${esc(l.at)} · IVO ${l.ivo} al decidir</span>
+      </span>
+    </div>`).join("");
+}
+
+function decide(dec){
+  const c=visible()[cur]; if(!c||state.d[c.id])return;
+  if(dec==="disc"){pendingDec="disc";renderDec();$("#rsel")?.focus();return;}
+  commit(c,dec,"","");
+}
+function commit(c,dec,reason,note){
+  const at=new Date().toISOString().slice(0,16).replace("T"," ");
+  state.d[c.id]={dec,reason,note,at};
+  state.log.push({id:c.id,name:c.n,dec,reason,note,at,ivo:c.ivo});
+  lastAction={id:c.id};
+  pendingDec=null; save();
+  toast(`${LABEL[dec]} · ${c.n}`);
+  const list=visible();
+  if(filter==="pendientes"||filter==="cerrados"){ if(cur>=list.length-1) cur=Math.max(0,list.length-1); }
+  else if(cur<list.length-1) cur++;
+  renderAll();
+}
+function undo(){
+  if(!lastAction)return;
+  delete state.d[lastAction.id];
+  state.log=state.log.filter(l=>l.id!==lastAction.id);
+  lastAction=null; save(); renderAll();
+  toast("Decisión deshecha",false);
+}
+function toast(msg,undoable=true){
+  $("#toastMsg").textContent=msg;
+  $("#undo").style.display=undoable?"":"none";
+  $("#toast").classList.add("on");
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>$("#toast").classList.remove("on"),3400);
+}
+
+function renderAll(){renderProg();renderQueue();renderDec();renderLed();}
+
+/* keyboard: the whole point of a triage table */
+document.addEventListener("keydown",e=>{
+  if(/input|textarea|select/i.test(document.activeElement.tagName))
+    { if(e.key==="Escape")document.activeElement.blur(); return; }
+  const list=visible(); if(!list.length)return;
+  const k=e.key.toLowerCase();
+  if(k==="j"||e.key==="ArrowDown"){e.preventDefault();cur=Math.min(cur+1,list.length-1);renderAll();}
+  else if(k==="k"||e.key==="ArrowUp"){e.preventDefault();cur=Math.max(cur-1,0);renderAll();}
+  else if(k==="r"){e.preventDefault();decide("rev");}
+  else if(k==="s"){e.preventDefault();decide("sel");}
+  else if(k==="d"){e.preventDefault();decide("disc");}
+  else if(k==="u"){e.preventDefault();undo();}
+});
+$("#undo").addEventListener("click",undo);
+document.querySelectorAll("[data-f]").forEach(b=>b.addEventListener("click",()=>{
+  filter=b.dataset.f; cur=0;
+  document.querySelectorAll("[data-f]").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+  renderAll();
+}));
+$("#reset").addEventListener("click",()=>{state={d:{},log:[]};lastAction=null;cur=0;save();renderAll();toast("Demo reiniciada",false);});
+
+const SUN='<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+const MOON='<path d="M20 15.4A8.5 8.5 0 0 1 8.6 4 8.5 8.5 0 1 0 20 15.4Z"/>';
+const cur_=()=>document.documentElement.getAttribute("data-theme")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");
+const paintT=()=>{$("#themeIcon").innerHTML=cur_()==="dark"?SUN:MOON;};
+$("#theme").addEventListener("click",()=>{document.documentElement.setAttribute("data-theme",cur_()==="dark"?"light":"dark");paintT();});
+paintT(); renderAll();
+})();
+</script>
+</body>
+</html>

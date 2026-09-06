@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Consola Atlas</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ground:#eef1f0; --surface:#ffffff; --surface-2:#e6eae9; --surface-3:#dde3e2;
+  --line:#d0d8d7; --line-soft:#e2e7e6;
+  --ink:#101718; --ink-2:#44514f; --muted:#6d7b79; --faint:#93a09e;
+  --accent:#0d6a66; --accent-2:#0a4f4c; --accent-soft:#dbeceb; --accent-line:#a9cfcd;
+  --ok:#2c6a4d; --ok-soft:#dcece3;
+  --watch:#8a5d0c; --watch-soft:#f6ebd4;
+  --crit:#a13629; --crit-soft:#f7e2de;
+  --info:#43518c; --info-soft:#e2e5f4;
+  --shadow:0 1px 2px rgba(16,23,24,.06),0 8px 24px rgba(16,23,24,.06);
+  --shadow-lift:0 2px 6px rgba(16,23,24,.10),0 24px 60px rgba(16,23,24,.16);
+  --rail:246px;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:"Archivo",system-ui,-apple-system,Segoe UI,sans-serif;
+}
+:root:not([data-theme="light"]) { }
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0b1113; --surface:#121a1c; --surface-2:#182225; --surface-3:#1f2b2e;
+    --line:#263336; --line-soft:#1d282b;
+    --ink:#e5ecec; --ink-2:#a8b7b7; --muted:#7b8a8a; --faint:#5d6c6c;
+    --accent:#3fbdb2; --accent-2:#6ad6cb; --accent-soft:#11312f; --accent-line:#255450;
+    --ok:#5cb98a; --ok-soft:#122a20;
+    --watch:#d6a03c; --watch-soft:#2c2312;
+    --crit:#e0715e; --crit-soft:#301a17;
+    --info:#8ea1e2; --info-soft:#1a1f36;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);
+    --shadow-lift:0 2px 6px rgba(0,0,0,.5),0 24px 60px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0b1113; --surface:#121a1c; --surface-2:#182225; --surface-3:#1f2b2e;
+  --line:#263336; --line-soft:#1d282b;
+  --ink:#e5ecec; --ink-2:#a8b7b7; --muted:#7b8a8a; --faint:#5d6c6c;
+  --accent:#3fbdb2; --accent-2:#6ad6cb; --accent-soft:#11312f; --accent-line:#255450;
+  --ok:#5cb98a; --ok-soft:#122a20;
+  --watch:#d6a03c; --watch-soft:#2c2312;
+  --crit:#e0715e; --crit-soft:#301a17;
+  --info:#8ea1e2; --info-soft:#1a1f36;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);
+  --shadow-lift:0 2px 6px rgba(0,0,0,.5),0 24px 60px rgba(0,0,0,.5);
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font:400 14px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+a{color:var(--accent);text-underline-offset:2px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* ---------- shell ---------- */
+.app{display:grid;grid-template-columns:var(--rail) 1fr;min-height:100vh}
+.rail{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow:auto}
+.brand{display:flex;gap:10px;align-items:center;padding:16px 16px 14px;border-bottom:1px solid var(--line-soft)}
+.brand .mk{width:30px;height:30px;border-radius:7px;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px;letter-spacing:.5px;flex:none}
+:root[data-theme="dark"] .brand .mk,:root:not([data-theme="light"]) .brand .mk{color:#07211f}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]) .brand .mk{color:#fff}}
+.brand b{display:block;font-size:14px;letter-spacing:.2px;line-height:1.15}
+.brand small{display:block;font:500 10px/1.3 var(--mono);color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+
+.navwrap{padding:10px 10px 16px;flex:1}
+.navgrp{margin:14px 0 4px;padding:0 8px;font:600 10px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--faint)}
+.navgrp:first-child{margin-top:4px}
+.nav{display:flex;flex-direction:column;gap:1px}
+.nav button{display:flex;align-items:center;gap:9px;width:100%;text-align:left;background:none;border:0;padding:7px 8px;border-radius:6px;color:var(--ink-2);cursor:pointer;font-size:13.5px;line-height:1.2}
+.nav button:hover{background:var(--surface-2);color:var(--ink)}
+.nav button[aria-current="page"]{background:var(--accent-soft);color:var(--accent);font-weight:600;box-shadow:inset 2px 0 0 var(--accent)}
+.nav svg{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+.nav .cnt{margin-left:auto;font:500 10.5px/1 var(--mono);background:var(--surface-3);color:var(--ink-2);padding:3px 5px;border-radius:4px}
+.nav button[aria-current="page"] .cnt{background:var(--accent);color:var(--surface)}
+.nav .cnt.hot{background:var(--crit-soft);color:var(--crit)}
+
+.railfoot{padding:12px 14px;border-top:1px solid var(--line-soft);font-size:11.5px;color:var(--muted);display:flex;flex-direction:column;gap:8px}
+.railfoot .rule{font:500 10px/1.45 var(--mono);letter-spacing:.02em}
+.railfoot .rule b{color:var(--ink-2);display:block;letter-spacing:.08em;text-transform:uppercase;font-size:9.5px;margin-bottom:3px}
+
+/* ---------- topbar ---------- */
+.main{display:flex;flex-direction:column;min-width:0}
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:10px 22px;background:color-mix(in srgb,var(--ground) 86%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.crumb{display:flex;align-items:center;gap:7px;font:500 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.crumb b{color:var(--ink);font-weight:600}
+.spacer{flex:1}
+.kbtn{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:6px 9px 6px 10px;color:var(--muted);cursor:pointer;min-width:250px;text-align:left}
+.kbtn:hover{border-color:var(--accent-line);color:var(--ink-2)}
+.kbtn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.7}
+.kbd{font:600 10px/1 var(--mono);border:1px solid var(--line);border-radius:4px;padding:3px 5px;color:var(--faint);background:var(--surface-2)}
+.iconbtn{background:var(--surface);border:1px solid var(--line);border-radius:7px;width:32px;height:32px;display:grid;place-items:center;cursor:pointer;color:var(--ink-2)}
+.iconbtn:hover{border-color:var(--accent-line);color:var(--accent)}
+.iconbtn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round}
+.who{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-2);padding-left:4px}
+.who i{width:7px;height:7px;border-radius:50%;background:var(--ok);display:block;flex:none}
+
+/* ---------- content ---------- */
+.view{padding:24px 22px 60px;max-width:1180px;width:100%}
+.phead{display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:20px}
+.phead h1{margin:0;font-size:25px;font-weight:600;letter-spacing:-.02em;text-wrap:balance}
+.phead p{margin:5px 0 0;color:var(--muted);font-size:13.5px;max-width:62ch}
+.asof{margin-left:auto;text-align:right;font:500 10.5px/1.5 var(--mono);color:var(--muted);letter-spacing:.04em}
+.asof b{display:block;color:var(--ink-2);text-transform:uppercase;letter-spacing:.09em;font-size:9.5px}
+
+.sechead{display:flex;align-items:baseline;gap:10px;margin:26px 0 11px}
+.sechead h2{margin:0;font-size:12.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);font-family:var(--mono)}
+.sechead span{font-size:12.5px;color:var(--muted)}
+.sechead .more{margin-left:auto;font-size:12.5px;color:var(--accent);background:none;border:0;cursor:pointer;padding:0}
+
+/* turno cards */
+.turno{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.turno article{background:var(--surface);padding:15px 16px 14px;display:flex;flex-direction:column;gap:3px}
+.turno .lab{font:600 9.5px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
+.turno .val{font:600 27px/1.05 var(--sans);letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:5px}
+.turno .val.na{color:var(--faint);font-weight:500}
+.turno .sub{font-size:12px;color:var(--muted);line-height:1.4}
+.turno .delta{font:600 11px/1 var(--mono);display:inline-flex;align-items:center;gap:4px;margin-top:2px}
+.delta.up{color:var(--crit)} .delta.down{color:var(--ok)} .delta.flat{color:var(--muted)}
+
+/* work list */
+.worklist{border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
+.row{display:grid;grid-template-columns:34px 1fr auto;gap:14px;align-items:center;padding:12px 15px;border-bottom:1px solid var(--line-soft);cursor:pointer;background:none;border-left:0;border-right:0;border-top:0;width:100%;text-align:left}
+.row:last-child{border-bottom:0}
+.row:hover{background:var(--surface-2)}
+.sev{width:34px;height:34px;border-radius:8px;display:grid;place-items:center;font:600 12px/1 var(--mono);flex:none}
+.sev.crit{background:var(--crit-soft);color:var(--crit)}
+.sev.watch{background:var(--watch-soft);color:var(--watch)}
+.sev.info{background:var(--info-soft);color:var(--info)}
+.sev.ok{background:var(--ok-soft);color:var(--ok)}
+.rowmain b{display:block;font-size:14px;font-weight:600;letter-spacing:-.005em}
+.rowmain p{margin:2px 0 0;font-size:12.5px;color:var(--muted);line-height:1.4}
+.tags{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
+.tag{font:500 10px/1 var(--mono);letter-spacing:.04em;padding:4px 6px;border-radius:4px;background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line-soft);text-transform:uppercase}
+.tag.src{color:var(--accent);background:var(--accent-soft);border-color:var(--accent-line)}
+.rowend{text-align:right;display:flex;flex-direction:column;gap:3px;align-items:flex-end}
+.rowend .sc{font:600 19px/1 var(--sans);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.rowend .scl{font:500 9.5px/1 var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
+.cov{display:flex;gap:2px;margin-top:5px}
+.cov i{width:12px;height:4px;border-radius:2px;background:var(--line);display:block}
+.cov i.on{background:var(--accent)}
+
+/* two column */
+.cols{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;align-items:start}
+@media (max-width:900px){.cols{grid-template-columns:1fr}}
+.panel{border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
+.panel > header{padding:13px 15px 11px;border-bottom:1px solid var(--line-soft)}
+.panel > header b{font-size:13.5px;font-weight:600;display:block}
+.panel > header span{font-size:12px;color:var(--muted)}
+.panel .body{padding:14px 15px}
+
+/* bars */
+.bars{display:flex;flex-direction:column;gap:9px}
+.bar{display:grid;grid-template-columns:1fr auto;gap:4px 10px;font-size:12.5px}
+.bar .nm{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar .vl{font:600 12px/1 var(--mono);font-variant-numeric:tabular-nums;color:var(--ink)}
+.bar .tr{grid-column:1/-1;height:5px;border-radius:3px;background:var(--surface-3);overflow:hidden}
+.bar .tr i{display:block;height:100%;border-radius:3px;background:var(--accent)}
+.bar.w .tr i{background:var(--watch)} .bar.c .tr i{background:var(--crit)}
+
+/* skeleton */
+@keyframes sk{0%{opacity:.5}50%{opacity:.95}100%{opacity:.5}}
+.sk{background:var(--surface-3);border-radius:5px;animation:sk 1.4s ease-in-out infinite}
+.skrow{display:grid;grid-template-columns:34px 1fr 60px;gap:14px;align-items:center;padding:12px 15px;border-bottom:1px solid var(--line-soft)}
+
+/* guardrail strip */
+.guard{margin-top:26px;border:1px solid var(--line);border-left:3px solid var(--watch);border-radius:8px;background:var(--surface);padding:13px 16px}
+.guard b{font:600 9.5px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--watch);display:block;margin-bottom:7px}
+.guard ul{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:5px 20px}
+.guard li{font-size:12.5px;color:var(--ink-2);padding-left:13px;position:relative;line-height:1.45}
+.guard li::before{content:"";position:absolute;left:0;top:8px;width:4px;height:4px;border-radius:50%;background:var(--faint)}
+
+/* command palette */
+.scrim{position:fixed;inset:0;background:rgba(9,15,16,.45);backdrop-filter:blur(3px);z-index:60;display:none}
+.scrim.on{display:block}
+.pal{position:fixed;z-index:61;top:11vh;left:50%;transform:translateX(-50%);width:min(640px,92vw);background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-lift);overflow:hidden;display:none}
+.pal.on{display:block}
+.palin{display:flex;align-items:center;gap:10px;padding:13px 15px;border-bottom:1px solid var(--line-soft)}
+.palin svg{width:17px;height:17px;stroke:var(--muted);fill:none;stroke-width:1.7}
+.palin input{flex:1;border:0;background:none;outline:none;font-size:15.5px}
+.palin input::placeholder{color:var(--faint)}
+.palres{max-height:min(420px,58vh);overflow:auto;padding:6px}
+.palgrp{font:600 9.5px/1 var(--mono);letter-spacing:.11em;text-transform:uppercase;color:var(--faint);padding:10px 10px 5px}
+.palitem{display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:7px;cursor:pointer;width:100%;text-align:left;background:none;border:0}
+.palitem[data-sel="1"]{background:var(--accent-soft)}
+.palitem .ic{width:26px;height:26px;border-radius:6px;background:var(--surface-2);display:grid;place-items:center;flex:none;font:600 10px/1 var(--mono);color:var(--ink-2)}
+.palitem[data-sel="1"] .ic{background:var(--accent);color:var(--surface)}
+.palitem b{font-size:13.5px;font-weight:500;display:block}
+.palitem small{display:block;font-size:11.5px;color:var(--muted)}
+.palitem .rt{margin-left:auto;font:500 10px/1 var(--mono);color:var(--faint);letter-spacing:.05em;text-transform:uppercase}
+.palfoot{border-top:1px solid var(--line-soft);padding:8px 14px;display:flex;gap:14px;font:500 10.5px/1 var(--mono);color:var(--faint);letter-spacing:.04em}
+.palempty{padding:26px 14px;text-align:center;color:var(--muted);font-size:13px}
+
+/* deeplink toast */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(90px);background:var(--ink);color:var(--ground);padding:10px 15px;border-radius:8px;font-size:12.5px;z-index:70;box-shadow:var(--shadow-lift);transition:transform .22s cubic-bezier(.2,.8,.3,1);display:flex;gap:9px;align-items:center}
+.toast.on{transform:translateX(-50%) translateY(0)}
+.toast code{font:500 11px/1 var(--mono);background:rgba(127,127,127,.28);padding:3px 5px;border-radius:4px}
+
+.note{margin-top:14px;font-size:12px;color:var(--muted);line-height:1.5;max-width:70ch}
+.note b{color:var(--ink-2)}
+
+@media (max-width:820px){
+  .app{grid-template-columns:1fr}
+  .rail{position:fixed;left:0;top:0;transform:translateX(-100%);transition:transform .2s;z-index:50;width:var(--rail);box-shadow:var(--shadow-lift)}
+  .rail.open{transform:none}
+  .kbtn{min-width:0;flex:1}
+  .who span{display:none}
+}
+.railtoggle{display:none}
+@media (max-width:820px){.railtoggle{display:grid}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail" id="rail">
+    <div class="brand">
+      <div class="mk">A</div>
+      <div><b>Atlas</b><small>Consola · v1.0 demo</small></div>
+    </div>
+
+    <div class="navwrap">
+      <div class="navgrp">Mi trabajo</div>
+      <nav class="nav" id="nav1"></nav>
+      <div class="navgrp">Preguntar al universo</div>
+      <nav class="nav" id="nav2"></nav>
+      <div class="navgrp">Vigilancia continua</div>
+      <nav class="nav" id="nav3"></nav>
+      <div class="navgrp">Método y datos</div>
+      <nav class="nav" id="nav4"></nav>
+    </div>
+
+    <div class="railfoot">
+      <div class="rule"><b>Regla de lectura</b>hecho → cálculo → evidencia → interpretación</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="top">
+      <button class="iconbtn railtoggle" id="railtoggle" aria-label="Abrir menú"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <div class="crumb"><span id="crumbGrp">Mi trabajo</span> <span style="opacity:.5">/</span> <b id="crumbView">Turno</b></div>
+      <div class="spacer"></div>
+      <button class="kbtn" id="openPal">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+        <span style="flex:1">Buscar entidad, RUT, sección…</span>
+        <span class="kbd">⌘K</span>
+      </button>
+      <button class="iconbtn" id="theme" aria-label="Cambiar tema"><svg viewBox="0 0 24 24" id="themeIcon"></svg></button>
+      <div class="who"><i></i><span>fiscalizador</span></div>
+    </header>
+
+    <main class="view" id="view"></main>
+  </div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<div class="pal" id="pal" role="dialog" aria-label="Buscador de comandos">
+  <div class="palin">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+    <input id="palq" placeholder="Escribe un RUT, una razón social, una sección o una pregunta…" autocomplete="off" spellcheck="false">
+    <span class="kbd">esc</span>
+  </div>
+  <div class="palres" id="palres"></div>
+  <div class="palfoot"><span>↑↓ navegar</span><span>↵ abrir</span><span>esc cerrar</span><span style="margin-left:auto">Atlas · 47.186 entidades indexadas</span></div>
+</div>
+
+<div class="toast" id="toast"><span>URL actualizada — este estado es compartible</span><code id="toastUrl"></code></div>
+
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const nf=new Intl.NumberFormat("es-CL");
+
+/* ---------------- information architecture ----------------
+   The current portal names sections after data producers (UAF, SII, OSFL,
+   CGR, Sanciones). This IA names them after the analyst's question. */
+const ICON={
+  turno:'<path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/>',
+  cola:'<path d="M4 6h16M4 12h11M4 18h7"/>',
+  bitacora:'<path d="M5 4h11l3 3v13H5z"/><path d="M9 9h6M9 13h6M9 17h3"/>',
+  entidad:'<circle cx="12" cy="8" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/>',
+  universo:'<path d="M12 3 4 6.5v6c0 4.4 3.3 8.3 8 9.5 4.7-1.2 8-5.1 8-9.5v-6z"/><path d="M9 11h6M9 14.4h4"/>',
+  territorio:'<path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/>',
+  gasto:'<circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7 6h10M6.6 7.7l4.2 8.1M17.4 7.7l-4.2 8.1"/>',
+  alertas:'<path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 20a2 2 0 0 1-3.4 0"/>',
+  fuentes:'<ellipse cx="12" cy="5.5" rx="7.5" ry="2.8"/><path d="M4.5 5.5v6c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-6M4.5 11.5v6c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-6"/>',
+  metodo:'<circle cx="12" cy="12" r="9"/><path d="M9.8 9.4a2.5 2.5 0 1 1 3.3 2.4c-.8.3-1.1.8-1.1 1.6v.4M12 17.4h.01"/>'
+};
+const NAV=[
+  {grp:"Mi trabajo", host:"#nav1", items:[
+    {id:"turno",  ic:"turno",    label:"Turno",            cnt:"6",  hot:true,  desc:"Qué cambió desde tu última sesión"},
+    {id:"cola",   ic:"cola",     label:"Cola de revisión", cnt:"41",            desc:"Casos asignados y priorizados"},
+    {id:"bitacora",ic:"bitacora",label:"Bitácora",         cnt:"",              desc:"Tus decisiones y sus fundamentos"}
+  ]},
+  {grp:"Preguntar al universo", host:"#nav2", items:[
+    {id:"entidad",   ic:"entidad",   label:"Entidad",     desc:"Expediente 360 por RUT, nombre o ID"},
+    {id:"universo",  ic:"universo",  label:"Universo SO", desc:"Padrón inscrito y potenciales sujetos obligados"},
+    {id:"territorio",ic:"territorio",label:"Territorio",  desc:"Contexto regional y comunal, nunca heredado"},
+    {id:"gasto",     ic:"gasto",     label:"Gasto público",desc:"Ejecución presupuestaria y compras"}
+  ]},
+  {grp:"Vigilancia continua", host:"#nav3", items:[
+    {id:"alertas", ic:"alertas", label:"Alertas", cnt:"3", desc:"Reglas guardadas que te avisan"}
+  ]},
+  {grp:"Método y datos", host:"#nav4", items:[
+    {id:"fuentes", ic:"fuentes", label:"Fuentes y frescura", desc:"Cobertura, corte y salud por productor"},
+    {id:"metodo",  ic:"metodo",  label:"Cómo se calcula",    desc:"Índices, pesos y guardarraíles"}
+  ]}
+];
+const GRPOF={}; NAV.forEach(g=>g.items.forEach(i=>GRPOF[i.id]=g.grp));
+const META={}; NAV.forEach(g=>g.items.forEach(i=>META[i.id]=i));
+
+function renderNav(){
+  NAV.forEach(g=>{
+    $(g.host).innerHTML=g.items.map(i=>
+      `<button data-view="${i.id}" title="${esc(i.desc)}">
+        <svg viewBox="0 0 24 24">${ICON[i.ic]}</svg>
+        <span>${esc(i.label)}</span>
+        ${i.cnt?`<span class="cnt${i.hot?" hot":""}">${i.cnt}</span>`:""}
+      </button>`).join("");
+  });
+  document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",()=>go(b.dataset.view)));
+}
+
+/* ---------------- data (representative sample, real magnitudes) ---------------- */
+const QUEUE=[
+  {id:"ENT-RUT-76124338",n:"Comercializadora Andes Austral SpA",rut:"76.124.338-9",
+   why:"Término de giro publicado en SII con inscripción UAF vigente",sev:"crit",sc:78,
+   tags:["Universo SO","SII","UAF"],src:4,sector:"Corredores de propiedades",reg:"Metropolitana"},
+  {id:"ENT-RUT-77903112",n:"Inversiones Ribera del Maipo Ltda.",rut:"77.903.112-1",
+   why:"Tercera sanción del mismo supervisor en 24 meses",sev:"crit",sc:74,
+   tags:["Sanciones","Reiteración"],src:3,sector:"Casas de cambio",reg:"Valparaíso"},
+  {id:"ENT-RUT-65089447",n:"Fundación Horizonte Comunitario",rut:"65.089.447-K",
+   why:"OSFL con transferencias públicas y giro compatible con sector 19.913",sev:"watch",sc:61,
+   tags:["OSFL","Fondos públicos"],src:3,sector:"OSFL / FATF R.8",reg:"Biobío"},
+  {id:"ENT-RUT-96578220",n:"Agencia de Aduanas Puerto Norte S.A.",rut:"96.578.220-4",
+   why:"Concentración de compras públicas sin pares comparables en el rubro",sev:"watch",sc:58,
+   tags:["Gasto público","Pares"],src:2,sector:"Agentes de aduana",reg:"Antofagasta"},
+  {id:"ENT-RUT-78334901",n:"Casa de Cambios Portal Bicentenario",rut:"78.334.901-6",
+   why:"Sector de alta vulnerabilidad con supervisión publicada bajo la mediana",sev:"info",sc:47,
+   tags:["Universo SO","Sector"],src:2,sector:"Casas de cambio",reg:"Metropolitana"},
+  {id:"ENT-RUT-77012884",n:"Automotriz Del Valle Comercial SpA",rut:"77.012.884-3",
+   why:"Giro característico de sector obligado sin figurar en el corte público del padrón",sev:"info",sc:44,
+   tags:["Universo SO","Potencial SO"],src:2,sector:"Concesionarios de automóviles",reg:"O'Higgins"}
+];
+const SECTIONS=NAV.flatMap(g=>g.items.map(i=>({...i,grp:g.grp})));
+const QUESTIONS=[
+  {q:"¿Qué sectores tienen alta vulnerabilidad y supervisión bajo la mediana?",to:"universo"},
+  {q:"¿Qué sujetos obligados tienen término de giro publicado y siguen inscritos?",to:"universo"},
+  {q:"¿Dónde se concentran las sanciones reiteradas en los últimos 5 años?",to:"territorio"},
+  {q:"¿Qué OSFL reciben fondos públicos y son compatibles con el perímetro UAF?",to:"universo"}
+];
+
+/* ---------------- routing: real, deep-linkable, back-button-safe ---------------- */
+function parse(){
+  const h=location.hash.replace(/^#\/?/,"");
+  const [v,...rest]=h.split("/");
+  return {view:META[v]?v:"turno", arg:rest.join("/")};
+}
+function go(view,arg,{push=true}={}){
+  const hash="#/"+view+(arg?"/"+arg:"");
+  if(push && location.hash!==hash) history.pushState({view,arg},"",hash);
+  render(parse.call?{view,arg}:{view,arg});
+}
+window.addEventListener("popstate",()=>render(parse()));
+
+/* ---------------- views ---------------- */
+function skeleton(){
+  return `<div class="worklist">${Array.from({length:4},()=>
+    `<div class="skrow"><div class="sk" style="width:34px;height:34px;border-radius:8px"></div>
+     <div><div class="sk" style="height:13px;width:52%"></div><div class="sk" style="height:11px;width:74%;margin-top:7px"></div></div>
+     <div class="sk" style="height:20px;width:44px"></div></div>`).join("")}</div>`;
+}
+
+function covDots(n,total=5){
+  return `<div class="cov">${Array.from({length:total},(_,i)=>`<i class="${i<n?"on":""}"></i>`).join("")}</div>`;
+}
+
+function viewTurno(){
+  return `
+  <div class="phead">
+    <div>
+      <h1>Tu turno</h1>
+      <p>Seis cosas cambiaron desde tu última sesión. Nada más pide tu atención hoy.</p>
+    </div>
+    <div class="asof"><b>Corte de datos</b>2026-09-05 · 04:12 UTC<br>9 productores · 1 en rezago</div>
+  </div>
+
+  <div class="turno">
+    <article><span class="lab">Te esperan</span><span class="val">6</span><span class="sub">casos nuevos en tu cola desde el jueves</span></article>
+    <article><span class="lab">Cerraste esta semana</span><span class="val">17</span><span class="sub">13 descartadas · 4 seleccionadas para inscripción</span><span class="delta down">▼ mediana 3,2 días</span></article>
+    <article><span class="lab">Cambió de estado</span><span class="val">2</span><span class="sub">entidades que ya revisaste volvieron a moverse</span><span class="delta up">▲ requieren re-lectura</span></article>
+    <article><span class="lab">Fuente en rezago</span><span class="val na">CGR</span><span class="sub">último corte hace 9 días · sus indicadores salen del promedio, no se rellenan</span></article>
+  </div>
+
+  <div class="sechead"><h2>Lo primero</h2><span>ordenado por índice de prioridad fiscalizadora (IPF-1.0)</span><button class="more" data-view="cola">Ver los 41 →</button></div>
+  <div class="worklist" id="wl">${skeleton()}</div>
+
+  <div class="cols" style="margin-top:26px">
+    <section class="panel">
+      <header><b>Por qué está arriba</b><span>aporte de cada componente al IPF del caso #1</span></header>
+      <div class="body">
+        <div class="bars">
+          ${[["Coherencia registral (término de giro vigente)",20,20,"c"],
+             ["Vulnerabilidad estructural del sector",19,25,""],
+             ["Historial de supervisión UAF",14,25,"w"],
+             ["Escala y complejidad",15.6,18,""],
+             ["Brecha de observabilidad",null,12,""]].map(([n,v,max,cl])=>`
+            <div class="bar ${cl}">
+              <span class="nm">${esc(n)}</span>
+              <span class="vl">${v===null?"— sin evidencia":String(v).replace(".",",")+" / "+max}</span>
+              <span class="tr"><i style="width:${v===null?0:Math.round(v/max*100)}%"></i></span>
+            </div>`).join("")}
+        </div>
+        <p class="note">El componente sin evidencia <b>sale del promedio</b>: no puntúa cero. Por eso el caso declara credibilidad 88% aparte del puntaje 78.</p>
+      </div>
+    </section>
+    <section class="panel">
+      <header><b>Qué NO deberías concluir</b><span>guardarraíles de este caso</span></header>
+      <div class="body">
+        <ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px">
+          ${["Término de giro publicado ≠ baja del registro UAF",
+             "Sanción administrativa ≠ LA/FT",
+             "Prioridad analítica ≠ probabilidad de delito",
+             "Seleccionar para inscripción ≠ decisión institucional ni ROS"].map(t=>
+            `<li style="font-size:12.5px;color:var(--ink-2);display:flex;gap:8px;line-height:1.45"><span style="color:var(--watch);flex:none">✕</span>${esc(t)}</li>`).join("")}
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <div class="guard">
+    <b>Reglas permanentes de lectura</b>
+    <ul>
+      <li>Ausencia de dato ≠ cero. Un componente sin evidencia se retira del promedio.</li>
+      <li>No observado en el corte público UAF ≠ no inscrito ni no obligado.</li>
+      <li>Contexto territorial y sectorial no se hereda a una entidad.</li>
+      <li>Cobertura y frescura describen la evidencia, no el riesgo.</li>
+    </ul>
+  </div>`;
+}
+
+function rowHtml(r){
+  const sevTxt={crit:"A",watch:"B",info:"C",ok:"D"}[r.sev];
+  return `<button class="row" data-open="${esc(r.id)}">
+    <span class="sev ${r.sev}">${sevTxt}</span>
+    <span class="rowmain">
+      <b>${esc(r.n)}</b>
+      <p>${esc(r.why)}</p>
+      <span class="tags"><span class="tag src">${esc(r.rut)}</span>${r.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join("")}</span>
+    </span>
+    <span class="rowend">
+      <span class="sc">${r.sc}</span>
+      <span class="scl">IPF</span>
+      ${covDots(r.src)}
+    </span>
+  </button>`;
+}
+
+function viewCola(){
+  return `<div class="phead"><div><h1>Cola de revisión</h1>
+    <p>41 casos abiertos. La cola ordena a quién mirar primero; no estima probabilidad de LA/FT.</p></div>
+    <div class="asof"><b>Asignados a ti</b>41 abiertos · 17 cerrados esta semana</div></div>
+    <div class="worklist">${QUEUE.concat(QUEUE.slice(0,3).map((q,i)=>({...q,id:q.id+"-b"+i}))).map(rowHtml).join("")}</div>
+    <p class="note">Demo: se muestran 9 de 41. En Atlas la cola se pagina en servidor y la selección persiste entre sesiones y entre fiscalizadores.</p>`;
+}
+
+function viewEntidad(arg){
+  const r=QUEUE.find(q=>q.id===arg);
+  if(!r) return `<div class="phead"><div><h1>Entidad</h1><p>Busca por razón social, RUT normalizado o ID de Entidad. Prueba <b>⌘K</b>.</p></div></div>
+    <div class="worklist">${QUEUE.map(rowHtml).join("")}</div>`;
+  return `<div class="phead"><div>
+      <h1>${esc(r.n)}</h1>
+      <p><span style="font-family:var(--mono);font-size:12.5px">${esc(r.rut)} · ${esc(r.id)}</span><br>${esc(r.sector)} · ${esc(r.reg)}</p>
+    </div>
+    <div class="asof"><b>IPF-1.0</b>${r.sc} / 100 · credibilidad 88%</div></div>
+    <div class="worklist"><div style="padding:22px 16px;color:var(--muted);font-size:13px">
+      El expediente completo es la <b style="color:var(--ink-2)">segunda demo</b> de esta propuesta.
+      Lo que esta consola demuestra es que llegaste aquí por URL:
+      <code style="font:500 12px/1 var(--mono);background:var(--surface-2);padding:3px 6px;border-radius:4px">${esc(location.hash)}</code>
+      — copiable, compartible y con el botón «atrás» del navegador funcionando.
+    </div></div>`;
+}
+
+function viewGeneric(id){
+  const m=META[id];
+  return `<div class="phead"><div><h1>${esc(m.label)}</h1><p>${esc(m.desc)}</p></div>
+    <div class="asof"><b>Ruta</b>${esc(location.hash||"#/"+id)}</div></div>
+    <section class="panel"><div class="body" style="padding:26px 18px">
+      <p style="margin:0 0 12px;font-size:13.5px;color:var(--ink-2);max-width:64ch">
+        Esta consola es una demostración de <b>navegación, jerarquía y estado</b>. Las secciones de contenido
+        conservan las superficies analíticas actuales de Atlas; lo que cambia es cómo se llega a ellas,
+        cómo se nombran y cómo se comparten.</p>
+      <p style="margin:0;font-size:13px;color:var(--muted);max-width:64ch">
+        Tres cosas ya funcionan aquí y hoy no existen en producción:
+        ruta en la URL con historial del navegador, buscador de comandos con <span class="kbd">⌘K</span>,
+        y un tema claro que se aplica a <b>todas</b> las superficies porque todo color sale de un token.</p>
+    </div></section>`;
+}
+
+const VIEWS={turno:viewTurno,cola:viewCola,entidad:viewEntidad};
+
+let loadTimer=null;
+function render({view,arg}){
+  clearTimeout(loadTimer);
+  document.querySelectorAll(".nav button").forEach(b=>{
+    if(b.dataset.view===view) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current");
+  });
+  $("#crumbGrp").textContent=GRPOF[view]||"";
+  $("#crumbView").textContent=META[view]?.label||"";
+  const fn=VIEWS[view];
+  $("#view").innerHTML=fn?fn(arg):viewGeneric(view);
+  window.scrollTo({top:0,behavior:"instant"});
+  $("#rail").classList.remove("open");
+  bindRows();
+  if(view==="turno"){
+    // demonstrate a real skeleton → content transition
+    loadTimer=setTimeout(()=>{
+      const wl=$("#wl"); if(!wl) return;
+      wl.innerHTML=QUEUE.map(rowHtml).join(""); bindRows();
+    },620);
+  }
+  showToast();
+}
+function bindRows(){
+  document.querySelectorAll("[data-open]").forEach(b=>b.addEventListener("click",()=>go("entidad",b.dataset.open)));
+  document.querySelectorAll(".more[data-view]").forEach(b=>b.addEventListener("click",()=>go(b.dataset.view)));
+}
+
+let toastTimer=null;
+function showToast(){
+  const t=$("#toast");
+  $("#toastUrl").textContent=location.hash||"#/turno";
+  t.classList.add("on"); clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove("on"),2100);
+}
+
+/* ---------------- command palette ---------------- */
+let palOpen=false, palSel=0, palItems=[];
+function openPal(){palOpen=true;$("#pal").classList.add("on");$("#scrim").classList.add("on");$("#palq").value="";$("#palq").focus();palQuery("");}
+function closePal(){palOpen=false;$("#pal").classList.remove("on");$("#scrim").classList.remove("on");}
+function norm(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");}
+function palQuery(q){
+  const n=norm(q), digits=q.replace(/[^0-9kK]/g,"");
+  const groups=[];
+  const ents=QUEUE.filter(e=>!n||norm(e.n).includes(n)||e.rut.replace(/[.\-]/g,"").toLowerCase().includes(digits.toLowerCase())||norm(e.id).includes(n));
+  if(ents.length) groups.push({t:"Entidades",items:ents.map(e=>({ic:e.rut.slice(0,2),b:e.n,s:e.rut+" · "+e.sector,rt:"Expediente",go:()=>go("entidad",e.id)}))});
+  const secs=SECTIONS.filter(s=>!n||norm(s.label).includes(n)||norm(s.desc).includes(n)||norm(s.grp).includes(n));
+  if(secs.length) groups.push({t:"Ir a",items:secs.map(s=>({ic:"→",b:s.label,s:s.grp+" · "+s.desc,rt:"Sección",go:()=>go(s.id)}))});
+  const qs=QUESTIONS.filter(x=>!n||norm(x.q).includes(n));
+  if(qs.length) groups.push({t:"Preguntas frecuentes",items:qs.map(x=>({ic:"?",b:x.q,s:"respuesta calculada sobre el corte vigente",rt:"Pregunta",go:()=>go(x.to)}))});
+
+  palItems=groups.flatMap(g=>g.items); palSel=0;
+  $("#palres").innerHTML = palItems.length
+    ? groups.map(g=>`<div class="palgrp">${esc(g.t)}</div>`+g.items.map(it=>{
+        const i=palItems.indexOf(it);
+        return `<button class="palitem" data-i="${i}"><span class="ic">${esc(it.ic)}</span><span><b>${esc(it.b)}</b><small>${esc(it.s)}</small></span><span class="rt">${esc(it.rt)}</span></button>`;
+      }).join("")).join("")
+    : `<div class="palempty">Sin coincidencias para “${esc(q)}”.<br><span style="font-size:12px">Atlas nunca completa con supuestos: si no está materializado, se dice.</span></div>`;
+  paint();
+  document.querySelectorAll(".palitem").forEach(b=>{
+    b.addEventListener("mousemove",()=>{palSel=+b.dataset.i;paint();});
+    b.addEventListener("click",()=>{palItems[+b.dataset.i].go();closePal();});
+  });
+}
+function paint(){
+  document.querySelectorAll(".palitem").forEach(b=>b.dataset.sel=(+b.dataset.i===palSel)?"1":"0");
+  document.querySelector('.palitem[data-sel="1"]')?.scrollIntoView({block:"nearest"});
+}
+$("#palq").addEventListener("input",e=>palQuery(e.target.value));
+$("#openPal").addEventListener("click",openPal);
+$("#scrim").addEventListener("click",closePal);
+document.addEventListener("keydown",e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){e.preventDefault();palOpen?closePal():openPal();return;}
+  if(!palOpen){
+    if(e.key==="/"&&!/input|textarea/i.test(document.activeElement.tagName)){e.preventDefault();openPal();}
+    return;
+  }
+  if(e.key==="Escape"){closePal();}
+  else if(e.key==="ArrowDown"){e.preventDefault();palSel=Math.min(palSel+1,palItems.length-1);paint();}
+  else if(e.key==="ArrowUp"){e.preventDefault();palSel=Math.max(palSel-1,0);paint();}
+  else if(e.key==="Enter"&&palItems[palSel]){e.preventDefault();palItems[palSel].go();closePal();}
+});
+
+/* ---------------- theme (one token set, every surface) ---------------- */
+const SUN='<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+const MOON='<path d="M20 15.4A8.5 8.5 0 0 1 8.6 4 8.5 8.5 0 1 0 20 15.4Z"/>';
+function currentTheme(){
+  const s=document.documentElement.getAttribute("data-theme");
+  if(s) return s;
+  return matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";
+}
+function paintTheme(){$("#themeIcon").innerHTML=currentTheme()==="dark"?SUN:MOON;}
+$("#theme").addEventListener("click",()=>{
+  document.documentElement.setAttribute("data-theme",currentTheme()==="dark"?"light":"dark");
+  paintTheme();
+});
+$("#railtoggle").addEventListener("click",()=>$("#rail").classList.toggle("open"));
+
+renderNav(); paintTheme();
+if(!location.hash) history.replaceState({},"","#/turno");
+render(parse());
+})();
+</script>
+</body>
+</html>
