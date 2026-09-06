@@ -15,7 +15,7 @@ const consoleErrors=[];
 page.on('pageerror',e=>pageErrors.push(String(e?.message||e)));
 page.on('console',m=>{if(m.type()==='error')consoleErrors.push({text:m.text(),location:m.location()||null});});
 
-const report={schema:'ATLAS_RUNTIME_SMOKE_V1',startedAt:new Date().toISOString(),routes:[],pageErrors,consoleErrors};
+const report={schema:'ATLAS_RUNTIME_SMOKE_V2',startedAt:new Date().toISOString(),routes:[],pageErrors,consoleErrors};
 try{
   await page.goto(baseURL,{waitUntil:'domcontentloaded',timeout:30000});
   await page.waitForFunction(()=>typeof sb!=='undefined'&&!!sb?.auth?.setSession,null,{timeout:15000});
@@ -27,8 +27,7 @@ try{
   assert.equal(set.email,expectedEmail);
   await page.reload({waitUntil:'domcontentloaded',timeout:30000});
   await page.waitForFunction(()=>{try{return typeof state!=='undefined'&&state?.access?.enabled===true&&state?.access?.provisional!==true}catch{return false}},null,{timeout:20000});
-  await page.waitForFunction(()=>typeof navigate==='function',null,{timeout:10000});
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(500);
 
   const views=await page.evaluate(()=>[...new Set([...document.querySelectorAll('[data-view]')].map(el=>el.getAttribute('data-view')).filter(Boolean))]);
   report.discoveredViews=views;
@@ -38,8 +37,15 @@ try{
     const beforeConsoleErrors=consoleErrors.length;
     let outcome='ok',detail='';
     try{
-      await page.evaluate(async v=>{const out=navigate(v);if(out&&typeof out.then==='function')await out;},view);
-      await page.waitForTimeout(250);
+      const clicked=await page.evaluate(v=>{
+        const candidates=[...document.querySelectorAll('[data-view]')].filter(el=>el.getAttribute('data-view')===v);
+        const target=candidates.find(el=>el.offsetParent!==null)||candidates[0];
+        if(!target)return false;
+        target.click();
+        return true;
+      },view);
+      if(!clicked)throw new Error('route control not found');
+      await page.waitForTimeout(850);
       const snap=await page.evaluate(()=>({
         view:(typeof state!=='undefined'&&state?.view)||null,
         text:(document.querySelector('#content')?.innerText||document.querySelector('#app')?.innerText||'').slice(0,800),
@@ -48,7 +54,11 @@ try{
       if(!snap.text.trim())throw new Error('route rendered no visible content');
       detail=snap.text.slice(0,120).replace(/\s+/g,' ');
     }catch(error){outcome='error';detail=String(error?.message||error);}
-    report.routes.push({view,outcome,durationMs:Date.now()-started,newPageErrors:pageErrors.slice(beforePageErrors),newConsoleErrors:consoleErrors.slice(beforeConsoleErrors),detail});
+    const newPageErrors=pageErrors.slice(beforePageErrors);
+    const newConsoleErrors=consoleErrors.slice(beforeConsoleErrors);
+    if(newPageErrors.some(x=>/Maximum call stack|RangeError/i.test(x)))outcome='error';
+    if(newConsoleErrors.some(x=>/Maximum call stack|RangeError/i.test(x.text||'')))outcome='error';
+    report.routes.push({view,outcome,durationMs:Date.now()-started,newPageErrors,newConsoleErrors,detail});
   }
 
   report.finishedAt=new Date().toISOString();
