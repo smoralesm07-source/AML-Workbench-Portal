@@ -57,7 +57,7 @@ jobs:
               assert Path(path).is_file(), path
           e360=Path('assets/atlas-entity360-resilience-0964.js').read_text(encoding='utf-8')
           assert "READ_RPC='atlas_v2_entity360_read'" in e360
-          assert "0964-e360-single-read-4" in e360
+          assert "0964-e360-single-read-5" in e360
           assert "SINGLE_READ_V2" in e360
           assert "PARALLEL_FALLBACK" in e360
           sql=Path('supabase/migrations/20260906083150_atlas_v2_entity360_fast_spend_read.sql').read_text(encoding='utf-8').lower()
@@ -101,7 +101,7 @@ jobs:
           assert Path('_site/v2/public-spend-adapter.js').is_file()
           assert Path('_site/v2/public-spend-route-bridge.js').is_file()
           compiled='\n'.join(p.read_text(encoding='utf-8',errors='ignore') for p in sorted(Path('_site').glob('atlas-runtime-current-*.js')))
-          for marker in ['0964-e360-single-read-4','atlas_v2_entity360_read','SINGLE_READ_V2','PARALLEL_FALLBACK']:
+          for marker in ['0964-e360-single-read-5','atlas_v2_entity360_read','SINGLE_READ_V2','PARALLEL_FALLBACK']:
               assert marker in compiled, f'Entity 360 optimization missing from compiled runtime: {marker}'
           assert '0.96.2' not in Path('_site/atlas-release.json').read_text(encoding='utf-8')
           print(f'built canonical ATLAS v2 cutover for {release["release"]}/{release["build"]} with Entity 360 single-read compiled')
@@ -162,7 +162,7 @@ jobs:
                   js_names=[x for x in live_report.get('published_js',[]) if x.startswith('atlas-runtime-current-') and x.endswith('.js')]
                   assert js_names, 'compiled runtime list missing'
                   live_compiled='\n'.join(get('/'+name,stamp) for name in js_names)
-                  for marker in ['0964-e360-single-read-4','atlas_v2_entity360_read','SINGLE_READ_V2','PARALLEL_FALLBACK']:
+                  for marker in ['0964-e360-single-read-5','atlas_v2_entity360_read','SINGLE_READ_V2','PARALLEL_FALLBACK']:
                       assert marker in live_compiled, f'live Entity 360 optimization missing: {marker}'
                   print(json.dumps({'status':'ok','release':rel,'build':bid,'page_url':base,'v2_cutover':True,'entity360':'SINGLE_READ_V2'}))
                   break
