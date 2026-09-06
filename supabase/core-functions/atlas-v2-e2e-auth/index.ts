@@ -5,8 +5,11 @@ const ISSUER = "https://token.actions.githubusercontent.com";
 const JWKS = createRemoteJWKSet(new URL(`${ISSUER}/.well-known/jwks`));
 const AUDIENCE = "atlas-v2-e2e";
 const REPOSITORY = "smoralesm07-source/AML-Workbench-Portal";
-const REF = "refs/heads/atlas-architecture-v2";
-const WORKFLOW_REF = `${REPOSITORY}/.github/workflows/e2e-atlas-v2-public-spend.yml@${REF}`;
+const ALLOWED_WORKFLOWS = new Set([
+  `${REPOSITORY}/.github/workflows/e2e-atlas-v2-public-spend.yml@refs/heads/atlas-architecture-v2`,
+  `${REPOSITORY}/.github/workflows/e2e-atlas-runtime-smoke.yml@refs/heads/main`,
+]);
+const ALLOWED_REFS = new Set(["refs/heads/atlas-architecture-v2", "refs/heads/main"]);
 const ALLOWED_EVENTS = new Set(["push", "workflow_dispatch"]);
 const TTL_MS = 20 * 60 * 1000;
 
@@ -28,8 +31,8 @@ function bearer(req: Request) {
 async function authorize(req: Request) {
   const { payload } = await jwtVerify(bearer(req), JWKS, { issuer: ISSUER, audience: AUDIENCE });
   if (payload.repository !== REPOSITORY) throw new Error("OIDC_REPOSITORY_DENIED");
-  if (payload.ref !== REF) throw new Error("OIDC_REF_DENIED");
-  if (payload.workflow_ref !== WORKFLOW_REF) throw new Error("OIDC_WORKFLOW_DENIED");
+  if (!ALLOWED_REFS.has(String(payload.ref || ""))) throw new Error("OIDC_REF_DENIED");
+  if (!ALLOWED_WORKFLOWS.has(String(payload.workflow_ref || ""))) throw new Error("OIDC_WORKFLOW_DENIED");
   if (!ALLOWED_EVENTS.has(String(payload.event_name || ""))) throw new Error("OIDC_EVENT_DENIED");
 }
 function json(data: unknown, status = 200) {
