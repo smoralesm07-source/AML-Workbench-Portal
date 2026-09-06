@@ -8,7 +8,7 @@
  * - Conserva RLS, cruces exactos y semántica vacío != ausencia/cero.
  */
 (function atlasEntity360Resilience0964(){
-  const BUILD='0964-e360-resilience-1';
+  const BUILD='0964-e360-resilience-2';
   const MASTER='aml_entity_master_v0553';
   const TAX='aml_entity_tax_profile';
   const UAF='aml_uaf_entity_profile';
@@ -22,7 +22,7 @@
   if(window.__ATLAS_ENTITY360_RESILIENCE_0964__?.build===BUILD)return;
 
   const CACHE=new Map();
-  let token=0,lastId='',observer=null,poll=null,activeJob=null;
+  let token=0,lastId='',observer=null,poll=null,activeJob=null,loadingId='',loadingMeta=null;
 
   const db=()=>{try{return typeof sb!=='undefined'?sb:(window.sb||null);}catch(_e){return window.sb||null;}};
   const appState=()=>{try{return window.amlState||(typeof state!=='undefined'?state:window.state)||null;}catch(_e){return window.amlState||window.state||null;}};
@@ -100,13 +100,16 @@
     style.id='atlas-e360-resilience-0964-style';
     style.textContent=`
       #content[data-e360-resilient-loading="1"]{position:relative!important;min-height:64vh}
-      .atlas-e360-resilient-loader{position:absolute;inset:0;z-index:2900;display:grid;place-items:center;min-height:60vh;padding:28px;background:rgba(6,15,25,.94);backdrop-filter:blur(3px)}
-      .atlas-e360-resilient-loader-card{width:min(500px,calc(100vw - 48px));display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:30px;border:1px solid rgba(148,163,184,.16);border-radius:18px;background:rgba(14,26,40,.96);box-shadow:0 24px 80px rgba(0,0,0,.34)}
-      .atlas-e360-resilient-spinner{width:54px;height:54px;border-radius:50%;border:3px solid rgba(148,163,184,.18);border-top-color:#f59e0b;border-right-color:#fbbf24;animation:atlasE360ResilientSpin .75s linear infinite}
-      .atlas-e360-resilient-loader-card span{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#fbbf24}
-      .atlas-e360-resilient-loader-card h3{margin:0;color:#f8fafc;font-size:20px}.atlas-e360-resilient-loader-card p{margin:0;color:#a8b7ca;font-size:13px;line-height:1.5;max-width:410px}
-      .atlas-e360-resilient-loader-card small{color:#d8e3ef;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .atlas-e360-resilient-loader{position:absolute;inset:0;z-index:2900;display:grid;place-items:start center;min-height:60vh;padding:clamp(78px,12vh,132px) 20px 32px;background:rgba(6,15,25,.88);backdrop-filter:blur(2px)}
+      .atlas-e360-resilient-loader-card{width:min(540px,calc(100vw - 32px));display:grid;grid-template-columns:54px 1fr;grid-template-areas:'spin tag' 'spin title' 'spin text' 'spin meta' 'sources sources';align-items:center;column-gap:16px;row-gap:5px;padding:20px;border:1px solid rgba(56,189,248,.25);border-radius:18px;background:rgba(14,26,40,.98);box-shadow:0 24px 80px rgba(0,0,0,.36)}
+      .atlas-e360-resilient-spinner{grid-area:spin;width:46px;height:46px;border-radius:50%;border:3px solid rgba(148,163,184,.18);border-top-color:#38bdf8;border-right-color:#fbbf24;animation:atlasE360ResilientSpin .75s linear infinite}
+      .atlas-e360-resilient-loader-card span{grid-area:tag;font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#7dd3fc}
+      .atlas-e360-resilient-loader-card h3{grid-area:title;margin:0;color:#f8fafc;font-size:18px;line-height:1.2}.atlas-e360-resilient-loader-card p{grid-area:text;margin:0;color:#a8b7ca;font-size:13px;line-height:1.42}
+      .atlas-e360-resilient-loader-card small{grid-area:meta;color:#d8e3ef;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .atlas-e360-resilient-sources{grid-area:sources;display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;padding-top:11px;border-top:1px solid rgba(148,163,184,.12)}
+      .atlas-e360-resilient-sources i{font-style:normal;font-size:10px;font-weight:700;color:#8da3ba;padding:5px 8px;border-radius:999px;background:rgba(15,36,55,.8);border:1px solid rgba(148,163,184,.12)}
       @keyframes atlasE360ResilientSpin{to{transform:rotate(360deg)}}
+      @media(max-width:560px){.atlas-e360-resilient-loader{padding-top:70px}.atlas-e360-resilient-loader-card{grid-template-columns:42px 1fr;padding:16px}.atlas-e360-resilient-spinner{width:38px;height:38px}.atlas-e360-resilient-loader-card h3{font-size:16px}}
       @media(prefers-reduced-motion:reduce){.atlas-e360-resilient-spinner{animation:none}}
     `;
     document.head.appendChild(style);
@@ -114,18 +117,21 @@
 
   function showLoader(id,meta){
     ensureStyle();
+    loadingId=String(id||'');loadingMeta=meta||loadingMeta;
     try{window.AtlasEntity360Loading?.hide?.();}catch(_e){}
     const root=rootHost();if(!root)return;
     root.setAttribute('data-e360-resilient-loading','1');
     let loader=document.querySelector('[data-atlas-e360-resilient-loader="0964"]');
     if(!loader){loader=document.createElement('div');loader.className='atlas-e360-resilient-loader';loader.dataset.atlasE360ResilientLoader='0964';loader.setAttribute('role','status');loader.setAttribute('aria-live','polite');root.appendChild(loader);}
     loader.dataset.entityId=id;
-    loader.innerHTML=`<div class="atlas-e360-resilient-loader-card"><div class="atlas-e360-resilient-spinner" aria-hidden="true"></div><span>Entidad 360</span><h3>Procesando entidad seleccionada</h3><p>ATLAS está materializando las fuentes disponibles. Una fuente lenta no bloqueará el expediente completo.</p><small>${esc([meta?.name,meta?.rut].filter(Boolean).join(' · ')||id)}</small></div>`;
+    loader.innerHTML=`<div class="atlas-e360-resilient-loader-card"><div class="atlas-e360-resilient-spinner" aria-hidden="true"></div><span>Entidad 360 · consulta en curso</span><h3>Materializando información de la entidad</h3><p>Los valores “no materializado” que puedan aparecer debajo son preliminares mientras ATLAS consulta las fuentes.</p><small>${esc([meta?.name,meta?.rut].filter(Boolean).join(' · ')||id)}</small><div class="atlas-e360-resilient-sources" aria-label="Fuentes en consulta"><i>Identidad</i><i>SII</i><i>UAF</i><i>Sanciones</i><i>Compras públicas</i><i>Historia</i></div></div>`;
   }
 
   function hideLoader(id){
+    const sid=String(id||'');
     const loader=document.querySelector('[data-atlas-e360-resilient-loader="0964"]');
-    if(loader&&(!id||loader.dataset.entityId===String(id)))loader.remove();
+    if(loader&&(!id||loader.dataset.entityId===sid))loader.remove();
+    if(!id||loadingId===sid){loadingId='';loadingMeta=null;}
     const root=rootHost();if(root)root.removeAttribute('data-e360-resilient-loading');
     try{window.AtlasEntity360Loading?.hide?.();}catch(_e){}
   }
@@ -142,6 +148,10 @@
     if(!inEntities()||String(selected()||id)!==String(id))return false;
     api.mount(id,meta,data);
     decorate();
+    /* Executive renderer replaces #content descendants. Re-attach the loading
+       authority after every progressive paint so preliminary empty values can
+       never be mistaken for a completed dossier. */
+    if(loadingId===String(id))showLoader(id,loadingMeta||meta);
     return true;
   }
 
@@ -211,9 +221,10 @@
     const fresh=hit&&Date.now()-hit.loadedAt<CACHE_TTL;
     const runToken=++token;lastId=id;
     if(fresh){mount(id,hit.entity||meta,hit);decorate();hideLoader(id);keepMounted(id,hit.entity||meta,hit);return Promise.resolve(true);}
-    showLoader(id,meta);
     const scaffold=emptyPackage(id,meta);
+    loadingId=id;loadingMeta=meta;
     mount(id,meta,scaffold);
+    showLoader(id,meta);
     const hardTimer=setTimeout(()=>{if(runToken===token){hideLoader(id);mount(id,meta,CACHE.get(id)||scaffold);}},HARD_LOADING_TIMEOUT);
     const job=loadResilient(id,meta,runToken).then(data=>{
       clearTimeout(hardTimer);
@@ -278,7 +289,7 @@
     if(!poll)poll=setInterval(()=>{wrapEntry();reconcile('poll');},500);
   }
 
-  const API={build:BUILD,start,reconcile,clear:()=>CACHE.clear(),get activeEntity(){return lastId;},get activeJob(){return activeJob;}};
+  const API={build:BUILD,start,reconcile,clear:()=>CACHE.clear(),get activeEntity(){return lastId;},get activeJob(){return activeJob;},get loadingEntity(){return loadingId;}};
   window.__ATLAS_ENTITY360_RESILIENCE_0964__=API;
   window.AtlasEntity360Resilience=API;
   ['atlas:entity-workspace-ready','atlas:entity-entry-ready','atlas:entity360-open'].forEach(name=>document.addEventListener(name,()=>{wrapEntry();reconcile(name);}));
