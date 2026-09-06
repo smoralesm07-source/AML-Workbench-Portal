@@ -126,6 +126,23 @@ def _remove_legacy_public_spend_assets(out_dir: Path) -> list[str]:
     return sorted(removed)
 
 
+def _defer_noncritical_scripts(html: str) -> str:
+    """Allow first paint/auth shell before the large compiled runtime executes.
+
+    Deferred classic scripts preserve document order, so ATLAS keeps the same
+    dependency sequence while the browser can parse the document and download
+    bundles in parallel. Release/theme bootstrap remain synchronous by design.
+    """
+    patterns = [
+        r'<script(?![^>]*\bdefer\b)([^>]*\bdata-atlas-runtime="current"[^>]*)>',
+        r'<script(?![^>]*\bdefer\b)([^>]*\bdata-atlas-v2-cutover="public-spend"[^>]*)>',
+        r'<script(?![^>]*\bdefer\b)([^>]*\bsrc="\./assets/supabase-js-[^"]+"[^>]*)>',
+    ]
+    for pattern in patterns:
+        html = re.sub(pattern, r'<script defer\1>', html, flags=re.I)
+    return html
+
+
 def _mount_v2(html: str) -> str:
     style_tag = (
         f'  <link id="atlas-v2-public-spend-adapter-style" rel="stylesheet" '
@@ -143,7 +160,7 @@ def _mount_v2(html: str) -> str:
         "public-spend-route-bridge.js",
     ]
     script_tags = "\n".join(
-        f'  <script src="./v2/{name}?v={V2_VERSION}" data-atlas-v2-cutover="public-spend"></script>'
+        f'  <script defer src="./v2/{name}?v={V2_VERSION}" data-atlas-v2-cutover="public-spend"></script>'
         for name in ordered_scripts
     ) + "\n"
     if "</body>" not in html:
@@ -194,6 +211,11 @@ def _validate_cutover(out_dir: Path, html: str, removed_assets: list[str], *, e2
     if unexpected:
         raise SystemExit(f"cutover build: non-authority support assets were retired: {sorted(unexpected)}")
 
+    sync_runtime = re.findall(r'<script(?![^>]*\bdefer\b)[^>]*\bdata-atlas-runtime="current"[^>]*>', html, flags=re.I)
+    sync_v2 = re.findall(r'<script(?![^>]*\bdefer\b)[^>]*\bdata-atlas-v2-cutover="public-spend"[^>]*>', html, flags=re.I)
+    if sync_runtime or sync_v2:
+        raise SystemExit("cutover build: noncritical production scripts remain parser-blocking")
+
 
 def _update_report(out_dir: Path, published_v2: list[str], removed_assets: list[str], *, e2e_proxy: bool = False) -> None:
     path = out_dir / "atlas-runtime-report.json"
@@ -205,6 +227,8 @@ def _update_report(out_dir: Path, published_v2: list[str], removed_assets: list[
     report["public_spend_source"] = "BACKEND_READ_MODELS"
     report["public_spend_e2e_proxy"] = e2e_proxy
     report["public_spend_legacy_assets_retired"] = removed_assets
+    report["startup_script_policy"] = "DEFERRED_ORDERED_RUNTIME"
+    report["parser_blocking_runtime"] = False
     report["published_css"] = [
         item for item in report.get("published_css", []) if item not in retired
     ] + ["v2/public-spend-adapter.css"]
@@ -223,6 +247,7 @@ def build_cutover(out_dir: Path, *, e2e_proxy: bool = False) -> None:
     removed_assets = _remove_legacy_public_spend_assets(out_dir)
     published_v2 = _copy_v2_runtime(out_dir, e2e_proxy=e2e_proxy)
     html = _mount_v2(html)
+    html = _defer_noncritical_scripts(html)
     _validate_cutover(out_dir, html, removed_assets, e2e_proxy=e2e_proxy)
     html_path.write_text(html, encoding="utf-8")
     _update_report(out_dir, published_v2, removed_assets, e2e_proxy=e2e_proxy)
@@ -234,6 +259,8 @@ def build_cutover(out_dir: Path, *, e2e_proxy: bool = False) -> None:
         "retired_legacy_asset_count": len(removed_assets),
         "e2e_proxy": e2e_proxy,
         "shared_support_assets_preserved": True,
+        "startup_script_policy": "DEFERRED_ORDERED_RUNTIME",
+        "parser_blocking_runtime": False,
         "main_build_default_unchanged": True,
     }, ensure_ascii=False))
 
