@@ -14,6 +14,7 @@ function health(stage, extra = {}) {
     entityRendererMutation:'HISTORY_ONLY_FINAL_GUARD',
     advancedEntityExplorer:true,
     digitalIdentityExplorer:true,
+    navigationPolicy:'CAPTURE_ENTITIES_ONLY_NO_GLOBAL_NAVIGATE_WRAP',
     at:iso(),
     ...extra
   };
@@ -25,17 +26,16 @@ function health(stage, extra = {}) {
  * Auth-passive: never mutates Supabase sessions or replays refresh tokens.
  * Entity 360 visual authority remains HISTORY_INTELLIGENCE_ATLAS_V1.
  *
- * 2026-09-04 correction:
- * The previous fresh-entry normalizer unconditionally emptied #content after
- * ENTRY.load(). That destroyed the 0512 Entidades explorer (and therefore the
- * Entidad | Identidad digital selector) and left the older 0447 search surface.
- * Fresh entry now clears the prior dossier BEFORE load and preserves a live
- * .aex AFTER load. Only stale Entity 360 dossier nodes are removed.
+ * 2026-09-06 stability correction:
+ * This guard no longer replaces window.navigate. Multiple historical route
+ * wrappers were capturing each other and could form a recursive cycle after
+ * opening RES. Entity-specific behavior is now isolated to the Entities click
+ * boundary and the existing load/open APIs.
  */
-const navigationDelegate = typeof window.navigate === 'function' ? window.navigate : null;
 let cachedHistoryHost = null;
 let healTimer = null;
 let healing = false;
+let entityClickGuardInstalled = false;
 
 function entityContent() {
   try {
@@ -297,20 +297,22 @@ function installEntityAuthority() {
     scheduleHistoryHeal('entry-open', 0);
     return result;
   }) : null;
-  const stableNavigate = async (view, ...args) => {
-    if (view === 'entities') return stableLoad(...args);
-    if (view === 'pep-discovery' && typeof window.AtlasPepDiscovery?.open === 'function') {
-      return window.AtlasPepDiscovery.open(false);
-    }
-    if (navigationDelegate) return navigationDelegate(view, ...args);
-  };
+
+  if (!entityClickGuardInstalled) {
+    document.addEventListener('click', event => {
+      const target = event.target?.closest?.('[data-view="entities"]');
+      if (!target) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      void stableLoad();
+    }, true);
+    entityClickGuardInstalled = true;
+  }
 
   window.loadEntities = stableLoad;
-  window.navigate = stableNavigate;
   if (stableSearch) window.searchEntities = stableSearch;
   if (stableOpen) window.openEntity = stableOpen;
   try { loadEntities = stableLoad; } catch (_error) {}
-  try { navigate = stableNavigate; } catch (_error) {}
   if (stableSearch) { try { searchEntities = stableSearch; } catch (_error) {} }
   if (stableOpen) { try { openEntity = stableOpen; } catch (_error) {} }
 
@@ -331,12 +333,13 @@ function installEntityAuthority() {
     landingPinned:true,
     advancedExplorerPinned:true,
     digitalIdentityPinned:!!window.__ATLAS_DIGITAL_IDENTITY_0524__,
-    routePinned:true,
+    routePinned:false,
+    navigationPolicy:'CAPTURE_ENTITIES_ONLY_NO_GLOBAL_NAVIGATE_WRAP',
     entitiesFreshSearchBoundary:true,
     previousEntityClearedOnMenuEntry:true,
     finalCleanEntryAuthority:'FINAL_CLEAN_ENTITY_ENTRY_ADVANCED_PRESERVING',
     legacyCapturedLoaderBypassed:true,
-    pepDiscoveryRoutePinned:typeof window.AtlasPepDiscovery?.open === 'function',
+    pepDiscoveryRoutePinned:false,
     searchPinned:!!stableSearch,
     autocompletePinned:true,
     siiDocumentAuthorizationPinned:typeof window.AtlasSiiDocumentAuthorization==='object',
@@ -383,12 +386,13 @@ window.__ATLAS_RUNTIME_RELIABILITY__ = {
   releaseGuard:'NO_ACTIVE_SESSION_RELOAD',
   authGuard:'PASSIVE_FINAL_MODULE',
   refreshTokenPolicy:'SUPABASE_CLIENT_ONLY_NO_MANUAL_REPLAY',
-  entityAuthority:'ENTITY360_HISTORY_INTELLIGENCE+ENTITY_EXPLORER_0512+DIGITAL_IDENTITY_0526+ENTITY360_ROUTE_AUTHORITY_0448+FINAL_ADVANCED_PRESERVING_GUARD',
+  entityAuthority:'ENTITY360_HISTORY_INTELLIGENCE+ENTITY_EXPLORER_0512+DIGITAL_IDENTITY_0526+FINAL_ADVANCED_PRESERVING_GUARD',
   entityWorkspace:'ADVANCED_ENTITY_EXPLORER+ENTITY_OR_DIGITAL_IDENTITY_SEARCH+CURRENT_HISTORY_360+FRESH_ENTRY_WITHOUT_STALE_DOSSIER',
   legacyRendererPolicy:'NEVER_PIN_LEGACY_RENDERER+SELF_HEAL_TO_HISTORY_VARIANT',
-  pepDiscoveryRoute:'PRESERVED_BY_FINAL_NAVIGATION_AUTHORITY',
+  navigationPolicy:'NO_GLOBAL_NAVIGATE_WRAP',
+  pepDiscoveryRoute:'CORE_NAVIGATION_AUTHORITY',
   patch:ADVANCED_ENTITY_PATCH,
   installedAt:iso()
 };
 
-health('installed-entity360-history-and-advanced-explorer-final-guard');
+health('installed-entity360-history-and-advanced-explorer-navsafe-final-guard');
