@@ -11,6 +11,8 @@ on:
       - 'tools/e2e_atlas_runtime_smoke.mjs'
       - 'v*.js'
       - 'assets/*.js'
+      - 'src/v2/*.js'
+      - 'src/v2/*.css'
       - '.github/workflows/e2e-atlas-runtime-smoke.yml'
   workflow_dispatch:
 
