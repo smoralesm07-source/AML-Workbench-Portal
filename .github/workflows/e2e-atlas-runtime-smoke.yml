@@ -1,0 +1,91 @@
+name: E2E ATLAS runtime smoke
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'atlas-runtime-manifest.json'
+      - 'atlas-release-guard.js'
+      - 'tools/build_atlas_site.py'
+      - 'tools/build_atlas_v2_cutover.py'
+      - 'tools/e2e_atlas_runtime_smoke.mjs'
+      - 'v*.js'
+      - 'assets/*.js'
+      - '.github/workflows/e2e-atlas-runtime-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: atlas-runtime-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CORE_E2E_BROKER: https://ldmtlwzqaqmegedktlxr.supabase.co/functions/v1/atlas-v2-e2e-auth
+      ATLAS_E2E_URL: http://127.0.0.1:4173/
+      PLAYWRIGHT_VERSION: '1.62.1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Chromium
+        run: |
+          npm install --no-save --no-package-lock "playwright@${PLAYWRIGHT_VERSION}"
+          npx playwright install --with-deps chromium
+      - name: Build production-equivalent artifact
+        run: python3 tools/build_atlas_v2_cutover.py --out _site --e2e-proxy
+      - name: Mint ephemeral authenticated session
+        shell: bash
+        run: |
+          set -euo pipefail
+          request_url="${ACTIONS_ID_TOKEN_REQUEST_URL}"
+          sep='?'; [[ "$request_url" == *'?'* ]] && sep='&'
+          oidc_json="$(curl --fail-with-body --silent --show-error -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${request_url}${sep}audience=atlas-v2-e2e")"
+          oidc_token="$(jq -er '.value' <<<"$oidc_json")"
+          echo "::add-mask::$oidc_token"
+          issue_file="$(mktemp)"
+          curl --fail-with-body --silent --show-error -X POST "$CORE_E2E_BROKER" -H "Authorization: Bearer $oidc_token" -H 'Content-Type: application/json' --data '{"action":"issue"}' > "$issue_file"
+          email="$(jq -er '.email' "$issue_file")"; user_id="$(jq -er '.user_id' "$issue_file")"; access_token="$(jq -er '.access_token' "$issue_file")"; refresh_token="$(jq -er '.refresh_token' "$issue_file")"
+          echo "::add-mask::$email"; echo "::add-mask::$user_id"; echo "::add-mask::$access_token"; echo "::add-mask::$refresh_token"
+          echo "ATLAS_E2E_EMAIL=$email" >> "$GITHUB_ENV"
+          echo "ATLAS_E2E_USER_ID=$user_id" >> "$GITHUB_ENV"
+          echo "ATLAS_E2E_ACCESS_TOKEN=$access_token" >> "$GITHUB_ENV"
+          echo "ATLAS_E2E_REFRESH_TOKEN=$refresh_token" >> "$GITHUB_ENV"
+      - name: Start artifact server
+        shell: bash
+        run: |
+          node tools/serve_atlas_v2_e2e.mjs _site > /tmp/atlas-runtime-smoke-server.log 2>&1 &
+          echo "ATLAS_E2E_SERVER_PID=$!" >> "$GITHUB_ENV"
+          for _ in $(seq 1 30); do curl -fsS "$ATLAS_E2E_URL" >/dev/null && exit 0; sleep 1; done
+          cat /tmp/atlas-runtime-smoke-server.log; exit 1
+      - name: Run authenticated cross-route smoke
+        run: node tools/e2e_atlas_runtime_smoke.mjs
+      - name: Upload smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-runtime-smoke-${{ github.run_id }}
+          path: |
+            e2e-atlas-runtime-smoke.json
+            /tmp/atlas-runtime-smoke-server.log
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Cleanup ephemeral principal
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          [ -n "${ATLAS_E2E_SERVER_PID:-}" ] && kill "$ATLAS_E2E_SERVER_PID" 2>/dev/null || true
+          if [ -z "${ATLAS_E2E_USER_ID:-}" ] || [ -z "${ATLAS_E2E_EMAIL:-}" ]; then exit 0; fi
+          request_url="${ACTIONS_ID_TOKEN_REQUEST_URL}"; sep='?'; [[ "$request_url" == *'?'* ]] && sep='&'
+          oidc_json="$(curl --fail-with-body --silent --show-error -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${request_url}${sep}audience=atlas-v2-e2e")" || exit 1
+          oidc_token="$(jq -er '.value' <<<"$oidc_json")" || exit 1
+          payload="$(jq -nc --arg uid "$ATLAS_E2E_USER_ID" --arg email "$ATLAS_E2E_EMAIL" '{action:"cleanup",user_id:$uid,email:$email}')"
+          curl --fail-with-body --silent --show-error -X POST "$CORE_E2E_BROKER" -H "Authorization: Bearer $oidc_token" -H 'Content-Type: application/json' --data "$payload" >/dev/null
