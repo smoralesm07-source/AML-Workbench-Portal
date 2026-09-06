@@ -5,7 +5,7 @@
  * Empty source != loading/failure. The loader remains visible until completion.
  */
 (function atlasEntity360Resilience0964(){
-  const BUILD='0964-e360-single-read-4';
+  const BUILD='0964-e360-single-read-5';
   const READ_RPC='atlas_v2_entity360_read';
   const MASTER='aml_entity_master_v0553';
   const TAX='aml_entity_tax_profile';
@@ -21,11 +21,11 @@
   if(window.__ATLAS_ENTITY360_RESILIENCE_0964__?.build===BUILD)return;
 
   const CACHE=new Map();
-  let token=0,lastId='',observer=null,poll=null,activeJob=null,loadingId='',loadingMeta=null;
+  let token=0,lastId='',observer=null,poll=null,activeJob=null,activeJobId='',loadingId='',loadingMeta=null;
 
   const db=()=>{try{return typeof sb!=='undefined'?sb:(window.sb||null);}catch(_e){return window.sb||null;}};
   const appState=()=>{try{return window.amlState||(typeof state!=='undefined'?state:window.state)||null;}catch(_e){return window.amlState||window.state||null;}};
-  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
   const rootHost=()=>document.querySelector('#content')||document.querySelector('#app')||document.body;
   const historyApi=()=>window.__ATLAS_ENTITY360_EXECUTIVE__;
   const profileHost=()=>document.querySelector('#atlas-entity360-executive');
@@ -97,10 +97,9 @@
   }
   function hideLoader(id){
     const sid=String(id||''),loader=document.querySelector('[data-atlas-e360-resilient-loader="0964"]');
+    const matches=!id||loadingId===sid;
     if(loader&&(!id||loader.dataset.entityId===sid))loader.remove();
-    if(!id||loadingId===sid){loadingId='';loadingMeta=null;}
-    rootHost()?.removeAttribute?.('data-e360-resilient-loading');
-    try{window.AtlasEntity360Loading?.hide?.();}catch(_e){}
+    if(matches){loadingId='';loadingMeta=null;rootHost()?.removeAttribute?.('data-e360-resilient-loading');try{window.AtlasEntity360Loading?.hide?.();}catch(_e){}}
   }
   function decorate(){const host=profileHost();if(host)try{window.AtlasEntity360Drilldown?.decorate?.(host);}catch(error){console.warn('[ATLAS E360] drilldown decorate',error);}}
   function mount(id,meta,data){
@@ -155,17 +154,18 @@
   function keepMounted(id,meta,data){[300,1200,3500].forEach(ms=>setTimeout(()=>{if(String(selected()||'')!==String(id)||!inEntities())return;const host=profileHost();if(!host||host.dataset.entityId!==String(id)||host.dataset.e360Variant!=='HISTORY_INTELLIGENCE_ATLAS_V1')mount(id,meta,data);else decorate();},ms));}
   function start(id,extraMeta={}){
     id=String(id||'').trim();if(!id||!inEntities())return Promise.resolve(false);
+    if(activeJob&&activeJobId===id)return activeJob;
     const meta=metaFor(id,extraMeta),hit=CACHE.get(id),fresh=hit&&Date.now()-hit.loadedAt<CACHE_TTL,runToken=++token;lastId=id;
     if(fresh){mount(id,hit.entity||meta,hit);decorate();hideLoader(id);keepMounted(id,hit.entity||meta,hit);return Promise.resolve(true);}
     const scaffold=emptyPackage(id,meta);loadingId=id;loadingMeta=meta;mount(id,meta,scaffold);showLoader(id,meta);
     const hardTimer=setTimeout(()=>{if(runToken===token){hideLoader(id);mount(id,meta,CACHE.get(id)||scaffold);}},HARD_LOADING_TIMEOUT);
     const job=loadResilient(id,meta,runToken).then(data=>{clearTimeout(hardTimer);if(data){hideLoader(id);keepMounted(id,data.entity||meta,data);}return !!data;}).catch(error=>{clearTimeout(hardTimer);console.error('[ATLAS E360] load',error);if(runToken===token){scaffold.errors=['Entidad 360: una fuente falló, se muestra el expediente parcial'];cacheAndMount(id,meta,scaffold);hideLoader(id);keepMounted(id,meta,scaffold);}return false;});
-    activeJob=job;return job;
+    activeJobId=id;activeJob=job.finally(()=>{if(activeJob===job||activeJobId===id){activeJob=null;activeJobId='';}});return activeJob;
   }
   function reconcile(reason='runtime'){
     if(!inEntities())return;const id=String(selected()||'').trim();if(!id)return;
     const host=profileHost(),wrong=!host||host.dataset.entityId!==id||host.dataset.e360Variant!=='HISTORY_INTELLIGENCE_ATLAS_V1',hydrated=host&&window.__ATLAS_ENTITY360_EXECUTIVE_STATE__?.hydrated===true&&String(window.__ATLAS_ENTITY360_EXECUTIVE_STATE__?.entityId||'')===id;
-    if(id!==lastId||wrong||!hydrated){const hit=CACHE.get(id);if(hit&&Date.now()-hit.loadedAt<CACHE_TTL){mount(id,hit.entity||metaFor(id),hit);decorate();hideLoader(id);lastId=id;return;}if(!activeJob||id!==lastId)void start(id,{reason});}
+    if(id!==lastId||wrong||!hydrated){const hit=CACHE.get(id);if(hit&&Date.now()-hit.loadedAt<CACHE_TTL){mount(id,hit.entity||metaFor(id),hit);decorate();hideLoader(id);lastId=id;return;}if(!activeJob||activeJobId!==id)void start(id,{reason});}
   }
   function wrapEntry(){
     const entry=window.__ATLAS_ENTITY_ENTRY__;if(!entry||typeof entry.open!=='function'||entry.open.__atlasE360Resilience0964)return false;
@@ -174,8 +174,8 @@
   }
   function install(){
     ensureStyle();wrapEntry();reconcile('install');const app=document.querySelector('#app')||document.body;
-    if(!observer){let queued=false;observer=new MutationObserver(()=>{if(queued)return;queued=true;setTimeout(()=>{queued=false;wrapEntry();reconcile('mutation');},120);});observer.observe(app,{childList:true,subtree:true,characterData:false});}
-    if(!poll)poll=setInterval(()=>{wrapEntry();reconcile('poll');},750);
+    if(!observer){let queued=false;observer=new MutationObserver(()=>{if(queued||!inEntities())return;queued=true;setTimeout(()=>{queued=false;wrapEntry();reconcile('mutation');},220);});observer.observe(app,{childList:true,subtree:true,characterData:false});}
+    if(!poll)poll=setInterval(()=>{if(!inEntities())return;wrapEntry();reconcile('poll');},2500);
   }
 
   const API={build:BUILD,start,reconcile,clear:()=>CACHE.clear(),get activeEntity(){return lastId;},get activeJob(){return activeJob;},get loadingEntity(){return loadingId;}};
