@@ -54,7 +54,8 @@ try{
   report.finishedAt=new Date().toISOString();
   fs.writeFileSync('e2e-atlas-runtime-smoke.json',JSON.stringify(report,null,2));
   const failed=report.routes.filter(r=>r.outcome!=='ok'||r.newPageErrors.length);
-  if(failed.length)throw new Error(`runtime smoke failures: ${failed.map(r=>r.view).join(', ')}`);
+  console.log(JSON.stringify({schema:report.schema,discoveredViews:report.discoveredViews,routes:report.routes,pageErrors:report.pageErrors,consoleErrors:report.consoleErrors},null,2));
+  if(failed.length)throw new Error(`runtime smoke failures: ${failed.map(r=>`${r.view}:${r.detail}`).join(' | ')}`);
 }finally{
   if(!fs.existsSync('e2e-atlas-runtime-smoke.json')){
     report.finishedAt=new Date().toISOString();
