@@ -11,6 +11,8 @@ on:
       - 'tools/build_atlas_v2_primary.py'
       - 'tools/e2e_atlas_runtime_smoke.mjs'
       - 'tools/serve_atlas_v2_e2e.mjs'
+      - 'tools/test_atlas_v2_data_client.js'
+      - 'tools/test_atlas_v2_session.js'
       - 'supabase/functions/atlas-v2-read/**'
       - 'supabase/functions/atlas-v2-session-exchange/**'
       - 'supabase/core-functions/atlas-v2-e2e-auth/**'
@@ -61,11 +63,19 @@ jobs:
             src/v2/watch-adapter.js \
             src/v2/watch-surface.js \
             tools/e2e_atlas_runtime_smoke.mjs \
-            tools/serve_atlas_v2_e2e.mjs; do
+            tools/serve_atlas_v2_e2e.mjs \
+            tools/test_atlas_v2_data_client.js \
+            tools/test_atlas_v2_session.js; do
             node --check "$f"
           done
           python3 -m py_compile tools/build_atlas_v2_primary.py
           git diff --check
+
+      - name: Run governed data and federation unit smokes
+        run: |
+          set -euo pipefail
+          node tools/test_atlas_v2_data_client.js
+          node tools/test_atlas_v2_session.js
 
       - name: Validate release, auth and federation invariants
         shell: bash
