@@ -161,7 +161,7 @@ The integration artifact makes the analytics-first v2 shell the only runtime aut
 5. Universos: SII, UAF/SO, OSFL, RES and Sanciones as population lenses. **Complete in branch.**
 6. Territorio: governed contextual geographic analysis. **Complete in branch.**
 7. Vigilancia: snapshot-based signals/change/source-health surface. **Complete in branch.**
-8. Integration cut: autonomous authentication, v2 primary build authority and explicit non-competing legacy rollback. **Complete in branch; pending launch hardening and merge.**
+8. Integration cut: autonomous authentication, v2 primary build authority and explicit non-competing legacy rollback. **Complete in branch; production remains unchanged until launch-hardening gates pass and the PR is merged.**
 9. Launch hardening: authenticated browser E2E, regression, observability, performance, error handling, responsive behavior and controlled production cutover.
 10. Optional continuity/outcome objects may be added contextually after launch gates, without becoming mandatory workflow.
 
