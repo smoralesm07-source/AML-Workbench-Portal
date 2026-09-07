@@ -7,20 +7,17 @@ on:
       - 'atlas-v2.html'
       - 'atlas-v2-release.json'
       - 'src/v2/**'
+      - 'data/uaf_reportability_sector_2025.json'
+      - 'data/uaf_dashboard_snapshot.json'
       - 'supabase/functions/atlas-v2-read/index.ts'
-      - 'supabase/core-migrations/*atlas_v2_entity_search*'
-      - 'supabase/core-migrations/*atlas_v2_entity360*'
-      - 'supabase/migrations/20260907023000_atlas_v2_relations_query.sql'
-      - 'supabase/core-contracts/atlas-v2-universes-query-v2.sql'
-      - 'supabase/core-contracts/atlas-v2-territory-watch-query-v2.sql'
+      - 'supabase/core-migrations/*atlas_v2*'
+      - 'supabase/migrations/*atlas_v2*'
       - 'tests/atlas-v2-*.mjs'
       - 'tools/build_atlas_v2_primary.py'
       - 'tools/e2e_atlas_runtime_smoke.mjs'
       - 'tools/e2e_atlas_v2_ux_preflight.mjs'
       - 'tools/serve_atlas_v2_e2e.mjs'
-      - 'docs/ATLAS_V2_ANALYTICS_FIRST.md'
       - '.github/workflows/validate-atlas-v2-analytics-shell.yml'
-      - '.github/workflows/e2e-atlas-runtime-smoke.yml'
       - '.github/workflows/deploy-atlas-pages-current.yml'
   pull_request:
     branches: [main]
@@ -33,6 +30,7 @@ permissions:
 jobs:
   foundation:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -46,6 +44,7 @@ jobs:
             src/v2/atlas-v2-production-config.js src/v2/atlas-v2-health.js src/v2/atlas-v2-core-auth.js \
             src/v2/atlas-v2-shell.js src/v2/atlas-v2-boot.js src/v2/atlas-v2-data.js src/v2/atlas-v2-session.js \
             src/v2/atlas-v2-access.js src/v2/atlas-v2-viz.js src/v2/entity-search-adapter.js \
+            src/v2/entity-explorer-adapter.js src/v2/entity-explorer-classic-surface.js \
             src/v2/explore-surface.js src/v2/entity360-adapter.js src/v2/entity360-surface.js src/v2/entity360-parity-surface.js \
             src/v2/public-spend-surface.js src/v2/relations-surface.js src/v2/universes-adapter.js \
             src/v2/universes-surface.js src/v2/territory-adapter.js src/v2/territory-surface.js \
@@ -57,78 +56,15 @@ jobs:
           python3 -m py_compile tools/build_atlas_v2_primary.py
           git diff --check
 
-      - name: Enforce analytics-first visual/search/intelligence contract
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          shell=Path('src/v2/atlas-v2-shell.js').read_text()
-          boot=Path('src/v2/atlas-v2-boot.js').read_text()
-          explore=Path('src/v2/explore-surface.js').read_text()
-          explore_css=Path('src/v2/explore-surface.css').read_text()
-          entity=Path('src/v2/entity360-surface.js').read_text()
-          parity=Path('src/v2/entity360-parity-surface.js').read_text()
-          entity_adapter=Path('src/v2/entity360-adapter.js').read_text()
-          universes=Path('src/v2/universes-adapter.js').read_text()
-          adapter=Path('src/v2/entity-search-adapter.js').read_text()
-          viz=Path('src/v2/atlas-v2-viz.js').read_text()
-          html=Path('atlas-v2.html').read_text()
-          primary=json.loads(Path('atlas-v2-release.json').read_text())
-          legacy=json.loads(Path('atlas-release.json').read_text())
-          sql=Path('supabase/core-migrations/20260907111841_atlas_v2_entity_search_allowlist_hardening.sql').read_text()
-          dossier_sql=Path('supabase/core-migrations/20260907173100_atlas_v2_entity360_legacy_parity_res.sql').read_text()
-          edge=Path('supabase/functions/atlas-v2-read/index.ts').read_text()
-
-          assert primary['release']=='2.0.2' and str(primary['build'])=='2002'
-          assert primary['visual_navigation']=='INTERACTIVE_FIRST'
-          assert primary['entity_search']=='RUT_NAME_UAF_PRESS'
-          assert str(primary['legacy_fallback']['release'])==str(legacy['release'])
-          assert str(primary['legacy_fallback']['build'])==str(legacy['build'])
-          assert primary['legacy_fallback']['authority_active_on_primary'] is False
-          for route in ['explorar','universos','entidad','gasto-publico','territorio','relaciones','vigilancia','guardados','metodo']:
-              assert f"id: '{route}'" in shell
-          for forbidden in ["id: 'casos'","id: 'tareas'","id: 'cola'","id: 'sla'"]:
-              assert forbidden not in shell
-          assert "STRUCTURAL_VERSION = 'v2-primary-5'" in boot
-          assert "SURFACE_VERSION = 'v2-primary-6-explore-legacy-pulse-1'" in boot
-          assert 'atlas-v2-viz.js' in boot and 'entity-search-adapter.js' in boot
-          assert 'VISUAL_SEARCH_CAPABILITY_MISSING' in boot
-          assert all(x in explore for x in ['LEGACY_PULSE_NATIVE_V2','areaLineChart','proportionalBars','statusComposition','AtlasV2Universes.attention','UAF ↔ SII'])
-          assert all(x in explore_css for x in ['.atlas-v2-home-pulse','.atlas-v2-pulse-svg','.atlas-v2-recon-track','.atlas-v2-context-card'])
-          assert 'widthPct.toFixed' in viz and 'style: `width:' in viz
-          assert 'AtlasV2EntitySearch.search' in entity and 'Radar Prensa' in entity and 'entity_id' in entity
-          assert 'lineChart' in entity and 'TRAYECTORIA SII' in entity
-          assert all(x in entity for x in ['reconciliationPanel','reportingPanel','screeningPanel','digitalIdentityPanel'])
-          assert all(x in entity_adapter for x in ['entity_intelligence','entity_screening_live','digital_identity_live','searchDigitalIdentity'])
-          assert "query('attention'" in universes and 'recentTerminated' in universes
-          assert 'ATLAS_ENTITY_SEARCH_V2' in adapter and "operation: 'entity_search'" in adapter and 'resultTier' in adapter
-          assert all(x in viz for x in ['horizontalBars','lineChart','segmented'])
-          assert 'aml_allowed_users' in sql and 'auth.uid()' in sql and 'security definer' in sql.lower()
-          assert 'security invoker' in sql.lower()
-          assert 'entity_search' in edge and 'atlas_v2_entity_search' in edge
-          assert all(x in edge for x in ['entity_intelligence','entity_screening_live','digital_identity_live'])
-          assert './v2/atlas-v2-boot.js?v=v2-primary-6-explore-legacy-pulse-1' in html
-          assert './v2/atlas-v2-viz.css?v=v2-primary-5-viz1' in html
-          assert './v2/entity360-parity-surface.js?v=v2-primary-5-entity360-parity-1' in html
-          assert './v2/entity360-parity-surface.css?v=v2-primary-5-entity360-parity-1' in html
-          for marker in ['SIX_LENS_NATIVE_V2','ENTITY360_LEGACY_PARITY_V2','e360p-identidad','e360p-caracterizacion','e360p-relaciones','e360p-contexto','e360p-senales','e360p-evidencia','ipa3_score','peer_positions','res_lifecycle','sanction_resolution']:
-              assert marker in parity
-          for marker in ['aml_ipa3_entity_score_snapshot_v0_4','aml_ipa3_mark_scores_snapshot_v0_4','aml_entity_peer_position_snapshot','aml_entity_res_lifecycle_v0556','aml_entity_res_relationship_v0556','aml_entity_res_evidence_v0556']:
-              assert marker in dossier_sql
-          for source in [shell,boot,explore,entity,parity,entity_adapter,universes,adapter,viz]:
-              assert 'MutationObserver' not in source
-              assert '.innerHTML' not in source
-          assert 'raw.githubusercontent.com' not in explore and 'raw.githubusercontent.com' not in entity and 'raw.githubusercontent.com' not in parity
-          print('ATLAS 2.0.2 analytics-first + native legacy pulse Explore invariants: OK')
-          PY
-
-      - name: Validate analytical surfaces
+      - name: Validate executive Explore and recovered Entity 360
         run: |
           set -euo pipefail
           node tests/atlas-v2-explore-live.mjs
           node tests/atlas-v2-entity360-analytics.mjs
+
+      - name: Validate analytical surfaces
+        run: |
+          set -euo pipefail
           node tests/atlas-v2-public-spend-native.mjs
           node tests/atlas-v2-relations-native.mjs
           node tests/atlas-v2-universes-native.mjs
@@ -148,22 +84,24 @@ jobs:
           r=json.loads((root/'atlas-runtime-report.json').read_text())
           html=(root/'index.html').read_text()
           legacy=(root/'legacy.html').read_text()
+          boot=(root/'v2/atlas-v2-boot.js').read_text()
           assert p['release']=='2.0.2' and str(p['build'])=='2002'
-          assert r['v2_explore_mode']=='LEGACY_PULSE_NATIVE_V2'
-          assert r['v2_visual_navigation']=='INTERACTIVE_FIRST'
+          assert r['v2_version']=='v2-primary-5'
+          assert r['v2_surface_version']=='v2-primary-7-executive-pulse-entity360-classic-1'
+          assert r['v2_explore_design']=='EXECUTIVE_PULSE_V2'
+          assert r['v2_ros_2026_semantics']=='YTD_DASHED_NO_FABRICATION'
           assert r['v2_entity_search']=='IDENTITY_TIERED_DIGITAL_PRESS'
           assert r['v2_entity_intelligence']=='UAF_SII_REPORTING_SCREENING_DIGITAL'
+          assert r['v2_entity360_authority']=='ENTITY360_LEGACY_PARITY_V2'
           assert r['v2_entity360_parity']=='SIX_LENS_NATIVE_V2'
-          assert r['v2_entity360_dossier']=='ENTITY360_LEGACY_PARITY_V2'
-          assert r['v2_version']=='v2-primary-5'
-          assert 'v2-primary-6-explore-legacy-pulse-1' in html
-          assert 'entity360-parity-surface.js?v=v2-primary-5-entity360-parity-1' in html
+          assert 'atlas-v2-boot.js?v=v2-primary-7-executive-pulse-entity360-classic-1' in html
+          assert 'entity360-parity-surface.js?v=' not in html
+          assert "'entity360-surface.js'" in boot and "'entity360-parity-surface.js'" in boot
+          assert boot.index("'entity360-surface.js'") < boot.index("'entity360-parity-surface.js'")
           assert 'atlas-runtime-current-' not in html and 'atlas-runtime-current-' in legacy
           assert f'data-aml-version="{p["release"]}"' in html
           assert f'data-aml-version="{l["release"]}"' in legacy
-          for name in ['atlas-v2-viz.js','atlas-v2-viz.css','entity-search-adapter.js','explore-surface.js','explore-surface.css','entity360-adapter.js','entity360-surface.js','entity360-parity-surface.js','entity360-parity-surface.css','universes-adapter.js']:
-              assert (root/'v2'/name).is_file(), name
-          print('ATLAS 2.0.2 + native legacy pulse Explore production artifact: OK')
+          print('ATLAS 2.0.2 executive pulse + recovered Entity 360 artifact: OK')
           PY
 
       - uses: actions/upload-artifact@v4

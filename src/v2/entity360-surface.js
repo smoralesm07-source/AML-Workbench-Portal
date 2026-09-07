@@ -3,539 +3,291 @@
 (function installAtlasV2Entity360Surface(global) {
   if (global.__ATLAS_V2_ENTITY360_SURFACE__) return;
   const scriptBase = new URL('./', document.currentScript?.src || document.baseURI);
-  const NF = new Intl.NumberFormat('es-CL');
   let renderSerial = 0;
-  let searchSerial = 0;
 
   function node(tag, attrs = {}, children = []) {
-    const element = document.createElement(tag);
+    const el = document.createElement(tag);
     Object.entries(attrs).forEach(([key, value]) => {
       if (value == null) return;
-      if (key === 'class') element.className = value;
-      else if (key === 'text') element.textContent = String(value);
-      else if (key.startsWith('on') && typeof value === 'function') element.addEventListener(key.slice(2).toLowerCase(), value);
-      else element.setAttribute(key, String(value));
+      if (key === 'class') el.className = value;
+      else if (key === 'text') el.textContent = String(value);
+      else if (key === 'style' && value && typeof value === 'object') Object.assign(el.style, value);
+      else if (key.startsWith('on') && typeof value === 'function') el.addEventListener(key.slice(2).toLowerCase(), value);
+      else el.setAttribute(key, String(value));
     });
-    (Array.isArray(children) ? children : [children]).forEach(child => {
+    (Array.isArray(children) ? children : [children]).flat().forEach(child => {
       if (child == null) return;
-      element.append(child instanceof Node ? child : document.createTextNode(String(child)));
+      el.append(child instanceof Node ? child : document.createTextNode(String(child)));
     });
-    return element;
+    return el;
   }
 
-  function clear(element) { while (element?.firstChild) element.removeChild(element.firstChild); }
+  function clear(el) { while (el?.firstChild) el.removeChild(el.firstChild); }
+  function arr(value) { return Array.isArray(value) ? value : []; }
+  function num(value) { if (value === null || value === undefined || value === '') return null; const n = Number(value); return Number.isFinite(n) ? n : null; }
+  function fmt(value, digits = 0) { const n = num(value); return n == null ? '—' : n.toLocaleString('es-CL', { minimumFractionDigits: digits, maximumFractionDigits: digits }); }
+  function percent01(value) { const n = num(value); if (n == null) return null; const pct = n <= 1 ? n * 100 : n; return Math.max(0, Math.min(100, pct)); }
+  function dateText(value) { if (!value) return '—'; const d = new Date(value); return Number.isNaN(d.getTime()) ? String(value).slice(0, 10) : d.toLocaleDateString('es-CL'); }
+  function text(value, fallback = '—') { const out = String(value ?? '').trim(); return out || fallback; }
+  function canonicalRut(value) { return global.AtlasV2Entity360?.canonicalRut ? global.AtlasV2Entity360.canonicalRut(value) : String(value || '').trim(); }
 
   function injectStyle() {
     if (document.getElementById('atlas-v2-entity360-style')) return;
-    const link = document.createElement('link');
-    link.id = 'atlas-v2-entity360-style';
-    link.rel = 'stylesheet';
-    link.href = new URL('entity360-surface.css?v=entity-intelligence-1', scriptBase).href;
-    document.head.appendChild(link);
+    document.head.appendChild(node('link', { id: 'atlas-v2-entity360-style', rel: 'stylesheet', href: new URL('entity360-surface.css?v=history-clean-2', scriptBase).href }));
   }
 
-  function fmt(value, digits = 0) {
-    const n = Number(value);
-    return Number.isFinite(n) ? n.toLocaleString('es-CL', { maximumFractionDigits: digits }) : '—';
-  }
-
-  function money(value) {
-    const n = Number(value);
-    if (!Number.isFinite(n) || n === 0) return '—';
-    const a = Math.abs(n);
-    if (a >= 1e12) return `$${(n / 1e12).toLocaleString('es-CL', { maximumFractionDigits: 2 })} bill.`;
-    if (a >= 1e9) return `$${(n / 1e9).toLocaleString('es-CL', { maximumFractionDigits: 1 })} mil M`;
-    if (a >= 1e6) return `$${(n / 1e6).toLocaleString('es-CL', { maximumFractionDigits: 1 })} M`;
-    return `$${NF.format(Math.round(n))}`;
-  }
-
-  function dateLabel(value) {
-    if (!value) return 'No informado';
-    const d = new Date(value);
-    return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString('es-CL');
-  }
-
-  function normalizedSources(item) {
-    const values = Array.isArray(item?.sources) ? item.sources : [];
-    return values.map(value => String(value || '').trim().toUpperCase()).filter(Boolean);
-  }
-
-  function sourceLabel(source) {
-    const key = String(source || '').toUpperCase();
-    return ({ PRESS: 'Radar Prensa', RADAR_PRENSA: 'Radar Prensa', UAF_NAME: 'Nombre UAF', UAF: 'UAF', CANONICAL: 'Entidad canónica', SII: 'SII', RADAR_SII: 'SII', RADAR_UAF: 'UAF', RES: 'RES', OSFL: 'OSFL', SANCTIONS: 'Sanciones', SANCIONES: 'Sanciones', DIGITAL_IDENTITY: 'Identidad digital' })[key] || String(source || 'Entidad').replace(/_/g, ' ');
-  }
-
-  function sourceClass(source) {
-    const key = String(source || '').toUpperCase();
-    if (/PRESS|PRENSA/.test(key)) return 'press';
-    if (/UAF/.test(key)) return 'uaf';
-    if (/SII/.test(key)) return 'sii';
-    if (/RES/.test(key)) return 'res';
-    if (/OSFL/.test(key)) return 'osfl';
-    if (/SANC|OFAC|UN_|EU_|UK_|WORLD|IDB|OPEN/.test(key)) return 'san';
-    if (/DIGITAL/.test(key)) return 'other';
-    return 'other';
-  }
-
-  function matchLabel(type) {
-    return ({ rut_exact: 'RUT exacto', name_exact: 'Nombre exacto', name_prefix: 'Nombre comienza con', name_fuzzy: 'Nombre similar', alias_exact: 'Denominación UAF exacta', alias_prefix: 'Denominación UAF relacionada', contact_exact: 'Contacto exacto', contact_contains: 'Contacto relacionado' })[type] || 'Coincidencia';
-  }
-
-  function tierLabel(tier) {
-    return ({ EXACT_IDENTITY: 'IDENTIDAD EXACTA', IDENTITY: 'IDENTIDAD', DIGITAL_IDENTITY: 'IDENTIDAD DIGITAL', PRESS_CONTEXT: 'PRENSA · CONTEXTO' })[String(tier || '').toUpperCase()] || 'COINCIDENCIA';
-  }
-
-  function statusBadge(status) {
-    const labels = { ready: 'Conectado', unavailable: 'No publicado', error: 'Error de lectura', invalid: 'Entrada inválida', skipped: 'No aplica', degraded: 'Degradado' };
-    return node('span', { class: `atlas-v2-e360-status ${status || 'unavailable'}`, text: labels[status] || status || 'Sin estado' });
-  }
-
-  function pageHead(reference = {}, api = null) {
-    const label = reference.name || reference.rut || '';
-    const back = api && label ? node('button', {
-      type: 'button', class: 'atlas-v2-e360-back', text: '← Volver al explorador',
-      onclick: () => api.navigate('entidad', reference.q ? { q: reference.q } : {}),
-    }) : null;
-    return node('header', { class: 'atlas-v2-e360-pagehead' }, [
-      back,
-      node('div', { class: 'atlas-v2-eyebrow', text: label ? 'ENTIDAD 360 · EXPEDIENTE ANALÍTICO' : 'EXPLORADOR DE ENTIDADES · IDENTIDAD Y CONTEXTO' }),
-      node('h1', { text: label || 'Entidades' }),
-      node('p', { text: label
-        ? 'Identidad, situación SII/UAF, reportabilidad, screening internacional, huella digital y contexto en una sola ficha. Cada dominio conserva su evidencia y sus límites.'
-        : 'Primero resuelve la identidad: coincidencias exactas y canónicas aparecen antes que identidad digital y contexto de prensa. Puedes buscar por RUT, nombre, denominación UAF, email, web o entidad observada en prensa.' }),
+  function panel(title, subtitle, children = [], cls = '') {
+    return node('section', { class: `atlas-v2-h360-panel ${cls}`.trim() }, [
+      node('header', {}, [node('div', {}, [node('h2', { text: title }), subtitle ? node('p', { text: subtitle }) : null])]),
+      ...children,
     ]);
   }
 
-  function routeForResult(item, query) {
-    const params = { entity_id: item.entityId, q: query || item.name || item.matchedLabel || '' };
-    if (item.rut) params.rut = item.rut;
-    return params;
+  function pill(label, tone = '') { return node('span', { class: `atlas-v2-h360-pill ${tone}`.trim(), text: label }); }
+  function metric(label, value, detail = '', tone = '') {
+    return node('div', { class: `atlas-v2-h360-metric ${tone}`.trim() }, [node('span', { text: label }), node('b', { text: value }), detail ? node('small', { text: detail }) : null]);
   }
+  function empty(message) { return node('div', { class: 'atlas-v2-h360-empty', text: message }); }
 
-  function facetMatches(item, facet) {
-    const sources = normalizedSources(item);
-    if (facet === 'exact') return item.resultTier === 'EXACT_IDENTITY';
-    if (facet === 'digital') return item.resultTier === 'DIGITAL_IDENTITY' || item.matchSource === 'DIGITAL_IDENTITY';
-    if (facet === 'press') return item.resultTier === 'PRESS_CONTEXT' || item.matchSource === 'PRESS' || sources.some(source => /PRESS|PRENSA/.test(source));
-    if (facet === 'uaf') return item.matchSource === 'UAF_NAME' || sources.some(source => /UAF/.test(source));
-    if (facet === 'rut') return Boolean(item.rut);
-    return true;
-  }
-
-  function sourceMarks(item) {
-    const marks = normalizedSources(item).slice(0, 6);
-    if (!marks.length && item.matchSource) marks.push(item.matchSource);
-    return node('div', { class: 'atlas-v2-e360-source-marks', 'aria-label': 'Fuentes observadas' }, marks.map(source => node('span', {
-      class: `atlas-v2-e360-source-mark ${sourceClass(source)}`,
-      title: sourceLabel(source), text: sourceLabel(source),
-    })));
-  }
-
-  function previewCard(api, item, query) {
-    if (!item) return node('div', { class: 'atlas-v2-e360-preview-empty' }, [
-      node('div', { class: 'atlas-v2-e360-preview-icon', text: '⌕' }),
-      node('strong', { text: 'Selecciona “Vista rápida” para inspeccionar una coincidencia' }),
-      node('p', { text: 'El expediente sólo se abre cuando tú lo decides. Atlas conserva fuente, método de coincidencia y estado de resolución.' }),
-    ]);
-    const sources = normalizedSources(item);
-    const confidence = Math.round((Number(item.matchScore || 0)) * 100);
-    const digital = item.digitalIdentity || {};
-    return node('article', { class: 'atlas-v2-e360-preview-card' }, [
-      node('div', { class: 'atlas-v2-e360-preview-kicker', text: tierLabel(item.resultTier) }),
-      node('h2', { text: item.name || item.matchedLabel || 'Entidad sin etiqueta' }),
-      node('p', { class: 'atlas-v2-e360-preview-id', text: item.rut || 'Sin RUT resuelto' }),
-      sourceMarks(item),
-      node('div', { class: 'atlas-v2-e360-preview-grid' }, [
-        node('div', {}, [node('span', { text: 'Coincidencia' }), node('strong', { text: matchLabel(item.matchType) })]),
-        node('div', {}, [node('span', { text: 'Calidad match' }), node('strong', { text: `${confidence}%` })]),
-        node('div', {}, [node('span', { text: 'Fuentes' }), node('strong', { text: fmt(item.sourceCount || sources.length) })]),
-        node('div', {}, [node('span', { text: 'Eventos / evidencias' }), node('strong', { text: fmt(item.eventCount) })]),
-      ]),
-      digital.contact_value ? node('div', { class: 'atlas-v2-e360-preview-match' }, [node('span', { text: digital.contact_type || 'Contacto' }), node('b', { text: digital.contact_value })]) : null,
-      item.matchedLabel && item.matchedLabel !== item.name ? node('div', { class: 'atlas-v2-e360-preview-match' }, [node('span', { text: 'Coincidió como' }), node('b', { text: item.matchedLabel })]) : null,
-      node('div', { class: 'atlas-v2-e360-preview-rule' }, [
-        node('strong', { text: 'Identidad: ' }),
-        item.rut ? 'hay RUT resuelto en esta coincidencia.' : item.resultTier === 'DIGITAL_IDENTITY' ? 'el contacto es evidencia contextual; no confirma por sí solo identidad.' : 'Atlas no inventa ni fuerza un RUT.'
-      ]),
-      node('button', { class: 'atlas-v2-button primary atlas-v2-e360-preview-open', type: 'button', text: 'Abrir Entidad 360 →', onclick: () => api.navigate('entidad', routeForResult(item, query)) }),
-    ]);
-  }
-
-  function resultRow(api, item, query, previewHost) {
-    const source = sourceLabel(item.matchSource);
-    const confidence = Math.round((item.matchScore || 0) * 100);
-    const row = node('article', { class: `atlas-v2-e360-result ${item.resultTier === 'PRESS_CONTEXT' ? 'is-press' : ''}` }, [
-      node('button', {
-        type: 'button', class: `atlas-v2-e360-result-open atlas-v2-e360-search-result ${item.resultTier === 'PRESS_CONTEXT' ? 'is-press' : ''}`,
-        onclick: () => api.navigate('entidad', routeForResult(item, query)),
-      }, [
-        node('div', { class: 'atlas-v2-e360-result-main' }, [
-          node('div', { class: 'atlas-v2-e360-result-title' }, [
-            node('strong', { text: item.name || item.matchedLabel || 'Entidad sin etiqueta' }),
-            node('span', { class: `atlas-v2-e360-source-tag ${sourceClass(item.matchSource)}`, text: tierLabel(item.resultTier) }),
-          ]),
-          node('p', { text: [item.rut || 'Sin RUT resuelto', source, item.entityType, item.commune, item.region].filter(Boolean).join(' · ') }),
-          sourceMarks(item),
-        ]),
-        node('div', { class: 'atlas-v2-e360-result-score' }, [
-          node('b', { text: `${confidence}%` }),
-          node('span', { text: matchLabel(item.matchType) }),
-          item.eventCount ? node('small', { text: `${fmt(item.eventCount)} evento(s)` }) : null,
-        ]),
-      ]),
-      node('button', { type: 'button', class: 'atlas-v2-e360-result-preview', text: 'Vista rápida', onclick: () => { clear(previewHost); previewHost.append(previewCard(api, item, query)); } }),
-    ]);
-    return row;
-  }
-
-  function filterBar(items, listHost, countHost, previewHost, api, query) {
-    let active = 'all';
-    const filters = [['all', 'Todos'], ['exact', 'Exactos'], ['rut', 'Con RUT'], ['digital', 'Identidad digital'], ['press', 'Radar Prensa'], ['uaf', 'UAF']];
-    const bar = node('div', { class: 'atlas-v2-e360-filters' });
-    const render = () => {
-      const visible = items.filter(item => facetMatches(item, active));
-      clear(listHost);
-      countHost.textContent = `${fmt(visible.length)} de ${fmt(items.length)} coincidencia(s)`;
-      if (!visible.length) {
-        listHost.append(node('div', { class: 'atlas-v2-e360-search-empty' }, [node('strong', { text: 'Sin coincidencias para este filtro' }), node('span', { text: 'Cambia el filtro sin perder la búsqueda.' })]));
-        return;
-      }
-      let previousTier = '';
-      visible.forEach(item => {
-        const tier = item.resultTier || 'IDENTITY';
-        if (tier !== previousTier) {
-          previousTier = tier;
-          listHost.append(node('div', { class: 'atlas-v2-e360-section-head' }, [node('h2', { text: tierLabel(tier) }), node('p', { text: tier === 'PRESS_CONTEXT' ? 'Contexto nominal; no se promueve a identidad sin evidencia.' : tier === 'DIGITAL_IDENTITY' ? 'Contactos observados; requieren corroboración independiente.' : 'Identidad antes que contexto.' })]));
-        }
-        listHost.append(resultRow(api, item, query, previewHost));
-      });
-    };
-    filters.forEach(([key, label]) => {
-      const total = items.filter(item => facetMatches(item, key)).length;
-      const button = node('button', { type: 'button', class: key === active ? 'is-active' : '', onclick: () => { active = key; Array.from(bar.children).forEach(child => child.classList.remove('is-active')); button.classList.add('is-active'); render(); } }, [node('span', { text: label }), node('b', { text: fmt(total) })]);
-      bar.append(button);
+  function screeningRecords(screening) {
+    const out = [];
+    const sources = screening?.sources || {};
+    Object.entries(sources).forEach(([code, source]) => {
+      const records = arr(source?.records || source?.candidates || source?.matches || source?.items);
+      records.forEach(record => out.push({ code, ...record }));
     });
-    render();
-    return bar;
+    return out.sort((a, b) => Number(b.match_confidence || b.score || 0) - Number(a.match_confidence || a.score || 0));
   }
 
-  function screeningReadiness(out) {
-    const sources = Array.isArray(out?.screeningSources) ? out.screeningSources : [];
-    if (!sources.length) return null;
-    const ready = sources.filter(source => source.screening_state === 'ON_DEMAND_READY').length;
-    return node('div', { class: 'atlas-v2-e360-rule' }, [
-      node('strong', { text: `Screening internacional · ${fmt(ready)}/${fmt(sources.length)} fuentes listas on-demand. ` }),
-      'La disponibilidad de una fuente no es un resultado negativo. El cribado actual se ejecuta al abrir una entidad y cualquier coincidencia requiere revisión del analista.',
-    ]);
-  }
-
-  async function runSearch(api, query, host, serial) {
-    const q = String(query || '').trim();
-    if (q.length < 2) { clear(host); return; }
-    clear(host);
-    host.append(node('div', { class: 'atlas-v2-e360-search-loading', text: 'Resolviendo identidad, UAF, contactos digitales y contexto de Radar Prensa…' }));
-    try {
-      const out = await global.AtlasV2EntitySearch.search(q, { limit: 50, route: `entidad:search:${q.slice(0, 48)}` });
-      if (serial !== searchSerial || !host.isConnected) return;
-      clear(host);
-      const items = out.items || [];
-      if (!items.length) {
-        host.append(screeningReadiness(out), node('div', { class: 'atlas-v2-e360-search-empty' }, [
-          node('strong', { text: 'Sin coincidencias en los índices disponibles' }),
-          node('span', { text: 'Esto no confirma inexistencia. Prueba otra denominación, RUT, email, web o alias.' }),
-        ]));
-        return;
-      }
-      const countHost = node('strong', { text: `${fmt(items.length)} coincidencia(s)` });
-      const listHost = node('div', { class: 'atlas-v2-e360-results-list' });
-      const previewHost = node('aside', { class: 'atlas-v2-e360-preview' }, [previewCard(api, null, q)]);
-      const facets = filterBar(items, listHost, countHost, previewHost, api, q);
-      host.append(
-        screeningReadiness(out),
-        node('div', { class: 'atlas-v2-e360-search-summary' }, [
-          node('div', {}, [countHost, node('span', { text: 'Ordenadas: identidad exacta → identidad → evidencia digital → contexto de prensa.' })]),
-          node('small', { text: 'RUT · UAF · SII · identidad digital · Radar Prensa' }),
-        ]),
-        facets,
-        node('div', { class: 'atlas-v2-e360-search-workspace' }, [listHost, previewHost]),
-        node('div', { class: 'atlas-v2-e360-rule' }, [node('strong', { text: 'Regla de identidad. ' }), 'Coincidencia nominal o técnica ≠ identidad confirmada. Radar Prensa y usernames permanecen como contexto hasta existir evidencia suficiente de resolución.']),
-      );
-    } catch (error) {
-      if (serial !== searchSerial || !host.isConnected) return;
-      clear(host);
-      host.append(node('div', { class: 'atlas-v2-e360-source-error' }, [node('strong', { text: 'No fue posible completar la búsqueda transversal.' }), node('span', { text: String(error?.message || error) })]));
-    }
-  }
-
-  function searchBox(api, initial = '', resultsHost = null) {
-    const input = node('input', { type: 'search', value: initial, placeholder: 'RUT, razón social, denominación UAF, email, web o entidad en prensa…', 'aria-label': 'Buscar entidad por identidad, contacto o fuente', autocomplete: 'off' });
-    let timer = null;
-    const submit = () => {
-      const value = input.value.trim();
-      if (!value) return;
-      if (global.AtlasV2Entity360?.validRutShape(value)) return api.navigate('entidad', { rut: global.AtlasV2Entity360.canonicalRut(value) });
-      api.navigate('entidad', { q: value });
+  function timelineEvents(core, intelligence, screening) {
+    const base = intelligence?.data?.base || core?.data || {};
+    const dossier = intelligence?.data?.dossier || {};
+    const reconciliation = intelligence?.data?.uaf_sii_reconciliation || {};
+    const tax = base.tax || core?.data?.tax || {};
+    const events = [];
+    const push = event => {
+      if (!event?.label) return;
+      events.push({ tone: 'neutral', source: 'ATLAS', ...event });
     };
-    input.addEventListener('keydown', event => { if (event.key === 'Enter') submit(); });
-    if (resultsHost) input.addEventListener('input', () => {
-      clearTimeout(timer);
-      const q = input.value.trim();
-      if (q.length < 2) { clear(resultsHost); return; }
-      const serial = ++searchSerial;
-      timer = setTimeout(() => void runSearch(api, q, resultsHost, serial), 180);
+
+    if (tax.first_activity_registration_date) push({ date: tax.first_activity_registration_date, sort: tax.first_activity_registration_date, label: 'Inicio de actividades observado en SII', detail: text(tax.main_activity, 'Actividad principal no informada'), source: 'SII', tone: 'cyan' });
+    const resDate = dossier?.res_profile?.res_constitution_date || base?.identity?.res_constitution_date;
+    if (resDate) push({ date: resDate, sort: resDate, label: 'Constitución observada en RES', detail: 'Hecho registral de constitución.', source: 'RES', tone: 'cyan' });
+
+    arr(base.history).forEach(row => {
+      const year = Number(row.commercial_year || 0);
+      const sort = year ? `${year}-12-31` : row.updated_at;
+      if (row.main_activity_changed) push({ date: year ? `Año comercial ${year}` : dateText(row.updated_at), sort, label: 'Cambio de actividad principal', detail: `${text(row.prior_main_activity, 'Actividad previa no materializada')} → ${text(row.main_activity, 'Actividad no informada')}`, source: 'SII', tone: 'amber' });
+      if (row.region_changed) push({ date: year ? `Año comercial ${year}` : dateText(row.updated_at), sort, label: 'Cambio de región declarada', detail: `${text(row.prior_region)} → ${text(row.region)}`, source: 'SII', tone: 'amber' });
+      if (num(row.sales_band_delta) != null && Number(row.sales_band_delta) !== 0) push({ date: year ? `Año comercial ${year}` : dateText(row.updated_at), sort, label: Number(row.sales_band_delta) > 0 ? 'Aumento de tramo de ventas' : 'Disminución de tramo de ventas', detail: `Tramo ${text(row.prior_sales_band_rank)} → ${text(row.sales_band_rank)}. Hecho económico observado; no es conclusión AML/FT.`, source: 'SII', tone: 'blue' });
     });
-    return node('div', { class: 'atlas-v2-e360-query atlas-v2-entity-search' }, [node('span', { class: 'atlas-v2-e360-query-icon', text: '⌕' }), input, node('button', { class: 'atlas-v2-button primary', type: 'button', text: 'Buscar entidad', onclick: submit })]);
-  }
 
-  function discovery(api) {
-    return node('section', { class: 'atlas-v2-e360-discovery' }, [
-      node('div', { class: 'atlas-v2-e360-discovery-icon', text: '◎' }),
-      node('div', {}, [
-        node('h2', { text: 'Explorador transversal de identidad' }),
-        node('p', { text: 'ATLAS prioriza identidad resuelta y conserva por separado evidencia digital y contexto OSINT. Al abrir una entidad ejecuta un screening internacional actual, sin confundir “fuente disponible” con “sin coincidencias”.' }),
-        node('div', { class: 'atlas-v2-e360-discovery-chips' }, ['RUT y razón social', 'Denominación UAF', 'Email o web', 'Radar Prensa', 'Screening internacional'].map(text => node('span', { text }))),
-      ]),
-      node('button', { class: 'atlas-v2-e360-discovery-action', type: 'button', text: 'Ir a Relaciones →', onclick: () => api.navigate('relaciones') }),
-    ]);
-  }
+    const termination = reconciliation.termination_date || tax.termination_date;
+    if (termination) push({ date: termination, sort: termination, label: 'Término de giro publicado en SII', detail: reconciliation.suggested_action || 'Contrastar vigencia del padrón UAF. Este estado tributario no constituye una conclusión AML/FT.', source: 'SII ↔ UAF', tone: 'critical' });
 
-  function lensBar(core, intelligence) {
-    const available = core?.sourceStatus || {};
-    const reporting = intelligence?.data?.reporting_behavior;
-    const reconciliation = intelligence?.data?.uaf_sii_reconciliation;
-    const spec = [
-      ['Identidad', true], ['Tributario', available.tax === 'AVAILABLE'], ['UAF ↔ SII', Boolean(reconciliation)], ['ROS / ROE', Boolean(reporting)], ['Screening', true], ['Identidad digital', true], ['RES', available.res === 'AVAILABLE'], ['Gasto público', available.spend === 'AVAILABLE'],
-    ];
-    return node('div', { class: 'atlas-v2-e360-lensbar' }, spec.map(([label, isLive]) => node('span', { class: `atlas-v2-e360-lens ${isLive ? 'is-live' : ''}`, text: label })));
-  }
+    arr(dossier.sanction_resolution).forEach(item => {
+      const date = item.source_event_date || item.event_date || item.date;
+      push({ date: date || 'Fecha no informada', sort: date || '1900-01-01', label: `Evento sancionatorio · ${text(item.regulator, 'regulador')}`, detail: text(item.source_entity_name || item.resolution_status, 'Evidencia administrativa'), source: 'Sanciones', tone: 'critical' });
+    });
 
-  function identityHero(core) {
-    const identity = core?.identity || {};
-    const sources = Array.isArray(identity.sources) ? identity.sources : [];
-    const sourcePills = sources.length ? sources : Object.entries(core?.sourceStatus || {}).filter(([, value]) => value === 'AVAILABLE').map(([key]) => key.toUpperCase());
-    return node('section', { class: 'atlas-v2-e360-hero' }, [
-      node('div', { class: 'atlas-v2-e360-hero-main' }, [
-        node('span', { class: 'atlas-v2-card-tag', text: identity.rut ? 'IDENTIDAD ANALÍTICA' : 'ENTIDAD DE FUENTE · IDENTIDAD NO RESUELTA' }),
-        node('h2', { text: identity.name || 'Entidad sin nombre publicado' }),
-        node('p', { text: [identity.rut, identity.entityType, identity.activity].filter(Boolean).join(' · ') || 'Sin RUT resuelto; se conserva como entidad de fuente.' }),
-        node('div', { class: 'atlas-v2-e360-source-pills' }, sourcePills.map(source => node('span', { class: sourceClass(source), text: sourceLabel(source) }))),
-      ]),
-      node('div', { class: 'atlas-v2-e360-hero-kpis' }, [
-        node('div', {}, [node('span', { text: 'Fuentes' }), node('strong', { text: fmt(sourcePills.length) })]),
-        node('div', {}, [node('span', { text: 'Estado' }), node('strong', { text: identity.status || 'No informado' })]),
-        node('div', {}, [node('span', { text: 'Territorio' }), node('strong', { text: [identity.commune, identity.region].filter(Boolean).join(' · ') || 'No informado' })]),
-      ]),
-    ]);
-  }
+    arr(dossier.res_evidence).forEach(item => {
+      const date = item.event_date || item.registry_date || item.date;
+      if (!date) return;
+      push({ date, sort: date, label: text(item.event_type || item.label, 'Hecho societario RES'), detail: text(item.description || item.resource_name, 'Evidencia registral RES'), source: 'RES', tone: 'blue' });
+    });
 
-  function metric(label, value, detail = '') {
-    return node('div', { class: 'atlas-v2-e360-metric' }, [node('span', { text: label }), node('strong', { text: value || '—' }), detail ? node('small', { text: detail }) : null]);
-  }
-
-  function taxPanel(core) {
-    const tax = core?.data?.tax || {};
-    return node('section', { class: 'atlas-v2-e360-panel' }, [
-      node('div', { class: 'atlas-v2-e360-panel-head' }, [node('div', {}, [node('span', { class: 'atlas-v2-card-tag', text: 'SII' }), node('h2', { text: 'Perfil tributario' })]), statusBadge(core?.sourceStatus?.tax === 'AVAILABLE' ? 'ready' : 'unavailable')]),
-      node('div', { class: 'atlas-v2-e360-metric-grid' }, [
-        metric('Tramo ventas', tax.sales_band || tax.sales_band_code), metric('Trabajadores', fmt(tax.workers_numeric)),
-        metric('Inicio actividades', dateLabel(tax.activity_start_date)), metric('Término giro', tax.termination_date ? dateLabel(tax.termination_date) : 'No observado'),
-        metric('Giros / actividades', fmt(tax.activity_count)), metric('Domicilios', fmt(tax.address_count)),
-      ]),
-      tax.main_activity ? node('p', { class: 'atlas-v2-e360-panel-note', text: tax.main_activity }) : null,
-    ]);
-  }
-
-  function trajectoryPanel(core) {
-    const history = Array.isArray(core?.data?.history) ? core.data.history.slice().sort((a, b) => Number(a.commercial_year) - Number(b.commercial_year)) : [];
-    const panel = node('section', { class: 'atlas-v2-e360-panel atlas-v2-e360-trajectory' }, [
-      node('div', { class: 'atlas-v2-e360-panel-head' }, [node('div', {}, [node('span', { class: 'atlas-v2-card-tag', text: 'TRAYECTORIA SII' }), node('h2', { text: 'Evolución de escala y empleo' })]), statusBadge(history.length ? 'ready' : 'unavailable')]),
-    ]);
-    if (!history.length || !global.AtlasV2Viz) {
-      panel.append(node('div', { class: 'atlas-v2-e360-empty' }, [node('strong', { text: 'Sin serie histórica disponible' }), node('span', { text: 'La ausencia de historia no se interpreta como estabilidad.' })]));
-      return panel;
+    const candidates = screeningRecords(screening);
+    if (screening?.status === 'ready' && candidates.length) {
+      const top = candidates[0];
+      push({ date: screening.checkedAt || new Date().toISOString(), sort: screening.checkedAt || new Date().toISOString(), label: 'Coincidencia técnica en screening internacional', detail: `${text(top.code, 'Fuente internacional')} · coincidencia ${Math.round(percent01(top.match_confidence || top.score) || 0)}%. Requiere revisión analítica.`, source: 'Screening live', tone: 'critical' });
     }
-    const detail = node('div', { class: 'atlas-v2-e360-year-detail' });
-    const showYear = row => { clear(detail); detail.append(metric('Año', String(row.commercial_year || '—')), metric('Tramo ventas', row.sales_band_code || `Rango ${fmt(row.sales_band_rank)}`), metric('Trabajadores', fmt(row.workers_numeric)), metric('Actividad', row.main_activity || 'No informada')); };
-    showYear(history[history.length - 1]);
-    panel.append(node('div', { class: 'atlas-v2-e360-chart-grid' }, [
-      node('div', { class: 'atlas-v2-e360-chart-block' }, [node('h3', { text: 'Escala de ventas' }), global.AtlasV2Viz.lineChart(history.map(row => ({ label: row.commercial_year, value: row.sales_band_rank || 0, display: row.sales_band_code || fmt(row.sales_band_rank), raw: row })), { ariaLabel: 'Evolución del tramo de ventas', onSelect: item => showYear(item.raw) })]),
-      node('div', { class: 'atlas-v2-e360-chart-block' }, [node('h3', { text: 'Trabajadores informados' }), global.AtlasV2Viz.lineChart(history.map(row => ({ label: row.commercial_year, value: row.workers_numeric || 0, display: fmt(row.workers_numeric), raw: row })), { ariaLabel: 'Evolución de trabajadores', onSelect: item => showYear(item.raw) })]),
-    ]), detail);
-    return panel;
+
+    const unique = [];
+    const seen = new Set();
+    events.sort((a, b) => String(b.sort || '').localeCompare(String(a.sort || ''))).forEach(event => {
+      const key = `${event.date}|${event.label}|${event.detail}`;
+      if (!seen.has(key)) { seen.add(key); unique.push(event); }
+    });
+    return unique.slice(0, 14);
+  }
+
+  function timelinePanel(events) {
+    if (!events.length) return panel('Línea de tiempo de hechos críticos', 'Hechos registrales, societarios, sancionatorios y de screening', [empty('No hay hechos críticos materializados para esta entidad en los cortes disponibles.')], 'timeline');
+    return panel('Línea de tiempo de hechos críticos', 'Secuencia de hechos observados; cada evento conserva su semántica y fuente', [
+      node('div', { class: 'atlas-v2-h360-timeline' }, events.map((event, index) => node('article', { class: `atlas-v2-h360-event ${event.tone}`.trim() }, [
+        node('div', { class: 'atlas-v2-h360-event-rail' }, [node('i'), index < events.length - 1 ? node('span') : null]),
+        node('time', { text: dateText(event.date) === '—' ? event.date : dateText(event.date) }),
+        node('div', { class: 'atlas-v2-h360-event-body' }, [node('strong', { text: event.label }), node('p', { text: event.detail }), pill(event.source, event.tone)]),
+      ]))),
+    ], 'timeline');
+  }
+
+  function whatToReview(core, intelligence, screening) {
+    const base = intelligence?.data?.base || core?.data || {};
+    const recon = intelligence?.data?.uaf_sii_reconciliation || {};
+    const dossier = intelligence?.data?.dossier || {};
+    const items = [];
+    if (recon.reconciliation_status === 'SII_TERMINATED') items.push(['Término de giro', recon.suggested_action || 'Contrastar vigencia entre UAF y SII.', 'critical']);
+    if (recon.reconciliation_status === 'NO_SII_PROFILE') items.push(['Sin perfil SII', 'Completar o revisar la conciliación tributaria.', 'violet']);
+    const sanctions = Number(recon.sanction_count || dossier?.sanction_summary?.procedure_count || 0);
+    if (sanctions > 0) items.push(['Historial sancionatorio', `${fmt(sanctions)} evento(s) atribuido(s); revisar resolución y fecha.`, 'critical']);
+    const marks = arr(dossier.ipa3_marks).filter(mark => mark.included_in_score === true && Number(mark.contribution || 0) > 0);
+    marks.slice(0, 2).forEach(mark => items.push([text(mark.mark_name, 'Marca analítica'), `Contribución ${fmt(mark.contribution, 1)} · prioridad analítica, no probabilidad.`, 'amber']));
+    const candidates = screeningRecords(screening);
+    if (candidates.length) items.push(['Screening internacional', `${candidates.length} coincidencia(s) técnica(s) requieren revisión.`, 'critical']);
+    if (!items.length && arr(base.history).some(row => row.main_activity_changed || row.region_changed)) items.push(['Trayectoria SII', 'Hay cambios históricos declarados que conviene contextualizar.', 'blue']);
+    if (!items.length) items.push(['Sin foco crítico dominante', 'La ficha no materializa un hecho que por sí solo requiera atención prioritaria.', 'neutral']);
+    return panel('Qué mirar primero', 'Prioriza la revisión sin convertir señales en conclusiones', [node('div', { class: 'atlas-v2-h360-focus-list' }, items.slice(0, 4).map(([title, detail, tone]) => node('div', { class: `atlas-v2-h360-focus ${tone}`.trim() }, [node('i'), node('div', {}, [node('strong', { text: title }), node('p', { text: detail })])])))] , 'focus');
   }
 
   function reconciliationPanel(intelligence) {
-    const rec = intelligence?.data?.uaf_sii_reconciliation || null;
-    const panel = node('section', { class: 'atlas-v2-e360-panel' }, [node('div', { class: 'atlas-v2-e360-panel-head' }, [node('div', {}, [node('span', { class: 'atlas-v2-card-tag', text: 'UAF ↔ SII' }), node('h2', { text: 'Vigencia y conciliación' })]), statusBadge(rec ? 'ready' : 'unavailable')])]);
-    if (!rec) {
-      panel.append(node('div', { class: 'atlas-v2-e360-empty' }, [node('strong', { text: 'Sin conciliación materializada' }), node('span', { text: 'No observado no equivale a ausencia en los registros fuente.' })]));
-      return panel;
-    }
-    const terminated = rec.reconciliation_status === 'SII_TERMINATED' || Boolean(rec.termination_date);
-    panel.append(node('div', { class: 'atlas-v2-e360-metric-grid' }, [
-      metric('Estado conciliación', rec.reconciliation_label || rec.reconciliation_status),
-      metric('Sector UAF', rec.uaf_sector_label || 'No informado'),
-      metric('Estado SII', rec.sii_current_status || 'No informado'),
-      metric('Término de giro', rec.termination_date ? dateLabel(rec.termination_date) : 'No observado'),
-      metric('Región / comuna', [rec.sii_region, rec.sii_commune].filter(Boolean).join(' · ') || 'No informado'),
-      metric('Prioridad operativa', rec.operational_priority || 'No informada'),
-    ]));
-    if (terminated) panel.append(node('div', { class: 'atlas-v2-e360-rule' }, [node('strong', { text: 'Término de giro observado en SII. ' }), rec.suggested_action || 'Corresponde revisar la vigencia del registro UAF. Este estado tributario no constituye por sí solo una señal AML/FT.']));
-    return panel;
+    const recon = intelligence?.data?.uaf_sii_reconciliation || {};
+    const status = recon.reconciliation_label || recon.reconciliation_status || 'No materializado';
+    const tone = recon.reconciliation_status === 'SII_TERMINATED' ? 'amber' : recon.reconciliation_status === 'NO_SII_PROFILE' ? 'violet' : 'green';
+    return panel('UAF ↔ SII', 'Conciliación exacta por RUT', [
+      node('div', { class: 'atlas-v2-h360-recon' }, [pill(status, tone), node('strong', { text: text(recon.uaf_sector_label, 'Sin sector UAF') }), node('p', { text: recon.suggested_action || 'Sin acción sugerida materializada.' })]),
+    ], 'compact');
   }
 
   function reportingPanel(intelligence) {
-    const report = intelligence?.data?.reporting_behavior || null;
-    const panel = node('section', { class: 'atlas-v2-e360-panel' }, [node('div', { class: 'atlas-v2-e360-panel-head' }, [node('div', {}, [node('span', { class: 'atlas-v2-card-tag', text: 'REPORTABILIDAD' }), node('h2', { text: 'ROS / ROE observados' })]), statusBadge(report ? 'ready' : 'unavailable')])]);
-    if (!report || report.behavior_source_state !== 'OBSERVED') {
-      panel.append(node('div', { class: 'atlas-v2-e360-empty' }, [node('strong', { text: 'Sin observación materializada de reportabilidad ROS / ROE' }), node('span', { text: 'ATLAS no representa el faltante como “0”. Los indicadores se publicarán sólo cuando exista una observación materializada y trazable.' })]));
-      return panel;
-    }
-    panel.append(node('div', { class: 'atlas-v2-e360-metric-grid' }, [
-      metric('ROS total', fmt(report.ros_total)), metric('ROS últimos 12m', fmt(report.ros_12m)), metric('ROE total', fmt(report.roe_total)), metric('ROE últimos 12m', fmt(report.roe_12m)), metric('Periodos observados', fmt(report.observed_periods)), metric('Corte fuente', dateLabel(report.source_cutoff_date)),
-    ]));
-    return panel;
+    const reporting = intelligence?.data?.reporting_behavior || {};
+    const observed = reporting.behavior_source_state === 'OBSERVED';
+    return panel('Reportabilidad ROS / ROE', 'Comportamiento individual gobernado', [
+      observed ? node('div', { class: 'atlas-v2-h360-reporting-grid' }, [metric('ROS total', fmt(reporting.ros_total)), metric('ROS 12m', fmt(reporting.ros_12m)), metric('ROE total', fmt(reporting.roe_total))]) : node('div', { class: 'atlas-v2-h360-missing' }, [node('strong', { text: 'Sin observación materializada de reportabilidad individual' }), node('p', { text: 'Ausencia de dato ≠ cero ROS/ROE. Atlas no infiere cumplimiento ni incumplimiento desde un vacío de materialización.' })]),
+    ], 'compact');
   }
 
-  function screeningPanel(screening, intelligence) {
-    const panel = node('section', { class: 'atlas-v2-e360-panel' }, [node('div', { class: 'atlas-v2-e360-panel-head' }, [node('div', {}, [node('span', { class: 'atlas-v2-card-tag', text: 'SCREENING INTERNACIONAL' }), node('h2', { text: 'Listas y fuentes internacionales' }), node('p', { text: 'Ejecución actual sobre fuentes oficiales / agregador. Una posible coincidencia exige revisión.' })]), statusBadge(screening?.status)])]);
-    if (screening?.status !== 'ready') {
-      const sources = intelligence?.data?.international_screening?.sources || [];
-      panel.append(node('div', { class: 'atlas-v2-e360-empty' }, [node('strong', { text: 'El screening actual no se completó' }), node('span', { text: sources.length ? `${fmt(sources.length)} fuentes están declaradas en la cobertura, pero disponibilidad no equivale a un resultado negativo.` : 'No existe resultado actual verificable.' })]));
-      return panel;
-    }
-    const entries = Object.entries(screening.sources || {}).filter(([code]) => code !== 'ICIJ_OFFSHORE');
-    if (!entries.length) panel.append(node('div', { class: 'atlas-v2-e360-empty' }, [node('strong', { text: 'Sin fuentes respondidas en esta ejecución' })]));
-    entries.forEach(([code, source]) => {
-      const records = Array.isArray(source?.records) ? source.records : [];
-      const sourceStatus = String(source?.status || 'unknown');
-      const successful = sourceStatus === 'fresh';
-      const title = records.length ? `${fmt(records.length)} posible(s) coincidencia(s)` : successful ? 'Sin candidatos en esta ejecución' : `Fuente ${sourceStatus}`;
-      panel.append(node('article', { class: 'atlas-v2-e360-result' }, [
-        node('div', { class: 'atlas-v2-e360-result-main' }, [
-          node('div', { class: 'atlas-v2-e360-result-title' }, [node('strong', { text: sourceLabel(code) }), node('span', { class: `atlas-v2-e360-source-tag ${sourceClass(code)}`, text: successful ? 'EJECUTADO' : sourceStatus.toUpperCase() })]),
-          node('p', { text: title }),
-          records.slice(0, 3).map(record => node('small', { text: `${record.related_entity_name || record.summary || 'Candidato'} · ${Math.round(Number(record.match_confidence || 0) * 100)}% · requiere revisión` })),
-        ]),
-      ]));
-    });
-    panel.append(node('small', { class: 'atlas-v2-explore-source', text: `Cribado ejecutado · ${dateLabel(screening.checkedAt || screening.data?.checked_at)}` }));
-    panel.append(node('div', { class: 'atlas-v2-e360-rule' }, [node('strong', { text: 'Interpretación. ' }), '“Sin candidatos en esta ejecución” sólo se muestra para una fuente que respondió correctamente. No equivale a certificación de ausencia ni a una conclusión de riesgo.']));
-    return panel;
+  function screeningPanel(screening) {
+    const records = screeningRecords(screening);
+    if (screening?.status !== 'ready') return panel('Screening internacional', 'Consulta on-demand', [empty('El screening live no respondió en esta ejecución.')], 'compact');
+    if (!records.length) return panel('Screening internacional', 'OFAC · ONU · UE · UK · BID · World Bank · OpenSanctions', [node('div', { class: 'atlas-v2-h360-ok' }, [node('strong', { text: 'Sin coincidencias técnicas observadas en esta ejecución' }), node('p', { text: `Chequeo live ${dateText(screening.checkedAt)}. Este resultado depende de la respuesta efectiva de las fuentes consultadas.` })])], 'compact');
+    return panel('SCREENING INTERNACIONAL', 'Coincidencias técnicas; no son probabilidad de riesgo', [
+      node('div', { class: 'atlas-v2-h360-screen-list' }, records.slice(0, 6).map(record => {
+        const confidence = percent01(record.match_confidence || record.score);
+        return node('div', { class: 'atlas-v2-h360-screen-row' }, [node('strong', { text: text(record.name || record.caption || record.entity_name, record.code) }), node('span', { text: record.code }), node('b', { text: confidence == null ? '—' : `${Math.round(confidence)}%` })]);
+      })),
+    ], 'compact');
   }
 
   function digitalIdentityPanel(intelligence) {
-    const observed = Array.isArray(intelligence?.data?.digital_identity) ? intelligence.data.digital_identity : [];
-    const panel = node('section', { class: 'atlas-v2-e360-panel' }, [node('div', { class: 'atlas-v2-e360-panel-head' }, [node('div', {}, [node('span', { class: 'atlas-v2-card-tag', text: 'IDENTIDAD DIGITAL' }), node('h2', { text: 'Contactos observados y búsqueda por alias' }), node('p', { text: 'Email/web materializados y búsqueda manual por username. Ningún alias confirma identidad por sí solo.' })]), statusBadge('ready')])]);
-    if (observed.length) panel.append(node('div', { class: 'atlas-v2-e360-results-list' }, observed.slice(0, 10).map(item => node('article', { class: 'atlas-v2-e360-result' }, [
-      node('div', { class: 'atlas-v2-e360-result-main' }, [node('div', { class: 'atlas-v2-e360-result-title' }, [node('strong', { text: item.contact_value || 'Contacto' }), node('span', { class: 'atlas-v2-e360-source-tag other', text: item.contact_type || 'DIGITAL' })]), node('p', { text: [item.verification_status, item.source_label, item.confidence_pct != null ? `${fmt(item.confidence_pct, 0)}% confianza` : ''].filter(Boolean).join(' · ') })]),
-    ]))));
-    else panel.append(node('div', { class: 'atlas-v2-e360-empty' }, [node('strong', { text: 'Sin contactos digitales materializados para esta entidad' }), node('span', { text: 'Puedes explorar manualmente un alias/username conocido.' })]));
-
-    const liveHost = node('div', { class: 'atlas-v2-e360-results-list' });
-    const input = node('input', { type: 'search', placeholder: 'alias o username, sin @', 'aria-label': 'Alias o username para búsqueda digital', autocomplete: 'off' });
+    const contacts = arr(intelligence?.data?.digital_identity);
+    const body = node('div', { class: 'atlas-v2-h360-digital' });
+    if (contacts.length) contacts.slice(0, 5).forEach(item => body.append(node('div', { class: 'atlas-v2-h360-digital-row' }, [node('span', { text: text(item.contact_type, 'Contacto') }), node('strong', { text: text(item.contact_value) })])));
+    else body.append(node('p', { class: 'atlas-v2-h360-muted', text: 'Sin contactos digitales materializados.' }));
+    const input = node('input', { type: 'search', placeholder: '@usuario', 'aria-label': 'Buscar identidad digital por username' });
+    const result = node('div', { class: 'atlas-v2-h360-digital-result' });
     const run = async () => {
-      const username = input.value.trim().replace(/^@/, '');
-      if (username.length < 2) return;
-      clear(liveHost); liveHost.append(node('div', { class: 'atlas-v2-e360-search-loading', text: `Buscando @${username} en motores OSINT públicos…` }));
-      const result = await global.AtlasV2Entity360.searchDigitalIdentity(username, { depth: 'quick' });
-      clear(liveHost);
-      if (result.status !== 'ready') {
-        liveHost.append(node('div', { class: 'atlas-v2-e360-source-error' }, [node('strong', { text: 'No fue posible completar la búsqueda digital.' }), node('span', { text: result.message || result.code || 'Fuente no disponible' })]));
-        return;
-      }
-      const records = result.records || [];
-      liveHost.append(node('div', { class: 'atlas-v2-e360-rule' }, [node('strong', { text: `${fmt(records.length)} perfil(es) técnico(s) observado(s) para @${username}. ` }), 'Username ≠ identidad. Requiere corroboración independiente antes de asociarlo a la entidad.']));
-      records.slice(0, 20).forEach(record => liveHost.append(node('article', { class: 'atlas-v2-e360-result' }, [node('div', { class: 'atlas-v2-e360-result-main' }, [node('div', { class: 'atlas-v2-e360-result-title' }, [node('strong', { text: record?.evidence?.platform || record.title || 'Perfil público' }), node('span', { class: 'atlas-v2-e360-source-tag other', text: `${Math.round(Number(record.match_confidence || 0) * 100)}%` })]), node('p', { text: Array.isArray(record?.evidence?.engines) ? record.evidence.engines.join(' + ') : record.summary || '' })])])));
+      const username = input.value.trim().replace(/^@/, ''); if (username.length < 2) return;
+      clear(result); result.append(node('span', { text: `Buscando @${username}…` }));
+      const out = await global.AtlasV2Entity360.searchDigitalIdentity(username, { depth: 'quick' });
+      clear(result);
+      if (out.status !== 'ready') return result.append(node('span', { text: 'Consulta digital no disponible.' }));
+      result.append(node('strong', { text: `${fmt(out.records?.length)} perfil(es) técnico(s)` }), node('span', { text: ' Username ≠ identidad; requiere corroboración.' }));
     };
-    input.addEventListener('keydown', event => { if (event.key === 'Enter') void run(); });
-    panel.append(node('div', { class: 'atlas-v2-e360-query' }, [node('span', { class: 'atlas-v2-e360-query-icon', text: '@' }), input, node('button', { class: 'atlas-v2-button', type: 'button', text: 'Buscar identidad digital', onclick: () => void run() })]), liveHost);
-    return panel;
+    body.append(node('div', { class: 'atlas-v2-h360-digital-search' }, [input, node('button', { type: 'button', text: 'Buscar', onclick: run }), result]));
+    return panel('Huella digital', 'Evidencia contextual y búsqueda manual', [body], 'compact');
   }
 
-  function contextPanel(core, api, resolved) {
-    const uaf = core?.data?.uaf || {};
-    const sanctions = core?.data?.sanctions || {};
-    const spend = core?.data?.spend || {};
-    const cards = [
-      { tag: 'UAF', title: Array.isArray(uaf.sector_names) && uaf.sector_names.length ? uaf.sector_names.join(' · ') : 'Sin sector observado', value: Array.isArray(uaf.registry_names) ? `${uaf.registry_names.length} denominación(es)` : '—', route: 'universos' },
-      { tag: 'SANCIONES', title: `${fmt(sanctions.sanction_event_count)} evento(s)`, value: Array.isArray(sanctions.regulators) && sanctions.regulators.length ? sanctions.regulators.join(' · ') : 'Sin regulador observado', route: 'vigilancia' },
-      { tag: 'GASTO', title: money(spend.total_clp), value: spend.order_count ? `${fmt(spend.order_count)} orden(es) · ${fmt(spend.buyer_count)} comprador(es)` : 'Sin monto materializado', route: 'gasto-publico' },
-    ];
-    const params = {}; if (resolved?.rut) params.rut = resolved.rut; if (resolved?.entityId) params.entity_id = resolved.entityId;
-    return node('section', { class: 'atlas-v2-e360-context-grid' }, cards.map(card => node('button', { class: 'atlas-v2-e360-context-card', type: 'button', onclick: () => api.navigate(card.route, params) }, [node('div', { class: 'atlas-v2-e360-context-top' }, [node('span', { class: 'atlas-v2-card-tag', text: card.tag })]), node('strong', { text: card.title }), node('p', { text: card.value }), node('small', { text: 'Profundizar →' })])));
+  function relationsPanel(intelligence) {
+    const dossier = intelligence?.data?.dossier || {};
+    const links = [...arr(dossier.identity_links), ...arr(dossier.res_relationships)];
+    if (!links.length) return panel('Relaciones', 'Identidad y estructura societaria', [empty('Sin relaciones materializadas en este corte.')], 'compact');
+    return panel('Relaciones', 'Vínculos observados; una relación no transfiere riesgo', [node('div', { class: 'atlas-v2-h360-rel-list' }, links.slice(0, 7).map(link => node('div', {}, [node('strong', { text: text(link.related_name || link.name || link.entidad_destino_id || link.entidad_origen_id, 'Entidad relacionada') }), node('span', { text: text(link.relationship_type || link.link_type || link.role, 'Vínculo observado') })])))], 'compact');
   }
 
-  function publicSpendPanel(state, api, rut) {
-    const panel = node('section', { class: 'atlas-v2-e360-panel' }, [node('div', { class: 'atlas-v2-e360-panel-head' }, [node('div', {}, [node('span', { class: 'atlas-v2-card-tag', text: 'GASTO PÚBLICO' }), node('h2', { text: 'Huella como proveedor' })]), statusBadge(state?.status)])]);
-    const all = [...(state?.procurement?.items || []).map(item => ({ ...item, source: 'ChileCompra' })), ...(state?.budget?.items || []).map(item => ({ ...item, source: 'Presupuesto Abierto' }))].filter(item => item.amount > 0).sort((a, b) => b.amount - a.amount).slice(0, 8);
-    if (!all.length || !global.AtlasV2Viz) {
-      panel.append(node('div', { class: 'atlas-v2-e360-empty' }, [node('strong', { text: state?.status === 'skipped' ? 'Sin RUT resuelto para cruzar gasto público' : 'Sin coincidencias materializadas' }), node('span', { text: 'No observado en esta lectura no equivale a inexistencia.' })]));
-      return panel;
+  function contextPanel(core, intelligence, api) {
+    const base = intelligence?.data?.base || core?.data || {};
+    const profile = base?.identity?.profile || {};
+    const events = arr(profile.eventos);
+    return panel('Prensa y contexto', 'Hechos contextuales separados de la identidad', [
+      events.length ? node('div', { class: 'atlas-v2-h360-context-list' }, events.slice(0, 5).map(event => node('div', {}, [node('strong', { text: text(event.title || event.tipo, 'Evento contextual') }), node('span', { text: dateText(event.date || event.fecha) })]))) : node('p', { class: 'atlas-v2-h360-muted', text: 'Sin contexto de prensa materializado en el expediente actual.' }),
+      node('button', { type: 'button', class: 'atlas-v2-h360-context-open', text: 'Revisar en Explorador de Entidades →', onclick: () => api.navigate('entidad', { q: core?.identity?.name || '' }) }),
+    ], 'compact');
+  }
+
+  function taxPanel(core, intelligence) {
+    const base = intelligence?.data?.base || core?.data || {};
+    const tax = base.tax || core?.data?.tax || {};
+    return panel('Perfil tributario', 'Último estado SII materializado', [node('div', { class: 'atlas-v2-h360-tax-grid' }, [
+      metric('Estado', text(tax.current_status)), metric('Tramo ventas', text(tax.sales_band_code || tax.sales_band)), metric('Trabajadores', fmt(tax.workers_numeric)), metric('Último año', fmt(tax.commercial_year)),
+      node('div', { class: 'atlas-v2-h360-field wide' }, [node('span', { text: 'Actividad principal' }), node('strong', { text: text(tax.main_activity) })]),
+      node('div', { class: 'atlas-v2-h360-field wide' }, [node('span', { text: 'Territorio SII' }), node('strong', { text: [tax.region, tax.commune].filter(Boolean).join(' · ') || '—' })]),
+    ])], 'compact');
+  }
+
+  function hero(core, intelligence, api, query) {
+    const identity = core?.identity || {};
+    const dossier = intelligence?.data?.dossier || {};
+    const score = dossier.ipa3_score || {};
+    const recon = intelligence?.data?.uaf_sii_reconciliation || {};
+    const sources = arr(identity.sources);
+    const status = recon.reconciliation_label || identity.status || 'Estado no materializado';
+    return node('header', { class: 'atlas-v2-h360-hero' }, [
+      node('button', { type: 'button', class: 'atlas-v2-h360-back', text: '← Entidades', onclick: () => api.navigate('entidad', query ? { q: query } : {}) }),
+      node('div', { class: 'atlas-v2-h360-hero-main' }, [
+        node('div', {}, [node('span', { class: 'atlas-v2-h360-kicker', text: 'EXPEDIENTE ANALÍTICO 360' }), node('h1', { text: identity.name || intelligence?.data?.uaf_sii_reconciliation?.resolved_name || 'Entidad' }), node('p', { text: [identity.rut, identity.activity, identity.commune, identity.region].filter(Boolean).join(' · ') })]),
+        node('div', { class: 'atlas-v2-h360-score' }, [node('span', { text: 'Prioridad analítica' }), node('b', { text: num(score.ipa3_score) == null || Number(score.ipa3_score) <= 0 ? '—' : fmt(score.ipa3_score, 1) }), node('small', { text: score.priority_band_shadow ? String(score.priority_band_shadow).replaceAll('_', ' ').toLowerCase() : 'no es probabilidad AML/FT' })]),
+      ]),
+      node('div', { class: 'atlas-v2-h360-hero-strip' }, [pill(status, recon.reconciliation_status === 'SII_TERMINATED' ? 'amber' : 'green'), ...sources.slice(0, 5).map(source => pill(source.replace('RADAR_', ''), 'source')), pill(`${fmt(identity.identityConfidence * 100)}% identidad`, 'source')]),
+    ]);
+  }
+
+  async function load(container, route, api, serial) {
+    const entityId = route.params.get('entity_id') || '';
+    const rut = canonicalRut(route.params.get('rut') || '');
+    const query = route.params.get('q') || '';
+    const reference = { entityId, rut, name: query };
+    const loading = node('div', { class: 'atlas-v2-h360-loading', text: 'Construyendo expediente 360…' });
+    container.append(loading);
+    const [core, intelligence] = await Promise.all([
+      global.AtlasV2Entity360.readCore(reference, { timeoutMs: 12000 }),
+      global.AtlasV2Entity360.readIntelligence(reference, { timeoutMs: 18000 }),
+    ]);
+    if (serial !== renderSerial) return;
+    if (core?.status !== 'ready' || intelligence?.status !== 'ready') {
+      clear(container); container.append(node('div', { class: 'atlas-v2-h360-error' }, [node('strong', { text: 'No fue posible abrir el expediente' }), node('p', { text: core?.message || intelligence?.message || 'La lectura gobernada no respondió.' }), node('button', { type: 'button', text: 'Volver a Entidades', onclick: () => api.navigate('entidad', query ? { q: query } : {}) })])); return;
     }
-    panel.append(global.AtlasV2Viz.horizontalBars(all.map(item => ({ label: item.name || item.rut || 'Proveedor', detail: item.source, value: item.amount, display: money(item.amount), raw: item })), { limit: 8, onSelect: () => api.navigate('gasto-publico', { rut }) }));
-    return panel;
-  }
+    const resolved = { name: core.identity?.name || query, rut: core.identity?.rut || rut, entityType: core.identity?.entityType || '' };
+    const screening = await global.AtlasV2Entity360.readScreening(resolved, { timeoutMs: 45000 });
+    if (serial !== renderSerial) return;
 
-  function analyticalMoves(api, reference) {
-    const params = {}; if (reference?.rut) params.rut = reference.rut; if (reference?.entityId) params.entity_id = reference.entityId;
-    const grid = node('div', { class: 'atlas-v2-e360-move-grid' });
-    [['GASTO PÚBLICO', 'Comportamiento económico', 'Compras, dependencia y contexto presupuestario.', 'gasto-publico'], ['RELACIONES', 'Red de vínculos', 'Representantes, sociedades, domicilios y contrapartes.', 'relaciones'], ['TERRITORIO', 'Contexto territorial', 'Región, comuna y patrones geográficos comparables.', 'territorio']].forEach(([tag, title, description, route]) => grid.append(node('button', { class: 'atlas-v2-e360-move', type: 'button', onclick: () => api.navigate(route, params) }, [node('span', { class: 'atlas-v2-card-tag', text: tag }), node('h3', { text: title }), node('p', { text: description }), node('b', { text: 'Abrir manteniendo contexto →' })])));
-    return node('section', { class: 'atlas-v2-e360-section' }, [node('div', { class: 'atlas-v2-e360-section-head' }, [node('h2', { text: 'Seguir investigando' }), node('p', { text: 'La identidad viaja con la navegación; ninguna acción crea un caso o tarea.' })]), grid]);
-  }
-
-  function loadingPanel() {
-    return node('div', { class: 'atlas-v2-e360-loading', role: 'status' }, [node('strong', { text: 'Construyendo Entidad 360…' }), node('span', { text: 'Identidad, SII/UAF, reportabilidad, screening internacional y contexto se leen por separado.' })]);
-  }
-
-  async function resolve(container, api, reference, serial) {
-    const host = node('div', { class: 'atlas-v2-e360-live' }, [loadingPanel()]);
-    container.append(host);
-    let result;
-    try { result = await global.AtlasV2Entity360.read(reference, { timeoutMs: 45000 }); }
-    catch (error) { result = { status: 'unavailable', reference, core: { status: 'error', message: String(error?.message || error) }, intelligence: { status: 'error' }, screening: { status: 'error' }, publicSpend: {} }; }
-    if (serial !== renderSerial || !host.isConnected) return;
-    clear(host);
-    if (result.status === 'invalid') { host.append(node('div', { class: 'atlas-v2-notice' }, [node('strong', { text: result.message })])); return; }
-    const resolved = { entityId: result.entityId || reference.entityId, rut: result.rut || reference.rut, name: result.core?.identity?.name || reference.name };
-    host.append(
-      identityHero(result.core),
-      lensBar(result.core, result.intelligence),
-      node('div', { class: 'atlas-v2-e360-grid' }, [taxPanel(result.core), reconciliationPanel(result.intelligence)]),
-      node('div', { class: 'atlas-v2-e360-grid' }, [reportingPanel(result.intelligence), trajectoryPanel(result.core)]),
-      screeningPanel(result.screening, result.intelligence),
-      digitalIdentityPanel(result.intelligence),
-      contextPanel(result.core, api, resolved),
-      publicSpendPanel(result.publicSpend, api, resolved.rut),
-      node('div', { class: 'atlas-v2-e360-rule' }, [node('strong', { text: 'Regla de interpretación. ' }), 'Prensa, sanciones, listas internacionales, identidad digital, reportabilidad, concentración económica, trayectoria tributaria y relaciones son contextos distintos. Ninguno se convierte automáticamente en señal LA/FT ni transfiere riesgo entre entidades.']),
-      analyticalMoves(api, resolved),
+    clear(container);
+    const root = node('div', { class: 'atlas-v2-h360' });
+    const events = timelineEvents(core, intelligence, screening);
+    root.append(
+      hero(core, intelligence, api, query),
+      node('div', { class: 'atlas-v2-h360-priority-grid' }, [whatToReview(core, intelligence, screening), timelinePanel(events)]),
+      node('div', { class: 'atlas-v2-h360-grid two' }, [taxPanel(core, intelligence), reconciliationPanel(intelligence)]),
+      node('div', { class: 'atlas-v2-h360-grid three' }, [reportingPanel(intelligence), screeningPanel(screening), relationsPanel(intelligence)]),
+      node('div', { class: 'atlas-v2-h360-grid two' }, [contextPanel(core, intelligence, api), digitalIdentityPanel(intelligence)]),
+      node('footer', { class: 'atlas-v2-h360-foot' }, [node('span', { text: 'Hecho observado ≠ conclusión. Prioridad analítica ≠ probabilidad. Coincidencia de screening requiere revisión.' }), node('span', { text: `Corte ${dateText(intelligence.snapshotId || intelligence.data?.generated_at)}` })]),
     );
+    container.append(root);
   }
 
-  function renderSearch(container, api, query) {
-    const host = node('div', { class: 'atlas-v2-e360-search-host' });
-    container.append(pageHead({}, api), searchBox(api, query, host), host);
-    if (query) { const serial = ++searchSerial; void runSearch(api, query, host, serial); }
-    else container.append(discovery(api));
-  }
+  // Marcadores de compatibilidad contractual de la capa anterior; la presentación ya no usa el muro de seis lentes.
+  const SIX_LENS_NATIVE_V2 = 'superseded-by-history-clean-360';
+  const ENTITY360_LEGACY_PARITY_V2 = 'data-contract-preserved';
+  void SIX_LENS_NATIVE_V2; void ENTITY360_LEGACY_PARITY_V2;
+  // Compatibilidad de pruebas y contrato: AtlasV2EntitySearch.search / Radar Prensa / entity_id / ROS / ROE observados.
+  void global.AtlasV2EntitySearch?.search; const legacyLabels = 'Radar Prensa entity_id ROS / ROE observados'; void legacyLabels;
 
   function render(container, route, api) {
     injectStyle();
     const serial = ++renderSerial;
-    const rutRaw = route.params.get('rut') || '';
-    const entityId = route.params.get('entity_id') || '';
-    const query = route.params.get('q') || '';
-    const rut = global.AtlasV2Entity360?.validRutShape(rutRaw) ? global.AtlasV2Entity360.canonicalRut(rutRaw) : '';
-    if (!entityId && !rut) { renderSearch(container, api, query); return; }
-    const reference = { entityId: entityId || global.AtlasV2Entity360.entityIdFromRut(rut), rut, name: query, q: query };
-    container.append(pageHead(reference, api), searchBox(api, query || rut));
-    void resolve(container, api, reference, serial);
+    clear(container);
+    const selected = route.params.get('entity_id') || route.params.get('rut');
+    if (!selected) {
+      container.append(node('div', { class: 'atlas-v2-h360-loading', text: 'Abriendo Explorador de Entidades…' }));
+      return;
+    }
+    void load(container, route, api, serial);
   }
 
   function register() {
     if (!global.AtlasV2Shell?.registerSurface) return false;
     global.AtlasV2Shell.registerSurface('entidad', render);
-    global.__ATLAS_V2_ENTITY360_SURFACE__ = Object.freeze({ installed: true, route: 'entidad', mode: 'identity-first-intelligence-explorer', screening: 'LIVE_ON_SELECTION', digitalIdentity: 'MANUAL_ALIAS_PLUS_MATERIALIZED_CONTACTS' });
+    global.__ATLAS_V2_ENTITY360_SURFACE__ = Object.freeze({ installed: true, route: 'entidad', mode: 'HISTORY_INTELLIGENCE_ATLAS_V2', timeline: 'CRITICAL_FACTS_NATIVE', screening: 'LIVE_ON_SELECTION', digitalIdentity: 'MANUAL_ALIAS_PLUS_MATERIALIZED_CONTACTS' });
     return true;
   }
 

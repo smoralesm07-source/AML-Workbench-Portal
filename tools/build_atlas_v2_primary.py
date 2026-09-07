@@ -11,7 +11,9 @@ from build_atlas_site import build as build_legacy
 
 ROOT = Path(__file__).resolve().parents[1]
 V2_VERSION = "v2-primary-5"
+SURFACE_VERSION = "v2-primary-7-executive-pulse-entity360-classic-1"
 ENTITY_EXPLORER_VERSION = "v2-primary-6-entidades-classic-1"
+ENTITY360_PARITY_VERSION = "v2-primary-5-entity360-parity-1"
 V2_RELEASE_FILE = "atlas-v2-release.json"
 V2_FILES = [
     "atlas-v2-production-config.js",
@@ -109,23 +111,23 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
         './v2/atlas-v2-health.js?v=v2-primary-5',
         './v2/atlas-v2-core-auth.js?v=v2-primary-5',
         './v2/atlas-v2-shell.js?v=v2-primary-5',
-        './v2/atlas-v2-boot.js?v=v2-primary-6-explore-legacy-pulse-1',
+        f'./v2/atlas-v2-boot.js?v={SURFACE_VERSION}',
         './v2/atlas-v2-viz.css?v=v2-primary-5-viz1',
-        './v2/entity360-parity-surface.css?v=v2-primary-5-entity360-parity-1',
-        './v2/entity360-parity-surface.js?v=v2-primary-5-entity360-parity-1',
+        f'./v2/entity360-parity-surface.css?v={ENTITY360_PARITY_VERSION}',
         f'./v2/entity-explorer-classic-surface.css?v={ENTITY_EXPLORER_VERSION}',
         f'./v2/entity-explorer-adapter.js?v={ENTITY_EXPLORER_VERSION}',
         f'./v2/entity-explorer-classic-surface.js?v={ENTITY_EXPLORER_VERSION}',
         './assets/supabase-js-2.111.0.umd.js?v=v2-primary-5',
     ], "root authority")
 
+    if 'entity360-parity-surface.js?v=' in html:
+        raise SystemExit("v2 primary build: Entity 360 parity must be loaded by boot after the executive surface")
     for marker in [
         "ATLAS_RUNTIME_SCRIPTS", "atlas-runtime-current-", "atlas-module-current-",
         "atlas-public-spend-route-authority-0578.js", "atlas-gasto-publico-1000.js", "raw.githubusercontent.com",
     ]:
         if marker in html:
             raise SystemExit(f"v2 primary build: legacy authority leaked into root: {marker}")
-
     if "atlas-runtime-current-" not in legacy:
         raise SystemExit("v2 primary build: explicit legacy fallback lost compiled runtime")
     if 'data-atlas-v2-primary="analytics"' in legacy:
@@ -145,6 +147,7 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
     explore = read("explore-surface.js")
     explore_css = read("explore-surface.css")
     entity = read("entity360-surface.js")
+    entity_css = read("entity360-surface.css")
     parity = read("entity360-parity-surface.js")
     parity_css = read("entity360-parity-surface.css")
     entity_adapter = read("entity360-adapter.js")
@@ -160,23 +163,29 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
     require(auth, ["aml_allowed_users", "signInWithOAuth", "provider: 'azure'", ".auth.getUser()"], "auth contract")
     require(boot, [
         "AtlasCoreSession.ready", "STRUCTURAL_SURFACE_LOAD_FAILED", "warmFederatedSession",
-        "atlas-v2-viz.js", "entity-search-adapter.js", "VISUAL_SEARCH_CAPABILITY_MISSING",
-        "STRUCTURAL_VERSION = 'v2-primary-5'", "SURFACE_VERSION = 'v2-primary-6-explore-legacy-pulse-1'",
+        "atlas-v2-viz.js", "entity-search-adapter.js", "entity360-surface.js", "entity360-parity-surface.js",
+        "VISUAL_SEARCH_CAPABILITY_MISSING", "STRUCTURAL_VERSION = 'v2-primary-5'",
+        f"SURFACE_VERSION = '{SURFACE_VERSION}'", "ENTITY360_LEGACY_PARITY_V2",
     ], "boot authority")
+    if boot.index("'entity360-surface.js'") >= boot.index("'entity360-parity-surface.js'"):
+        raise SystemExit("v2 primary build: classic Entity 360 must register after the executive fallback")
+
     require(explore, [
-        "registerSurface('explorar'", "AtlasV2Universes.overview", "AtlasV2Watch.overview", "AtlasV2Territory.overview",
-        "AtlasV2Universes.attention", "LEGACY_PULSE_NATIVE_V2", "areaLineChart", "proportionalBars", "statusComposition", "UAF ↔ SII",
-    ], "Explore legacy pulse intelligence")
+        "registerSurface('explorar'", "AtlasV2Universes.overview", "AtlasV2Universes.attention",
+        "LEGACY_PULSE_NATIVE_V2", "EXECUTIVE_PULSE_V2", "YTD_DASHED_NO_FABRICATION",
+        "rosYearChart", "areaLineChart", "proportionalBars", "statusComposition", "attentionTable",
+        "Acumulado 2026", "UAF ↔ SII", "Padrón operativo UAF",
+    ], "Explore executive pulse intelligence")
     require(explore_css, [
-        ".atlas-v2-home-pulse", ".atlas-v2-pulse-svg", ".atlas-v2-recon-track", ".atlas-v2-context-card",
-    ], "Explore legacy pulse visual contract")
+        ".atlas-v2-exec-home", ".atlas-v2-exec-search", ".atlas-v2-exec-kpis", ".atlas-v2-ros-chart",
+        ".atlas-v2-recon-track", ".atlas-v2-attention-table", ".atlas-v2-exec-panel",
+    ], "Explore executive pulse visual contract")
+
     require(search, [
         "ATLAS_ENTITY_SEARCH_V2", "operation: 'entity_search'", "resultTier", "tierPriority",
         "EXACT_RECONCILED_THEN_PRESS_HIGH", "exact_reconciled", "press_high", "pressMinimumConfidence: 0.86",
     ], "entity staged search")
-    require(explorer_adapter, [
-        "ENTITY_EXPLORER_CLASSIC_V2", "explorer_meta", "request('explorer'", "request('suggest'",
-    ], "classic entity explorer adapter")
+    require(explorer_adapter, ["ENTITY_EXPLORER_CLASSIC_V2", "explorer_meta", "request('explorer'", "request('suggest'"], "classic entity explorer adapter")
     require(explorer, [
         "ENTITY_EXPLORER_CLASSIC_V2", "EXACT_RECONCILED_THEN_PRESS_HIGH", "EVERY_IDENTITY_SEARCH",
         "Observadas UAF", "Con sanciones", "UAF + sanciones", "Multi-fuente 3+", "OSFL", "Organismos públicos",
@@ -187,21 +196,27 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
         ".aex2-command", ".aex2-facets", ".aex2-quick", ".aex2-panorama", ".aex2-result-row",
         ".aex2-fingerprint", ".aex2-signature", ".aex2-gauge", ".aex2-sheet", ".aex2-screening",
     ], "classic Entidades visual contract")
+
     require(universes, ["attention: (options = {}) => query('attention'", "recentTerminated", "terminatedByYear"], "UAF-SII attention adapter")
     require(entity_adapter, ["entity_intelligence", "entity_screening_live", "digital_identity_live", "searchDigitalIdentity"], "Entity 360 intelligence adapter")
     require(entity, [
-        "AtlasV2EntitySearch.search", "Radar Prensa", "entity_id", "reconciliationPanel", "reportingPanel",
-        "screeningPanel", "digitalIdentityPanel", "searchDigitalIdentity", "SCREENING INTERNACIONAL", "ROS / ROE observados",
-    ], "Entity 360 intelligence surface")
+        "timelineEvents", "timelinePanel", "whatToReview", "Qué mirar primero", "Línea de tiempo de hechos críticos",
+        "reconciliationPanel", "reportingPanel", "screeningPanel", "digitalIdentityPanel", "SCREENING INTERNACIONAL",
+        "Término de giro publicado en SII", "Ausencia de dato ≠ cero ROS/ROE",
+    ], "Entity 360 executive fallback surface")
+    require(entity_css, [
+        ".atlas-v2-h360", ".atlas-v2-h360-priority-grid", ".atlas-v2-h360-timeline",
+        ".atlas-v2-h360-focus-list", ".atlas-v2-h360-screen-list",
+    ], "Entity 360 executive fallback visual contract")
     require(parity, [
         "SIX_LENS_NATIVE_V2", "ENTITY360_LEGACY_PARITY_V2", "e360p-identidad", "e360p-caracterizacion",
         "e360p-relaciones", "e360p-contexto", "e360p-senales", "e360p-evidencia", "ipa3_score",
         "peer_positions", "res_lifecycle", "sanction_resolution", "AtlasV2Entity360.read", "registerSurface('entidad'",
-    ], "Entity 360 six-lens parity surface")
-    require(parity_css, [".e360p-hero", ".e360p-lens-nav", ".e360p-score-ring", ".e360p-rail", ".e360p-mark", ".e360p-timeline"], "Entity 360 parity visual contract")
+    ], "Entity 360 recovered six-lens surface")
+    require(parity_css, [".e360p-hero", ".e360p-lens-nav", ".e360p-score-ring", ".e360p-rail", ".e360p-mark", ".e360p-timeline"], "Entity 360 recovered visual contract")
+
     require(viz, ["horizontalBars", "lineChart", "segmented", "widthPct.toFixed"], "visualization primitives")
     require(health, ["ATLAS_V2_RUNTIME_HEALTH_V1"], "runtime health")
-
     if e2e_proxy:
         require(config, ["location.origin + '/__atlas_v2'", "mode: 'analytics-primary-e2e-proxy'"], "E2E proxy config")
     else:
@@ -236,7 +251,9 @@ def update_report(out_dir: Path, published_v2: list[str], primary_release: dict,
         "v2_structural_surface_policy": "FAIL_CLOSED",
         "v2_followup_policy": "OPTIONAL_NOT_WORKFLOW",
         "v2_explore_mode": "LEGACY_PULSE_NATIVE_V2",
-        "v2_explore_visual_reference": "ATLAS_STRATEGIC_PULSE_LEGACY_NATIVE_PORT",
+        "v2_explore_design": "EXECUTIVE_PULSE_V2",
+        "v2_explore_visual_reference": "APPROVED_EXECUTIVE_PULSE_VIEW",
+        "v2_ros_2026_semantics": "YTD_DASHED_NO_FABRICATION",
         "v2_visual_navigation": "INTERACTIVE_FIRST",
         "v2_entity_search": "IDENTITY_TIERED_DIGITAL_PRESS",
         "v2_entity_search_policy": "EXACT_RECONCILED_THEN_PRESS_HIGH",
@@ -246,8 +263,11 @@ def update_report(out_dir: Path, published_v2: list[str], primary_release: dict,
         "v2_entity_screening": "EVERY_IDENTITY_SEARCH",
         "v2_entity_digital_identity": True,
         "v2_entity_intelligence": "UAF_SII_REPORTING_SCREENING_DIGITAL",
+        "v2_entity360_authority": "ENTITY360_LEGACY_PARITY_V2",
         "v2_entity360_parity": "SIX_LENS_NATIVE_V2",
         "v2_entity360_dossier": "ENTITY360_LEGACY_PARITY_V2",
+        "v2_entity360_executive_fallback": "HISTORY_CLEAN_EXECUTIVE_V2",
+        "v2_surface_version": SURFACE_VERSION,
         "v2_federation_prewarm": True,
         "v2_e2e_proxy": e2e_proxy,
         "v2_version": V2_VERSION,
@@ -288,11 +308,13 @@ def build_primary(out_dir: Path, *, e2e_proxy: bool = False) -> None:
         "legacy_authority_active_on_primary": False,
         "published_v2_count": len(published_v2),
         "visual_navigation": "INTERACTIVE_FIRST",
+        "explore_design": "EXECUTIVE_PULSE_V2",
         "entity_search": "EXACT_RECONCILED_THEN_PRESS_HIGH",
         "entity_explorer": "ENTITY_EXPLORER_CLASSIC_V2",
         "entity_screening": "EVERY_IDENTITY_SEARCH",
         "entity_intelligence": "UAF_SII_REPORTING_SCREENING_DIGITAL",
-        "entity360_parity": "SIX_LENS_NATIVE_V2",
+        "entity360_authority": "ENTITY360_LEGACY_PARITY_V2",
+        "surface_version": SURFACE_VERSION,
         "e2e_proxy": e2e_proxy,
     }, ensure_ascii=False))
 
