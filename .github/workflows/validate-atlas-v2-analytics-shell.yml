@@ -1,0 +1,112 @@
+name: Validate ATLAS v2 analytics shell
+
+on:
+  push:
+    branches:
+      - reengineering/atlas-v2-analytics-shell
+    paths:
+      - 'atlas-v2.html'
+      - 'src/v2/atlas-v2-shell.js'
+      - 'src/v2/atlas-v2-shell.css'
+      - 'src/v2/atlas-v2-boot.js'
+      - 'docs/ATLAS_V2_ANALYTICS_FIRST.md'
+      - '.github/workflows/validate-atlas-v2-analytics-shell.yml'
+  pull_request:
+    paths:
+      - 'atlas-v2.html'
+      - 'src/v2/atlas-v2-shell.js'
+      - 'src/v2/atlas-v2-shell.css'
+      - 'src/v2/atlas-v2-boot.js'
+      - 'docs/ATLAS_V2_ANALYTICS_FIRST.md'
+      - '.github/workflows/validate-atlas-v2-analytics-shell.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  foundation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Syntax checks
+        run: |
+          set -euo pipefail
+          node --check src/v2/atlas-v2-shell.js
+          node --check src/v2/atlas-v2-boot.js
+
+      - name: Enforce analytics-first product contract
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          js = Path('src/v2/atlas-v2-shell.js').read_text(encoding='utf-8')
+          css = Path('src/v2/atlas-v2-shell.css').read_text(encoding='utf-8')
+          html = Path('atlas-v2.html').read_text(encoding='utf-8')
+          contract = Path('docs/ATLAS_V2_ANALYTICS_FIRST.md').read_text(encoding='utf-8')
+
+          # One modern shell: no DOM repair layer and no HTML string renderer.
+          assert 'MutationObserver' not in js
+          assert '.innerHTML' not in js
+          assert 'raw.githubusercontent.com' not in js
+          assert 'supabase.from(' not in js
+          assert 'select("*")' not in js and "select('*')" not in js
+
+          # URL-addressable navigation and keyboard-first access are mandatory.
+          assert "addEventListener('hashchange', render)" in js
+          assert 'URLSearchParams' in js
+          assert "event.metaKey || event.ctrlKey" in js
+          assert "toLocaleLowerCase() === 'k'" in js
+
+          # Analytics is primary. No top-level workflow/task route may appear.
+          for route in ['explorar','universos','entidad','gasto-publico','territorio','relaciones','vigilancia','guardados','metodo']:
+              assert f"id: '{route}'" in js, route
+          for forbidden_route in ["id: 'casos'", "id: 'tareas'", "id: 'cola'", "id: 'asignaciones'", "id: 'sla'"]:
+              assert forbidden_route not in js, forbidden_route
+
+          # Saved continuity is optional and cannot masquerade as case management.
+          assert 'No se creó ningún caso ni tarea.' in js
+          assert 'Exploración primero · seguimiento opcional' in js
+          assert 'Exploration is free; follow-up is optional.' in contract
+
+          # Design decisions must flow through the shell token system.
+          assert '--atlas-bg:' in css and '--atlas-surface:' in css and '--atlas-accent:' in css
+          assert 'data-atlas-v2-foundation="analytics-first"' in html
+          assert "'unsafe-inline'" not in html
+          print('ATLAS v2 analytics-first invariants: OK')
+          PY
+
+      - name: Build isolated preview artifact
+        run: |
+          set -euo pipefail
+          rm -rf _atlas_v2_preview
+          mkdir -p _atlas_v2_preview/v2
+          cp atlas-v2.html _atlas_v2_preview/index.html
+          cp src/v2/atlas-v2-shell.js _atlas_v2_preview/v2/
+          cp src/v2/atlas-v2-shell.css _atlas_v2_preview/v2/
+          cp src/v2/atlas-v2-boot.js _atlas_v2_preview/v2/
+          touch _atlas_v2_preview/.nojekyll
+
+      - name: Verify preview is isolated from production runtime
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          html = Path('_atlas_v2_preview/index.html').read_text(encoding='utf-8')
+          assert 'atlas-runtime-current' not in html
+          assert 'atlas-public-spend-v2' not in html
+          assert 'ATLAS_RUNTIME_SCRIPTS' not in html
+          assert Path('_atlas_v2_preview/v2/atlas-v2-shell.js').exists()
+          assert Path('_atlas_v2_preview/v2/atlas-v2-shell.css').exists()
+          print('Isolated v2 preview artifact: OK')
+          PY
+
+      - name: Upload analytics shell preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-v2-analytics-shell
+          path: _atlas_v2_preview
+          retention-days: 7
