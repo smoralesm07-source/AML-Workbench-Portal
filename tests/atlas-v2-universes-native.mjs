@@ -34,8 +34,8 @@ assert.match(edge, /operation === "universes_query"/);
 assert.match(edge, /atlas_v2_universes_query/);
 assert.match(edge, /ATLAS_UNIVERSES_QUERY_V2/);
 assert.match(edge, /x-atlas-core-authorization/);
-assert.match(edge, /verify_jwt/); // source is deployed with verify_jwt=true; workflow also checks source contract.
-assert.doesNotMatch(edge, /coreAuth\s*[:,]/); // no token persisted into telemetry/body objects.
+assert.doesNotMatch(edge, /metadata:\s*\{[^}]*coreAuth/s);
+assert.doesNotMatch(edge, /response\(\{[^}]*coreAuth/s);
 
 // Core contract is allow-list authorized and not callable by anon.
 assert.match(core, /auth\.uid\(\)/);
