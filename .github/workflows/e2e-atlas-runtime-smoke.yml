@@ -1,19 +1,19 @@
-name: E2E ATLAS runtime smoke
+name: E2E ATLAS v2 primary launch gate
 
 on:
   push:
     branches: [main]
-    paths:
-      - 'atlas-runtime-manifest.json'
-      - 'atlas-release-guard.js'
-      - 'tools/build_atlas_site.py'
-      - 'tools/build_atlas_v2_cutover.py'
+    paths: &atlas_v2_e2e_paths
+      - 'atlas-v2.html'
+      - 'tools/build_atlas_v2_primary.py'
       - 'tools/e2e_atlas_runtime_smoke.mjs'
-      - 'v*.js'
-      - 'assets/*.js'
+      - 'tools/serve_atlas_v2_e2e.mjs'
       - 'src/v2/*.js'
       - 'src/v2/*.css'
       - '.github/workflows/e2e-atlas-runtime-smoke.yml'
+  pull_request:
+    branches: [main]
+    paths: *atlas_v2_e2e_paths
   workflow_dispatch:
 
 permissions:
@@ -21,7 +21,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: atlas-runtime-smoke-${{ github.ref }}
+  group: atlas-v2-primary-e2e-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -37,12 +37,48 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      - name: Validate launch-hardened sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/v2/atlas-v2-health.js
+          node --check src/v2/atlas-v2-core-auth.js
+          node --check src/v2/atlas-v2-boot.js
+          node --check tools/e2e_atlas_runtime_smoke.mjs
+          node --check tools/serve_atlas_v2_e2e.mjs
+          python3 -m py_compile tools/build_atlas_v2_primary.py
+
       - name: Install Chromium
         run: |
           npm install --no-save --no-package-lock "playwright@${PLAYWRIGHT_VERSION}"
           npx playwright install --with-deps chromium
-      - name: Build production-equivalent artifact
-        run: python3 tools/build_atlas_v2_cutover.py --out _site --e2e-proxy
+
+      - name: Build production-equivalent v2 primary artifact
+        run: python3 tools/build_atlas_v2_primary.py --out _site --e2e-proxy
+
+      - name: Verify primary authority before browser test
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          html=Path('_site/index.html').read_text(encoding='utf-8')
+          legacy=Path('_site/legacy.html').read_text(encoding='utf-8')
+          report=json.loads(Path('_site/atlas-runtime-report.json').read_text(encoding='utf-8'))
+          assert 'data-atlas-v2-primary="analytics"' in html
+          assert 'atlas-v2-health.js?v=v2-primary-1' in html
+          assert 'atlas-runtime-current-' not in html and 'atlas-module-current-' not in html
+          assert 'atlas-runtime-current-' in legacy
+          assert report['primary_runtime']=='ATLAS_V2_ANALYTICS'
+          assert report['legacy_authority_active_on_primary'] is False
+          assert report['v2_auth_boundary']=='ENTRA_SUPABASE_ALLOWLIST_VERIFIED_USER'
+          assert report['v2_structural_surface_policy']=='FAIL_CLOSED'
+          assert report['v2_e2e_proxy'] is True
+          print('ATLAS v2 primary authority preflight: OK')
+          PY
+
       - name: Mint ephemeral authenticated session
         shell: bash
         run: |
@@ -54,31 +90,38 @@ jobs:
           echo "::add-mask::$oidc_token"
           issue_file="$(mktemp)"
           curl --fail-with-body --silent --show-error -X POST "$CORE_E2E_BROKER" -H "Authorization: Bearer $oidc_token" -H 'Content-Type: application/json' --data '{"action":"issue"}' > "$issue_file"
-          email="$(jq -er '.email' "$issue_file")"; user_id="$(jq -er '.user_id' "$issue_file")"; access_token="$(jq -er '.access_token' "$issue_file")"; refresh_token="$(jq -er '.refresh_token' "$issue_file")"
+          email="$(jq -er '.email' "$issue_file")"
+          user_id="$(jq -er '.user_id' "$issue_file")"
+          access_token="$(jq -er '.access_token' "$issue_file")"
+          refresh_token="$(jq -er '.refresh_token' "$issue_file")"
           echo "::add-mask::$email"; echo "::add-mask::$user_id"; echo "::add-mask::$access_token"; echo "::add-mask::$refresh_token"
           echo "ATLAS_E2E_EMAIL=$email" >> "$GITHUB_ENV"
           echo "ATLAS_E2E_USER_ID=$user_id" >> "$GITHUB_ENV"
           echo "ATLAS_E2E_ACCESS_TOKEN=$access_token" >> "$GITHUB_ENV"
           echo "ATLAS_E2E_REFRESH_TOKEN=$refresh_token" >> "$GITHUB_ENV"
-      - name: Start artifact server
+
+      - name: Start production-equivalent artifact server
         shell: bash
         run: |
           node tools/serve_atlas_v2_e2e.mjs _site > /tmp/atlas-runtime-smoke-server.log 2>&1 &
           echo "ATLAS_E2E_SERVER_PID=$!" >> "$GITHUB_ENV"
           for _ in $(seq 1 30); do curl -fsS "$ATLAS_E2E_URL" >/dev/null && exit 0; sleep 1; done
           cat /tmp/atlas-runtime-smoke-server.log; exit 1
-      - name: Run authenticated cross-route smoke
+
+      - name: Run authenticated cross-route, responsive and resilience gate
         run: node tools/e2e_atlas_runtime_smoke.mjs
-      - name: Upload smoke evidence
+
+      - name: Upload launch-gate evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: atlas-runtime-smoke-${{ github.run_id }}
+          name: atlas-v2-primary-e2e-${{ github.run_id }}
           path: |
             e2e-atlas-runtime-smoke.json
             /tmp/atlas-runtime-smoke-server.log
           if-no-files-found: warn
           retention-days: 7
+
       - name: Cleanup ephemeral principal
         if: always()
         shell: bash
