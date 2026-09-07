@@ -26,7 +26,7 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 1
 
-      - name: Validate 2.0.2 entity intelligence authority and frozen rollback
+      - name: Validate 2.0.2 entity intelligence authority, Entity 360 parity and frozen rollback
         shell: bash
         run: |
           set -euo pipefail
@@ -47,16 +47,21 @@ jobs:
           for path in [
             'atlas-v2.html','src/v2/atlas-v2-boot.js','src/v2/atlas-v2-viz.js','src/v2/atlas-v2-viz.css',
             'src/v2/entity-search-adapter.js','src/v2/explore-surface.js','src/v2/entity360-adapter.js',
-            'src/v2/entity360-surface.js','src/v2/universes-adapter.js','tools/build_atlas_v2_primary.py'
+            'src/v2/entity360-surface.js','src/v2/entity360-parity-surface.js','src/v2/entity360-parity-surface.css',
+            'src/v2/universes-adapter.js','tools/build_atlas_v2_primary.py'
           ]: assert Path(path).is_file(), path
           html=Path('atlas-v2.html').read_text()
           assert 'data-atlas-v2-primary="analytics"' in html
           assert './v2/atlas-v2-shell.css?v=v2-primary-5' in html
           assert './v2/atlas-v2-viz.css?v=v2-primary-5-viz1' in html
           assert './v2/atlas-v2-boot.js?v=v2-primary-5-entity-intelligence-1' in html
+          assert './v2/entity360-parity-surface.js?v=v2-primary-5-entity360-parity-1' in html
+          assert './v2/entity360-parity-surface.css?v=v2-primary-5-entity360-parity-1' in html
           boot=Path('src/v2/atlas-v2-boot.js').read_text()
+          parity=Path('src/v2/entity360-parity-surface.js').read_text()
           assert "STRUCTURAL_VERSION = 'v2-primary-5'" in boot
           assert "SURFACE_VERSION = 'v2-primary-5-entity-intelligence-1'" in boot
+          assert all(x in parity for x in ['SIX_LENS_NATIVE_V2','ENTITY360_LEGACY_PARITY_V2','e360p-identidad','e360p-caracterizacion','e360p-relaciones','e360p-contexto','e360p-senales','e360p-evidencia'])
           explore=Path('src/v2/explore-surface.js').read_text()
           entity=Path('src/v2/entity360-surface.js').read_text()
           entity_adapter=Path('src/v2/entity360-adapter.js').read_text()
@@ -65,13 +70,13 @@ jobs:
           assert all(x in entity for x in ['screeningPanel','reportingPanel','reconciliationPanel','digitalIdentityPanel'])
           assert all(x in entity_adapter for x in ['entity_intelligence','entity_screening_live','digital_identity_live','searchDigitalIdentity'])
           assert "query('attention'" in universe
-          print('ATLAS 2.0.2 entity-intelligence source authority: OK')
+          print('ATLAS 2.0.2 entity-intelligence + six-lens Entity 360 source authority: OK')
           PY
           for f in \
             src/v2/atlas-v2-production-config.js src/v2/atlas-v2-health.js src/v2/atlas-v2-core-auth.js \
             src/v2/atlas-v2-data.js src/v2/atlas-v2-session.js src/v2/atlas-v2-access.js src/v2/atlas-v2-shell.js \
             src/v2/atlas-v2-boot.js src/v2/atlas-v2-viz.js src/v2/entity-search-adapter.js src/v2/explore-surface.js \
-            src/v2/entity360-adapter.js src/v2/entity360-surface.js src/v2/public-spend-surface.js \
+            src/v2/entity360-adapter.js src/v2/entity360-surface.js src/v2/entity360-parity-surface.js src/v2/public-spend-surface.js \
             src/v2/relations-surface.js src/v2/universes-adapter.js src/v2/universes-surface.js \
             src/v2/territory-adapter.js src/v2/territory-surface.js src/v2/watch-adapter.js src/v2/watch-surface.js; do node --check "$f"; done
           python3 -m py_compile tools/build_atlas_v2_primary.py
@@ -94,16 +99,19 @@ jobs:
           assert r['v2_explore_mode']=='LIVE_PULSE_VISUAL_UAF_SII'
           assert r['v2_entity_search']=='IDENTITY_TIERED_DIGITAL_PRESS'
           assert r['v2_entity_intelligence']=='UAF_SII_REPORTING_SCREENING_DIGITAL'
+          assert r['v2_entity360_parity']=='SIX_LENS_NATIVE_V2'
+          assert r['v2_entity360_dossier']=='ENTITY360_LEGACY_PARITY_V2'
           assert r['legacy_fallback_policy']=='FROZEN_ROLLBACK_ONLY'
           assert r['legacy_authority_active_on_primary'] is False
           assert f'data-aml-version="{p["release"]}"' in html and f'data-aml-build="{p["build"]}"' in html
           assert './v2/atlas-v2-boot.js?v=v2-primary-5-entity-intelligence-1' in html
           assert './v2/atlas-v2-viz.css?v=v2-primary-5-viz1' in html
+          assert './v2/entity360-parity-surface.js?v=v2-primary-5-entity360-parity-1' in html
           assert 'atlas-runtime-current-' not in html
           assert f'data-aml-version="{l["release"]}"' in legacy and 'atlas-runtime-current-' in legacy
-          for path in ['v2/atlas-v2-viz.js','v2/atlas-v2-viz.css','v2/entity-search-adapter.js','v2/explore-surface.js','v2/entity360-adapter.js','v2/entity360-surface.js','v2/universes-adapter.js']:
+          for path in ['v2/atlas-v2-viz.js','v2/atlas-v2-viz.css','v2/entity-search-adapter.js','v2/explore-surface.js','v2/entity360-adapter.js','v2/entity360-surface.js','v2/entity360-parity-surface.js','v2/entity360-parity-surface.css','v2/universes-adapter.js']:
               assert (root/path).is_file(), path
-          print('ATLAS 2.0.2 entity-intelligence artifact + frozen rollback: OK')
+          print('ATLAS 2.0.2 Entity 360 parity artifact + frozen rollback: OK')
           PY
 
       - uses: actions/configure-pages@v5
@@ -114,7 +122,7 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Verify live ATLAS 2.0.2 entity intelligence and rollback
+      - name: Verify live ATLAS 2.0.2 Entity 360 parity and rollback
         shell: bash
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
@@ -131,10 +139,11 @@ jobs:
           sha=os.environ.get('GITHUB_SHA','unknown')
           asset='v2-primary-5'
           surface='v2-primary-5-entity-intelligence-1'
+          parity_surface='v2-primary-5-entity360-parity-1'
           viz_style='v2-primary-5-viz1'
           def get(path, stamp):
               sep='&' if '?' in path else '?'
-              req=urllib.request.Request(f'{base}{path}{sep}atlas={stamp}',headers={'Cache-Control':'no-cache','User-Agent':'ATLAS-2.0.2-entity-intelligence-smoke'})
+              req=urllib.request.Request(f'{base}{path}{sep}atlas={stamp}',headers={'Cache-Control':'no-cache','User-Agent':'ATLAS-2.0.2-entity360-parity-smoke'})
               with urllib.request.urlopen(req,timeout=20) as r: return r.read().decode('utf-8','replace')
           last=None
           for n in range(1,13):
@@ -147,6 +156,8 @@ jobs:
                   boot=get(f'/v2/atlas-v2-boot.js?v={surface}',stamp)
                   explore=get(f'/v2/explore-surface.js?v={surface}',stamp)
                   entity=get(f'/v2/entity360-surface.js?v={surface}',stamp)
+                  parity=get(f'/v2/entity360-parity-surface.js?v={parity_surface}',stamp)
+                  parity_css=get(f'/v2/entity360-parity-surface.css?v={parity_surface}',stamp)
                   entity_adapter=get(f'/v2/entity360-adapter.js?v={surface}',stamp)
                   universe=get(f'/v2/universes-adapter.js?v={surface}',stamp)
                   search=get(f'/v2/entity-search-adapter.js?v={surface}',stamp)
@@ -155,26 +166,31 @@ jobs:
                   assert live['release']==rel and str(live['build'])==bid
                   assert f'data-aml-version="{rel}"' in html and f'data-aml-build="{bid}"' in html
                   assert f'./v2/atlas-v2-boot.js?v={surface}' in html and f'./v2/atlas-v2-viz.css?v={viz_style}' in html
+                  assert f'./v2/entity360-parity-surface.js?v={parity_surface}' in html and f'./v2/entity360-parity-surface.css?v={parity_surface}' in html
                   assert 'atlas-runtime-current-' not in html
                   assert report['release']==rel and report['build']==bid and report['v2_version']==asset
                   assert report['v2_explore_mode']=='LIVE_PULSE_VISUAL_UAF_SII'
                   assert report['v2_entity_search']=='IDENTITY_TIERED_DIGITAL_PRESS'
                   assert report['v2_entity_intelligence']=='UAF_SII_REPORTING_SCREENING_DIGITAL'
+                  assert report['v2_entity360_parity']=='SIX_LENS_NATIVE_V2'
+                  assert report['v2_entity360_dossier']=='ENTITY360_LEGACY_PARITY_V2'
                   assert f'data-aml-version="{lrel}"' in legacy and f'data-aml-build="{lbid}"' in legacy and 'atlas-runtime-current-' in legacy
                   assert "STRUCTURAL_VERSION = 'v2-primary-5'" in boot and "SURFACE_VERSION = 'v2-primary-5-entity-intelligence-1'" in boot
                   assert 'AtlasV2Universes.attention' in explore and 'SO UAF ↔ SII' in explore
                   assert all(x in entity for x in ['screeningPanel','reportingPanel','reconciliationPanel','digitalIdentityPanel'])
+                  assert all(x in parity for x in ['SIX_LENS_NATIVE_V2','ENTITY360_LEGACY_PARITY_V2','e360p-identidad','e360p-caracterizacion','e360p-relaciones','e360p-contexto','e360p-senales','e360p-evidencia','ipa3_score','peer_positions','res_lifecycle','sanction_resolution'])
+                  assert all(x in parity_css for x in ['.e360p-hero','.e360p-lens-nav','.e360p-score-ring','.e360p-rail','.e360p-mark','.e360p-timeline'])
                   assert all(x in entity_adapter for x in ['entity_intelligence','entity_screening_live','digital_identity_live','searchDigitalIdentity'])
                   assert "query('attention'" in universe and 'recentTerminated' in universe
                   assert 'ATLAS_ENTITY_SEARCH_V2' in search and "operation: 'entity_search'" in search and 'resultTier' in search
                   assert all(x in viz for x in ['horizontalBars','lineChart','segmented'])
                   assert all(x in viz_css for x in ['.atlas-v2-viz-bar-fill','.atlas-v2-viz-segment-track','.atlas-v2-viz-legend-item'])
-                  print(json.dumps({'status':'ok','release':rel,'build':bid,'asset':asset,'surface':surface,'viz_style':viz_style,'entity_intelligence':'UAF_SII_REPORTING_SCREENING_DIGITAL','legacy_release':lrel,'legacy_build':lbid}))
+                  print(json.dumps({'status':'ok','release':rel,'build':bid,'asset':asset,'surface':surface,'entity360_parity':parity_surface,'entity360_dossier':'ENTITY360_LEGACY_PARITY_V2','legacy_release':lrel,'legacy_build':lbid}))
                   break
               except Exception as exc:
                   last=exc
                   print(f'live smoke attempt {n}/12 not ready: {exc}')
                   if n<12: time.sleep(8)
           else:
-              raise SystemExit(f'ATLAS 2.0.2 entity-intelligence live smoke failed: {last}')
+              raise SystemExit(f'ATLAS 2.0.2 Entity 360 parity live smoke failed: {last}')
           PY
