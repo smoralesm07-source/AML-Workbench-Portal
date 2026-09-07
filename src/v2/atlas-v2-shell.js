@@ -12,7 +12,7 @@
     { id: 'gasto-publico', label: 'Gasto público', icon: '04', group: 'analysis', description: 'Compras y presupuesto' },
     { id: 'territorio', label: 'Territorio', icon: '05', group: 'analysis', description: 'Contexto geográfico' },
     { id: 'relaciones', label: 'Relaciones', icon: '06', group: 'analysis', description: 'Redes y convergencias' },
-    { id: 'vigilancia', label: 'Vigilancia', icon: '07', group: 'analysis', description: 'Reglas guardadas' },
+    { id: 'vigilancia', label: 'Vigilancia', icon: '07', group: 'analysis', description: 'Cambios y señales' },
     { id: 'guardados', label: 'Guardados', icon: '08', group: 'utility', description: 'Continuidad opcional' },
     { id: 'metodo', label: 'Método y datos', icon: '09', group: 'utility', description: 'Fuentes y explicabilidad' },
   ]);
@@ -210,76 +210,68 @@
   }
 
   function renderRelations(container) {
-    container.append(pageHead('CONVERGENCIA', 'Relaciones', 'Busca conexiones entre entidades, representantes, domicilios, proveedores, compradores y otras evidencias sin convertir coincidencias débiles en identidad.'));
-    container.append(node('section', { class: 'atlas-v2-section' }, [
-      sectionHeading('Tres niveles de lectura', 'La relación debe conservar fuente, tipo, evidencia y confianza.'),
-      node('div', { class: 'atlas-v2-grid three' }, [
-        card('DIRECTA', 'Relación documentada', 'Vínculo explícito observado en una fuente con identidad suficientemente resuelta.', 'Evidencia primaria'),
-        card('CONVERGENCIA', 'Múltiples señales', 'Fuentes independientes coinciden sobre una entidad o grupo sin sumar señales redundantes.', 'Explicabilidad'),
-        card('HIPÓTESIS', 'Relación por revisar', 'Coincidencia útil para explorar, pero insuficiente para afirmar identidad, control o conducta.', 'No inferir de más'),
-      ]),
-    ]));
+    container.append(pageHead('RED ANALÍTICA', 'Relaciones', 'Observa vínculos, estructuras repetidas y convergencias entre entidades. Un vínculo describe conectividad; no transmite automáticamente riesgo ni culpabilidad.'));
+    container.append(node('div', { class: 'atlas-v2-empty' }, [node('strong', { text: 'Superficie v2 reservada' }), node('span', { text: 'El grafo se alimentará de relaciones tipificadas y evidencia de origen; toda inferencia debe distinguirse de una relación documentada.' })]));
   }
 
   function renderWatch(container) {
-    container.append(pageHead('VIGILANCIA OPCIONAL', 'Vigilancia', 'Guarda reglas o preguntas analíticas y vuelve cuando algo material cambie. No existe obligación de transformar una alerta en caso.'));
-    container.append(node('div', { class: 'atlas-v2-empty' }, [node('strong', { text: 'Sin cola obligatoria' }), node('span', { text: 'Las alertas futuras serán entradas de exploración. El analista podrá abrirlas, ignorarlas, guardarlas o registrar un resultado, sin workflow impuesto.' })]));
+    container.append(pageHead('CAMBIO Y ATENCIÓN', 'Vigilancia', 'Detecta señales nuevas o cambiantes a través de snapshots publicados. Revisarlas es opcional: Atlas no las asigna, no abre tareas y no exige cierre.'));
+    container.append(node('div', { class: 'atlas-v2-empty' }, [node('strong', { text: 'Superficie analítica v2' }), node('span', { text: 'La vista nativa muestra cambios, señales actuales, salud de fuentes e historial. Una señal puede explorarse o ignorarse sin cambiar un estado de workflow.' })]));
   }
 
-  function savedViews() {
+  function readSaved() {
     try {
-      const value = JSON.parse(localStorage.getItem(STORAGE_SAVED) || '[]');
-      return Array.isArray(value) ? value : [];
+      const parsed = JSON.parse(localStorage.getItem(STORAGE_SAVED) || '[]');
+      return Array.isArray(parsed) ? parsed.slice(0, 50) : [];
     } catch (_) { return []; }
-  }
-
-  function persistSaved(items) {
-    localStorage.setItem(STORAGE_SAVED, JSON.stringify(items.slice(0, 50)));
   }
 
   function saveCurrentView() {
     const current = routeFromHash();
-    const route = routeMap.get(current.id);
-    const items = savedViews();
-    const url = location.hash || '#/explorar';
-    const next = [{ id: `${Date.now()}`, title: route?.label || 'Vista Atlas', url, savedAt: new Date().toISOString() }, ...items.filter(item => item.url !== url)];
-    persistSaved(next);
+    const saved = readSaved();
+    const item = {
+      id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+      route: current.id,
+      hash: location.hash,
+      label: routeMap.get(current.id)?.label || current.id,
+      savedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(STORAGE_SAVED, JSON.stringify([item, ...saved].slice(0, 50)));
     toast('Vista guardada. No se creó ningún caso ni tarea.');
-    if (state.route?.id === 'guardados') render();
+    if (current.id === 'guardados') render();
   }
 
   function renderSaved(container) {
-    const items = savedViews();
-    container.append(pageHead('CONTINUIDAD OPCIONAL', 'Guardados', 'Vistas e hipótesis a las que quieres volver. Guardar algo no crea propietario, estado, tarea, plazo ni SLA.'));
-    if (!items.length) {
-      container.append(node('div', { class: 'atlas-v2-empty' }, [node('strong', { text: 'Todavía no guardaste vistas' }), node('span', { text: 'Puedes usar “Guardar vista” desde cualquier análisis. Es sólo un marcador personal de continuidad.' })]));
+    const saved = readSaved();
+    container.append(pageHead('CONTINUIDAD OPCIONAL', 'Guardados', 'Retoma una exploración sin convertirla en caso, tarea o cola de trabajo.'));
+    if (!saved.length) {
+      container.append(node('div', { class: 'atlas-v2-empty' }, [node('strong', { text: 'Todavía no guardaste vistas' }), node('span', { text: 'Usa “Guardar vista” desde cualquier análisis. Guardar no asigna propietario ni crea workflow.' })]));
       return;
     }
-    const grid = node('div', { class: 'atlas-v2-grid three' });
-    items.forEach(item => grid.append(card('VISTA GUARDADA', item.title, item.url, new Date(item.savedAt).toLocaleString('es-CL'), () => { location.hash = item.url; })));
-    container.append(node('section', { class: 'atlas-v2-section' }, [sectionHeading('Vistas guardadas', `${items.length} elementos locales en esta Foundation.`), grid]));
+    const grid = node('div', { class: 'atlas-v2-grid three atlas-v2-saved-grid' });
+    saved.forEach(item => {
+      grid.append(card('VISTA GUARDADA', item.label, item.hash, new Date(item.savedAt).toLocaleString('es-CL'), () => { location.hash = item.hash; }));
+    });
+    container.append(node('section', { class: 'atlas-v2-section' }, [grid]));
   }
 
   function renderMethod(container) {
-    container.append(pageHead('EXPLICABILIDAD', 'Método y datos', 'La metodología deja de estar dispersa bajo cada tarjeta. Esta superficie concentrará contratos, cobertura, frescura, fórmulas, guardarraíles y versiones.'));
+    container.append(pageHead('EXPLICABILIDAD', 'Método y datos', 'Haz visible qué sabe Atlas, de dónde proviene, qué tan fresco está y qué no puede inferirse de la evidencia disponible.'));
+    const principles = [
+      ['PRIORIDAD ≠ PROBABILIDAD', 'Los scores ordenan atención comparativa; no estiman la probabilidad de delito.'],
+      ['FALTANTE ≠ CERO', 'La ausencia de datos se muestra como cobertura incompleta, no como ausencia del fenómeno.'],
+      ['CONTEXTO ≠ ENTIDAD', 'Un atributo territorial o sectorial no se transfiere automáticamente a una entidad.'],
+      ['SANCIÓN ≠ AML/FT', 'Una sanción administrativa mantiene su naturaleza y no se convierte por sí sola en evidencia LA/FT.'],
+      ['INHERENTE / EXPOSICIÓN / CONTROL / RESIDUAL', 'Cada dimensión se conserva separada; el residual requiere evidencia suficiente de riesgo inherente y controles.'],
+      ['EVIDENCIA VERSIONADA', 'Toda síntesis debe ser trazable a fuente, snapshot y regla o contrato que la produjo.'],
+    ];
     container.append(node('section', { class: 'atlas-v2-section' }, [
-      sectionHeading('Principios que no se negocian', 'Reglas que deben acompañar cualquier nueva señal o visualización.'),
-      node('div', { class: 'atlas-v2-grid' }, [
-        card('GUARDARRAÍL', 'Prioridad ≠ probabilidad', 'Los scores ordenan revisión o atención; no estiman automáticamente probabilidad de LA/FT.', 'Metodología'),
-        card('GUARDARRAÍL', 'Ausencia de dato ≠ cero', 'No observar una fuente o un atributo no equivale a confirmar su inexistencia.', 'Calidad'),
-        card('GUARDARRAÍL', 'Contexto no se hereda', 'Una señal sectorial o territorial no se transfiere automáticamente a una entidad.', 'Inferencia'),
-        card('GUARDARRAÍL', 'Sanción ≠ LA/FT', 'Un evento administrativo es evidencia contextual y no prueba actividad de lavado o financiamiento.', 'Semántica'),
-      ]),
-    ]));
-    container.append(node('div', { class: 'atlas-v2-statusline' }, [
-      node('span', { text: 'Arquitectura: ATLAS v2' }),
-      node('span', { text: 'Navegador: delgado' }),
-      node('span', { text: 'Estado: URL' }),
-      node('span', { text: 'Seguimiento: opcional' }),
+      sectionHeading('Guardrails metodológicos', 'Reglas que una interfaz no puede sobrescribir.'),
+      node('div', { class: 'atlas-v2-grid three' }, principles.map(([tag, description]) => card('REGLA', tag, description, 'Metodología Atlas'))),
     ]));
   }
 
-  const defaultRenderers = Object.freeze({
+  const fallbackRenderers = Object.freeze({
     explorar: renderExplore,
     universos: renderUniverses,
     entidad: renderEntity,
@@ -292,31 +284,36 @@
   });
 
   function render() {
-    state.route = routeFromHash();
-    const route = routeMap.get(state.route.id);
-    refs.title.textContent = route.label;
+    if (!refs.content) return;
+    const route = routeFromHash();
+    state.route = route;
     refs.navButtons.forEach((button, id) => {
       if (id === route.id) button.setAttribute('aria-current', 'page');
       else button.removeAttribute('aria-current');
     });
+    refs.title.textContent = routeMap.get(route.id)?.label || 'Atlas';
     clear(refs.content);
-    const custom = surfaces.get(route.id);
-    const renderer = custom || defaultRenderers[route.id] || renderExplore;
-    renderer(refs.content, state.route, api);
+    const renderer = surfaces.get(route.id) || fallbackRenderers[route.id] || renderExplore;
+    renderer(refs.content, route, api);
     refs.content.focus({ preventScroll: true });
   }
 
-  function commandCatalog(query = '') {
-    const q = String(query || '').trim().toLocaleLowerCase('es-CL');
-    const items = ROUTES.map(route => ({ label: route.label, detail: route.description, route: route.id, keywords: `${route.label} ${route.description}`.toLocaleLowerCase('es-CL') }));
-    if (looksLikeRut(query)) items.unshift({ label: `Abrir ${query} en Entidad 360`, detail: 'Buscar por RUT', route: 'entidad', params: { rut: query }, keywords: query.toLocaleLowerCase('es-CL') });
-    return q ? items.filter(item => item.keywords.includes(q) || item.label.toLocaleLowerCase('es-CL').includes(q)).slice(0, 12) : items.slice(0, 12);
+  function commandItems(filter = '') {
+    const cleanFilter = String(filter).trim().toLocaleLowerCase('es-CL');
+    const items = ROUTES.map(route => ({ label: route.label, detail: route.description, route: route.id }));
+    if (looksLikeRut(filter)) items.unshift({ label: `Abrir ${filter} en Entidad 360`, detail: 'Consulta de entidad', route: 'entidad', params: { rut: filter } });
+    if (!cleanFilter) return items;
+    return items.filter(item => `${item.label} ${item.detail}`.toLocaleLowerCase('es-CL').includes(cleanFilter));
   }
 
-  function paintCommands(query = '') {
-    state.commandItems = commandCatalog(query);
-    state.commandIndex = Math.min(state.commandIndex, Math.max(0, state.commandItems.length - 1));
+  function paintCommands(filter = '') {
+    state.commandItems = commandItems(filter);
+    state.commandIndex = Math.min(state.commandIndex, Math.max(state.commandItems.length - 1, 0));
     clear(refs.commandList);
+    if (!state.commandItems.length) {
+      refs.commandList.append(node('div', { class: 'atlas-v2-empty', text: 'Sin coincidencias. Escribe un RUT o navega a Universos para explorar.' }));
+      return;
+    }
     state.commandItems.forEach((item, index) => {
       refs.commandList.append(node('button', {
         type: 'button',
