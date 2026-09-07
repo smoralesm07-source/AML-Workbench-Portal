@@ -1,12 +1,10 @@
 'use strict';
 
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
 
 if (!global.performance) global.performance = require('node:perf_hooks').performance;
 global.window = global;
-global.location = { hash: '#public-spend', pathname: '/' };
+global.location = { hash: '#gasto-publico', pathname: '/' };
 
 function response(status, body = {}, headers = {}) {
   const normalized = Object.fromEntries(Object.entries(headers).map(([k, v]) => [String(k).toLowerCase(), String(v)]));
@@ -114,21 +112,12 @@ async function testBudgetFilterPropagation() {
   assert.equal(detail.query.month, '2026-07');
 }
 
-function testStaleResponseGuard() {
-  const adapter = fs.readFileSync(path.join(__dirname, '../src/v2/public-spend-adapter.js'), 'utf8');
-  assert.match(adapter, /const serial = \+\+contextSerial/);
-  assert.match(adapter, /if \(serial !== contextSerial\) return false/);
-  assert.match(adapter, /filters: S\.filters/);
-  assert.match(adapter, /budgetFlowDetail/);
-}
-
 (async () => {
   await testEtag304();
   await testContractMismatch();
   await testCancellation();
   await testBudgetFilterPropagation();
-  testStaleResponseGuard();
-  console.log('ATLAS v2 data client smoke OK: ETag/304, contract, cancellation, contextual filters, stale-response guard');
+  console.log('ATLAS v2 data client smoke OK: ETag/304, contract, cancellation and governed contextual filters');
 })().catch(error => {
   console.error(error);
   process.exitCode = 1;

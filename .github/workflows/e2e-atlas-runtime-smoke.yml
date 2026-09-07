@@ -1,19 +1,20 @@
-name: E2E ATLAS v2 primary launch gate
+name: E2E ATLAS v2 primary post-merge gate
 
 on:
   push:
     branches: [main]
     paths: &atlas_v2_e2e_paths
       - 'atlas-v2.html'
+      - 'atlas-v2-release.json'
       - 'tools/build_atlas_v2_primary.py'
       - 'tools/e2e_atlas_runtime_smoke.mjs'
       - 'tools/serve_atlas_v2_e2e.mjs'
       - 'src/v2/*.js'
       - 'src/v2/*.css'
+      - 'supabase/functions/atlas-v2-read/**'
+      - 'supabase/functions/atlas-v2-session-exchange/**'
+      - 'supabase/core-functions/atlas-v2-e2e-auth/**'
       - '.github/workflows/e2e-atlas-runtime-smoke.yml'
-  pull_request:
-    branches: [main]
-    paths: *atlas_v2_e2e_paths
   workflow_dispatch:
 
 permissions:
@@ -38,10 +39,20 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Validate launch-hardened sources
+      - name: Validate post-launch sources
         shell: bash
         run: |
           set -euo pipefail
+          python3 - <<'PY'
+          import json
+          p=json.load(open('atlas-v2-release.json',encoding='utf-8'))
+          l=json.load(open('atlas-release.json',encoding='utf-8'))
+          assert p['release']=='2.0.0' and str(p['build'])=='2000'
+          assert p['runtime']=='ATLAS_V2_ANALYTICS'
+          assert str(p['legacy_fallback']['release'])==str(l['release'])
+          assert str(p['legacy_fallback']['build'])==str(l['build'])
+          assert p['legacy_fallback']['authority_active_on_primary'] is False
+          PY
           node --check src/v2/atlas-v2-health.js
           node --check src/v2/atlas-v2-core-auth.js
           node --check src/v2/atlas-v2-boot.js
@@ -64,26 +75,33 @@ jobs:
           python3 - <<'PY'
           import json
           from pathlib import Path
+          primary=json.loads(Path('_site/atlas-v2-release.json').read_text())
+          legacy_release=json.loads(Path('_site/atlas-release.json').read_text())
           html=Path('_site/index.html').read_text(encoding='utf-8')
           legacy=Path('_site/legacy.html').read_text(encoding='utf-8')
           report=json.loads(Path('_site/atlas-runtime-report.json').read_text(encoding='utf-8'))
+          assert f'data-aml-version="{primary["release"]}"' in html
+          assert f'data-aml-build="{primary["build"]}"' in html
           assert 'data-atlas-v2-primary="analytics"' in html
           assert 'atlas-v2-health.js?v=v2-primary-1' in html
           assert 'atlas-runtime-current-' not in html and 'atlas-module-current-' not in html
+          assert f'data-aml-version="{legacy_release["release"]}"' in legacy
+          assert f'data-aml-build="{legacy_release["build"]}"' in legacy
           assert 'atlas-runtime-current-' in legacy
           assert report['primary_runtime']=='ATLAS_V2_ANALYTICS'
+          assert report['release']==str(primary['release']) and report['build']==str(primary['build'])
+          assert report['legacy_release']==str(legacy_release['release']) and report['legacy_build']==str(legacy_release['build'])
           assert report['legacy_authority_active_on_primary'] is False
           assert report['v2_auth_boundary']=='ENTRA_SUPABASE_ALLOWLIST_VERIFIED_USER'
           assert report['v2_structural_surface_policy']=='FAIL_CLOSED'
           assert report['v2_e2e_proxy'] is True
-          print('ATLAS v2 primary authority preflight: OK')
+          print('ATLAS v2 primary post-launch preflight: OK')
           PY
 
       - name: Mint ephemeral authenticated session
         shell: bash
         run: |
           set -euo pipefail
-          # The broker accepts only the exact GitHub repository/workflow/ref/event OIDC claims.
           request_url="${ACTIONS_ID_TOKEN_REQUEST_URL}"
           sep='?'; [[ "$request_url" == *'?'* ]] && sep='&'
           oidc_json="$(curl --fail-with-body --silent --show-error -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${request_url}${sep}audience=atlas-v2-e2e")"

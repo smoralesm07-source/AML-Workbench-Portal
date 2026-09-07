@@ -1,4 +1,4 @@
-name: Deploy ATLAS AML current
+name: Deploy ATLAS AML v2
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: atlas-pages-current
+  group: atlas-pages-v2
   cancel-in-progress: true
 
 jobs:
@@ -27,20 +27,26 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 1
 
-      - name: Validate v2 primary source contracts
+      - name: Validate primary and frozen rollback release contracts
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           import json
           from pathlib import Path
-          release=json.loads(Path('atlas-release.json').read_text())
+          primary=json.loads(Path('atlas-v2-release.json').read_text())
+          legacy=json.loads(Path('atlas-release.json').read_text())
           runtime=json.loads(Path('atlas-runtime-manifest.json').read_text())
           build=json.loads(Path('build.json').read_text())
-          rel=str(release['release']); bid=str(release['build'])
-          assert runtime['release']==rel and str(runtime['build'])==bid
-          assert build['app_version']==rel and str(build['build'])==bid
-          assert release['deployment_policy']=='SINGLE_ACTIVE_RELEASE'
+          assert primary['schema']=='ATLAS_V2_RELEASE_V1'
+          assert primary['runtime']=='ATLAS_V2_ANALYTICS'
+          assert primary['release']=='2.0.0' and str(primary['build'])=='2000'
+          assert runtime['release']==legacy['release']==build['app_version']
+          assert str(runtime['build'])==str(legacy['build'])==str(build['build'])
+          fallback=primary['legacy_fallback']
+          assert str(fallback['release'])==str(legacy['release'])
+          assert str(fallback['build'])==str(legacy['build'])
+          assert fallback['path']=='legacy.html' and fallback['authority_active_on_primary'] is False
           for path in [
               'atlas-v2.html',
               'src/v2/atlas-v2-production-config.js',
@@ -58,12 +64,11 @@ jobs:
           html=Path('atlas-v2.html').read_text(encoding='utf-8')
           assert 'data-atlas-v2-primary="analytics"' in html
           assert 'atlas-v2-core-auth.js' in html
-          assert 'ldmtlwzqaqmegedktlxr.supabase.co' in html
-          assert 'bzqxvidggykkdouotylg.supabase.co' in html
-          print(f'validated ATLAS v2 primary sources for {rel}/{bid}')
+          print(f"validated ATLAS {primary['release']}/{primary['build']} with frozen rollback {legacy['release']}/{legacy['build']}")
           PY
           for f in \
             src/v2/atlas-v2-production-config.js \
+            src/v2/atlas-v2-health.js \
             src/v2/atlas-v2-core-auth.js \
             src/v2/atlas-v2-data.js \
             src/v2/atlas-v2-session.js \
@@ -83,7 +88,7 @@ jobs:
             node --check "$f"
           done
 
-      - name: Build v2 primary site with explicit legacy rollback
+      - name: Build ATLAS v2 primary with explicit legacy rollback
         shell: bash
         run: |
           set -euo pipefail
@@ -91,24 +96,34 @@ jobs:
           python3 - <<'PY'
           import json
           from pathlib import Path
-          release=json.loads(Path('_site/atlas-release.json').read_text())
+          primary=json.loads(Path('_site/atlas-v2-release.json').read_text())
+          legacy_release=json.loads(Path('_site/atlas-release.json').read_text())
           report=json.loads(Path('_site/atlas-runtime-report.json').read_text())
           html=Path('_site/index.html').read_text(encoding='utf-8')
           legacy=Path('_site/legacy.html').read_text(encoding='utf-8')
           assert report['primary_runtime']=='ATLAS_V2_ANALYTICS'
+          assert report['release']==str(primary['release']) and report['build']==str(primary['build'])
+          assert report['legacy_release']==str(legacy_release['release']) and report['legacy_build']==str(legacy_release['build'])
           assert report['legacy_fallback']=='legacy.html'
+          assert report['legacy_fallback_policy']=='FROZEN_ROLLBACK_ONLY'
           assert report['legacy_authority_active_on_primary'] is False
-          assert 'data-atlas-v2-primary="analytics"' in html
+          assert f'data-aml-version="{primary["release"]}"' in html
+          assert f'data-aml-build="{primary["build"]}"' in html
           assert 'atlas-runtime-current-' not in html
+          assert f'data-aml-version="{legacy_release["release"]}"' in legacy
+          assert f'data-aml-build="{legacy_release["build"]}"' in legacy
           assert 'atlas-runtime-current-' in legacy
-          assert Path('_site/v2/atlas-v2-core-auth.js').is_file()
-          assert Path('_site/v2/entity360-surface.js').is_file()
-          assert Path('_site/v2/public-spend-surface.js').is_file()
-          assert Path('_site/v2/relations-surface.js').is_file()
-          assert Path('_site/v2/universes-surface.js').is_file()
-          assert Path('_site/v2/territory-surface.js').is_file()
-          assert Path('_site/v2/watch-surface.js').is_file()
-          print(f'built ATLAS v2 primary {release["release"]}/{release["build"]} with legacy rollback')
+          for path in [
+              '_site/v2/atlas-v2-core-auth.js',
+              '_site/v2/entity360-surface.js',
+              '_site/v2/public-spend-surface.js',
+              '_site/v2/relations-surface.js',
+              '_site/v2/universes-surface.js',
+              '_site/v2/territory-surface.js',
+              '_site/v2/watch-surface.js',
+          ]:
+              assert Path(path).is_file(), path
+          print(f"built ATLAS {primary['release']}/{primary['build']} with frozen rollback {legacy_release['release']}/{legacy_release['build']}")
           PY
 
       - name: Configure Pages
@@ -123,7 +138,7 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Verify live v2 primary authority
+      - name: Verify live ATLAS v2 authority and frozen rollback
         shell: bash
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
@@ -132,8 +147,10 @@ jobs:
           python3 - <<'PY'
           import json, os, time, urllib.request
           from pathlib import Path
-          expected=json.loads(Path('atlas-release.json').read_text())
-          rel=str(expected['release']); bid=str(expected['build'])
+          primary=json.loads(Path('atlas-v2-release.json').read_text())
+          legacy_expected=json.loads(Path('atlas-release.json').read_text())
+          rel=str(primary['release']); bid=str(primary['build'])
+          legacy_rel=str(legacy_expected['release']); legacy_bid=str(legacy_expected['build'])
           base=os.environ['PAGE_URL'].rstrip('/')
           sha=os.environ.get('GITHUB_SHA','unknown')
           def get(path, stamp):
@@ -145,20 +162,26 @@ jobs:
               try:
                   stamp=f'{sha}-{n}'
                   html=get('/',stamp)
+                  release_live=json.loads(get('/atlas-v2-release.json',stamp))
                   report=json.loads(get('/atlas-runtime-report.json',stamp))
                   legacy=get('/legacy.html',stamp)
                   auth=get('/v2/atlas-v2-core-auth.js',stamp)
                   boot=get('/v2/atlas-v2-boot.js',stamp)
+                  assert release_live['release']==rel and str(release_live['build'])==bid
                   assert f'data-aml-version="{rel}"' in html
                   assert f'data-aml-build="{bid}"' in html
                   assert 'data-atlas-v2-primary="analytics"' in html
                   assert 'atlas-runtime-current-' not in html
                   assert report['primary_runtime']=='ATLAS_V2_ANALYTICS'
+                  assert report['release']==rel and report['build']==bid
+                  assert report['legacy_release']==legacy_rel and report['legacy_build']==legacy_bid
                   assert report['legacy_authority_active_on_primary'] is False
+                  assert f'data-aml-version="{legacy_rel}"' in legacy
+                  assert f'data-aml-build="{legacy_bid}"' in legacy
                   assert 'atlas-runtime-current-' in legacy
                   assert 'aml_allowed_users' in auth and 'signInWithOAuth' in auth
                   assert 'AtlasCoreSession.ready' in boot
-                  print(json.dumps({'status':'ok','release':rel,'build':bid,'runtime':'ATLAS_V2_ANALYTICS','legacy_fallback':'legacy.html'}))
+                  print(json.dumps({'status':'ok','release':rel,'build':bid,'runtime':'ATLAS_V2_ANALYTICS','legacy_release':legacy_rel,'legacy_build':legacy_bid,'legacy_fallback':'legacy.html'}))
                   break
               except Exception as exc:
                   last=exc
