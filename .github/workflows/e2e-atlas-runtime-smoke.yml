@@ -8,6 +8,7 @@ on:
       - 'atlas-v2-release.json'
       - 'tools/build_atlas_v2_primary.py'
       - 'tools/e2e_atlas_runtime_smoke.mjs'
+      - 'tools/e2e_atlas_v2_ux_preflight.mjs'
       - 'tools/serve_atlas_v2_e2e.mjs'
       - 'src/v2/*.js'
       - 'src/v2/*.css'
@@ -47,7 +48,7 @@ jobs:
           import json
           p=json.load(open('atlas-v2-release.json',encoding='utf-8'))
           l=json.load(open('atlas-release.json',encoding='utf-8'))
-          assert p['release']=='2.0.0' and str(p['build'])=='2000'
+          assert p['release']=='2.0.1' and str(p['build'])=='2001'
           assert p['runtime']=='ATLAS_V2_ANALYTICS'
           assert str(p['legacy_fallback']['release'])==str(l['release'])
           assert str(p['legacy_fallback']['build'])==str(l['build'])
@@ -56,7 +57,9 @@ jobs:
           node --check src/v2/atlas-v2-health.js
           node --check src/v2/atlas-v2-core-auth.js
           node --check src/v2/atlas-v2-boot.js
+          node --check src/v2/explore-surface.js
           node --check tools/e2e_atlas_runtime_smoke.mjs
+          node --check tools/e2e_atlas_v2_ux_preflight.mjs
           node --check tools/serve_atlas_v2_e2e.mjs
           python3 -m py_compile tools/build_atlas_v2_primary.py
 
@@ -83,7 +86,7 @@ jobs:
           assert f'data-aml-version="{primary["release"]}"' in html
           assert f'data-aml-build="{primary["build"]}"' in html
           assert 'data-atlas-v2-primary="analytics"' in html
-          assert 'atlas-v2-health.js?v=v2-primary-1' in html
+          assert 'atlas-v2-health.js?v=v2-primary-2' in html
           assert 'atlas-runtime-current-' not in html and 'atlas-module-current-' not in html
           assert f'data-aml-version="{legacy_release["release"]}"' in legacy
           assert f'data-aml-build="{legacy_release["build"]}"' in legacy
@@ -94,8 +97,12 @@ jobs:
           assert report['legacy_authority_active_on_primary'] is False
           assert report['v2_auth_boundary']=='ENTRA_SUPABASE_ALLOWLIST_VERIFIED_USER'
           assert report['v2_structural_surface_policy']=='FAIL_CLOSED'
+          assert report['v2_explore_mode']=='LIVE_PULSE'
+          assert report['v2_federation_prewarm'] is True
           assert report['v2_e2e_proxy'] is True
-          print('ATLAS v2 primary post-launch preflight: OK')
+          assert Path('_site/v2/explore-surface.js').is_file()
+          assert Path('_site/v2/explore-surface.css').is_file()
+          print('ATLAS v2 primary UX preflight: OK')
           PY
 
       - name: Mint ephemeral authenticated session
@@ -130,6 +137,9 @@ jobs:
       - name: Run authenticated cross-route, responsive and resilience gate
         run: node tools/e2e_atlas_runtime_smoke.mjs
 
+      - name: Run authenticated first-test UX preflight
+        run: node tools/e2e_atlas_v2_ux_preflight.mjs
+
       - name: Upload launch-gate evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -137,6 +147,7 @@ jobs:
           name: atlas-v2-primary-e2e-${{ github.run_id }}
           path: |
             e2e-atlas-runtime-smoke.json
+            e2e-atlas-v2-ux-preflight.json
             /tmp/atlas-runtime-smoke-server.log
           if-no-files-found: warn
           retention-days: 7
