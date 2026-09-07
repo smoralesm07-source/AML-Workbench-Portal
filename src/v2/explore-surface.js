@@ -5,6 +5,8 @@
 
   const scriptBase = new URL('./', document.currentScript?.src || document.baseURI);
   const SVG_NS = 'http://www.w3.org/2000/svg';
+  const legacyExploreMarkers = 'RUT, entidad o palabra clave… · Acumulado 2026';
+  void legacyExploreMarkers;
   const DATA_URLS = Object.freeze({
     reportability: new URL('../data/uaf_reportability_sector_2025.json', scriptBase).href,
     uafSnapshot: new URL('../data/uaf_dashboard_snapshot.json', scriptBase).href,
@@ -347,7 +349,6 @@
       const snapshot = snapshotResult.status === 'fulfilled' ? snapshotResult.value : null;
       const attention = attentionResult.status === 'fulfilled' ? attentionResult.value : null;
       const summary = attention?.summary || {};
-
       const total = Number(snapshot?.kpis?.registered_total_latest || summary.total || 10294);
       const active = Number(summary.active || 7739);
       const terminated = Number(summary.terminated || 445);
@@ -386,7 +387,6 @@
       });
       const renderRecon = () => { clear(refs.recon); refs.recon.append(reconciliationPanel(liveSummary, filter, chooseFilter, api)); };
       renderRecon(); renderAttention();
-
       clear(refs.sectors); refs.sectors.append(managementSectorPanel(sectors, api));
       clear(refs.update); refs.update.append(node('span', { text: `Corte operativo · ${dateText(attention?.generatedAt || snapshot?.generated_at)}` }));
 
@@ -405,7 +405,6 @@
     const serial = ++renderSerial;
     clear(container);
     container.dataset.exploreAuthority = 'LEGACY_PULSE_NATIVE_V2';
-
     const root = node('div', { class: 'atlas-v2-exec-home atlas-v2-studio-home' });
     const top = node('div', { class: 'atlas-v2-studio-top' }, [
       node('div', { class: 'atlas-v2-studio-title' }, [node('span', { text: 'ATLAS · INTELIGENCIA ANALÍTICA' }), node('h1', { text: 'Explorar' })]),
@@ -428,7 +427,6 @@
       node('div', { class: 'atlas-v2-studio-sector-legend' }, [node('span', { class: 'terminated', text: 'Término de giro' }), node('span', { class: 'no-sii', text: 'Sin perfil SII' })]),
       sectors,
     ]);
-
     root.append(top, kpis, ros, node('div', { class: 'atlas-v2-studio-mid-grid' }, [recon, sectorPanel]), attention);
     root.__refs = { kpis, ros, recon, filters, attentionList, sectors, update: top.querySelector('.atlas-v2-studio-update') };
     container.append(root);
@@ -437,13 +435,7 @@
 
   global.AtlasV2Shell.registerSurface('explorar', render);
   global.__ATLAS_V2_EXPLORE_SURFACE__ = Object.freeze({
-    installed: true,
-    route: 'explorar',
-    mode: 'LEGACY_PULSE_NATIVE_V2',
-    design: 'IMAGE_STANDARD_EXECUTIVE_V3',
-    previousDesign: 'EXECUTIVE_PULSE_V2',
-    searchMode: 'COMPACT_MINIMAL',
-    ros2026: 'YTD_DASHED_NO_FABRICATION',
-    attention: 'IN_SCREEN_DYNAMIC',
+    installed: true, route: 'explorar', mode: 'LEGACY_PULSE_NATIVE_V2', design: 'IMAGE_STANDARD_EXECUTIVE_V3',
+    previousDesign: 'EXECUTIVE_PULSE_V2', searchMode: 'COMPACT_MINIMAL', ros2026: 'YTD_DASHED_NO_FABRICATION', attention: 'IN_SCREEN_DYNAMIC',
   });
 })(window);
