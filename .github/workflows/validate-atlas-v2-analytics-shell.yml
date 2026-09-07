@@ -22,13 +22,22 @@ on:
       - 'src/v2/universes-adapter.js'
       - 'src/v2/universes-surface.js'
       - 'src/v2/universes-surface.css'
+      - 'src/v2/territory-adapter.js'
+      - 'src/v2/territory-surface.js'
+      - 'src/v2/territory-surface.css'
+      - 'src/v2/watch-adapter.js'
+      - 'src/v2/watch-surface.js'
+      - 'src/v2/watch-surface.css'
       - 'supabase/functions/atlas-v2-read/index.ts'
       - 'supabase/migrations/20260907023000_atlas_v2_relations_query.sql'
       - 'supabase/core-contracts/atlas-v2-universes-query-v2.sql'
+      - 'supabase/core-contracts/atlas-v2-territory-watch-query-v2.sql'
       - 'tests/atlas-v2-entity360-analytics.mjs'
       - 'tests/atlas-v2-public-spend-native.mjs'
       - 'tests/atlas-v2-relations-native.mjs'
       - 'tests/atlas-v2-universes-native.mjs'
+      - 'tests/atlas-v2-territory-native.mjs'
+      - 'tests/atlas-v2-watch-native.mjs'
       - 'docs/ATLAS_V2_ANALYTICS_FIRST.md'
       - '.github/workflows/validate-atlas-v2-analytics-shell.yml'
   pull_request:
@@ -59,10 +68,16 @@ jobs:
           node --check src/v2/relations-surface.js
           node --check src/v2/universes-adapter.js
           node --check src/v2/universes-surface.js
+          node --check src/v2/territory-adapter.js
+          node --check src/v2/territory-surface.js
+          node --check src/v2/watch-adapter.js
+          node --check src/v2/watch-surface.js
           node --check tests/atlas-v2-entity360-analytics.mjs
           node --check tests/atlas-v2-public-spend-native.mjs
           node --check tests/atlas-v2-relations-native.mjs
           node --check tests/atlas-v2-universes-native.mjs
+          node --check tests/atlas-v2-territory-native.mjs
+          node --check tests/atlas-v2-watch-native.mjs
 
       - name: Enforce analytics-first product contract
         run: |
@@ -107,6 +122,12 @@ jobs:
       - name: Validate native Universes analytical contract
         run: node tests/atlas-v2-universes-native.mjs
 
+      - name: Validate native Territory analytical contract
+        run: node tests/atlas-v2-territory-native.mjs
+
+      - name: Validate native Vigilance analytical contract
+        run: node tests/atlas-v2-watch-native.mjs
+
       - name: Build isolated preview artifact
         run: |
           set -euo pipefail
@@ -129,6 +150,12 @@ jobs:
           cp src/v2/universes-adapter.js _atlas_v2_preview/v2/
           cp src/v2/universes-surface.js _atlas_v2_preview/v2/
           cp src/v2/universes-surface.css _atlas_v2_preview/v2/
+          cp src/v2/territory-adapter.js _atlas_v2_preview/v2/
+          cp src/v2/territory-surface.js _atlas_v2_preview/v2/
+          cp src/v2/territory-surface.css _atlas_v2_preview/v2/
+          cp src/v2/watch-adapter.js _atlas_v2_preview/v2/
+          cp src/v2/watch-surface.js _atlas_v2_preview/v2/
+          cp src/v2/watch-surface.css _atlas_v2_preview/v2/
           touch _atlas_v2_preview/.nojekyll
 
       - name: Verify preview is isolated from production runtime
@@ -141,26 +168,18 @@ jobs:
           assert 'atlas-public-spend-v2' not in html
           assert 'ATLAS_RUNTIME_SCRIPTS' not in html
           assert 'ldmtlwzqaqmegedktlxr' not in html
-          for path in [
-              '_atlas_v2_preview/v2/atlas-v2-shell.js',
-              '_atlas_v2_preview/v2/atlas-v2-shell.css',
-              '_atlas_v2_preview/v2/atlas-v2-data.js',
-              '_atlas_v2_preview/v2/atlas-v2-session.js',
-              '_atlas_v2_preview/v2/atlas-v2-access.js',
-              '_atlas_v2_preview/v2/entity360-adapter.js',
-              '_atlas_v2_preview/v2/entity360-surface.js',
-              '_atlas_v2_preview/v2/entity360-surface.css',
-              '_atlas_v2_preview/v2/public-spend-surface.js',
-              '_atlas_v2_preview/v2/public-spend-surface.css',
-              '_atlas_v2_preview/v2/relations-surface.js',
-              '_atlas_v2_preview/v2/relations-surface.css',
-              '_atlas_v2_preview/v2/universes-adapter.js',
-              '_atlas_v2_preview/v2/universes-surface.js',
-              '_atlas_v2_preview/v2/universes-surface.css',
-          ]:
-              assert Path(path).exists(), path
-          assert 'ldmtlwzqaqmegedktlxr' not in Path('_atlas_v2_preview/v2/universes-adapter.js').read_text(encoding='utf-8')
-          assert 'ldmtlwzqaqmegedktlxr' not in Path('_atlas_v2_preview/v2/universes-surface.js').read_text(encoding='utf-8')
+          required = [
+              'atlas-v2-shell.js','atlas-v2-shell.css','atlas-v2-data.js','atlas-v2-session.js','atlas-v2-access.js',
+              'entity360-adapter.js','entity360-surface.js','entity360-surface.css',
+              'public-spend-surface.js','public-spend-surface.css','relations-surface.js','relations-surface.css',
+              'universes-adapter.js','universes-surface.js','universes-surface.css',
+              'territory-adapter.js','territory-surface.js','territory-surface.css',
+              'watch-adapter.js','watch-surface.js','watch-surface.css',
+          ]
+          for name in required:
+              assert Path('_atlas_v2_preview/v2', name).exists(), name
+          for name in ['universes-adapter.js','universes-surface.js','territory-adapter.js','territory-surface.js','watch-adapter.js','watch-surface.js']:
+              assert 'ldmtlwzqaqmegedktlxr' not in Path('_atlas_v2_preview/v2', name).read_text(encoding='utf-8'), name
           assert not Path('_atlas_v2_preview/v2/public-spend-adapter.js').exists()
           assert not Path('_atlas_v2_preview/v2/public-spend-route-bridge.js').exists()
           print('Isolated v2 preview artifact: OK')
