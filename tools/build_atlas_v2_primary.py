@@ -11,6 +11,7 @@ from build_atlas_site import build as build_legacy
 
 ROOT = Path(__file__).resolve().parents[1]
 V2_VERSION = "v2-primary-5"
+ENTITY_EXPLORER_VERSION = "v2-primary-6-entidades-classic-1"
 V2_RELEASE_FILE = "atlas-v2-release.json"
 V2_FILES = [
     "atlas-v2-production-config.js",
@@ -26,6 +27,9 @@ V2_FILES = [
     "atlas-v2-viz.js",
     "atlas-v2-viz.css",
     "entity-search-adapter.js",
+    "entity-explorer-adapter.js",
+    "entity-explorer-classic-surface.js",
+    "entity-explorer-classic-surface.css",
     "explore-surface.js",
     "explore-surface.css",
     "entity360-adapter.js",
@@ -109,6 +113,9 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
         './v2/atlas-v2-viz.css?v=v2-primary-5-viz1',
         './v2/entity360-parity-surface.css?v=v2-primary-5-entity360-parity-1',
         './v2/entity360-parity-surface.js?v=v2-primary-5-entity360-parity-1',
+        f'./v2/entity-explorer-classic-surface.css?v={ENTITY_EXPLORER_VERSION}',
+        f'./v2/entity-explorer-adapter.js?v={ENTITY_EXPLORER_VERSION}',
+        f'./v2/entity-explorer-classic-surface.js?v={ENTITY_EXPLORER_VERSION}',
         './assets/supabase-js-2.111.0.umd.js?v=v2-primary-5',
     ], "root authority")
 
@@ -141,6 +148,9 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
     parity_css = read("entity360-parity-surface.css")
     entity_adapter = read("entity360-adapter.js")
     search = read("entity-search-adapter.js")
+    explorer_adapter = read("entity-explorer-adapter.js")
+    explorer = read("entity-explorer-classic-surface.js")
+    explorer_css = read("entity-explorer-classic-surface.css")
     universes = read("universes-adapter.js")
     viz = read("atlas-v2-viz.js")
     config = read("atlas-v2-production-config.js")
@@ -156,7 +166,23 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
         "registerSurface('explorar'", "AtlasV2Universes.overview", "AtlasV2Watch.overview", "AtlasV2Territory.overview",
         "AtlasV2Universes.attention", "attentionPanel", "SO UAF ↔ SII", "AtlasV2Viz.horizontalBars", "AtlasV2Viz.segmented",
     ], "Explore intelligence pulse")
-    require(search, ["ATLAS_ENTITY_SEARCH_V2", "operation: 'entity_search'", "resultTier", "tierPriority"], "entity search")
+    require(search, [
+        "ATLAS_ENTITY_SEARCH_V2", "operation: 'entity_search'", "resultTier", "tierPriority",
+        "EXACT_RECONCILED_THEN_PRESS_HIGH", "exact_reconciled", "press_high", "pressMinimumConfidence: 0.86",
+    ], "entity staged search")
+    require(explorer_adapter, [
+        "ENTITY_EXPLORER_CLASSIC_V2", "explorer_meta", "request('explorer'", "request('suggest'",
+    ], "classic entity explorer adapter")
+    require(explorer, [
+        "ENTITY_EXPLORER_CLASSIC_V2", "EXACT_RECONCILED_THEN_PRESS_HIGH", "EVERY_IDENTITY_SEARCH",
+        "Observadas UAF", "Con sanciones", "UAF + sanciones", "Multi-fuente 3+", "OSFL", "Organismos públicos",
+        "Prioridad analítica", "Cobertura × condición", "Territorios observados", "Ficha", "Expediente",
+        "SCREENING INTERNACIONAL", "Identidad digital", "readScreening", "searchDigitalIdentity",
+    ], "classic Entidades surface")
+    require(explorer_css, [
+        ".aex2-command", ".aex2-facets", ".aex2-quick", ".aex2-panorama", ".aex2-result-row",
+        ".aex2-fingerprint", ".aex2-signature", ".aex2-gauge", ".aex2-sheet", ".aex2-screening",
+    ], "classic Entidades visual contract")
     require(universes, ["attention: (options = {}) => query('attention'", "recentTerminated", "terminatedByYear"], "UAF-SII attention adapter")
     require(entity_adapter, ["entity_intelligence", "entity_screening_live", "digital_identity_live", "searchDigitalIdentity"], "Entity 360 intelligence adapter")
     require(entity, [
@@ -178,7 +204,7 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
         require(config, ["mode: 'analytics-primary'"], "production config")
     require(config, ["legacyFallbackPath: './legacy.html'"], "legacy fallback contract")
 
-    for source in (auth, explore, entity, parity, entity_adapter, search, universes, viz):
+    for source in (auth, explore, entity, parity, entity_adapter, search, explorer_adapter, explorer, universes, viz):
         if "MutationObserver" in source or ".innerHTML" in source:
             raise SystemExit("v2 primary build: runtime repair/HTML injection reintroduced")
 
@@ -208,6 +234,12 @@ def update_report(out_dir: Path, published_v2: list[str], primary_release: dict,
         "v2_explore_mode": "LIVE_PULSE_VISUAL_UAF_SII",
         "v2_visual_navigation": "INTERACTIVE_FIRST",
         "v2_entity_search": "IDENTITY_TIERED_DIGITAL_PRESS",
+        "v2_entity_search_policy": "EXACT_RECONCILED_THEN_PRESS_HIGH",
+        "v2_entity_search_press_min_confidence": 0.86,
+        "v2_entity_explorer": "ENTITY_EXPLORER_CLASSIC_V2",
+        "v2_entity_explorer_asset": ENTITY_EXPLORER_VERSION,
+        "v2_entity_screening": "EVERY_IDENTITY_SEARCH",
+        "v2_entity_digital_identity": True,
         "v2_entity_intelligence": "UAF_SII_REPORTING_SCREENING_DIGITAL",
         "v2_entity360_parity": "SIX_LENS_NATIVE_V2",
         "v2_entity360_dossier": "ENTITY360_LEGACY_PARITY_V2",
@@ -251,7 +283,9 @@ def build_primary(out_dir: Path, *, e2e_proxy: bool = False) -> None:
         "legacy_authority_active_on_primary": False,
         "published_v2_count": len(published_v2),
         "visual_navigation": "INTERACTIVE_FIRST",
-        "entity_search": "IDENTITY_TIERED_DIGITAL_PRESS",
+        "entity_search": "EXACT_RECONCILED_THEN_PRESS_HIGH",
+        "entity_explorer": "ENTITY_EXPLORER_CLASSIC_V2",
+        "entity_screening": "EVERY_IDENTITY_SEARCH",
         "entity_intelligence": "UAF_SII_REPORTING_SCREENING_DIGITAL",
         "entity360_parity": "SIX_LENS_NATIVE_V2",
         "e2e_proxy": e2e_proxy,

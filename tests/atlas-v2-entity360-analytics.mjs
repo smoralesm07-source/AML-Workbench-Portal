@@ -3,6 +3,10 @@ import assert from 'node:assert/strict';
 
 const access = fs.readFileSync('src/v2/atlas-v2-access.js', 'utf8');
 const search = fs.readFileSync('src/v2/entity-search-adapter.js', 'utf8');
+const explorerAdapter = fs.readFileSync('src/v2/entity-explorer-adapter.js', 'utf8');
+const classicExplorer = fs.readFileSync('src/v2/entity-explorer-classic-surface.js', 'utf8');
+const classicExplorerCss = fs.readFileSync('src/v2/entity-explorer-classic-surface.css', 'utf8');
+const html = fs.readFileSync('atlas-v2.html', 'utf8');
 const adapter = fs.readFileSync('src/v2/entity360-adapter.js', 'utf8');
 const surface = fs.readFileSync('src/v2/entity360-surface.js', 'utf8');
 const viz = fs.readFileSync('src/v2/atlas-v2-viz.js', 'utf8');
@@ -12,6 +16,11 @@ const shell = fs.readFileSync('src/v2/atlas-v2-shell.js', 'utf8');
 const edge = fs.readFileSync('supabase/functions/atlas-v2-read/index.ts', 'utf8');
 const sql = fs.readFileSync('supabase/core-migrations/20260907111841_atlas_v2_entity_search_allowlist_hardening.sql', 'utf8');
 const searchPerfSql = fs.readFileSync('supabase/core-migrations/20260907115225_optimize_atlas_v2_entity_search_enrichment.sql', 'utf8');
+const classicSql = fs.readFileSync('supabase/core-migrations/20260907180500_atlas_v2_entidades_classic_explorer.sql', 'utf8');
+
+// Compile the two new browser modules so this test catches syntax regressions.
+new Function(explorerAdapter);
+new Function(classicExplorer);
 
 assert.match(access, /AtlasV2Data\.create/);
 assert.match(adapter, /AtlasV2Access\.data/);
@@ -36,7 +45,48 @@ assert.match(search, /operation: 'entity_search'/);
 assert.match(search, /resultTier/);
 assert.match(search, /tierPriority/);
 assert.match(search, /x-atlas-core-authorization/);
+assert.match(search, /EXACT_RECONCILED_THEN_PRESS_HIGH/);
+assert.match(search, /exact_reconciled/);
+assert.match(search, /press_high/);
+assert.match(search, /pressMinimumConfidence:\s*0\.86/);
+assert.match(search, /if \(exact\.items\.length\)/);
 assert.doesNotMatch(search, /supabase\.from|raw\.githubusercontent|rest\/v1/);
+
+assert.match(explorerAdapter, /ENTITY_EXPLORER_CLASSIC_V2/);
+assert.match(explorerAdapter, /explorer_meta/);
+assert.match(explorerAdapter, /request\('explorer'/);
+assert.match(explorerAdapter, /request\('suggest'/);
+assert.match(explorerAdapter, /x-atlas-core-authorization/);
+assert.doesNotMatch(explorerAdapter, /supabase\.from|raw\.githubusercontent|rest\/v1/);
+
+for (const marker of [
+  'ENTIDADES', 'Explorador', 'Observadas UAF', 'Con sanciones', 'UAF + sanciones', 'Multi-fuente 3+',
+  'OSFL', 'Organismos públicos', 'Prioridad analítica', 'Cobertura × condición', 'Territorios observados',
+  'Ficha', 'Expediente', 'SCREENING INTERNACIONAL', 'Identidad digital', 'readScreening', 'searchDigitalIdentity',
+  'EXACT_RECONCILED_THEN_PRESS_HIGH', 'EVERY_IDENTITY_SEARCH', 'ENTITY_EXPLORER_CLASSIC_V2',
+]) assert.ok(classicExplorer.includes(marker), `classic Entidades missing ${marker}`);
+assert.match(classicExplorer, /SIN EXACTA · RADAR PRENSA ≥ 86%/);
+assert.match(classicExplorer, /Coincidencia ≠ identidad firme ni riesgo/);
+assert.match(classicExplorer, /Username ≠ identidad/);
+assert.match(classicExplorer, /api\.navigate\('entidad', \{ entity_id:/);
+assert.doesNotMatch(classicExplorer, /innerHTML|MutationObserver|raw\.githubusercontent/);
+for (const selector of ['.aex2-command', '.aex2-facets', '.aex2-quick', '.aex2-panorama', '.aex2-result-row', '.aex2-fingerprint', '.aex2-signature', '.aex2-gauge', '.aex2-sheet', '.aex2-screening']) {
+  assert.ok(classicExplorerCss.includes(selector), `classic Entidades CSS missing ${selector}`);
+}
+assert.match(html, /entity-explorer-adapter\.js\?v=v2-primary-6-entidades-classic-1/);
+assert.match(html, /entity-explorer-classic-surface\.js\?v=v2-primary-6-entidades-classic-1/);
+assert.match(html, /entity-explorer-classic-surface\.css\?v=v2-primary-6-entidades-classic-1/);
+
+assert.match(classicSql, /kind','explorer_meta'/);
+assert.match(classicSql, /v_kind = 'explorer'/);
+assert.match(classicSql, /v_kind = 'suggest'/);
+assert.match(classicSql, /v_mode = 'exact_reconciled'/);
+assert.match(classicSql, /v_mode = 'press_high'/);
+assert.match(classicSql, /similarity\(r\.resolution_key,v_qkey\) >= 0\.86/);
+assert.match(classicSql, /lower\(r\.entity_id\) not like 'entity:press:%'/);
+assert.match(classicSql, /'result_tier','EXACT_IDENTITY'/);
+assert.match(classicSql, /'result_tier','PRESS_CONTEXT'/);
+assert.match(classicSql, /identity_not_promoted/);
 
 assert.match(edge, /entity_search/);
 assert.match(edge, /atlas_v2_entity_search/);
@@ -107,4 +157,4 @@ assert.match(boot, /STRUCTURAL_VERSION = 'v2-primary-5'/);
 assert.match(shell, /Guardar una vista, seguir una entidad o registrar un resultado nunca será requisito/);
 assert.doesNotMatch(shell, /Comercial Andina SpA|76\.123\.456-7/);
 
-console.log('ATLAS 2.0.2 Entity 360 governed intelligence + screening + digital identity contract OK');
+console.log('ATLAS 2.0.2 Entidades classic explorer + Entity 360 governed intelligence contract OK');
