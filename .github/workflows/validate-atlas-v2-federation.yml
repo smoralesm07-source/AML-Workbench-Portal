@@ -86,13 +86,17 @@ jobs:
           assert p['visual_navigation']=='INTERACTIVE_FIRST' and p['entity_search']=='RUT_NAME_UAF_PRESS'
           assert str(p['legacy_fallback']['release'])==str(l['release']) and str(p['legacy_fallback']['build'])==str(l['build'])
           assert p['legacy_fallback']['authority_active_on_primary'] is False
-          assert 'v2-primary-4' in html and 'atlas-runtime-current-' not in html
+          assert 'v2-primary-5' in html and 'atlas-runtime-current-' not in html
+          assert './v2/atlas-v2-boot.js?v=v2-primary-5-entity-intelligence-1' in html
           assert 'ATLAS_V2_SESSION_EXCHANGE_V1' in session and 'refreshToken' not in session
           assert 'AtlasV2Access' in access and 'global.AtlasV2Data.create' in access and 'getAccessToken' in access
-          assert "STRUCTURAL_VERSION = 'v2-primary-4'" in boot and 'entity-search-adapter.js' in boot and 'atlas-v2-viz.js' in boot
-          assert 'ATLAS_ENTITY_SEARCH_V2' in search and "operation: 'entity_search'" in search
+          assert "STRUCTURAL_VERSION = 'v2-primary-5'" in boot and "SURFACE_VERSION = 'v2-primary-5-entity-intelligence-1'" in boot
+          assert 'entity-search-adapter.js' in boot and 'atlas-v2-viz.js' in boot
+          assert 'ATLAS_ENTITY_SEARCH_V2' in search and "operation: 'entity_search'" in search and 'resultTier' in search
           assert 'normalizeReference' in entity and 'entityId' in entity
+          assert all(x in entity for x in ['entity_intelligence','entity_screening_live','digital_identity_live','searchDigitalIdentity'])
           assert 'atlas_v2_entity_search' in edge and 'search_entities' in edge
+          assert all(x in edge for x in ['entity_intelligence','entity_screening_live','digital_identity_live'])
           assert 'aml_allowed_users' in sql and 'auth.uid()' in sql and 'ATLAS_CORE_FORBIDDEN' in sql
           assert 'security invoker' in sql.lower()
           assert 'ATLAS_V2_SESSION_EXCHANGE_V1' in exchange and 'aml_allowed_users' in exchange
@@ -102,7 +106,7 @@ jobs:
           assert 'pull_request' not in broker and 'refs/pull/231/merge' not in broker
           assert 'pull_request:' not in e2e and 'id-token: write' in e2e and 'audience=atlas-v2-e2e' in e2e
           assert 'entity search security/gateway contract' in e2e
-          print('ATLAS 2.0.2 federation/search invariants: OK')
+          print('ATLAS 2.0.2 federation/search primary-5 invariants: OK')
           PY
 
       - name: Build and verify dual release identities
@@ -120,11 +124,13 @@ jobs:
           legacy=(root/'legacy.html').read_text()
           assert r['release']=='2.0.2' and r['build']=='2002'
           assert r['v2_visual_navigation']=='INTERACTIVE_FIRST'
-          assert r['v2_entity_search']=='RUT_NAME_UAF_PRESS'
-          assert r['v2_version']=='v2-primary-4'
-          assert 'v2-primary-4' in html
+          assert r['v2_explore_mode']=='LIVE_PULSE_VISUAL_UAF_SII'
+          assert r['v2_entity_search']=='IDENTITY_TIERED_DIGITAL_PRESS'
+          assert r['v2_entity_intelligence']=='UAF_SII_REPORTING_SCREENING_DIGITAL'
+          assert r['v2_version']=='v2-primary-5'
+          assert 'v2-primary-5' in html
           assert 'atlas-runtime-current-' not in html and 'atlas-runtime-current-' in legacy
           assert f'data-aml-version="{p["release"]}"' in html
           assert f'data-aml-version="{l["release"]}"' in legacy
-          print('ATLAS 2.0.2 fresh-asset primary + frozen rollback build: OK')
+          print('ATLAS 2.0.2 primary-5 + frozen rollback build: OK')
           PY
