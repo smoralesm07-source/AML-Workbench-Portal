@@ -2,7 +2,7 @@
 
 (function bootAtlasV2() {
   const baseUrl = new URL('./', document.currentScript?.src || document.baseURI);
-  const STRUCTURAL_VERSION = 'v2-primary-3';
+  const STRUCTURAL_VERSION = 'v2-primary-4';
   const STRUCTURAL_SURFACES = Object.freeze([
     'atlas-v2-access.js',
     'atlas-v2-viz.js',

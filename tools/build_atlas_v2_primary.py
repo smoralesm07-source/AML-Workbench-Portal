@@ -10,7 +10,7 @@ from pathlib import Path
 from build_atlas_site import build as build_legacy
 
 ROOT = Path(__file__).resolve().parents[1]
-V2_VERSION = "v2-primary-3"
+V2_VERSION = "v2-primary-4"
 V2_RELEASE_FILE = "atlas-v2-release.json"
 V2_FILES = [
     "atlas-v2-production-config.js",
@@ -95,12 +95,12 @@ def production_index(primary_release: dict) -> str:
 def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, e2e_proxy: bool = False) -> None:
     required_markers = [
         'data-atlas-v2-primary="analytics"',
-        './v2/atlas-v2-production-config.js?v=v2-primary-3',
-        './v2/atlas-v2-health.js?v=v2-primary-3',
-        './v2/atlas-v2-core-auth.js?v=v2-primary-3',
-        './v2/atlas-v2-shell.js?v=v2-primary-3',
-        './v2/atlas-v2-boot.js?v=v2-primary-3',
-        './assets/supabase-js-2.111.0.umd.js?v=v2-primary-3',
+        './v2/atlas-v2-production-config.js?v=v2-primary-4',
+        './v2/atlas-v2-health.js?v=v2-primary-4',
+        './v2/atlas-v2-core-auth.js?v=v2-primary-4',
+        './v2/atlas-v2-shell.js?v=v2-primary-4',
+        './v2/atlas-v2-boot.js?v=v2-primary-4',
+        './assets/supabase-js-2.111.0.umd.js?v=v2-primary-4',
     ]
     for marker in required_markers:
         if marker not in html:
