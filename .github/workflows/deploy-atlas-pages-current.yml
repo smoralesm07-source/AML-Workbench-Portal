@@ -27,7 +27,7 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 1
 
-      - name: Validate release, v2 and Entity 360 source contracts
+      - name: Validate v2 primary source contracts
         shell: bash
         run: |
           set -euo pipefail
@@ -38,73 +38,77 @@ jobs:
           runtime=json.loads(Path('atlas-runtime-manifest.json').read_text())
           build=json.loads(Path('build.json').read_text())
           rel=str(release['release']); bid=str(release['build'])
-          assert rel == '0.96.4', f'unexpected current release {rel}'
           assert runtime['release']==rel and str(runtime['build'])==bid
           assert build['app_version']==rel and str(build['build'])==bid
           assert release['deployment_policy']=='SINGLE_ACTIVE_RELEASE'
-          assert release['runtime_policy']=='CANONICAL_COMPILED_RUNTIME_ONLY'
-          assert release['pages_artifact_policy']=='COMPILED_CURRENT_BUNDLES_ONLY'
           for path in [
+              'atlas-v2.html',
               'src/v2/atlas-v2-production-config.js',
+              'src/v2/atlas-v2-core-auth.js',
+              'src/v2/atlas-v2-core-auth.css',
               'src/v2/atlas-v2-data.js',
               'src/v2/atlas-v2-session.js',
-              'src/v2/public-spend-adapter.js',
-              'src/v2/public-spend-route-bridge.js',
-              'src/v2/public-spend-adapter.css',
-              'assets/atlas-entity360-resilience-0964.js',
-              'supabase/migrations/20260906083150_atlas_v2_entity360_fast_spend_read.sql',
+              'src/v2/atlas-v2-access.js',
+              'src/v2/atlas-v2-shell.js',
+              'src/v2/atlas-v2-shell.css',
+              'src/v2/atlas-v2-boot.js',
+              'tools/build_atlas_v2_primary.py',
           ]:
               assert Path(path).is_file(), path
-          e360=Path('assets/atlas-entity360-resilience-0964.js').read_text(encoding='utf-8')
-          assert "READ_RPC='atlas_v2_entity360_read'" in e360
-          assert "0964-e360-single-read-5" in e360
-          assert "SINGLE_READ_V2" in e360
-          assert "PARALLEL_FALLBACK" in e360
-          sql=Path('supabase/migrations/20260906083150_atlas_v2_entity360_fast_spend_read.sql').read_text(encoding='utf-8').lower()
-          assert 'security invoker' in sql
-          assert 'aml_mv_gp12_supplier_entity_id_idx' in sql
-          assert 'grant execute on function public.atlas_v2_entity360_read(text,text) to authenticated, service_role' in sql
-          print(f'validated ATLAS {rel} build {bid}; public-spend v2 and Entity 360 single-read sources present')
+          html=Path('atlas-v2.html').read_text(encoding='utf-8')
+          assert 'data-atlas-v2-primary="analytics"' in html
+          assert 'atlas-v2-core-auth.js' in html
+          assert 'ldmtlwzqaqmegedktlxr.supabase.co' in html
+          assert 'bzqxvidggykkdouotylg.supabase.co' in html
+          print(f'validated ATLAS v2 primary sources for {rel}/{bid}')
           PY
-          node --check src/v2/atlas-v2-production-config.js
-          node --check src/v2/atlas-v2-data.js
-          node --check src/v2/atlas-v2-session.js
-          node --check src/v2/public-spend-adapter.js
-          node --check src/v2/public-spend-route-bridge.js
-          node --check assets/atlas-entity360-resilience-0964.js
+          for f in \
+            src/v2/atlas-v2-production-config.js \
+            src/v2/atlas-v2-core-auth.js \
+            src/v2/atlas-v2-data.js \
+            src/v2/atlas-v2-session.js \
+            src/v2/atlas-v2-access.js \
+            src/v2/atlas-v2-shell.js \
+            src/v2/atlas-v2-boot.js \
+            src/v2/entity360-adapter.js \
+            src/v2/entity360-surface.js \
+            src/v2/public-spend-surface.js \
+            src/v2/relations-surface.js \
+            src/v2/universes-adapter.js \
+            src/v2/universes-surface.js \
+            src/v2/territory-adapter.js \
+            src/v2/territory-surface.js \
+            src/v2/watch-adapter.js \
+            src/v2/watch-surface.js; do
+            node --check "$f"
+          done
 
-      - name: Build canonical ATLAS v2 cutover site
+      - name: Build v2 primary site with explicit legacy rollback
         shell: bash
         run: |
           set -euo pipefail
-          python3 tools/build_atlas_v2_cutover.py --out _site
+          python3 tools/build_atlas_v2_primary.py --out _site
           python3 - <<'PY'
           import json
           from pathlib import Path
           release=json.loads(Path('_site/atlas-release.json').read_text())
-          runtime=json.loads(Path('_site/atlas-runtime-manifest.json').read_text())
-          build=json.loads(Path('_site/build.json').read_text())
+          report=json.loads(Path('_site/atlas-runtime-report.json').read_text())
           html=Path('_site/index.html').read_text(encoding='utf-8')
-          assert release['release']=='0.96.4'
-          assert runtime['release']==release['release']==build['app_version']
-          assert str(runtime['build'])==str(release['build'])==str(build['build'])
-          assert 'data-atlas-v2-cutover="public-spend"' in html
-          assert './v2/atlas-v2-production-config.js?v=v2-cutover-1' in html
-          assert './v2/public-spend-adapter.js?v=v2-cutover-1' in html
-          assert './v2/public-spend-route-bridge.js?v=v2-cutover-1' in html
-          report=Path('_site/atlas-runtime-report.json').read_text(encoding='utf-8')
-          assert 'ARCHITECTURE_V2' in report
-          assert 'BACKEND_READ_MODELS' in report
-          assert 'atlas-public-spend-route-authority-0578.js' not in html
-          assert 'atlas-gasto-publico-1000.js' not in html
-          assert Path('_site/v2/atlas-v2-production-config.js').is_file()
-          assert Path('_site/v2/public-spend-adapter.js').is_file()
-          assert Path('_site/v2/public-spend-route-bridge.js').is_file()
-          compiled='\n'.join(p.read_text(encoding='utf-8',errors='ignore') for p in sorted(Path('_site').glob('atlas-runtime-current-*.js')))
-          for marker in ['0964-e360-single-read-5','atlas_v2_entity360_read','SINGLE_READ_V2','PARALLEL_FALLBACK']:
-              assert marker in compiled, f'Entity 360 optimization missing from compiled runtime: {marker}'
-          assert '0.96.2' not in Path('_site/atlas-release.json').read_text(encoding='utf-8')
-          print(f'built canonical ATLAS v2 cutover for {release["release"]}/{release["build"]} with Entity 360 single-read compiled')
+          legacy=Path('_site/legacy.html').read_text(encoding='utf-8')
+          assert report['primary_runtime']=='ATLAS_V2_ANALYTICS'
+          assert report['legacy_fallback']=='legacy.html'
+          assert report['legacy_authority_active_on_primary'] is False
+          assert 'data-atlas-v2-primary="analytics"' in html
+          assert 'atlas-runtime-current-' not in html
+          assert 'atlas-runtime-current-' in legacy
+          assert Path('_site/v2/atlas-v2-core-auth.js').is_file()
+          assert Path('_site/v2/entity360-surface.js').is_file()
+          assert Path('_site/v2/public-spend-surface.js').is_file()
+          assert Path('_site/v2/relations-surface.js').is_file()
+          assert Path('_site/v2/universes-surface.js').is_file()
+          assert Path('_site/v2/territory-surface.js').is_file()
+          assert Path('_site/v2/watch-surface.js').is_file()
+          print(f'built ATLAS v2 primary {release["release"]}/{release["build"]} with legacy rollback')
           PY
 
       - name: Configure Pages
@@ -119,7 +123,7 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Verify live ATLAS 0.96.4, v2 cutover and Entity 360 optimization
+      - name: Verify live v2 primary authority
         shell: bash
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
@@ -131,45 +135,35 @@ jobs:
           expected=json.loads(Path('atlas-release.json').read_text())
           rel=str(expected['release']); bid=str(expected['build'])
           base=os.environ['PAGE_URL'].rstrip('/')
-          sha=os.environ.get('GITHUB_SHA','unknown'); attempt=os.environ.get('GITHUB_RUN_ATTEMPT','1')
+          sha=os.environ.get('GITHUB_SHA','unknown')
           def get(path, stamp):
               sep='&' if '?' in path else '?'
-              req=urllib.request.Request(f'{base}{path}{sep}atlas={stamp}',headers={'Cache-Control':'no-cache','User-Agent':f'ATLAS-live-smoke/{rel}'})
+              req=urllib.request.Request(f'{base}{path}{sep}atlas={stamp}',headers={'Cache-Control':'no-cache','User-Agent':'ATLAS-v2-primary-smoke'})
               with urllib.request.urlopen(req,timeout=20) as r: return r.read().decode('utf-8','replace')
           last=None
           for n in range(1,13):
               try:
-                  stamp=f'{sha}-{attempt}-{n}'
+                  stamp=f'{sha}-{n}'
                   html=get('/',stamp)
+                  report=json.loads(get('/atlas-runtime-report.json',stamp))
+                  legacy=get('/legacy.html',stamp)
+                  auth=get('/v2/atlas-v2-core-auth.js',stamp)
+                  boot=get('/v2/atlas-v2-boot.js',stamp)
                   assert f'data-aml-version="{rel}"' in html
                   assert f'data-aml-build="{bid}"' in html
-                  assert 'data-atlas-v2-cutover="public-spend"' in html
-                  assert './v2/atlas-v2-production-config.js?v=v2-cutover-1' in html
-                  assert './v2/public-spend-adapter.js?v=v2-cutover-1' in html
-                  assert './v2/public-spend-route-bridge.js?v=v2-cutover-1' in html
-                  live_release=json.loads(get('/atlas-release.json',stamp))
-                  live_build=json.loads(get('/build.json',stamp))
-                  live_report=json.loads(get('/atlas-runtime-report.json',stamp))
-                  assert live_release['release']==rel=='0.96.4'
-                  assert live_build['app_version']==rel
-                  cfg=get('/v2/atlas-v2-production-config.js',stamp)
-                  adapter=get('/v2/public-spend-adapter.js',stamp)
-                  bridge=get('/v2/public-spend-route-bridge.js',stamp)
-                  assert '__ATLAS_V2_PUBLIC_SPEND_CUTOVER__ = true' in cfg
-                  assert '__ATLAS_V2_PUBLIC_SPEND_CUTOVER__ === true' in adapter
-                  assert '__ATLAS_V2_PUBLIC_SPEND_CUTOVER__ === true' in bridge
-                  assert 'v2-preview' not in adapter and 'v2-preview' not in bridge
-                  js_names=[x for x in live_report.get('published_js',[]) if x.startswith('atlas-runtime-current-') and x.endswith('.js')]
-                  assert js_names, 'compiled runtime list missing'
-                  live_compiled='\n'.join(get('/'+name,stamp) for name in js_names)
-                  for marker in ['0964-e360-single-read-5','atlas_v2_entity360_read','SINGLE_READ_V2','PARALLEL_FALLBACK']:
-                      assert marker in live_compiled, f'live Entity 360 optimization missing: {marker}'
-                  print(json.dumps({'status':'ok','release':rel,'build':bid,'page_url':base,'v2_cutover':True,'entity360':'SINGLE_READ_V2'}))
+                  assert 'data-atlas-v2-primary="analytics"' in html
+                  assert 'atlas-runtime-current-' not in html
+                  assert report['primary_runtime']=='ATLAS_V2_ANALYTICS'
+                  assert report['legacy_authority_active_on_primary'] is False
+                  assert 'atlas-runtime-current-' in legacy
+                  assert 'aml_allowed_users' in auth and 'signInWithOAuth' in auth
+                  assert 'AtlasCoreSession.ready' in boot
+                  print(json.dumps({'status':'ok','release':rel,'build':bid,'runtime':'ATLAS_V2_ANALYTICS','legacy_fallback':'legacy.html'}))
                   break
               except Exception as exc:
                   last=exc
-                  print(f'live ATLAS smoke attempt {n}/12 not ready: {exc}')
+                  print(f'live v2 smoke attempt {n}/12 not ready: {exc}')
                   if n<12: time.sleep(8)
           else:
-              raise SystemExit(f'ATLAS 0.96.4 live smoke failed: {last}')
+              raise SystemExit(f'ATLAS v2 live smoke failed: {last}')
           PY
