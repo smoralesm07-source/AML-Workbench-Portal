@@ -3,6 +3,7 @@
 (function bootAtlasV2() {
   const baseUrl = new URL('./', document.currentScript?.src || document.baseURI);
   const STRUCTURAL_VERSION = 'v2-primary-4';
+  const SURFACE_VERSION = 'v2-primary-4-legacy-power-1';
   const STRUCTURAL_SURFACES = Object.freeze([
     'atlas-v2-access.js',
     'atlas-v2-viz.js',
@@ -28,7 +29,7 @@
 
   function loadScript(file) {
     return new Promise((resolve, reject) => {
-      const src = new URL(`${file}?v=${STRUCTURAL_VERSION}`, baseUrl).href;
+      const src = new URL(`${file}?v=${SURFACE_VERSION}`, baseUrl).href;
       const existing = Array.from(document.scripts).find(script => script.src === src);
       if (existing) {
         if (existing.dataset.atlasLoaded === 'true') return resolve();
