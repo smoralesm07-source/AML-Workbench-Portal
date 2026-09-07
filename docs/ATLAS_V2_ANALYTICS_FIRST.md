@@ -148,6 +148,7 @@ The integration artifact makes the analytics-first v2 shell the only runtime aut
 - Microsoft Entra + Supabase Auth + `aml_allowed_users` form the autonomous core authorization boundary;
 - analytical adapters continue to use governed v2 gateway/read contracts rather than direct operational-table reads;
 - the compiled 0.96.4 runtime is retained only as `legacy.html` for controlled rollback and does not execute in the primary page;
+- `legacy.html` is not linked as ordinary product navigation and has no route authority while the v2 entry is healthy;
 - rollback availability must never be used as justification for layering a legacy renderer back into a v2 route;
 - production authority changes only after merge/deploy and launch-hardening gates pass.
 
