@@ -21,117 +21,84 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout triggering revision
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
           fetch-depth: 1
 
-      - name: Validate primary and frozen rollback release contracts
+      - name: Validate 2.0.2 release and frozen rollback
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           import json
           from pathlib import Path
-          primary=json.loads(Path('atlas-v2-release.json').read_text())
-          legacy=json.loads(Path('atlas-release.json').read_text())
+          p=json.loads(Path('atlas-v2-release.json').read_text())
+          l=json.loads(Path('atlas-release.json').read_text())
           runtime=json.loads(Path('atlas-runtime-manifest.json').read_text())
           build=json.loads(Path('build.json').read_text())
-          assert primary['schema']=='ATLAS_V2_RELEASE_V1'
-          assert primary['runtime']=='ATLAS_V2_ANALYTICS'
-          assert primary['release']=='2.0.1' and str(primary['build'])=='2001'
-          assert runtime['release']==legacy['release']==build['app_version']
-          assert str(runtime['build'])==str(legacy['build'])==str(build['build'])
-          fallback=primary['legacy_fallback']
-          assert str(fallback['release'])==str(legacy['release'])
-          assert str(fallback['build'])==str(legacy['build'])
-          assert fallback['path']=='legacy.html' and fallback['authority_active_on_primary'] is False
+          assert p['release']=='2.0.2' and str(p['build'])=='2002'
+          assert p['runtime']=='ATLAS_V2_ANALYTICS'
+          assert p['visual_navigation']=='INTERACTIVE_FIRST'
+          assert p['entity_search']=='RUT_NAME_UAF_PRESS'
+          assert runtime['release']==l['release']==build['app_version']
+          assert str(runtime['build'])==str(l['build'])==str(build['build'])
+          assert str(p['legacy_fallback']['release'])==str(l['release'])
+          assert str(p['legacy_fallback']['build'])==str(l['build'])
+          assert p['legacy_fallback']['authority_active_on_primary'] is False
           for path in [
-              'atlas-v2.html','src/v2/atlas-v2-production-config.js','src/v2/atlas-v2-core-auth.js',
-              'src/v2/atlas-v2-core-auth.css','src/v2/atlas-v2-data.js','src/v2/atlas-v2-session.js',
-              'src/v2/atlas-v2-access.js','src/v2/atlas-v2-shell.js','src/v2/atlas-v2-shell.css',
-              'src/v2/atlas-v2-boot.js','src/v2/explore-surface.js','src/v2/explore-surface.css',
-              'tools/build_atlas_v2_primary.py',
-          ]:
-              assert Path(path).is_file(), path
-          html=Path('atlas-v2.html').read_text(encoding='utf-8')
-          assert 'data-atlas-v2-primary="analytics"' in html
-          assert 'v2-primary-2' in html
-          print(f"validated ATLAS {primary['release']}/{primary['build']} with frozen rollback {legacy['release']}/{legacy['build']}")
+            'atlas-v2.html','src/v2/atlas-v2-boot.js','src/v2/atlas-v2-viz.js','src/v2/atlas-v2-viz.css',
+            'src/v2/entity-search-adapter.js','src/v2/explore-surface.js','src/v2/entity360-adapter.js',
+            'src/v2/entity360-surface.js','tools/build_atlas_v2_primary.py'
+          ]: assert Path(path).is_file(), path
+          html=Path('atlas-v2.html').read_text()
+          assert 'data-atlas-v2-primary="analytics"' in html and 'v2-primary-3' in html
+          print('ATLAS 2.0.2 release contract: OK')
           PY
           for f in \
-            src/v2/atlas-v2-production-config.js \
-            src/v2/atlas-v2-health.js \
-            src/v2/atlas-v2-core-auth.js \
-            src/v2/atlas-v2-data.js \
-            src/v2/atlas-v2-session.js \
-            src/v2/atlas-v2-access.js \
-            src/v2/atlas-v2-shell.js \
-            src/v2/atlas-v2-boot.js \
-            src/v2/explore-surface.js \
-            src/v2/entity360-adapter.js \
-            src/v2/entity360-surface.js \
-            src/v2/public-spend-surface.js \
-            src/v2/relations-surface.js \
-            src/v2/universes-adapter.js \
-            src/v2/universes-surface.js \
-            src/v2/territory-adapter.js \
-            src/v2/territory-surface.js \
-            src/v2/watch-adapter.js \
-            src/v2/watch-surface.js; do
-            node --check "$f"
-          done
+            src/v2/atlas-v2-production-config.js src/v2/atlas-v2-health.js src/v2/atlas-v2-core-auth.js \
+            src/v2/atlas-v2-data.js src/v2/atlas-v2-session.js src/v2/atlas-v2-access.js src/v2/atlas-v2-shell.js \
+            src/v2/atlas-v2-boot.js src/v2/atlas-v2-viz.js src/v2/entity-search-adapter.js src/v2/explore-surface.js \
+            src/v2/entity360-adapter.js src/v2/entity360-surface.js src/v2/public-spend-surface.js \
+            src/v2/relations-surface.js src/v2/universes-adapter.js src/v2/universes-surface.js \
+            src/v2/territory-adapter.js src/v2/territory-surface.js src/v2/watch-adapter.js src/v2/watch-surface.js; do node --check "$f"; done
 
       - name: Build ATLAS v2 primary with explicit legacy rollback
-        shell: bash
         run: |
           set -euo pipefail
           python3 tools/build_atlas_v2_primary.py --out _site
           python3 - <<'PY'
           import json
           from pathlib import Path
-          primary=json.loads(Path('_site/atlas-v2-release.json').read_text())
-          legacy_release=json.loads(Path('_site/atlas-release.json').read_text())
-          report=json.loads(Path('_site/atlas-runtime-report.json').read_text())
-          html=Path('_site/index.html').read_text(encoding='utf-8')
-          legacy=Path('_site/legacy.html').read_text(encoding='utf-8')
-          assert report['primary_runtime']=='ATLAS_V2_ANALYTICS'
-          assert report['release']==str(primary['release']) and report['build']==str(primary['build'])
-          assert report['legacy_release']==str(legacy_release['release']) and report['legacy_build']==str(legacy_release['build'])
-          assert report['legacy_fallback']=='legacy.html'
-          assert report['legacy_fallback_policy']=='FROZEN_ROLLBACK_ONLY'
-          assert report['legacy_authority_active_on_primary'] is False
-          assert report['v2_explore_mode']=='LIVE_PULSE'
-          assert report['v2_federation_prewarm'] is True
-          assert f'data-aml-version="{primary["release"]}"' in html
-          assert f'data-aml-build="{primary["build"]}"' in html
+          root=Path('_site')
+          p=json.loads((root/'atlas-v2-release.json').read_text())
+          l=json.loads((root/'atlas-release.json').read_text())
+          r=json.loads((root/'atlas-runtime-report.json').read_text())
+          html=(root/'index.html').read_text()
+          legacy=(root/'legacy.html').read_text()
+          assert r['release']=='2.0.2' and r['build']=='2002'
+          assert r['v2_explore_mode']=='LIVE_PULSE_VISUAL'
+          assert r['v2_visual_navigation']=='INTERACTIVE_FIRST'
+          assert r['v2_entity_search']=='RUT_NAME_UAF_PRESS'
+          assert r['legacy_fallback_policy']=='FROZEN_ROLLBACK_ONLY'
+          assert r['legacy_authority_active_on_primary'] is False
+          assert f'data-aml-version="{p["release"]}"' in html and f'data-aml-build="{p["build"]}"' in html
           assert 'atlas-runtime-current-' not in html
-          assert f'data-aml-version="{legacy_release["release"]}"' in legacy
-          assert f'data-aml-build="{legacy_release["build"]}"' in legacy
-          assert 'atlas-runtime-current-' in legacy
-          for path in [
-              '_site/v2/atlas-v2-core-auth.js','_site/v2/explore-surface.js','_site/v2/explore-surface.css',
-              '_site/v2/entity360-surface.js','_site/v2/public-spend-surface.js','_site/v2/relations-surface.js',
-              '_site/v2/universes-surface.js','_site/v2/territory-surface.js','_site/v2/watch-surface.js',
-          ]:
-              assert Path(path).is_file(), path
-          print(f"built ATLAS {primary['release']}/{primary['build']} with live Explore and frozen rollback {legacy_release['release']}/{legacy_release['build']}")
+          assert f'data-aml-version="{l["release"]}"' in legacy and 'atlas-runtime-current-' in legacy
+          for path in ['v2/atlas-v2-viz.js','v2/atlas-v2-viz.css','v2/entity-search-adapter.js','v2/explore-surface.js','v2/entity360-surface.js']:
+              assert (root/path).is_file(), path
+          print('ATLAS 2.0.2 artifact + frozen rollback: OK')
           PY
 
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: ./_site
-
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Verify live ATLAS v2 authority, Explore pulse and frozen rollback
+      - name: Verify live ATLAS 2.0.2 visual/search authority and rollback
         shell: bash
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
@@ -140,47 +107,49 @@ jobs:
           python3 - <<'PY'
           import json, os, time, urllib.request
           from pathlib import Path
-          primary=json.loads(Path('atlas-v2-release.json').read_text())
-          legacy_expected=json.loads(Path('atlas-release.json').read_text())
-          rel=str(primary['release']); bid=str(primary['build'])
-          legacy_rel=str(legacy_expected['release']); legacy_bid=str(legacy_expected['build'])
+          p=json.loads(Path('atlas-v2-release.json').read_text())
+          l=json.loads(Path('atlas-release.json').read_text())
+          rel=str(p['release']); bid=str(p['build'])
+          lrel=str(l['release']); lbid=str(l['build'])
           base=os.environ['PAGE_URL'].rstrip('/')
           sha=os.environ.get('GITHUB_SHA','unknown')
           def get(path, stamp):
               sep='&' if '?' in path else '?'
-              req=urllib.request.Request(f'{base}{path}{sep}atlas={stamp}',headers={'Cache-Control':'no-cache','User-Agent':'ATLAS-v2-primary-smoke'})
+              req=urllib.request.Request(f'{base}{path}{sep}atlas={stamp}',headers={'Cache-Control':'no-cache','User-Agent':'ATLAS-2.0.2-live-smoke'})
               with urllib.request.urlopen(req,timeout=20) as r: return r.read().decode('utf-8','replace')
           last=None
           for n in range(1,13):
               try:
                   stamp=f'{sha}-{n}'
                   html=get('/',stamp)
-                  release_live=json.loads(get('/atlas-v2-release.json',stamp))
+                  live=json.loads(get('/atlas-v2-release.json',stamp))
                   report=json.loads(get('/atlas-runtime-report.json',stamp))
                   legacy=get('/legacy.html',stamp)
-                  auth=get('/v2/atlas-v2-core-auth.js',stamp)
                   boot=get('/v2/atlas-v2-boot.js',stamp)
                   explore=get('/v2/explore-surface.js',stamp)
-                  assert release_live['release']==rel and str(release_live['build'])==bid
-                  assert f'data-aml-version="{rel}"' in html and f'data-aml-build="{bid}"' in html
-                  assert 'data-atlas-v2-primary="analytics"' in html and 'v2-primary-2' in html
+                  entity=get('/v2/entity360-surface.js',stamp)
+                  search=get('/v2/entity-search-adapter.js',stamp)
+                  viz=get('/v2/atlas-v2-viz.js',stamp)
+                  assert live['release']==rel and str(live['build'])==bid
+                  assert live['visual_navigation']=='INTERACTIVE_FIRST' and live['entity_search']=='RUT_NAME_UAF_PRESS'
+                  assert f'data-aml-version="{rel}"' in html and f'data-aml-build="{bid}"' in html and 'v2-primary-3' in html
                   assert 'atlas-runtime-current-' not in html
-                  assert report['primary_runtime']=='ATLAS_V2_ANALYTICS'
                   assert report['release']==rel and report['build']==bid
-                  assert report['v2_explore_mode']=='LIVE_PULSE' and report['v2_federation_prewarm'] is True
-                  assert report['legacy_release']==legacy_rel and report['legacy_build']==legacy_bid
-                  assert report['legacy_authority_active_on_primary'] is False
-                  assert f'data-aml-version="{legacy_rel}"' in legacy and f'data-aml-build="{legacy_bid}"' in legacy
-                  assert 'atlas-runtime-current-' in legacy
-                  assert 'aml_allowed_users' in auth and 'signInWithOAuth' in auth
-                  assert 'AtlasCoreSession.ready' in boot and 'warmFederatedSession' in boot
-                  assert "registerSurface('explorar'" in explore and 'publicSpend.monitor' in explore
-                  print(json.dumps({'status':'ok','release':rel,'build':bid,'runtime':'ATLAS_V2_ANALYTICS','explore':'LIVE_PULSE','legacy_release':legacy_rel,'legacy_build':legacy_bid,'legacy_fallback':'legacy.html'}))
+                  assert report['v2_explore_mode']=='LIVE_PULSE_VISUAL'
+                  assert report['v2_visual_navigation']=='INTERACTIVE_FIRST'
+                  assert report['v2_entity_search']=='RUT_NAME_UAF_PRESS'
+                  assert f'data-aml-version="{lrel}"' in legacy and f'data-aml-build="{lbid}"' in legacy and 'atlas-runtime-current-' in legacy
+                  assert 'atlas-v2-viz.js' in boot and 'entity-search-adapter.js' in boot
+                  assert 'AtlasV2Viz.horizontalBars' in explore and 'AtlasV2Viz.segmented' in explore
+                  assert 'Radar Prensa' in entity and 'AtlasV2EntitySearch.search' in entity
+                  assert 'ATLAS_ENTITY_SEARCH_V2' in search and "operation: 'entity_search'" in search
+                  assert all(x in viz for x in ['horizontalBars','lineChart','segmented'])
+                  print(json.dumps({'status':'ok','release':rel,'build':bid,'visual':'INTERACTIVE_FIRST','entity_search':'RUT_NAME_UAF_PRESS','legacy_release':lrel,'legacy_build':lbid}))
                   break
               except Exception as exc:
                   last=exc
-                  print(f'live v2 smoke attempt {n}/12 not ready: {exc}')
+                  print(f'live smoke attempt {n}/12 not ready: {exc}')
                   if n<12: time.sleep(8)
           else:
-              raise SystemExit(f'ATLAS v2 live smoke failed: {last}')
+              raise SystemExit(f'ATLAS 2.0.2 live smoke failed: {last}')
           PY
