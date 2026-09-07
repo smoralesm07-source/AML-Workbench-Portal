@@ -127,7 +127,7 @@
     return node('article', { class: 'atlas-v2-e360-preview-card' }, [
       node('div', { class: 'atlas-v2-e360-preview-kicker', text: sourceLabel(item.matchSource) }),
       node('h2', { text: item.name || item.matchedLabel || 'Entidad sin etiqueta' }),
-      node('p', { class: 'atlas-v2-e360-preview-id', text: item.rut || 'Sin RUT tributario resuelto' }),
+      node('p', { class: 'atlas-v2-e360-preview-id', text: item.rut || 'Sin RUT resuelto' }),
       sourceMarks(item),
       node('div', { class: 'atlas-v2-e360-preview-grid' }, [
         node('div', {}, [node('span', { text: 'Coincidencia' }), node('strong', { text: matchLabel(item.matchType) })]),
@@ -151,7 +151,7 @@
     const confidence = Math.round((item.matchScore || 0) * 100);
     const row = node('article', { class: `atlas-v2-e360-result ${pressOnly ? 'is-press' : ''}` }, [
       node('button', {
-        type: 'button', class: 'atlas-v2-e360-result-open',
+        type: 'button', class: `atlas-v2-e360-result-open atlas-v2-e360-search-result ${pressOnly ? 'is-press' : ''}`,
         onclick: () => api.navigate('entidad', routeForResult(item, query)),
       }, [
         node('div', { class: 'atlas-v2-e360-result-main' }, [
@@ -159,7 +159,7 @@
             node('strong', { text: item.name || item.matchedLabel || 'Entidad sin etiqueta' }),
             node('span', { class: `atlas-v2-e360-source-tag ${sourceClass(item.matchSource)}`, text: source }),
           ]),
-          node('p', { text: [item.rut || 'Sin RUT', item.entityType, item.commune, item.region].filter(Boolean).join(' · ') }),
+          node('p', { text: [item.rut || 'Sin RUT resuelto', item.entityType, item.commune, item.region].filter(Boolean).join(' · ') }),
           sourceMarks(item),
         ]),
         node('div', { class: 'atlas-v2-e360-result-score' }, [
@@ -278,7 +278,7 @@
         timer = setTimeout(() => void runSearch(api, q, resultsHost, serial), 180);
       });
     }
-    return node('div', { class: 'atlas-v2-e360-query' }, [
+    return node('div', { class: 'atlas-v2-e360-query atlas-v2-entity-search' }, [
       node('span', { class: 'atlas-v2-e360-query-icon', text: '⌕' }),
       input,
       node('button', { class: 'atlas-v2-button primary', type: 'button', text: 'Buscar entidad', onclick: submit }),
@@ -335,11 +335,12 @@
 
   function identityHero(core) {
     const identity = core?.identity || {};
-    const press = identity.sources.includes('RADAR_PRENSA');
-    const sourcePills = identity.sources.length ? identity.sources : Object.entries(core?.sourceStatus || {}).filter(([, value]) => value === 'AVAILABLE').map(([key]) => key.toUpperCase());
+    const sources = Array.isArray(identity.sources) ? identity.sources : [];
+    const press = sources.includes('RADAR_PRENSA') || sources.includes('PRESS');
+    const sourcePills = sources.length ? sources : Object.entries(core?.sourceStatus || {}).filter(([, value]) => value === 'AVAILABLE').map(([key]) => key.toUpperCase());
     return node('section', { class: 'atlas-v2-e360-hero' }, [
       node('div', { class: 'atlas-v2-e360-hero-main' }, [
-        node('span', { class: 'atlas-v2-card-tag', text: press && !identity.rut ? 'ENTIDAD OBSERVADA · RADAR PRENSA' : 'IDENTIDAD ANALÍTICA' }),
+        node('span', { class: 'atlas-v2-card-tag', text: press && !identity.rut ? 'ENTIDAD OBSERVADA · PRENSA' : 'IDENTIDAD ANALÍTICA' }),
         node('h2', { text: identity.name || 'Entidad sin nombre publicado' }),
         node('p', { text: [identity.rut, identity.entityType, identity.activity].filter(Boolean).join(' · ') || 'Sin RUT resuelto; se conserva como entidad de fuente.' }),
         node('div', { class: 'atlas-v2-e360-source-pills' }, sourcePills.map(source => node('span', { class: sourceClass(source), text: sourceLabel(source) }))),
