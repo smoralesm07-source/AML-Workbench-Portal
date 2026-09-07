@@ -2,6 +2,18 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.111.0";
 
 const ALLOWED_MODELS = new Set(["public_spend_overview", "public_spend_monitor"]);
+const QUERY_OPERATIONS = Object.freeze({
+  public_spend_query: {
+    rpc: "atlas_v2_public_spend_query",
+    contract: "ATLAS_PUBLIC_SPEND_QUERY_V2",
+    error: "PUBLIC_SPEND_QUERY_ERROR",
+  },
+  relations_query: {
+    rpc: "atlas_v2_relations_query",
+    contract: "ATLAS_RELATIONS_QUERY_V2",
+    error: "RELATIONS_QUERY_ERROR",
+  },
+});
 const CORS = {
   "access-control-allow-origin": "https://smoralesm07-source.github.io",
   "access-control-allow-headers": "authorization, x-client-info, apikey, content-type, if-none-match",
@@ -33,6 +45,60 @@ function userClient(url: string, key: string, auth: string) {
   });
 }
 
+function persistTelemetry(sb: any, event: Record<string,unknown>, traceId: string) {
+  const pending = sb.from("atlas_v2_client_event").insert(event).then(({ error }: any) => {
+    if (error) console.warn(JSON.stringify({ type: "atlas_v2_telemetry", trace_id: traceId, code: error.code }));
+  }).catch(() => undefined);
+  const edgeRuntime = (globalThis as any).EdgeRuntime;
+  if (edgeRuntime?.waitUntil) edgeRuntime.waitUntil(pending);
+}
+
+async function handleGovernedQuery(
+  sb: any,
+  operation: keyof typeof QUERY_OPERATIONS,
+  query: Record<string,unknown>,
+  route: string,
+  traceId: string,
+  started: number,
+) {
+  const spec = QUERY_OPERATIONS[operation];
+  const kind = clean(query?.kind, 80);
+  if (!kind) return response({ error: "INVALID_QUERY", trace_id: traceId }, 400, { "x-atlas-trace-id": traceId });
+
+  const dbStarted = performance.now();
+  const { data, error } = await sb.rpc(spec.rpc, { p_request: query });
+  const dbMs = Math.round(performance.now() - dbStarted);
+  const totalMs = Math.round(performance.now() - started);
+
+  if (error) {
+    console.error(JSON.stringify({ type: "atlas_v2_read", trace_id: traceId, operation, kind, route, status: "ERROR", db_ms: dbMs, total_ms: totalMs, code: error.code }));
+    const status = error.code === "42501" ? 403 : 500;
+    return response({ error: status === 403 ? "FORBIDDEN" : spec.error, trace_id: traceId }, status, {
+      "x-atlas-trace-id": traceId,
+      "server-timing": `db;dur=${dbMs}, total;dur=${totalMs}`,
+      "cache-control": "private, no-store",
+    });
+  }
+
+  const snapshotId = String(data?.snapshot_id || "");
+  persistTelemetry(sb, {
+    trace_id: traceId,
+    route,
+    operation: `${operation}:${kind}`,
+    phase: "edge_read",
+    duration_ms: totalMs,
+    status: "OK",
+    metadata: { kind, snapshot_id: snapshotId, db_ms: dbMs, contract: spec.contract },
+  }, traceId);
+
+  return response({ ...data, trace_id: traceId }, 200, {
+    "x-atlas-trace-id": traceId,
+    "x-atlas-snapshot": snapshotId,
+    "server-timing": `db;dur=${dbMs}, total;dur=${totalMs}`,
+    "cache-control": "private, no-store",
+  });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return response({ error: "METHOD_NOT_ALLOWED" }, 405);
@@ -52,48 +118,9 @@ Deno.serve(async (req: Request) => {
     const route = clean(body?.route || "unknown", 120) || "unknown";
     const sb = userClient(url, publishableKey, auth);
 
-    if (operation === "public_spend_query") {
+    if (operation === "public_spend_query" || operation === "relations_query") {
       const query = body?.query && typeof body.query === "object" ? body.query : {};
-      const kind = clean(query?.kind, 80);
-      if (!kind) return response({ error: "INVALID_QUERY", trace_id: traceId }, 400, { "x-atlas-trace-id": traceId });
-
-      const dbStarted = performance.now();
-      const { data, error } = await sb.rpc("atlas_v2_public_spend_query", { p_request: query });
-      const dbMs = Math.round(performance.now() - dbStarted);
-      const totalMs = Math.round(performance.now() - started);
-
-      if (error) {
-        console.error(JSON.stringify({ type: "atlas_v2_read", trace_id: traceId, operation, kind, route, status: "ERROR", db_ms: dbMs, total_ms: totalMs, code: error.code }));
-        const status = error.code === "42501" ? 403 : 500;
-        return response({ error: status === 403 ? "FORBIDDEN" : "PUBLIC_SPEND_QUERY_ERROR", trace_id: traceId }, status, {
-          "x-atlas-trace-id": traceId,
-          "server-timing": `db;dur=${dbMs}, total;dur=${totalMs}`,
-          "cache-control": "private, no-store",
-        });
-      }
-
-      const snapshotId = String(data?.snapshot_id || "");
-      const event = {
-        trace_id: traceId,
-        route,
-        operation: `public_spend_query:${kind}`,
-        phase: "edge_read",
-        duration_ms: totalMs,
-        status: "OK",
-        metadata: { kind, snapshot_id: snapshotId, db_ms: dbMs, contract: "ATLAS_PUBLIC_SPEND_QUERY_V2" },
-      };
-      const telemetry = sb.from("atlas_v2_client_event").insert(event).then(({ error: telemetryError }) => {
-        if (telemetryError) console.warn(JSON.stringify({ type: "atlas_v2_telemetry", trace_id: traceId, code: telemetryError.code }));
-      }).catch(() => undefined);
-      const edgeRuntime = (globalThis as any).EdgeRuntime;
-      if (edgeRuntime?.waitUntil) edgeRuntime.waitUntil(telemetry);
-
-      return response({ ...data, trace_id: traceId }, 200, {
-        "x-atlas-trace-id": traceId,
-        "x-atlas-snapshot": snapshotId,
-        "server-timing": `db;dur=${dbMs}, total;dur=${totalMs}`,
-        "cache-control": "private, no-store",
-      });
+      return await handleGovernedQuery(sb, operation, query, route, traceId, started);
     }
 
     if (operation !== "read_model") return response({ error: "INVALID_OPERATION", trace_id: traceId }, 400, { "x-atlas-trace-id": traceId });
@@ -129,7 +156,7 @@ Deno.serve(async (req: Request) => {
     const ifNoneMatch = req.headers.get("if-none-match") || "";
     const totalMs = Math.round(performance.now() - started);
 
-    const event = {
+    persistTelemetry(sb, {
       trace_id: traceId,
       route,
       operation: `read_model:${model}`,
@@ -137,12 +164,7 @@ Deno.serve(async (req: Request) => {
       duration_ms: totalMs,
       status: "OK",
       metadata: { model, scope, snapshot_id: data.snapshot_id, db_ms: dbMs, contract: "ATLAS_READ_API_V2" },
-    };
-    const telemetry = sb.from("atlas_v2_client_event").insert(event).then(({ error: telemetryError }) => {
-      if (telemetryError) console.warn(JSON.stringify({ type: "atlas_v2_telemetry", trace_id: traceId, code: telemetryError.code }));
-    }).catch(() => undefined);
-    const edgeRuntime = (globalThis as any).EdgeRuntime;
-    if (edgeRuntime?.waitUntil) edgeRuntime.waitUntil(telemetry);
+    }, traceId);
 
     const headers: Record<string,string> = {
       "x-atlas-trace-id": traceId,
