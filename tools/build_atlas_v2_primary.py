@@ -147,13 +147,13 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
         raise SystemExit("v2 primary build: visual/search capabilities are not structural")
     if "registerSurface('explorar'" not in explore or "AtlasV2Universes.overview" not in explore or "AtlasV2Watch.overview" not in explore or "AtlasV2Territory.overview" not in explore:
         raise SystemExit("v2 primary build: live Explore pulse contract missing")
-    if "AtlasV2Viz" not in explore or "navegable" not in explore.lower():
+    if "AtlasV2Viz.horizontalBars" not in explore or "AtlasV2Viz.segmented" not in explore:
         raise SystemExit("v2 primary build: Explore visual navigation contract missing")
     if "ATLAS_ENTITY_SEARCH_V2" not in search or "operation: 'entity_search'" not in search:
         raise SystemExit("v2 primary build: governed entity search contract missing")
     if "AtlasV2EntitySearch.search" not in entity or "Radar Prensa" not in entity or "entity_id" not in entity:
         raise SystemExit("v2 primary build: cross-source Entity 360 search missing")
-    if "stackedBar" not in viz or "timeline" not in viz:
+    if "horizontalBars" not in viz or "lineChart" not in viz or "segmented" not in viz:
         raise SystemExit("v2 primary build: interactive visualization primitives missing")
     if "ATLAS_V2_RUNTIME_HEALTH_V1" not in health:
         raise SystemExit("v2 primary build: sanitized runtime health boundary missing")
