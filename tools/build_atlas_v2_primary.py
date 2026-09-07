@@ -10,7 +10,7 @@ from pathlib import Path
 from build_atlas_site import build as build_legacy
 
 ROOT = Path(__file__).resolve().parents[1]
-V2_VERSION = "v2-primary-3"
+V2_VERSION = "v2-primary-4"
 V2_RELEASE_FILE = "atlas-v2-release.json"
 V2_FILES = [
     "atlas-v2-production-config.js",
@@ -31,6 +31,9 @@ V2_FILES = [
     "entity360-adapter.js",
     "entity360-surface.js",
     "entity360-surface.css",
+    "entity360-parity-adapter.js",
+    "entity360-parity-surface.js",
+    "entity360-parity-surface.css",
     "public-spend-surface.js",
     "public-spend-surface.css",
     "relations-surface.js",
@@ -95,12 +98,13 @@ def production_index(primary_release: dict) -> str:
 def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, e2e_proxy: bool = False) -> None:
     required_markers = [
         'data-atlas-v2-primary="analytics"',
-        './v2/atlas-v2-production-config.js?v=v2-primary-3',
-        './v2/atlas-v2-health.js?v=v2-primary-3',
-        './v2/atlas-v2-core-auth.js?v=v2-primary-3',
-        './v2/atlas-v2-shell.js?v=v2-primary-3',
-        './v2/atlas-v2-boot.js?v=v2-primary-3',
-        './assets/supabase-js-2.111.0.umd.js?v=v2-primary-3',
+        './v2/atlas-v2-production-config.js?v=v2-primary-4',
+        './v2/atlas-v2-health.js?v=v2-primary-4',
+        './v2/atlas-v2-core-auth.js?v=v2-primary-4',
+        './v2/atlas-v2-shell.js?v=v2-primary-4',
+        './v2/atlas-v2-boot.js?v=v2-primary-4',
+        './v2/atlas-v2-viz.css?v=v2-primary-4',
+        './assets/supabase-js-2.111.0.umd.js?v=v2-primary-4',
     ]
     for marker in required_markers:
         if marker not in html:
@@ -132,27 +136,37 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
     auth = (out_dir / "v2" / "atlas-v2-core-auth.js").read_text(encoding="utf-8")
     boot = (out_dir / "v2" / "atlas-v2-boot.js").read_text(encoding="utf-8")
     explore = (out_dir / "v2" / "explore-surface.js").read_text(encoding="utf-8")
-    entity = (out_dir / "v2" / "entity360-surface.js").read_text(encoding="utf-8")
+    entity = (out_dir / "v2" / "entity360-parity-surface.js").read_text(encoding="utf-8")
+    entity_adapter = (out_dir / "v2" / "entity360-parity-adapter.js").read_text(encoding="utf-8")
     search = (out_dir / "v2" / "entity-search-adapter.js").read_text(encoding="utf-8")
     viz = (out_dir / "v2" / "atlas-v2-viz.js").read_text(encoding="utf-8")
+    viz_css = (out_dir / "v2" / "atlas-v2-viz.css").read_text(encoding="utf-8")
     config = (out_dir / "v2" / "atlas-v2-production-config.js").read_text(encoding="utf-8")
     health = (out_dir / "v2" / "atlas-v2-health.js").read_text(encoding="utf-8")
+
     if "aml_allowed_users" not in auth or "signInWithOAuth" not in auth or "provider: 'azure'" not in auth or ".auth.getUser()" not in auth:
         raise SystemExit("v2 primary build: autonomous verified Entra/allowlist auth contract missing")
     if "AtlasCoreSession.ready" not in boot or "STRUCTURAL_SURFACE_LOAD_FAILED" not in boot:
         raise SystemExit("v2 primary build: shell is not auth-gated/fail-closed")
     if "warmFederatedSession" not in boot:
         raise SystemExit("v2 primary build: federation prewarm missing")
-    if "atlas-v2-viz.js" not in boot or "entity-search-adapter.js" not in boot or "VISUAL_SEARCH_CAPABILITY_MISSING" not in boot:
-        raise SystemExit("v2 primary build: visual/search capabilities are not structural")
+    for marker in ["atlas-v2-viz.js", "entity-search-adapter.js", "entity360-parity-adapter.js", "entity360-parity-surface.js", "VISUAL_SEARCH_CAPABILITY_MISSING"]:
+        if marker not in boot:
+            raise SystemExit(f"v2 primary build: structural capability missing from boot: {marker}")
     if "registerSurface('explorar'" not in explore or "AtlasV2Universes.overview" not in explore or "AtlasV2Watch.overview" not in explore or "AtlasV2Territory.overview" not in explore:
         raise SystemExit("v2 primary build: live Explore pulse contract missing")
     if "AtlasV2Viz.horizontalBars" not in explore or "AtlasV2Viz.segmented" not in explore:
         raise SystemExit("v2 primary build: Explore visual navigation contract missing")
+    if ".atlas-v2-viz-bar-track" not in viz_css or ".atlas-v2-viz-segment-track" not in viz_css:
+        raise SystemExit("v2 primary build: visualization geometry CSS missing")
     if "ATLAS_ENTITY_SEARCH_V2" not in search or "operation: 'entity_search'" not in search:
         raise SystemExit("v2 primary build: governed entity search contract missing")
-    if "AtlasV2EntitySearch.search" not in entity or "Radar Prensa" not in entity or "entity_id" not in entity:
-        raise SystemExit("v2 primary build: cross-source Entity 360 search missing")
+    for marker in ["AtlasV2EntitySearch.search", "Cronología", "Documentos", "Identidad digital", "Listas globales", "Radar Prensa", "Abrir documento", "Ejecutar screening live"]:
+        if marker not in entity:
+            raise SystemExit(f"v2 primary build: Entity 360 legacy parity missing: {marker}")
+    for marker in ["entity_intelligence_read", "watchlists_live", "digital_identity_live", "digital_identity_deep"]:
+        if marker not in entity_adapter:
+            raise SystemExit(f"v2 primary build: Entity intelligence adapter missing: {marker}")
     if "horizontalBars" not in viz or "lineChart" not in viz or "segmented" not in viz:
         raise SystemExit("v2 primary build: interactive visualization primitives missing")
     if "ATLAS_V2_RUNTIME_HEALTH_V1" not in health:
@@ -164,19 +178,12 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
         raise SystemExit("v2 primary build: production mode contract missing")
     if "legacyFallbackPath: './legacy.html'" not in config:
         raise SystemExit("v2 primary build: production fallback contract missing")
-    for source in (auth, explore, entity, search, viz):
+    for source in (auth, explore, entity, entity_adapter, search, viz):
         if "MutationObserver" in source or ".innerHTML" in source:
             raise SystemExit("v2 primary build: runtime repair/HTML injection reintroduced")
 
 
-def update_report(
-    out_dir: Path,
-    published_v2: list[str],
-    primary_release: dict,
-    legacy_release: dict,
-    *,
-    e2e_proxy: bool = False,
-) -> None:
+def update_report(out_dir: Path, published_v2: list[str], primary_release: dict, legacy_release: dict, *, e2e_proxy: bool = False) -> None:
     path = out_dir / "atlas-runtime-report.json"
     report = json.loads(path.read_text(encoding="utf-8"))
     report.update({
@@ -195,12 +202,14 @@ def update_report(
         "legacy_runtime_published_as_fallback": True,
         "v2_auth_boundary": "ENTRA_SUPABASE_ALLOWLIST_VERIFIED_USER",
         "v2_data_boundary": "ATLAS_V2_READ_GATEWAY",
+        "v2_entity_intelligence_boundary": "ATLAS_V2_ENTITY_INTELLIGENCE_GATEWAY",
         "v2_runtime_health": "SANITIZED_IN_MEMORY",
         "v2_structural_surface_policy": "FAIL_CLOSED",
         "v2_followup_policy": "OPTIONAL_NOT_WORKFLOW",
         "v2_explore_mode": "LIVE_PULSE_VISUAL",
         "v2_visual_navigation": "INTERACTIVE_FIRST",
-        "v2_entity_search": "RUT_NAME_UAF_PRESS",
+        "v2_entity_search": "RUT_NAME_UAF_PRESS_FACETED",
+        "v2_entity360_parity": "TIMELINE_DOCUMENTS_DIGITAL_WATCHLISTS_PEERS_MARKS",
         "v2_federation_prewarm": True,
         "v2_e2e_proxy": e2e_proxy,
         "v2_version": V2_VERSION,
@@ -217,7 +226,6 @@ def build_primary(out_dir: Path, *, e2e_proxy: bool = False) -> None:
         raise SystemExit("v2 primary build: frozen legacy release contract drifted")
 
     build_legacy(out_dir)
-
     legacy_path = out_dir / "index.html"
     legacy = legacy_path.read_text(encoding="utf-8")
     if f'data-aml-version="{legacy_release["release"]}"' not in legacy or f'data-aml-build="{legacy_release["build"]}"' not in legacy:
@@ -242,7 +250,8 @@ def build_primary(out_dir: Path, *, e2e_proxy: bool = False) -> None:
         "legacy_authority_active_on_primary": False,
         "published_v2_count": len(published_v2),
         "visual_navigation": "INTERACTIVE_FIRST",
-        "entity_search": "RUT_NAME_UAF_PRESS",
+        "entity_search": "RUT_NAME_UAF_PRESS_FACETED",
+        "entity360_parity": True,
         "e2e_proxy": e2e_proxy,
     }, ensure_ascii=False))
 
