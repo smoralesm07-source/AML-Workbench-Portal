@@ -42,7 +42,7 @@ assert.doesNotMatch(css, /#[0-9a-fA-F]{3,8}/);
 assert.match(boot, /atlas-v2-viz\.js/);
 assert.match(boot, /entity-search-adapter\.js/);
 assert.match(boot, /warmFederatedSession/);
-assert.match(boot, /STRUCTURAL_VERSION = 'v2-primary-3'/);
+assert.match(boot, /STRUCTURAL_VERSION = 'v2-primary-4'/);
 assert.match(boot, /VISUAL_SEARCH_CAPABILITY_MISSING/);
 
 for (const [name, adapter] of [['universes', universes], ['territory', territory], ['watch', watch]]) {
@@ -53,15 +53,15 @@ for (const [name, adapter] of [['universes', universes], ['territory', territory
 
 assert.match(builder, /"atlas-v2-viz\.js"/);
 assert.match(builder, /"entity-search-adapter\.js"/);
-assert.match(builder, /V2_VERSION = "v2-primary-3"/);
+assert.match(builder, /V2_VERSION = "v2-primary-4"/);
 assert.match(builder, /v2_visual_navigation/);
 assert.match(builder, /v2_entity_search/);
 
 for (const marker of [
-  'atlas-v2-shell.css?v=v2-primary-3',
-  'atlas-v2-core-auth.css?v=v2-primary-3',
-  'atlas-v2-boot.js?v=v2-primary-3',
-  'atlas-v2-session.js?v=v2-primary-3',
+  'atlas-v2-shell.css?v=v2-primary-4',
+  'atlas-v2-core-auth.css?v=v2-primary-4',
+  'atlas-v2-boot.js?v=v2-primary-4',
+  'atlas-v2-session.js?v=v2-primary-4',
 ]) assert.ok(html.includes(marker), marker);
 
 console.log('ATLAS 2.0.2 visual Explore + interactive navigation contract OK');
