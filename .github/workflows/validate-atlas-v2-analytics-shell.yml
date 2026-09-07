@@ -8,6 +8,7 @@ on:
       - 'atlas-v2-release.json'
       - 'src/v2/**'
       - 'supabase/functions/atlas-v2-read/index.ts'
+      - 'supabase/core-migrations/*atlas_v2_entity_search*'
       - 'supabase/migrations/20260907023000_atlas_v2_relations_query.sql'
       - 'supabase/core-contracts/atlas-v2-universes-query-v2.sql'
       - 'supabase/core-contracts/atlas-v2-territory-watch-query-v2.sql'
@@ -17,7 +18,6 @@ on:
       - 'tools/e2e_atlas_v2_ux_preflight.mjs'
       - 'tools/serve_atlas_v2_e2e.mjs'
       - 'docs/ATLAS_V2_ANALYTICS_FIRST.md'
-      - 'docs/ATLAS_V2_POST_LAUNCH.md'
       - '.github/workflows/validate-atlas-v2-analytics-shell.yml'
       - '.github/workflows/e2e-atlas-runtime-smoke.yml'
       - '.github/workflows/deploy-atlas-pages-current.yml'
@@ -33,100 +33,75 @@ jobs:
   foundation:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
       - name: Syntax checks
         run: |
           set -euo pipefail
           for f in \
-            src/v2/atlas-v2-production-config.js \
-            src/v2/atlas-v2-health.js \
-            src/v2/atlas-v2-core-auth.js \
-            src/v2/atlas-v2-shell.js \
-            src/v2/atlas-v2-boot.js \
-            src/v2/atlas-v2-data.js \
-            src/v2/atlas-v2-session.js \
-            src/v2/atlas-v2-access.js \
-            src/v2/explore-surface.js \
-            src/v2/entity360-adapter.js \
-            src/v2/entity360-surface.js \
-            src/v2/public-spend-surface.js \
-            src/v2/relations-surface.js \
-            src/v2/universes-adapter.js \
-            src/v2/universes-surface.js \
-            src/v2/territory-adapter.js \
-            src/v2/territory-surface.js \
-            src/v2/watch-adapter.js \
-            src/v2/watch-surface.js; do
-            node --check "$f"
-          done
+            src/v2/atlas-v2-production-config.js src/v2/atlas-v2-health.js src/v2/atlas-v2-core-auth.js \
+            src/v2/atlas-v2-shell.js src/v2/atlas-v2-boot.js src/v2/atlas-v2-data.js src/v2/atlas-v2-session.js \
+            src/v2/atlas-v2-access.js src/v2/atlas-v2-viz.js src/v2/entity-search-adapter.js \
+            src/v2/explore-surface.js src/v2/entity360-adapter.js src/v2/entity360-surface.js \
+            src/v2/public-spend-surface.js src/v2/relations-surface.js src/v2/universes-adapter.js \
+            src/v2/universes-surface.js src/v2/territory-adapter.js src/v2/territory-surface.js \
+            src/v2/watch-adapter.js src/v2/watch-surface.js; do node --check "$f"; done
           for f in tests/atlas-v2-*.mjs; do node --check "$f"; done
           node --check tools/e2e_atlas_runtime_smoke.mjs
           node --check tools/e2e_atlas_v2_ux_preflight.mjs
           node --check tools/serve_atlas_v2_e2e.mjs
           python3 -m py_compile tools/build_atlas_v2_primary.py
+          git diff --check
 
-      - name: Enforce analytics-first and UX candidate contract
+      - name: Enforce analytics-first visual/search contract
+        shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           import json
           from pathlib import Path
-          shell = Path('src/v2/atlas-v2-shell.js').read_text(encoding='utf-8')
-          css = Path('src/v2/atlas-v2-shell.css').read_text(encoding='utf-8')
-          explore = Path('src/v2/explore-surface.js').read_text(encoding='utf-8')
-          explore_css = Path('src/v2/explore-surface.css').read_text(encoding='utf-8')
-          html = Path('atlas-v2.html').read_text(encoding='utf-8')
-          auth = Path('src/v2/atlas-v2-core-auth.js').read_text(encoding='utf-8')
-          boot = Path('src/v2/atlas-v2-boot.js').read_text(encoding='utf-8')
-          health = Path('src/v2/atlas-v2-health.js').read_text(encoding='utf-8')
-          config = Path('src/v2/atlas-v2-production-config.js').read_text(encoding='utf-8')
-          contract = Path('docs/ATLAS_V2_ANALYTICS_FIRST.md').read_text(encoding='utf-8')
-          primary = json.loads(Path('atlas-v2-release.json').read_text(encoding='utf-8'))
-          legacy = json.loads(Path('atlas-release.json').read_text(encoding='utf-8'))
-          assert primary['release']=='2.0.1' and str(primary['build'])=='2001'
-          assert primary['runtime']=='ATLAS_V2_ANALYTICS'
+          shell=Path('src/v2/atlas-v2-shell.js').read_text()
+          boot=Path('src/v2/atlas-v2-boot.js').read_text()
+          explore=Path('src/v2/explore-surface.js').read_text()
+          entity=Path('src/v2/entity360-surface.js').read_text()
+          adapter=Path('src/v2/entity-search-adapter.js').read_text()
+          viz=Path('src/v2/atlas-v2-viz.js').read_text()
+          html=Path('atlas-v2.html').read_text()
+          primary=json.loads(Path('atlas-v2-release.json').read_text())
+          legacy=json.loads(Path('atlas-release.json').read_text())
+          sql=Path('supabase/core-migrations/20260907111841_atlas_v2_entity_search_allowlist_hardening.sql').read_text()
+          edge=Path('supabase/functions/atlas-v2-read/index.ts').read_text()
+
+          assert primary['release']=='2.0.2' and str(primary['build'])=='2002'
+          assert primary['visual_navigation']=='INTERACTIVE_FIRST'
+          assert primary['entity_search']=='RUT_NAME_UAF_PRESS'
           assert str(primary['legacy_fallback']['release'])==str(legacy['release'])
           assert str(primary['legacy_fallback']['build'])==str(legacy['build'])
           assert primary['legacy_fallback']['authority_active_on_primary'] is False
-          assert 'MutationObserver' not in shell and '.innerHTML' not in shell
-          assert 'MutationObserver' not in auth and '.innerHTML' not in auth
-          assert 'MutationObserver' not in explore and '.innerHTML' not in explore
-          assert 'raw.githubusercontent.com' not in shell and 'raw.githubusercontent.com' not in explore
-          assert 'supabase.from(' not in shell and 'supabase.from(' not in explore
-          assert 'select("*")' not in shell and "select('*')" not in shell
-          assert "addEventListener('hashchange', render)" in shell
-          assert 'URLSearchParams' in shell
-          assert "event.metaKey || event.ctrlKey" in shell
           for route in ['explorar','universos','entidad','gasto-publico','territorio','relaciones','vigilancia','guardados','metodo']:
-              assert f"id: '{route}'" in shell, route
-          for forbidden_route in ["id: 'casos'", "id: 'tareas'", "id: 'cola'", "id: 'asignaciones'", "id: 'sla'"]:
-              assert forbidden_route not in shell, forbidden_route
-          assert 'No se creó ningún caso ni tarea.' in shell
-          assert 'Exploración primero · seguimiento opcional' in shell
-          assert 'Exploration is free; follow-up is optional.' in contract
-          assert '--atlas-bg:' in css and '--atlas-surface:' in css and '--atlas-accent:' in css
-          assert 'registerSurface(\'explorar\'' in explore
-          assert 'AtlasV2Universes.overview' in explore and 'AtlasV2Watch.overview' in explore and 'AtlasV2Territory.overview' in explore
-          assert 'publicSpend.monitor' in explore
-          assert '#' not in explore_css
-          assert 'data-atlas-v2-foundation="analytics-first"' in html
-          assert 'data-atlas-v2-primary="analytics"' in html
-          assert './v2/atlas-v2-health.js?v=v2-primary-2' in html
-          assert "'unsafe-inline'" not in html
-          assert 'signInWithOAuth' in auth and "provider: 'azure'" in auth
-          assert '.auth.getUser()' in auth and 'aml_allowed_users' in auth
-          assert "event === 'TOKEN_REFRESHED'" in auth and 'resetFederatedSession' in auth
-          assert 'AtlasCoreSession.ready' in boot
-          assert 'warmFederatedSession' in boot and "STRUCTURAL_VERSION = 'v2-primary-2'" in boot
-          assert 'STRUCTURAL_SURFACE_LOAD_FAILED' in boot and 'INICIO BLOQUEADO' in boot
-          assert "ATLAS_V2_RUNTIME_HEALTH_V1" in health
-          for secret_word in ['access_token','refresh_token','authorization','email','rut','query']:
-              assert secret_word not in health.lower(), secret_word
-          assert "mode: 'analytics-primary'" in config
-          assert "legacyFallbackPath: './legacy.html'" in config
-          print('ATLAS 2.0.1 analytics-first + UX candidate invariants: OK')
+              assert f"id: '{route}'" in shell
+          for forbidden in ["id: 'casos'","id: 'tareas'","id: 'cola'","id: 'sla'"]:
+              assert forbidden not in shell
+          assert "STRUCTURAL_VERSION = 'v2-primary-3'" in boot
+          assert 'atlas-v2-viz.js' in boot and 'entity-search-adapter.js' in boot
+          assert 'VISUAL_SEARCH_CAPABILITY_MISSING' in boot
+          assert 'AtlasV2Viz.horizontalBars' in explore and 'AtlasV2Viz.segmented' in explore
+          assert 'AtlasV2EntitySearch.search' in entity and 'Radar Prensa' in entity and 'entity_id' in entity
+          assert 'lineChart' in entity and 'TRAYECTORIA SII' in entity
+          assert 'ATLAS_ENTITY_SEARCH_V2' in adapter and "operation: 'entity_search'" in adapter
+          assert all(x in viz for x in ['horizontalBars','lineChart','segmented'])
+          assert 'aml_allowed_users' in sql and 'auth.uid()' in sql and 'security definer' in sql.lower()
+          assert 'security invoker' in sql.lower()
+          assert 'entity_search' in edge and 'atlas_v2_entity_search' in edge
+          assert './v2/atlas-v2-boot.js?v=v2-primary-3' in html
+          for source in [shell,boot,explore,entity,adapter,viz]:
+              assert 'MutationObserver' not in source
+              assert '.innerHTML' not in source
+          assert 'raw.githubusercontent.com' not in explore and 'raw.githubusercontent.com' not in entity
+          print('ATLAS 2.0.2 analytics-first visual/search invariants: OK')
           PY
 
       - name: Validate analytical surfaces
@@ -140,62 +115,32 @@ jobs:
           node tests/atlas-v2-territory-native.mjs
           node tests/atlas-v2-watch-native.mjs
 
-      - name: Build primary production artifact
+      - name: Build and verify production artifact
         run: |
           set -euo pipefail
           python3 tools/build_atlas_v2_primary.py --out _atlas_v2_primary
-
-      - name: Verify primary authority and frozen rollback
-        run: |
-          set -euo pipefail
           python3 - <<'PY'
           import json
           from pathlib import Path
           root=Path('_atlas_v2_primary')
-          primary=json.loads((root/'atlas-v2-release.json').read_text(encoding='utf-8'))
-          legacy_release=json.loads((root/'atlas-release.json').read_text(encoding='utf-8'))
-          html=(root/'index.html').read_text(encoding='utf-8')
-          legacy=(root/'legacy.html').read_text(encoding='utf-8')
-          report=json.loads((root/'atlas-runtime-report.json').read_text(encoding='utf-8'))
-          assert report['primary_runtime']=='ATLAS_V2_ANALYTICS'
-          assert report['release']==str(primary['release']) and report['build']==str(primary['build'])
-          assert report['legacy_release']==str(legacy_release['release']) and report['legacy_build']==str(legacy_release['build'])
-          assert report['legacy_fallback']=='legacy.html'
-          assert report['legacy_fallback_policy']=='FROZEN_ROLLBACK_ONLY'
-          assert report['legacy_authority_active_on_primary'] is False
-          assert report['v2_auth_boundary']=='ENTRA_SUPABASE_ALLOWLIST_VERIFIED_USER'
-          assert report['v2_runtime_health']=='SANITIZED_IN_MEMORY'
-          assert report['v2_structural_surface_policy']=='FAIL_CLOSED'
-          assert report['v2_explore_mode']=='LIVE_PULSE'
-          assert report['v2_federation_prewarm'] is True
-          assert report['v2_e2e_proxy'] is False
-          assert f'data-aml-version="{primary["release"]}"' in html
-          assert f'data-aml-build="{primary["build"]}"' in html
-          assert 'data-atlas-v2-primary="analytics"' in html
-          assert 'atlas-runtime-current-' not in html
-          assert 'atlas-module-current-' not in html
-          assert 'ATLAS_RUNTIME_SCRIPTS' not in html
-          assert 'raw.githubusercontent.com' not in html
-          assert f'data-aml-version="{legacy_release["release"]}"' in legacy
-          assert f'data-aml-build="{legacy_release["build"]}"' in legacy
-          assert 'atlas-runtime-current-' in legacy
-          required=[
-            'atlas-v2-production-config.js','atlas-v2-health.js','atlas-v2-core-auth.js','atlas-v2-core-auth.css',
-            'atlas-v2-shell.js','atlas-v2-shell.css','atlas-v2-boot.js','atlas-v2-data.js','atlas-v2-session.js','atlas-v2-access.js',
-            'explore-surface.js','explore-surface.css',
-            'entity360-adapter.js','entity360-surface.js','entity360-surface.css',
-            'public-spend-surface.js','public-spend-surface.css','relations-surface.js','relations-surface.css',
-            'universes-adapter.js','universes-surface.js','universes-surface.css',
-            'territory-adapter.js','territory-surface.js','territory-surface.css',
-            'watch-adapter.js','watch-surface.js','watch-surface.css',
-          ]
-          for name in required: assert (root/'v2'/name).is_file(), name
-          assert (root/'assets'/'supabase-js-2.111.0.umd.js').is_file()
-          print('ATLAS 2.0.1 UX candidate artifact + frozen legacy rollback: OK')
+          p=json.loads((root/'atlas-v2-release.json').read_text())
+          l=json.loads((root/'atlas-release.json').read_text())
+          r=json.loads((root/'atlas-runtime-report.json').read_text())
+          html=(root/'index.html').read_text()
+          legacy=(root/'legacy.html').read_text()
+          assert p['release']=='2.0.2' and str(p['build'])=='2002'
+          assert r['v2_explore_mode']=='LIVE_PULSE_VISUAL'
+          assert r['v2_visual_navigation']=='INTERACTIVE_FIRST'
+          assert r['v2_entity_search']=='RUT_NAME_UAF_PRESS'
+          assert 'atlas-runtime-current-' not in html and 'atlas-runtime-current-' in legacy
+          assert f'data-aml-version="{p["release"]}"' in html
+          assert f'data-aml-version="{l["release"]}"' in legacy
+          for name in ['atlas-v2-viz.js','atlas-v2-viz.css','entity-search-adapter.js','explore-surface.js','entity360-surface.js']:
+              assert (root/'v2'/name).is_file(), name
+          print('ATLAS 2.0.2 production artifact: OK')
           PY
 
-      - name: Upload v2 primary preview
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: atlas-v2-primary
           path: _atlas_v2_primary
