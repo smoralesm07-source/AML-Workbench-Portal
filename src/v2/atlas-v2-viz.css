@@ -22,13 +22,14 @@ button.atlas-v2-viz-bar-row:hover { background: var(--atlas-surface-2); }
 
 .atlas-v2-viz-line { width: 100%; }
 .atlas-v2-viz-line svg { display: block; width: 100%; height: auto; overflow: visible; }
-.atlas-v2-viz-gridline { stroke: var(--atlas-border-soft); stroke-width: 1; }
-.atlas-v2-viz-line-path { stroke: var(--atlas-accent); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.atlas-v2-viz-gridline { stroke: var(--atlas-border-soft); stroke-width: 1; pointer-events: none; }
+.atlas-v2-viz-line-path { stroke: var(--atlas-accent); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 .atlas-v2-viz-line-point { cursor: pointer; outline: none; }
-.atlas-v2-viz-line-dot { fill: var(--atlas-bg); stroke: var(--atlas-accent); stroke-width: 3; transition: r .12s ease, fill .12s ease; }
+.atlas-v2-viz-line-hit { fill: transparent; stroke: none; pointer-events: all; }
+.atlas-v2-viz-line-dot { fill: var(--atlas-bg); stroke: var(--atlas-accent); stroke-width: 3; transition: r .12s ease, fill .12s ease; pointer-events: none; }
 .atlas-v2-viz-line-point:hover .atlas-v2-viz-line-dot,
 .atlas-v2-viz-line-point:focus .atlas-v2-viz-line-dot { r: 8; fill: var(--atlas-accent-soft); }
-.atlas-v2-viz-axis-label { fill: var(--atlas-muted); font: 10px var(--atlas-mono); }
+.atlas-v2-viz-axis-label { fill: var(--atlas-muted); font: 10px var(--atlas-mono); pointer-events: none; }
 .atlas-v2-viz-caption { margin-top: 5px; color: var(--atlas-muted); font-size: 10.5px; }
 
 .atlas-v2-viz-segment-track { height: 16px; display: flex; overflow: hidden; border-radius: 999px; background: var(--atlas-surface-3); }
