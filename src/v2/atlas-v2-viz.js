@@ -107,26 +107,39 @@
     svg.append(svgNode('polyline', { points, class: 'atlas-v2-viz-line-path', fill: 'none' }));
 
     rows.forEach((row, index) => {
-      const group = svgNode('g', { class: 'atlas-v2-viz-line-point', tabindex: '0', role: 'button', 'aria-label': `${label(row.label)}: ${row.display ?? row.value}` });
       const cx = x(index);
       const cy = y(row.value);
-      group.append(svgNode('circle', { cx, cy, r: 6, class: 'atlas-v2-viz-line-dot' }));
-      if (index === 0 || index === rows.length - 1 || rows.length <= 7) {
-        const tx = svgNode('text', { x: cx, y: height - 14, class: 'atlas-v2-viz-axis-label', 'text-anchor': 'middle' });
-        tx.textContent = label(row.label);
-        group.append(tx);
+      const interactive = typeof options.onSelect === 'function';
+      const group = svgNode('g', {
+        class: 'atlas-v2-viz-line-point',
+        tabindex: interactive ? '0' : '-1',
+        role: interactive ? 'button' : 'img',
+        'aria-label': `${label(row.label)}: ${row.display ?? row.value}`,
+      });
+
+      if (interactive) {
+        group.append(svgNode('circle', { cx, cy, r: 14, class: 'atlas-v2-viz-line-hit', 'aria-hidden': 'true' }));
       }
-      if (typeof options.onSelect === 'function') {
+      group.append(svgNode('circle', { cx, cy, r: 6, class: 'atlas-v2-viz-line-dot', 'aria-hidden': 'true' }));
+
+      if (interactive) {
         const activate = () => options.onSelect(row);
         group.addEventListener('click', activate);
         group.addEventListener('keydown', event => {
           if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); activate(); }
         });
       }
+
       const title = svgNode('title');
       title.textContent = `${label(row.label)} · ${row.display ?? row.value}`;
       group.append(title);
       svg.append(group);
+
+      if (index === 0 || index === rows.length - 1 || rows.length <= 7) {
+        const tx = svgNode('text', { x: cx, y: height - 14, class: 'atlas-v2-viz-axis-label', 'text-anchor': 'middle', 'aria-hidden': 'true' });
+        tx.textContent = label(row.label);
+        svg.append(tx);
+      }
     });
 
     root.append(svg);
