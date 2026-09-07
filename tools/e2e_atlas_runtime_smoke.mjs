@@ -143,10 +143,28 @@ try {
     results.push(await timed('relaciones', () => window.AtlasV2Access.data().relations.hypotheses({ query: { limit: 5 }, route: 'e2e:relaciones' })));
 
     let sampleRut = '';
+    const seedLenses = ['UAF', 'OSFL', 'SANCIONES'];
+    let seedContract = null;
+    let seedKind = null;
+    let seedTraceId = null;
+    let seedLens = null;
     try {
-      const seed = await window.AtlasV2Universes.entities('SII', '', { limit: 12, route: 'e2e:entity-seed' });
-      sampleRut = (seed.items || []).map(item => item?.rut || item?.entity_rut || item?.tax_id || '').find(value => window.AtlasV2Entity360.validRutShape(value)) || '';
-      results.push({ name: 'entity-seed', ok: !!sampleRut, ms: 0, contract: seed.contract || null, kind: seed.kind || null, traceId: seed.meta?.traceId || null });
+      for (const lens of seedLenses) {
+        const seed = await window.AtlasV2Universes.entities(lens, '', { limit: 30, route: `e2e:entity-seed:${lens.toLowerCase()}` });
+        seedContract ||= seed.contract || null;
+        seedKind ||= seed.kind || null;
+        seedTraceId ||= seed.meta?.traceId || null;
+        const candidate = (seed.items || [])
+          .map(item => item?.rut || '')
+          .find(value => window.AtlasV2Entity360.validRutShape(value));
+        if (candidate) {
+          sampleRut = window.AtlasV2Entity360.canonicalRut(candidate);
+          seedLens = lens;
+          seedTraceId = seed.meta?.traceId || seedTraceId;
+          break;
+        }
+      }
+      results.push({ name: 'entity-seed', ok: !!sampleRut, ms: 0, contract: seedContract, kind: seedKind, traceId: seedTraceId, lens: seedLens });
     } catch (error) {
       results.push({ name: 'entity-seed', ok: false, ms: 0, code: error?.code || error?.message || 'ERROR' });
     }
@@ -267,7 +285,7 @@ try {
   console.log(JSON.stringify({
     schema: report.schema,
     startupMs: report.startupMs,
-    contracts: report.contracts.map(({ name, ok, ms, contract, kind, traceId }) => ({ name, ok, ms, contract, kind, traced: !!traceId })),
+    contracts: report.contracts.map(({ name, ok, ms, contract, kind, traceId, lens }) => ({ name, ok, ms, contract, kind, lens, traced: !!traceId })),
     routes: report.routes.map(({ route, outcome, durationMs }) => ({ route, outcome, durationMs })),
     responsive: report.responsive.map(({ name, overflowPx }) => ({ name, overflowPx })),
     governedReads: { total: gatewayResponses.length, successful: successfulGateway.length, traced: successfulGateway.filter(item => item.traceId).length },
