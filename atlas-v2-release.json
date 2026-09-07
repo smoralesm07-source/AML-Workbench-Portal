@@ -1,8 +1,8 @@
 {
   "schema": "ATLAS_V2_RELEASE_V1",
   "product": "ATLAS AML",
-  "release": "2.0.1",
-  "build": "2001",
+  "release": "2.0.2",
+  "build": "2002",
   "channel": "current",
   "runtime": "ATLAS_V2_ANALYTICS",
   "primary_entry": "index.html",
@@ -14,6 +14,8 @@
   "structural_surface_policy": "FAIL_CLOSED",
   "runtime_health": "SANITIZED_IN_MEMORY",
   "deployment_policy": "MAIN_BUILD_DEPLOY_LIVE_SMOKE",
+  "visual_navigation": "INTERACTIVE_FIRST",
+  "entity_search": "RUT_NAME_UAF_PRESS",
   "legacy_fallback": {
     "path": "legacy.html",
     "release": "0.96.4",
@@ -39,7 +41,9 @@
     "TERRITORY_CONTEXT_NOT_ENTITY_RISK",
     "SANCTION_NOT_AML_FT_SIGNAL",
     "RELATION_DOES_NOT_TRANSFER_RISK",
+    "NAME_MATCH_NOT_IDENTITY_ASSERTION",
+    "PRESS_CONTEXT_NOT_IDENTITY_ASSERTION",
     "FOLLOWUP_OPTIONAL_NOT_CASE_WORKFLOW"
   ],
-  "release_notes": "ATLAS 2.0.1 es el candidato de primera prueba de experiencia usuaria. Convierte Explorar en un pulso analítico vivo con lecturas gobernadas de Universos, Vigilancia, Territorio y Gasto Público; precalienta la federación entre proyectos y reutiliza por 30 segundos los overview ya leídos para eliminar esperas redundantes al profundizar. Mantiene intactos los guardarraíles analytics-first y el rollback 0.96.4/0964 exclusivamente en legacy.html."
+  "release_notes": "ATLAS 2.0.2 recupera potencia analítica visible sin reintroducir la sedimentación legacy. Explorar prioriza gráficos navegables sobre bloques textuales; Entidad 360 incorpora búsqueda transversal por RUT, razón social, denominaciones UAF y entidades observadas en Radar Prensa; las coincidencias nominales explican su fuente y método; las entidades de prensa sin RUT pueden explorarse por entity_id sin fusionarse automáticamente con una identidad tributaria. Se incorpora una trayectoria SII interactiva y se mantiene 0.96.4/0964 exclusivamente como rollback congelado."
 }
