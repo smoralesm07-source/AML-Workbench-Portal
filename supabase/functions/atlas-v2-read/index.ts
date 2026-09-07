@@ -2,6 +2,8 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.111.0";
 
 const ALLOWED_MODELS = new Set(["public_spend_overview", "public_spend_monitor"]);
+const CORE_URL = "https://ldmtlwzqaqmegedktlxr.supabase.co";
+const CORE_PUBLISHABLE_KEY = "sb_publishable_Nu21dZFBM3NwtIvOwIM8ag_9tyfDJyR";
 const QUERY_OPERATIONS = Object.freeze({
   public_spend_query: {
     rpc: "atlas_v2_public_spend_query",
@@ -16,7 +18,7 @@ const QUERY_OPERATIONS = Object.freeze({
 });
 const CORS = {
   "access-control-allow-origin": "https://smoralesm07-source.github.io",
-  "access-control-allow-headers": "authorization, x-client-info, apikey, content-type, if-none-match",
+  "access-control-allow-headers": "authorization, x-client-info, apikey, content-type, if-none-match, x-atlas-core-authorization",
   "access-control-allow-methods": "POST, OPTIONS",
   "access-control-expose-headers": "etag, server-timing, x-atlas-trace-id, x-atlas-snapshot",
 };
@@ -99,6 +101,63 @@ async function handleGovernedQuery(
   });
 }
 
+async function handleUniversesQuery(
+  v2Client: any,
+  coreAuth: string,
+  query: Record<string,unknown>,
+  route: string,
+  traceId: string,
+  started: number,
+) {
+  const kind = clean(query?.kind, 80);
+  if (!kind) return response({ error: "INVALID_QUERY", trace_id: traceId }, 400, { "x-atlas-trace-id": traceId });
+  if (!coreAuth.startsWith("Bearer ")) {
+    return response({ error: "MISSING_CORE_AUTH", trace_id: traceId }, 401, { "x-atlas-trace-id": traceId });
+  }
+
+  const core = userClient(CORE_URL, CORE_PUBLISHABLE_KEY, coreAuth);
+  const dbStarted = performance.now();
+  const { data, error } = await core.rpc("atlas_v2_universes_query", { p_request: query });
+  const dbMs = Math.round(performance.now() - dbStarted);
+  const totalMs = Math.round(performance.now() - started);
+
+  if (error) {
+    console.error(JSON.stringify({ type: "atlas_v2_read", trace_id: traceId, operation: "universes_query", kind, route, status: "ERROR", db_ms: dbMs, total_ms: totalMs, code: error.code }));
+    const status = error.code === "42501" ? 403 : 500;
+    return response({ error: status === 403 ? "FORBIDDEN" : "UNIVERSES_QUERY_ERROR", trace_id: traceId }, status, {
+      "x-atlas-trace-id": traceId,
+      "server-timing": `coredb;dur=${dbMs}, total;dur=${totalMs}`,
+      "cache-control": "private, no-store",
+    });
+  }
+
+  if (data?.schema !== "ATLAS_UNIVERSES_QUERY_V2" || data?.kind !== kind) {
+    return response({ error: "UNIVERSES_CONTRACT_MISMATCH", trace_id: traceId }, 502, {
+      "x-atlas-trace-id": traceId,
+      "server-timing": `coredb;dur=${dbMs}, total;dur=${totalMs}`,
+      "cache-control": "private, no-store",
+    });
+  }
+
+  const snapshotId = String(data?.generated_at || "");
+  persistTelemetry(v2Client, {
+    trace_id: traceId,
+    route,
+    operation: `universes_query:${kind}`,
+    phase: "edge_read",
+    duration_ms: totalMs,
+    status: "OK",
+    metadata: { kind, snapshot_id: snapshotId, core_db_ms: dbMs, contract: "ATLAS_UNIVERSES_QUERY_V2" },
+  }, traceId);
+
+  return response({ ...data, trace_id: traceId }, 200, {
+    "x-atlas-trace-id": traceId,
+    "x-atlas-snapshot": snapshotId,
+    "server-timing": `coredb;dur=${dbMs}, total;dur=${totalMs}`,
+    "cache-control": "private, no-store",
+  });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return response({ error: "METHOD_NOT_ALLOWED" }, 405);
@@ -106,6 +165,7 @@ Deno.serve(async (req: Request) => {
   const started = performance.now();
   const traceId = crypto.randomUUID();
   const auth = req.headers.get("authorization") || "";
+  const coreAuth = req.headers.get("x-atlas-core-authorization") || "";
   const url = Deno.env.get("SUPABASE_URL") || "";
   const publishableKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY") || "";
 
@@ -121,6 +181,11 @@ Deno.serve(async (req: Request) => {
     if (operation === "public_spend_query" || operation === "relations_query") {
       const query = body?.query && typeof body.query === "object" ? body.query : {};
       return await handleGovernedQuery(sb, operation, query, route, traceId, started);
+    }
+
+    if (operation === "universes_query") {
+      const query = body?.query && typeof body.query === "object" ? body.query : {};
+      return await handleUniversesQuery(sb, coreAuth, query, route, traceId, started);
     }
 
     if (operation !== "read_model") return response({ error: "INVALID_OPERATION", trace_id: traceId }, 400, { "x-atlas-trace-id": traceId });
