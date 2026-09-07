@@ -52,8 +52,10 @@ jobs:
             'src/v2/entity360-surface.js','tools/build_atlas_v2_primary.py'
           ]: assert Path(path).is_file(), path
           html=Path('atlas-v2.html').read_text()
-          assert 'data-atlas-v2-primary="analytics"' in html and 'v2-primary-3' in html
-          print('ATLAS 2.0.2 release contract: OK')
+          assert 'data-atlas-v2-primary="analytics"' in html and 'v2-primary-4' in html
+          boot=Path('src/v2/atlas-v2-boot.js').read_text()
+          assert "STRUCTURAL_VERSION = 'v2-primary-4'" in boot
+          print('ATLAS 2.0.2 release/cache authority: OK')
           PY
           for f in \
             src/v2/atlas-v2-production-config.js src/v2/atlas-v2-health.js src/v2/atlas-v2-core-auth.js \
@@ -80,14 +82,16 @@ jobs:
           assert r['v2_explore_mode']=='LIVE_PULSE_VISUAL'
           assert r['v2_visual_navigation']=='INTERACTIVE_FIRST'
           assert r['v2_entity_search']=='RUT_NAME_UAF_PRESS'
+          assert r['v2_version']=='v2-primary-4'
           assert r['legacy_fallback_policy']=='FROZEN_ROLLBACK_ONLY'
           assert r['legacy_authority_active_on_primary'] is False
           assert f'data-aml-version="{p["release"]}"' in html and f'data-aml-build="{p["build"]}"' in html
+          assert 'v2-primary-4' in html
           assert 'atlas-runtime-current-' not in html
           assert f'data-aml-version="{l["release"]}"' in legacy and 'atlas-runtime-current-' in legacy
           for path in ['v2/atlas-v2-viz.js','v2/atlas-v2-viz.css','v2/entity-search-adapter.js','v2/explore-surface.js','v2/entity360-surface.js']:
               assert (root/path).is_file(), path
-          print('ATLAS 2.0.2 artifact + frozen rollback: OK')
+          print('ATLAS 2.0.2 fresh-asset artifact + frozen rollback: OK')
           PY
 
       - uses: actions/configure-pages@v5
@@ -98,7 +102,7 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Verify live ATLAS 2.0.2 visual/search authority and rollback
+      - name: Verify live ATLAS 2.0.2 fresh visual/search authority and rollback
         shell: bash
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
@@ -113,6 +117,7 @@ jobs:
           lrel=str(l['release']); lbid=str(l['build'])
           base=os.environ['PAGE_URL'].rstrip('/')
           sha=os.environ.get('GITHUB_SHA','unknown')
+          asset='v2-primary-4'
           def get(path, stamp):
               sep='&' if '?' in path else '?'
               req=urllib.request.Request(f'{base}{path}{sep}atlas={stamp}',headers={'Cache-Control':'no-cache','User-Agent':'ATLAS-2.0.2-live-smoke'})
@@ -125,26 +130,27 @@ jobs:
                   live=json.loads(get('/atlas-v2-release.json',stamp))
                   report=json.loads(get('/atlas-runtime-report.json',stamp))
                   legacy=get('/legacy.html',stamp)
-                  boot=get('/v2/atlas-v2-boot.js',stamp)
-                  explore=get('/v2/explore-surface.js',stamp)
-                  entity=get('/v2/entity360-surface.js',stamp)
-                  search=get('/v2/entity-search-adapter.js',stamp)
-                  viz=get('/v2/atlas-v2-viz.js',stamp)
+                  boot=get(f'/v2/atlas-v2-boot.js?v={asset}',stamp)
+                  explore=get(f'/v2/explore-surface.js?v={asset}',stamp)
+                  entity=get(f'/v2/entity360-surface.js?v={asset}',stamp)
+                  search=get(f'/v2/entity-search-adapter.js?v={asset}',stamp)
+                  viz=get(f'/v2/atlas-v2-viz.js?v={asset}',stamp)
                   assert live['release']==rel and str(live['build'])==bid
                   assert live['visual_navigation']=='INTERACTIVE_FIRST' and live['entity_search']=='RUT_NAME_UAF_PRESS'
-                  assert f'data-aml-version="{rel}"' in html and f'data-aml-build="{bid}"' in html and 'v2-primary-3' in html
+                  assert f'data-aml-version="{rel}"' in html and f'data-aml-build="{bid}"' in html and asset in html
                   assert 'atlas-runtime-current-' not in html
-                  assert report['release']==rel and report['build']==bid
+                  assert report['release']==rel and report['build']==bid and report['v2_version']==asset
                   assert report['v2_explore_mode']=='LIVE_PULSE_VISUAL'
                   assert report['v2_visual_navigation']=='INTERACTIVE_FIRST'
                   assert report['v2_entity_search']=='RUT_NAME_UAF_PRESS'
                   assert f'data-aml-version="{lrel}"' in legacy and f'data-aml-build="{lbid}"' in legacy and 'atlas-runtime-current-' in legacy
+                  assert "STRUCTURAL_VERSION = 'v2-primary-4'" in boot
                   assert 'atlas-v2-viz.js' in boot and 'entity-search-adapter.js' in boot
                   assert 'AtlasV2Viz.horizontalBars' in explore and 'AtlasV2Viz.segmented' in explore
                   assert 'Radar Prensa' in entity and 'AtlasV2EntitySearch.search' in entity
                   assert 'ATLAS_ENTITY_SEARCH_V2' in search and "operation: 'entity_search'" in search
                   assert all(x in viz for x in ['horizontalBars','lineChart','segmented'])
-                  print(json.dumps({'status':'ok','release':rel,'build':bid,'visual':'INTERACTIVE_FIRST','entity_search':'RUT_NAME_UAF_PRESS','legacy_release':lrel,'legacy_build':lbid}))
+                  print(json.dumps({'status':'ok','release':rel,'build':bid,'asset':asset,'visual':'INTERACTIVE_FIRST','entity_search':'RUT_NAME_UAF_PRESS','legacy_release':lrel,'legacy_build':lbid}))
                   break
               except Exception as exc:
                   last=exc
