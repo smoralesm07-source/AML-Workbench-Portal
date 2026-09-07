@@ -109,7 +109,7 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
         './v2/atlas-v2-health.js?v=v2-primary-5',
         './v2/atlas-v2-core-auth.js?v=v2-primary-5',
         './v2/atlas-v2-shell.js?v=v2-primary-5',
-        './v2/atlas-v2-boot.js?v=v2-primary-5-entity-intelligence-1',
+        './v2/atlas-v2-boot.js?v=v2-primary-6-explore-legacy-pulse-1',
         './v2/atlas-v2-viz.css?v=v2-primary-5-viz1',
         './v2/entity360-parity-surface.css?v=v2-primary-5-entity360-parity-1',
         './v2/entity360-parity-surface.js?v=v2-primary-5-entity360-parity-1',
@@ -143,6 +143,7 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
     auth = read("atlas-v2-core-auth.js")
     boot = read("atlas-v2-boot.js")
     explore = read("explore-surface.js")
+    explore_css = read("explore-surface.css")
     entity = read("entity360-surface.js")
     parity = read("entity360-parity-surface.js")
     parity_css = read("entity360-parity-surface.css")
@@ -160,12 +161,15 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
     require(boot, [
         "AtlasCoreSession.ready", "STRUCTURAL_SURFACE_LOAD_FAILED", "warmFederatedSession",
         "atlas-v2-viz.js", "entity-search-adapter.js", "VISUAL_SEARCH_CAPABILITY_MISSING",
-        "STRUCTURAL_VERSION = 'v2-primary-5'", "SURFACE_VERSION = 'v2-primary-5-entity-intelligence-1'",
+        "STRUCTURAL_VERSION = 'v2-primary-5'", "SURFACE_VERSION = 'v2-primary-6-explore-legacy-pulse-1'",
     ], "boot authority")
     require(explore, [
         "registerSurface('explorar'", "AtlasV2Universes.overview", "AtlasV2Watch.overview", "AtlasV2Territory.overview",
-        "AtlasV2Universes.attention", "attentionPanel", "SO UAF ↔ SII", "AtlasV2Viz.horizontalBars", "AtlasV2Viz.segmented",
-    ], "Explore intelligence pulse")
+        "AtlasV2Universes.attention", "LEGACY_PULSE_NATIVE_V2", "areaLineChart", "proportionalBars", "statusComposition", "UAF ↔ SII",
+    ], "Explore legacy pulse intelligence")
+    require(explore_css, [
+        ".atlas-v2-home-pulse", ".atlas-v2-pulse-svg", ".atlas-v2-recon-track", ".atlas-v2-context-card",
+    ], "Explore legacy pulse visual contract")
     require(search, [
         "ATLAS_ENTITY_SEARCH_V2", "operation: 'entity_search'", "resultTier", "tierPriority",
         "EXACT_RECONCILED_THEN_PRESS_HIGH", "exact_reconciled", "press_high", "pressMinimumConfidence: 0.86",
@@ -195,7 +199,7 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
         "peer_positions", "res_lifecycle", "sanction_resolution", "AtlasV2Entity360.read", "registerSurface('entidad'",
     ], "Entity 360 six-lens parity surface")
     require(parity_css, [".e360p-hero", ".e360p-lens-nav", ".e360p-score-ring", ".e360p-rail", ".e360p-mark", ".e360p-timeline"], "Entity 360 parity visual contract")
-    require(viz, ["horizontalBars", "lineChart", "segmented"], "visualization primitives")
+    require(viz, ["horizontalBars", "lineChart", "segmented", "widthPct.toFixed"], "visualization primitives")
     require(health, ["ATLAS_V2_RUNTIME_HEALTH_V1"], "runtime health")
 
     if e2e_proxy:
@@ -231,7 +235,8 @@ def update_report(out_dir: Path, published_v2: list[str], primary_release: dict,
         "v2_runtime_health": "SANITIZED_IN_MEMORY",
         "v2_structural_surface_policy": "FAIL_CLOSED",
         "v2_followup_policy": "OPTIONAL_NOT_WORKFLOW",
-        "v2_explore_mode": "LIVE_PULSE_VISUAL_UAF_SII",
+        "v2_explore_mode": "LEGACY_PULSE_NATIVE_V2",
+        "v2_explore_visual_reference": "ATLAS_STRATEGIC_PULSE_LEGACY_NATIVE_PORT",
         "v2_visual_navigation": "INTERACTIVE_FIRST",
         "v2_entity_search": "IDENTITY_TIERED_DIGITAL_PRESS",
         "v2_entity_search_policy": "EXACT_RECONCILED_THEN_PRESS_HIGH",
