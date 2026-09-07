@@ -1,0 +1,45 @@
+{
+  "schema": "ATLAS_V2_RELEASE_V1",
+  "product": "ATLAS AML",
+  "release": "2.0.0",
+  "build": "2000",
+  "channel": "current",
+  "runtime": "ATLAS_V2_ANALYTICS",
+  "primary_entry": "index.html",
+  "launch_date": "2026-09-07",
+  "product_contract": "ANALYTICS_FIRST",
+  "followup_policy": "OPTIONAL_NOT_WORKFLOW",
+  "auth_boundary": "ENTRA_SUPABASE_ALLOWLIST_VERIFIED_USER",
+  "data_boundary": "ATLAS_V2_READ_GATEWAY",
+  "structural_surface_policy": "FAIL_CLOSED",
+  "runtime_health": "SANITIZED_IN_MEMORY",
+  "deployment_policy": "MAIN_BUILD_DEPLOY_LIVE_SMOKE",
+  "legacy_fallback": {
+    "path": "legacy.html",
+    "release": "0.96.4",
+    "build": "0964",
+    "authority_active_on_primary": false,
+    "policy": "FROZEN_ROLLBACK_ONLY"
+  },
+  "surfaces": [
+    "explorar",
+    "universos",
+    "entidad",
+    "gasto-publico",
+    "territorio",
+    "relaciones",
+    "vigilancia",
+    "guardados",
+    "metodo"
+  ],
+  "guardrails": [
+    "PRIORITY_NOT_PROBABILITY",
+    "MISSING_NOT_ZERO",
+    "MISSING_NOT_ABSENCE",
+    "TERRITORY_CONTEXT_NOT_ENTITY_RISK",
+    "SANCTION_NOT_AML_FT_SIGNAL",
+    "RELATION_DOES_NOT_TRANSFER_RISK",
+    "FOLLOWUP_OPTIONAL_NOT_CASE_WORKFLOW"
+  ],
+  "release_notes": "ATLAS 2.0.0 establece la arquitectura v2 analítica como autoridad productiva primaria. Integra Foundation, Entidad 360, Gasto Público, Relaciones, Universos, Territorio y Vigilancia mediante contratos gobernados, autenticación autónoma y runtime fail-closed. El runtime 0.96.4/0964 se conserva exclusivamente en legacy.html como rollback congelado y no compite por rutas productivas."
+}
