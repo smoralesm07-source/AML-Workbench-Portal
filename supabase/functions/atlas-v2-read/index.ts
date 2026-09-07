@@ -60,6 +60,19 @@ function clean(value: unknown, max = 120) {
   return s && s.length <= max ? s : "";
 }
 
+function canonicalRut(value: unknown) {
+  const compact = String(value ?? "").toUpperCase().replace(/[^0-9K]/g, "");
+  if (compact.length < 2) return "";
+  return `${compact.slice(0, -1)}-${compact.slice(-1)}`;
+}
+
+function entityIdFromRut(rut: string) {
+  const canonical = canonicalRut(rut);
+  if (!/^\d{7,8}-[0-9K]$/.test(canonical)) return "";
+  const [body, dv] = canonical.split("-");
+  return `ENT-RUT-${body}-${dv}`;
+}
+
 function userClient(url: string, key: string, auth: string) {
   return createClient(url, key, {
     global: { headers: { Authorization: auth } },
@@ -188,6 +201,69 @@ async function handleCoreQuery(
   });
 }
 
+async function handleEntity360(
+  v2Client: any,
+  coreAuth: string,
+  query: Record<string, unknown>,
+  route: string,
+  traceId: string,
+  started: number,
+) {
+  if (!coreAuth.startsWith("Bearer ")) {
+    return response({ error: "MISSING_CORE_AUTH", trace_id: traceId }, 401, { "x-atlas-trace-id": traceId });
+  }
+  const rut = canonicalRut(query?.rut);
+  const entityId = clean(query?.entity_id, 180) || entityIdFromRut(rut);
+  if (!entityId || (rut && !/^\d{7,8}-[0-9K]$/.test(rut))) {
+    return response({ error: "INVALID_ENTITY", trace_id: traceId }, 400, { "x-atlas-trace-id": traceId });
+  }
+
+  const core = userClient(CORE_URL, CORE_PUBLISHABLE_KEY, coreAuth);
+  const dbStarted = performance.now();
+  const { data, error } = await core.rpc("atlas_v2_entity360_read", {
+    p_entity_id: entityId,
+    p_rut: rut || null,
+  });
+  const dbMs = Math.round(performance.now() - dbStarted);
+  const totalMs = Math.round(performance.now() - started);
+
+  if (error) {
+    console.error(JSON.stringify({ type: "atlas_v2_read", trace_id: traceId, operation: "entity360_read", route, status: "ERROR", db_ms: dbMs, total_ms: totalMs, code: error.code }));
+    const status = error.code === "42501" ? 403 : 500;
+    return response({ error: status === 403 ? "FORBIDDEN" : "ENTITY360_READ_ERROR", trace_id: traceId }, status, {
+      "x-atlas-trace-id": traceId,
+      "server-timing": `coredb;dur=${dbMs}, total;dur=${totalMs}`,
+      "cache-control": "private, no-store",
+    });
+  }
+
+  if (data?.contract !== "ATLAS_ENTITY360_READ_V2") {
+    return response({ error: "ENTITY360_CONTRACT_MISMATCH", trace_id: traceId }, 502, {
+      "x-atlas-trace-id": traceId,
+      "server-timing": `coredb;dur=${dbMs}, total;dur=${totalMs}`,
+      "cache-control": "private, no-store",
+    });
+  }
+
+  const snapshotId = String(data?.generated_at || "");
+  persistTelemetry(v2Client, {
+    trace_id: traceId,
+    route,
+    operation: "entity360_read",
+    phase: "edge_read",
+    duration_ms: totalMs,
+    status: "OK",
+    metadata: { snapshot_id: snapshotId, core_db_ms: dbMs, contract: "ATLAS_ENTITY360_READ_V2" },
+  }, traceId);
+
+  return response({ ...data, trace_id: traceId }, 200, {
+    "x-atlas-trace-id": traceId,
+    "x-atlas-snapshot": snapshotId,
+    "server-timing": `coredb;dur=${dbMs}, total;dur=${totalMs}`,
+    "cache-control": "private, no-store",
+  });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return response({ error: "METHOD_NOT_ALLOWED" }, 405);
@@ -218,6 +294,8 @@ Deno.serve(async (req: Request) => {
       territory_explorer: "territory_query",
       watch: "watch_query",
       vigilance: "watch_query",
+      entity360: "entity360_read",
+      entity: "entity360_read",
     };
     const operation = operationAliases[requestedOperation] || requestedOperation;
 
@@ -227,6 +305,10 @@ Deno.serve(async (req: Request) => {
 
     if (operation === "universes_query" || operation === "territory_query" || operation === "watch_query") {
       return await handleCoreQuery(sb, operation, coreAuth, query, route, traceId, started);
+    }
+
+    if (operation === "entity360_read") {
+      return await handleEntity360(sb, coreAuth, query, route, traceId, started);
     }
 
     if (operation !== "read_model") return response({ error: "INVALID_OPERATION", trace_id: traceId }, 400, { "x-atlas-trace-id": traceId });
