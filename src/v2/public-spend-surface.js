@@ -4,6 +4,7 @@
   if (global.__ATLAS_V2_PUBLIC_SPEND_SURFACE__) return;
   const scriptBase = new URL('./', document.currentScript?.src || document.baseURI);
   const NF = new Intl.NumberFormat('es-CL');
+  const VALID_TABS = new Set(['overview', 'findings', 'providers', 'buyers', 'relations', 'method']);
   const REGION_LABELS = Object.freeze({
     '01': 'Tarapacá', '1': 'Tarapacá', '02': 'Antofagasta', '2': 'Antofagasta', '03': 'Atacama', '3': 'Atacama',
     '04': 'Coquimbo', '4': 'Coquimbo', '05': 'Valparaíso', '5': 'Valparaíso', '06': "O’Higgins", '6': "O’Higgins",
@@ -31,6 +32,15 @@
     return element;
   }
 
+  function svgNode(tag, attrs = {}, children = []) {
+    const element = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    Object.entries(attrs).forEach(([key, value]) => {
+      if (value != null) element.setAttribute(key, String(value));
+    });
+    (Array.isArray(children) ? children : [children]).forEach(child => { if (child) element.append(child); });
+    return element;
+  }
+
   function clear(element) {
     while (element?.firstChild) element.removeChild(element.firstChild);
   }
@@ -40,7 +50,7 @@
     const link = document.createElement('link');
     link.id = 'atlas-v2-public-spend-surface-style';
     link.rel = 'stylesheet';
-    link.href = new URL('public-spend-surface.css?v=1', scriptBase).href;
+    link.href = new URL('public-spend-surface.css?v=2', scriptBase).href;
     document.head.appendChild(link);
   }
 
@@ -82,10 +92,12 @@
 
   function routeState(route) {
     const params = route.params;
+    const rut = params.get('rut') || '';
+    const requestedTab = params.get('tab') || (rut ? 'providers' : 'overview');
     return {
-      tab: params.get('tab') || 'overview',
-      q: params.get('q') || params.get('rut') || '',
-      rut: params.get('rut') || '',
+      tab: VALID_TABS.has(requestedTab) ? requestedTab : 'overview',
+      q: params.get('q') || rut,
+      rut,
       region: params.get('region') || '',
       category: params.get('category') || '',
       month: params.get('month') || '',
@@ -224,9 +236,13 @@
     data.forEach(row => {
       const value = num(row.amount_clp);
       const height = Math.max(3, Math.round((value / max) * 100));
+      const y = 100 - height;
+      const svg = svgNode('svg', { viewBox: '0 0 24 100', preserveAspectRatio: 'none', 'aria-hidden': 'true' }, [
+        svgNode('rect', { x: 2, y, width: 20, height, rx: 3 }),
+      ]);
       chart.append(node('div', { class: 'atlas-v2-gp-trend-col', title: `${row.period || ''} · ${money(value)}` }, [
         node('div', { class: 'atlas-v2-gp-trend-value', text: money(value) }),
-        node('div', { class: 'atlas-v2-gp-barbox' }, [node('span', { style: `height:${height}%` })]),
+        node('div', { class: 'atlas-v2-gp-barbox' }, [svg]),
         node('small', { text: String(row.period || '').slice(5) || '—' }),
       ]));
     });
@@ -277,7 +293,7 @@
       actions.append(node('button', { type: 'button', text: 'Relaciones', onclick: () => api.navigate('relaciones', { rut, provider: providerId || '' }) }));
     } else if (kind === 'buyer') {
       title = buyerName;
-      detail = [first(row, ['rut', 'buyer_rut']), regionLabel(first(row, ['region', 'main_region'], ''))].filter(Boolean).join(' · ');
+      detail = [first(row, ['rut', 'buyer_rut']), first(row, ['region', 'main_region']) ? regionLabel(first(row, ['region', 'main_region'])) : ''].filter(Boolean).join(' · ');
       actions.append(node('button', { type: 'button', text: 'Relaciones', onclick: () => api.navigate('relaciones', { buyer: serviceId || '' }) }));
     } else if (kind === 'relation' || kind === 'pair') {
       title = `${buyerName || serviceId || 'Comprador'} → ${providerName || providerId || 'Proveedor'}`;
@@ -315,7 +331,7 @@
   function dualProviderView(api, state, procurement, budget) {
     return node('div', { class: 'atlas-v2-gp-grid' }, [
       rankPanel('Proveedores · ChileCompra', state.q ? `Búsqueda: “${state.q}”` : 'Dominio de compras públicas.', procurement?.items, 'supplier', api, state),
-      rankPanel('Proveedores · Presupuesto Abierto', 'Flujo a proveedores bajo los filtros presupuestarios activos.', budget?.items, 'provider', api, state),
+      rankPanel('Proveedores · Presupuesto Abierto', state.q ? `Búsqueda: “${state.q}” bajo filtros presupuestarios activos.` : 'Flujo a proveedores bajo los filtros presupuestarios activos.', budget?.items, 'provider', api, state),
     ]);
   }
 
@@ -348,7 +364,7 @@
     ]);
   }
 
-  async function load(route, api, host, state, serial, signal) {
+  async function load(api, host, state, serial, signal) {
     const data = global.AtlasV2Access?.data?.();
     if (!data) throw new Error('ATLAS v2 access bridge no está disponible');
     const filters = { region: state.region, category: state.category, month: state.month, serviceId: state.service, providerId: state.provider };
@@ -409,8 +425,9 @@
     container.append(pageHead(), tabs(api, state));
     const host = node('div', { class: 'atlas-v2-gp-host' }, [loading()]);
     container.append(host);
-    void load(route, api, host, state, serial, controller.signal).catch(error => {
-      if (serial !== renderSerial || controller?.signal.aborted || !host.isConnected) return;
+    const signal = controller.signal;
+    void load(api, host, state, serial, signal).catch(error => {
+      if (serial !== renderSerial || signal.aborted || !host.isConnected) return;
       clear(host); host.append(errorView(error, api, state));
     });
   }
