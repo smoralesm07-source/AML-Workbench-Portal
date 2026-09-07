@@ -18,7 +18,7 @@
       script.async = false;
       script.dataset.atlasV2Extension = file;
       script.addEventListener('load', () => { script.dataset.atlasLoaded = 'true'; resolve(); }, { once: true });
-      script.addEventListener('error', () => reject(new Error(`No fue posible cargar ${file}`)), { once: true });
+      script.addEventListener('error', reject, { once: true });
       document.head.appendChild(script);
     });
   }
@@ -48,10 +48,19 @@
   async function mount() {
     const root = document.getElementById('atlas-v2-root');
     if (!root) throw new Error('ATLAS v2 root is missing');
+    if (!window.AtlasCoreSession?.ready) throw new Error('ATLAS v2 core auth boundary failed to load');
+    const access = await window.AtlasCoreSession.ready();
+    if (!access) return;
     if (!window.AtlasV2Shell?.mount) throw new Error('ATLAS v2 shell failed to load');
     await installAnalyticalSurfaces();
     window.AtlasV2Shell.mount(root);
-    window.dispatchEvent(new CustomEvent('atlas:v2-shell-ready', { detail: { route: window.AtlasV2Shell.currentRoute?.().id || 'explorar' } }));
+    window.dispatchEvent(new CustomEvent('atlas:v2-shell-ready', {
+      detail: {
+        route: window.AtlasV2Shell.currentRoute?.().id || 'explorar',
+        role: access.role || 'viewer',
+        runtime: 'analytics-primary',
+      },
+    }));
   }
 
   const start = () => { void mount().catch(error => console.error('[ATLAS v2] boot failed', error)); };
