@@ -26,17 +26,22 @@ assert.equal(uafSnapshot.kpis.registered_total_latest, 10294);
 
 for (const marker of [
   "registerSurface('explorar'",
+  'IMAGE_STANDARD_EXECUTIVE_V3',
   'EXECUTIVE_PULSE_V2',
   'LEGACY_PULSE_NATIVE_V2',
   'YTD_DASHED_NO_FABRICATION',
-  'RUT, entidad o palabra clave…',
+  'RUT, entidad o tema…',
+  'rosTrendChart',
   'rosYearChart',
   'areaLineChart',
-  'Acumulado 2026',
+  '2026 · acumulado',
   'corte pendiente',
+  'reportabilityInsight',
+  'Quién explica el volumen',
   'proportionalBars',
   'statusComposition',
   'attentionTable',
+  'managementSectorPanel',
   'AtlasV2Universes.overview',
   'AtlasV2Universes.attention',
   'UAF ↔ SII',
@@ -48,12 +53,15 @@ for (const marker of [
 assert.doesNotMatch(explore, /innerHTML|MutationObserver|supabase\.from|rest\/v1|raw\.githubusercontent/);
 
 for (const selector of [
-  '.atlas-v2-exec-home', '.atlas-v2-exec-search', '.atlas-v2-exec-kpis', '.atlas-v2-exec-panel',
-  '.atlas-v2-ros-chart', '.atlas-v2-recon-track', '.atlas-v2-attention-table', '.atlas-v2-exec-bars',
-]) assert.ok(css.includes(selector), `Explore CSS missing ${selector}`);
+  '.atlas-v2-studio-home', '.atlas-v2-studio-search', '.atlas-v2-studio-kpis', '.atlas-v2-studio-panel',
+  '.atlas-v2-studio-ros-chart', '.atlas-v2-studio-ros-insight', '.atlas-v2-studio-ring',
+  '.atlas-v2-studio-status-track', '.atlas-v2-studio-attention-item', '.atlas-v2-studio-sector-row',
+]) assert.ok(css.includes(selector), `Explore image-standard CSS missing ${selector}`);
 assert.match(css, /grid-template-columns:repeat\(4/);
-assert.match(css, /@media\(max-width:1100px\)/);
-assert.match(css, /@media\(max-width:760px\)/);
+assert.match(css, /stroke-dasharray:6 6/);
+assert.match(css, /conic-gradient/);
+assert.match(css, /@media\(max-width:1180px\)/);
+assert.match(css, /@media\(max-width:560px\)/);
 
 assert.match(viz, /function horizontalBars/);
 assert.match(viz, /function lineChart/);
@@ -63,7 +71,7 @@ assert.doesNotMatch(viz, /innerHTML|MutationObserver/);
 
 assert.match(boot, /STRUCTURAL_VERSION = 'v2-primary-5'/);
 assert.match(boot, /SURFACE_VERSION = 'v2-primary-7-executive-pulse-entity360-classic-1'/);
-assert.match(boot, /ASSET_REVISION = 'executive-pulse-entity360-classic-1'/);
+assert.match(boot, /ASSET_REVISION = 'image-standard-3'/);
 assert.match(boot, /entity360-surface\.js/);
 assert.match(boot, /entity360-parity-surface\.js/);
 assert.ok(boot.indexOf("'entity360-surface.js'") < boot.indexOf("'entity360-parity-surface.js'"));
@@ -81,11 +89,11 @@ assert.match(builder, /"v2_ros_2026_semantics": "YTD_DASHED_NO_FABRICATION"/);
 for (const marker of [
   'atlas-v2-shell.css?v=v2-primary-5',
   'atlas-v2-core-auth.css?v=v2-primary-5',
-  'atlas-v2-boot.js?v=v2-primary-7-executive-pulse-entity360-classic-1',
+  'atlas-v2-boot.js?v=v2-primary-7-executive-pulse-entity360-classic-1&r=image-standard-3',
   'atlas-v2-session.js?v=v2-primary-5',
   'atlas-v2-viz.css?v=v2-primary-5-viz1',
   'entity360-parity-surface.css?v=v2-primary-5-entity360-parity-1',
 ]) assert.ok(html.includes(marker), marker);
 assert.doesNotMatch(html, /entity360-parity-surface\.js\?v=/);
 
-console.log('ATLAS 2.0.2 Explore executive pulse + recovered Entity 360 boot contract OK');
+console.log('ATLAS 2.0.2 Explore image-standard + recovered Entity 360 boot contract OK');
