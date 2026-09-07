@@ -2,9 +2,11 @@
 
 (function bootAtlasV2() {
   const baseUrl = new URL('./', document.currentScript?.src || document.baseURI);
-  const STRUCTURAL_VERSION = 'v2-primary-2';
+  const STRUCTURAL_VERSION = 'v2-primary-3';
   const STRUCTURAL_SURFACES = Object.freeze([
     'atlas-v2-access.js',
+    'atlas-v2-viz.js',
+    'entity-search-adapter.js',
     'explore-surface.js',
     'entity360-adapter.js',
     'entity360-surface.js',
@@ -102,18 +104,22 @@
     if (!access) return;
     if (!window.AtlasV2Shell?.mount) throw new Error('ATLAS v2 shell failed to load');
 
-    // Start the cross-project session exchange as soon as core authorization is
-    // verified. It runs in parallel with local surface installation so the first
-    // analytical read does not pay the entire federation cold-start penalty.
     const federationWarm = warmFederatedSession();
     await installAnalyticalSurfaces();
+    if (!window.AtlasV2Viz?.installed || !window.AtlasV2EntitySearch?.installed) {
+      const error = new Error('ATLAS v2 visual/search capabilities failed to initialize');
+      error.code = 'VISUAL_SEARCH_CAPABILITY_MISSING';
+      throw error;
+    }
     window.AtlasV2Shell.mount(root);
-    emit('ok', { code: 'SHELL_READY' });
+    emit('ok', { code: 'SHELL_READY', visualNavigation: true, entitySearch: true });
     window.dispatchEvent(new CustomEvent('atlas:v2-shell-ready', {
       detail: {
         route: window.AtlasV2Shell.currentRoute?.().id || 'explorar',
         role: access.role || 'viewer',
         runtime: 'analytics-primary',
+        visualNavigation: true,
+        entitySearch: true,
       },
     }));
     void federationWarm;
