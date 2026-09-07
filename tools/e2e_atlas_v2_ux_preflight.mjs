@@ -122,8 +122,8 @@ try {
   const pressResult = page.locator('.atlas-v2-e360-search-result.is-press').filter({ hasText: 'Corte Superior Nacional' }).first();
   assert.ok(await pressResult.count(), 'Press-only entity was not returned by cross-source search');
   const pressText = (await pressResult.innerText()).trim();
-  assert.match(pressText, /Radar Prensa/);
-  assert.match(pressText, /Sin RUT resuelto/);
+  assert.match(pressText, /Radar Prensa/i);
+  assert.doesNotMatch(pressText, /\b\d{7,8}-[0-9K]\b/i, 'Press-only entity unexpectedly exposes a resolved RUT');
   assert.ok(searchMs <= SEARCH_BUDGET_MS, `entity search exceeded ${SEARCH_BUDGET_MS}ms: ${searchMs}`);
   await pressResult.click();
   await page.waitForFunction(() => window.AtlasV2Shell?.currentRoute?.().id === 'entidad' && window.AtlasV2Shell.currentRoute().params.get('entity_id')?.startsWith('entity:press:'), null, { timeout: 5000 });
