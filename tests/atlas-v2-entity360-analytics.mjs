@@ -70,7 +70,7 @@ assert.match(surface, /AtlasV2EntitySearch\.search/);
 assert.match(surface, /Radar Prensa/);
 assert.match(surface, /Sin RUT resuelto/);
 assert.match(surface, /entity_id/);
-assert.match(surface, /ENTIDAD OBSERVADA · PRENSA/);
+assert.match(surface, /PRENSA · CONTEXTO/);
 assert.match(surface, /TRAYECTORIA SII/);
 assert.match(surface, /AtlasV2Viz\.lineChart/);
 assert.match(surface, /reconciliationPanel/);
