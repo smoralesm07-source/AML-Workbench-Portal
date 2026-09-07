@@ -10,10 +10,14 @@ on:
       - 'src/v2/atlas-v2-shell.css'
       - 'src/v2/atlas-v2-boot.js'
       - 'src/v2/atlas-v2-data.js'
+      - 'src/v2/atlas-v2-access.js'
       - 'src/v2/entity360-adapter.js'
       - 'src/v2/entity360-surface.js'
       - 'src/v2/entity360-surface.css'
+      - 'src/v2/public-spend-surface.js'
+      - 'src/v2/public-spend-surface.css'
       - 'tests/atlas-v2-entity360-analytics.mjs'
+      - 'tests/atlas-v2-public-spend-native.mjs'
       - 'docs/ATLAS_V2_ANALYTICS_FIRST.md'
       - '.github/workflows/validate-atlas-v2-analytics-shell.yml'
   pull_request:
@@ -23,10 +27,14 @@ on:
       - 'src/v2/atlas-v2-shell.css'
       - 'src/v2/atlas-v2-boot.js'
       - 'src/v2/atlas-v2-data.js'
+      - 'src/v2/atlas-v2-access.js'
       - 'src/v2/entity360-adapter.js'
       - 'src/v2/entity360-surface.js'
       - 'src/v2/entity360-surface.css'
+      - 'src/v2/public-spend-surface.js'
+      - 'src/v2/public-spend-surface.css'
       - 'tests/atlas-v2-entity360-analytics.mjs'
+      - 'tests/atlas-v2-public-spend-native.mjs'
       - 'docs/ATLAS_V2_ANALYTICS_FIRST.md'
       - '.github/workflows/validate-atlas-v2-analytics-shell.yml'
   workflow_dispatch:
@@ -47,9 +55,12 @@ jobs:
           node --check src/v2/atlas-v2-shell.js
           node --check src/v2/atlas-v2-boot.js
           node --check src/v2/atlas-v2-data.js
+          node --check src/v2/atlas-v2-access.js
           node --check src/v2/entity360-adapter.js
           node --check src/v2/entity360-surface.js
+          node --check src/v2/public-spend-surface.js
           node --check tests/atlas-v2-entity360-analytics.mjs
+          node --check tests/atlas-v2-public-spend-native.mjs
 
       - name: Enforce analytics-first product contract
         run: |
@@ -96,6 +107,9 @@ jobs:
       - name: Validate Entity 360 analytical contract
         run: node tests/atlas-v2-entity360-analytics.mjs
 
+      - name: Validate native Public Spend analytical contract
+        run: node tests/atlas-v2-public-spend-native.mjs
+
       - name: Build isolated preview artifact
         run: |
           set -euo pipefail
@@ -106,9 +120,12 @@ jobs:
           cp src/v2/atlas-v2-shell.css _atlas_v2_preview/v2/
           cp src/v2/atlas-v2-boot.js _atlas_v2_preview/v2/
           cp src/v2/atlas-v2-data.js _atlas_v2_preview/v2/
+          cp src/v2/atlas-v2-access.js _atlas_v2_preview/v2/
           cp src/v2/entity360-adapter.js _atlas_v2_preview/v2/
           cp src/v2/entity360-surface.js _atlas_v2_preview/v2/
           cp src/v2/entity360-surface.css _atlas_v2_preview/v2/
+          cp src/v2/public-spend-surface.js _atlas_v2_preview/v2/
+          cp src/v2/public-spend-surface.css _atlas_v2_preview/v2/
           touch _atlas_v2_preview/.nojekyll
 
       - name: Verify preview is isolated from production runtime
@@ -124,11 +141,16 @@ jobs:
               '_atlas_v2_preview/v2/atlas-v2-shell.js',
               '_atlas_v2_preview/v2/atlas-v2-shell.css',
               '_atlas_v2_preview/v2/atlas-v2-data.js',
+              '_atlas_v2_preview/v2/atlas-v2-access.js',
               '_atlas_v2_preview/v2/entity360-adapter.js',
               '_atlas_v2_preview/v2/entity360-surface.js',
               '_atlas_v2_preview/v2/entity360-surface.css',
+              '_atlas_v2_preview/v2/public-spend-surface.js',
+              '_atlas_v2_preview/v2/public-spend-surface.css',
           ]:
               assert Path(path).exists(), path
+          assert not Path('_atlas_v2_preview/v2/public-spend-adapter.js').exists()
+          assert not Path('_atlas_v2_preview/v2/public-spend-route-bridge.js').exists()
           print('Isolated v2 preview artifact: OK')
           PY
 
