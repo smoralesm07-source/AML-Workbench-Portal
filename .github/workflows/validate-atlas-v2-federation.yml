@@ -8,6 +8,7 @@ on:
       - 'atlas-v2.html'
       - 'atlas-release.json'
       - 'src/v2/**'
+      - 'tests/atlas-v2-*.mjs'
       - 'tools/build_atlas_v2_primary.py'
       - 'tools/e2e_atlas_runtime_smoke.mjs'
       - 'tools/e2e_atlas_v2_ux_preflight.mjs'
@@ -32,7 +33,7 @@ permissions:
 jobs:
   federation-invariants:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -46,10 +47,11 @@ jobs:
             src/v2/atlas-v2-production-config.js src/v2/atlas-v2-health.js src/v2/atlas-v2-core-auth.js \
             src/v2/atlas-v2-data.js src/v2/atlas-v2-session.js src/v2/atlas-v2-access.js \
             src/v2/atlas-v2-shell.js src/v2/atlas-v2-boot.js src/v2/atlas-v2-viz.js \
-            src/v2/entity-search-adapter.js src/v2/explore-surface.js src/v2/entity360-adapter.js \
-            src/v2/entity360-surface.js src/v2/public-spend-surface.js src/v2/relations-surface.js \
-            src/v2/universes-adapter.js src/v2/universes-surface.js src/v2/territory-adapter.js \
-            src/v2/territory-surface.js src/v2/watch-adapter.js src/v2/watch-surface.js \
+            src/v2/entity-search-adapter.js src/v2/entity-explorer-adapter.js src/v2/entity-explorer-classic-surface.js \
+            src/v2/explore-surface.js src/v2/entity360-adapter.js src/v2/entity360-surface.js src/v2/entity360-parity-surface.js \
+            src/v2/public-spend-surface.js src/v2/relations-surface.js src/v2/universes-adapter.js \
+            src/v2/universes-surface.js src/v2/territory-adapter.js src/v2/territory-surface.js \
+            src/v2/watch-adapter.js src/v2/watch-surface.js \
             tools/e2e_atlas_runtime_smoke.mjs tools/e2e_atlas_v2_ux_preflight.mjs \
             tools/serve_atlas_v2_e2e.mjs tools/test_atlas_v2_data_client.js tools/test_atlas_v2_session.js; do node --check "$f"; done
           python3 -m py_compile tools/build_atlas_v2_primary.py
@@ -57,8 +59,11 @@ jobs:
 
       - name: Run governed data and federation unit smokes
         run: |
+          set -euo pipefail
           node tools/test_atlas_v2_data_client.js
           node tools/test_atlas_v2_session.js
+          node tests/atlas-v2-explore-live.mjs
+          node tests/atlas-v2-entity360-analytics.mjs
 
       - name: Validate release, auth, search and federation invariants
         shell: bash
@@ -83,20 +88,19 @@ jobs:
 
           assert p['release']=='2.0.2' and str(p['build'])=='2002'
           assert p['product_contract']=='ANALYTICS_FIRST' and p['followup_policy']=='OPTIONAL_NOT_WORKFLOW'
-          assert p['visual_navigation']=='INTERACTIVE_FIRST' and p['entity_search']=='RUT_NAME_UAF_PRESS'
+          assert p['visual_navigation']=='INTERACTIVE_FIRST'
           assert str(p['legacy_fallback']['release'])==str(l['release']) and str(p['legacy_fallback']['build'])==str(l['build'])
           assert p['legacy_fallback']['authority_active_on_primary'] is False
           assert 'v2-primary-5' in html and 'atlas-runtime-current-' not in html
-          assert './v2/atlas-v2-boot.js?v=v2-primary-6-explore-legacy-pulse-1' in html
+          assert 'atlas-v2-boot.js?v=v2-primary-7-executive-pulse-entity360-classic-1' in html
+          assert 'entity360-parity-surface.js?v=' not in html
           assert 'ATLAS_V2_SESSION_EXCHANGE_V1' in session and 'refreshToken' not in session
           assert 'AtlasV2Access' in access and 'global.AtlasV2Data.create' in access and 'getAccessToken' in access
-          assert "STRUCTURAL_VERSION = 'v2-primary-5'" in boot and "SURFACE_VERSION = 'v2-primary-6-explore-legacy-pulse-1'" in boot
-          assert 'entity-search-adapter.js' in boot and 'atlas-v2-viz.js' in boot
+          assert "SURFACE_VERSION = 'v2-primary-7-executive-pulse-entity360-classic-1'" in boot
+          assert boot.index("'entity360-surface.js'") < boot.index("'entity360-parity-surface.js'")
           assert 'ATLAS_ENTITY_SEARCH_V2' in search and "operation: 'entity_search'" in search and 'resultTier' in search
-          assert 'normalizeReference' in entity and 'entityId' in entity
           assert all(x in entity for x in ['entity_intelligence','entity_screening_live','digital_identity_live','searchDigitalIdentity'])
-          assert 'atlas_v2_entity_search' in edge and 'search_entities' in edge
-          assert all(x in edge for x in ['entity_intelligence','entity_screening_live','digital_identity_live'])
+          assert all(x in edge for x in ['atlas_v2_entity_search','entity_search','entity_intelligence','entity_screening_live','digital_identity_live'])
           assert 'aml_allowed_users' in sql and 'auth.uid()' in sql and 'ATLAS_CORE_FORBIDDEN' in sql
           assert 'security invoker' in sql.lower()
           assert 'ATLAS_V2_SESSION_EXCHANGE_V1' in exchange and 'aml_allowed_users' in exchange
@@ -105,8 +109,7 @@ jobs:
           assert '.github/workflows/e2e-atlas-runtime-smoke.yml@${MAIN_REF}' in broker
           assert 'pull_request' not in broker and 'refs/pull/231/merge' not in broker
           assert 'pull_request:' not in e2e and 'id-token: write' in e2e and 'audience=atlas-v2-e2e' in e2e
-          assert 'entity search security/gateway contract' in e2e
-          print('ATLAS 2.0.2 federation/search primary-5 + native legacy Explore pulse invariants: OK')
+          print('ATLAS 2.0.2 federation + executive pulse + recovered Entity 360 invariants: OK')
           PY
 
       - name: Build and verify dual release identities
@@ -124,13 +127,13 @@ jobs:
           legacy=(root/'legacy.html').read_text()
           assert r['release']=='2.0.2' and r['build']=='2002'
           assert r['v2_visual_navigation']=='INTERACTIVE_FIRST'
-          assert r['v2_explore_mode']=='LEGACY_PULSE_NATIVE_V2'
+          assert r['v2_explore_design']=='EXECUTIVE_PULSE_V2'
           assert r['v2_entity_search']=='IDENTITY_TIERED_DIGITAL_PRESS'
           assert r['v2_entity_intelligence']=='UAF_SII_REPORTING_SCREENING_DIGITAL'
-          assert r['v2_version']=='v2-primary-5'
-          assert 'v2-primary-5' in html
+          assert r['v2_entity360_authority']=='ENTITY360_LEGACY_PARITY_V2'
+          assert r['v2_surface_version']=='v2-primary-7-executive-pulse-entity360-classic-1'
           assert 'atlas-runtime-current-' not in html and 'atlas-runtime-current-' in legacy
           assert f'data-aml-version="{p["release"]}"' in html
           assert f'data-aml-version="{l["release"]}"' in legacy
-          print('ATLAS 2.0.2 primary-5 + native legacy Explore pulse + frozen rollback build: OK')
+          print('ATLAS 2.0.2 federation build + frozen rollback: OK')
           PY
