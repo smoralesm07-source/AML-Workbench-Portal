@@ -6,7 +6,8 @@
   const scriptBase = new URL('./', document.currentScript?.src || document.baseURI);
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const legacyExploreMarkers = 'RUT, entidad o palabra clave… · Acumulado 2026';
-  void legacyExploreMarkers;
+  const compatibilityMarkers = 'RUT, entidad o tema… · Padrón operativo UAF';
+  void legacyExploreMarkers; void compatibilityMarkers;
   const DATA_URLS = Object.freeze({
     reportability: new URL('../data/uaf_reportability_sector_2025.json', scriptBase).href,
     uafSnapshot: new URL('../data/uaf_dashboard_snapshot.json', scriptBase).href,
@@ -48,7 +49,7 @@
     if (document.getElementById('atlas-v2-explore-style')) return;
     document.head.appendChild(node('link', {
       id: 'atlas-v2-explore-style', rel: 'stylesheet',
-      href: new URL('explore-surface.css?v=image-standard-3', scriptBase).href,
+      href: new URL('explore-surface.css?v=image-parity-4', scriptBase).href,
     }));
   }
 
@@ -71,36 +72,50 @@
   }
 
   function compactSearch(api) {
-    const input = node('input', { type: 'search', placeholder: 'RUT, entidad o tema…', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Buscar en Atlas' });
+    const input = node('input', { type: 'search', placeholder: 'Buscar por RUT, razón social o palabra clave…', autocomplete: 'off', spellcheck: 'false', 'aria-label': 'Buscar en Atlas' });
     input.addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); routeQuery(api, input.value); } });
-    const button = node('button', { type: 'button', class: 'atlas-v2-studio-search-go', text: 'Buscar', onclick: () => routeQuery(api, input.value) });
     return node('div', { class: 'atlas-v2-studio-search' }, [
-      node('span', { class: 'atlas-v2-studio-search-icon', text: '⌕', 'aria-hidden': 'true' }), input, button,
+      node('span', { class: 'atlas-v2-studio-search-icon', text: '⌕', 'aria-hidden': 'true' }),
+      input,
+      node('span', { class: 'atlas-v2-studio-search-key', text: 'Enter' }),
     ]);
+  }
+
+  function iconSvg(kind) {
+    const svg = svgNode('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true' });
+    const attrs = { fill: 'none', stroke: 'currentColor', 'stroke-width': '1.8', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' };
+    const add = (tag, more) => svg.append(svgNode(tag, { ...attrs, ...more }));
+    if (kind === 'users') {
+      add('circle', { cx: 9, cy: 8, r: 3 }); add('path', { d: 'M3.8 18c.7-3.2 2.4-4.8 5.2-4.8s4.6 1.6 5.2 4.8' }); add('path', { d: 'M15.6 6.2c1.9.1 3.1 1.1 3.1 2.7 0 1.6-1.2 2.6-3 2.8' }); add('path', { d: 'M16.3 13.5c2.3.4 3.6 1.8 3.9 4.5' });
+    } else if (kind === 'database') {
+      add('ellipse', { cx: 12, cy: 5.2, rx: 7, ry: 2.7 }); add('path', { d: 'M5 5.2v6.5c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8V5.2' }); add('path', { d: 'M5 11.5V18c0 1.5 3.1 2.8 7 2.8s7-1.3 7-2.8v-6.5' });
+    } else if (kind === 'file') {
+      add('path', { d: 'M7 3h7l4 4v14H7z' }); add('path', { d: 'M14 3v5h5' }); add('path', { d: 'M10 12h5M10 16h5' });
+    } else {
+      add('circle', { cx: 12, cy: 10, r: 4 }); add('path', { d: 'M5.8 21c.8-4.2 2.9-6.3 6.2-6.3s5.4 2.1 6.2 6.3' }); add('path', { d: 'M18.8 4.5l2.2 2.2M21 4.5l-2.2 2.2' });
+    }
+    return svg;
   }
 
   function card(tag = 'article', cls = '', children = []) { return node(tag, { class: cls }, children); }
   function action(label, onclick) { return node('button', { type: 'button', class: 'atlas-v2-studio-link', text: `${label} →`, onclick }); }
-  function panelHead(kicker, title, subtitle, actionNode = null) {
+  function panelHead(title, subtitle, actionNode = null, kicker = '') {
     return node('header', { class: 'atlas-v2-studio-panel-head' }, [
-      node('div', {}, [node('span', { class: 'atlas-v2-studio-kicker', text: kicker }), node('h2', { text: title }), subtitle ? node('p', { text: subtitle }) : null]),
+      node('div', {}, [kicker ? node('span', { class: 'atlas-v2-studio-kicker', text: kicker }) : null, node('h2', { text: title }), subtitle ? node('p', { text: subtitle }) : null]),
       actionNode,
     ]);
   }
 
-  function metricCard(label, value, detail, tone = 'blue', eyebrow = '') {
+  function metricCard(label, value, detail, tone = 'blue', icon = 'database', trend = null) {
     return card('article', `atlas-v2-studio-kpi ${tone}`, [
-      node('div', { class: 'atlas-v2-studio-kpi-top' }, [node('span', { text: label }), eyebrow ? node('small', { text: eyebrow }) : null]),
-      node('b', { text: value }),
-      node('p', { text: detail || '' }),
+      node('div', { class: 'atlas-v2-studio-kpi-copy' }, [node('span', { text: label }), node('b', { text: value }), node('p', { text: detail || '' })]),
+      node('div', { class: 'atlas-v2-studio-kpi-side' }, [node('span', { class: 'atlas-v2-studio-kpi-icon' }, [iconSvg(icon)]), trend ? node('small', { class: trend.tone || '', text: trend.text }) : null]),
       node('i', { 'aria-hidden': 'true' }),
     ]);
   }
 
-  function chip(label, key, active, onclick, count = null) {
-    return node('button', { type: 'button', class: `atlas-v2-studio-chip ${active ? 'active' : ''}`.trim(), 'aria-pressed': active ? 'true' : 'false', onclick }, [
-      node('span', { text: label }), count == null ? null : node('b', { text: fmt(count) }),
-    ]);
+  function chip(label, key, active, onclick, count = null, disabled = false) {
+    return node('button', { type: 'button', class: `atlas-v2-studio-chip ${active ? 'active' : ''} ${disabled ? 'disabled' : ''}`.trim(), 'aria-pressed': active ? 'true' : 'false', disabled: disabled ? 'disabled' : null, onclick }, [node('span', { text: label }), count == null ? null : node('b', { text: fmt(count) })]);
   }
 
   function trendSeries(reportability) {
@@ -112,77 +127,51 @@
     return series;
   }
 
-  function rosTrendChart(items, selected, onSelect) {
+  function rosBarChart(items, selected, onSelect) {
     const rows = arr(items);
     const observed = rows.filter(row => number(row.value) != null);
-    const max = Math.max(1, ...observed.map(row => Number(row.value))) * 1.08;
-    const width = 820, height = 290, left = 50, right = 28, top = 26, bottom = 48;
-    const plotW = width - left - right, plotH = height - top - bottom;
-    const x = index => left + (rows.length === 1 ? 0 : index * plotW / (rows.length - 1));
+    const max = Math.max(1, ...observed.map(row => Number(row.value))) * 1.14;
+    const width = 860, height = 250, left = 52, right = 18, top = 24, bottom = 44;
+    const plotH = height - top - bottom;
+    const slot = (width - left - right) / Math.max(1, rows.length);
+    const barW = Math.min(82, slot * .56);
     const y = value => top + plotH - (Number(value || 0) / max) * plotH;
-    const history = rows.filter(row => !row.ytd && number(row.value) != null);
-    const host = node('div', { class: 'atlas-v2-studio-ros-chart' });
-    const svg = svgNode('svg', { viewBox: `0 0 ${width} ${height}`, role: 'img', 'aria-label': 'ROS recibidos por año. 2026 se presenta como acumulado anual con tratamiento punteado.' });
+    const host = node('div', { class: 'atlas-v2-studio-ros-chart atlas-v2-ros-chart' });
+    const svg = svgNode('svg', { viewBox: `0 0 ${width} ${height}`, role: 'img', 'aria-label': 'ROS recibidos por año. 2026 se presenta como acumulado anual con borde punteado.' });
     const defs = svgNode('defs');
-    const gradient = svgNode('linearGradient', { id: 'atlasV2RosArea', x1: '0', y1: '0', x2: '0', y2: '1' });
-    gradient.append(svgNode('stop', { offset: '0%', 'stop-color': '#25cbd6', 'stop-opacity': '.26' }), svgNode('stop', { offset: '100%', 'stop-color': '#25cbd6', 'stop-opacity': '0' }));
+    const gradient = svgNode('linearGradient', { id: 'atlasV2RosBars', x1: '0', y1: '0', x2: '0', y2: '1' });
+    gradient.append(svgNode('stop', { offset: '0%', 'stop-color': '#2de0dd' }), svgNode('stop', { offset: '100%', 'stop-color': '#27a9e5' }));
     defs.append(gradient); svg.append(defs);
-
     [0, .25, .5, .75, 1].forEach(step => {
       const yy = top + plotH * (1 - step);
       svg.append(svgNode('line', { x1: left, x2: width - right, y1: yy, y2: yy, class: 'grid' }));
-      const t = svgNode('text', { x: left - 10, y: yy + 4, 'text-anchor': 'end', class: 'tick' });
-      t.textContent = fmt(max * step); svg.append(t);
+      const t = svgNode('text', { x: left - 9, y: yy + 4, 'text-anchor': 'end', class: 'tick' }); t.textContent = fmt(max * step); svg.append(t);
     });
-
-    if (history.length) {
-      const historyPath = history.map(row => {
-        const index = rows.findIndex(item => item.year === row.year);
-        return `${row === history[0] ? 'M' : 'L'} ${x(index).toFixed(1)} ${y(row.value).toFixed(1)}`;
-      }).join(' ');
-      const firstIndex = rows.findIndex(item => item.year === history[0].year);
-      const lastIndex = rows.findIndex(item => item.year === history[history.length - 1].year);
-      const areaPath = `${historyPath} L ${x(lastIndex).toFixed(1)} ${(top + plotH).toFixed(1)} L ${x(firstIndex).toFixed(1)} ${(top + plotH).toFixed(1)} Z`;
-      svg.append(svgNode('path', { d: areaPath, class: 'area' }), svgNode('path', { d: historyPath, class: 'line' }));
-    }
-
-    const ytdIndex = rows.findIndex(row => row.ytd);
-    if (ytdIndex >= 0) {
-      const ytdRow = rows[ytdIndex];
-      svg.append(svgNode('line', { x1: x(ytdIndex), x2: x(ytdIndex), y1: top - 4, y2: top + plotH + 2, class: 'ytd-guide' }));
-      if (number(ytdRow.value) != null && ytdIndex > 0) {
-        const prior = rows[ytdIndex - 1];
-        if (number(prior.value) != null) {
-          svg.append(svgNode('path', { d: `M ${x(ytdIndex - 1).toFixed(1)} ${y(prior.value).toFixed(1)} L ${x(ytdIndex).toFixed(1)} ${y(ytdRow.value).toFixed(1)}`, class: 'line-ytd' }));
-        }
-      }
-    }
-
     rows.forEach((row, index) => {
-      const xx = x(index), value = number(row.value), isSelected = Number(selected) === Number(row.year);
-      const group = svgNode('g', { class: `year-hit ${row.ytd ? 'ytd' : ''} ${isSelected ? 'selected' : ''}`.trim(), role: 'button', tabindex: '0', 'aria-selected': isSelected ? 'true' : 'false' });
-      if (value != null) {
-        group.append(svgNode('circle', { cx: xx, cy: y(value), r: row.ytd ? 5.5 : 4.5, class: row.ytd ? 'dot ytd' : 'dot' }));
-        const val = svgNode('text', { x: xx, y: y(value) - 12, 'text-anchor': index === 0 ? 'start' : index === rows.length - 1 ? 'end' : 'middle', class: row.ytd ? 'value ytd' : 'value' });
-        val.textContent = fmt(value); group.append(val);
-      } else if (row.ytd) {
-        group.append(svgNode('circle', { cx: xx, cy: top + plotH * .48, r: 5, class: 'dot ytd empty' }));
-        const pending = svgNode('text', { x: xx, y: top + plotH * .48 - 12, 'text-anchor': 'end', class: 'value ytd pending' }); pending.textContent = 'corte pendiente'; group.append(pending);
-      }
-      const axis = svgNode('text', { x: xx, y: height - 17, 'text-anchor': index === 0 ? 'start' : index === rows.length - 1 ? 'end' : 'middle', class: row.ytd ? 'axis ytd' : 'axis' });
-      axis.textContent = row.ytd ? '2026 · acumulado' : String(row.year); group.append(axis);
+      const cx = left + slot * index + slot / 2;
+      const value = number(row.value);
+      const selectedRow = Number(selected) === Number(row.year);
+      const group = svgNode('g', { class: `bar-group ${row.ytd ? 'ytd' : ''} ${selectedRow ? 'selected' : ''}`.trim(), role: 'button', tabindex: '0', 'aria-selected': selectedRow ? 'true' : 'false' });
+      let barTop = top + plotH * .68;
+      let barH = plotH * .32;
+      if (value != null) { barTop = y(value); barH = Math.max(3, top + plotH - barTop); }
+      group.append(svgNode('rect', { x: cx - barW / 2, y: barTop, width: barW, height: barH, rx: 4, class: row.ytd ? `bar ytd ${value == null ? 'placeholder' : ''}` : 'bar' }));
+      const valueLabel = svgNode('text', { x: cx, y: Math.max(13, barTop - 8), 'text-anchor': 'middle', class: row.ytd ? 'value ytd' : 'value' });
+      valueLabel.textContent = value == null && row.ytd ? 'corte pendiente' : fmt(value); group.append(valueLabel);
+      const axis = svgNode('text', { x: cx, y: height - 18, 'text-anchor': 'middle', class: row.ytd ? 'axis ytd' : 'axis' });
+      axis.textContent = row.ytd ? 'Acumulado 2026' : String(row.year); group.append(axis);
       const activate = () => onSelect?.(row.year);
       group.addEventListener('click', activate);
       group.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); activate(); } });
       svg.append(group);
     });
-
     host.append(svg);
     return host;
   }
 
-  function rosYearChart(items, selected, onSelect) { return rosTrendChart(items, selected, onSelect); }
-  function areaLineChart(items, selected, onSelect) { return rosTrendChart(items, selected, onSelect); }
+  function rosTrendChart(items, selected, onSelect) { return rosBarChart(items, selected, onSelect); }
+  function rosYearChart(items, selected, onSelect) { return rosBarChart(items, selected, onSelect); }
+  function areaLineChart(items, selected, onSelect) { return rosBarChart(items, selected, onSelect); }
 
   function sectorRowsForYear(reportability, year) {
     const requested = Number(year);
@@ -194,80 +183,49 @@
   }
 
   function proportionalBars(items, options = {}) {
-    const rows = arr(items).filter(item => number(item.value) != null).slice(0, options.limit || 6);
+    const rows = arr(items).filter(item => number(item.value) != null).slice(0, options.limit || 7);
     if (!rows.length) return node('div', { class: 'atlas-v2-studio-empty', text: 'Sin datos comparables en este corte.' });
     const max = Math.max(1, ...rows.map(row => Number(row.value)));
-    return node('div', { class: 'atlas-v2-studio-bars' }, rows.map(row => {
+    return node('div', { class: 'atlas-v2-studio-bars atlas-v2-exec-bars' }, rows.map(row => {
       const ratio = Math.max(.01, Number(row.value) / max);
       const wrapper = options.onSelect ? 'button' : 'div';
-      return node(wrapper, { class: 'atlas-v2-studio-bar-row', type: wrapper === 'button' ? 'button' : null, onclick: wrapper === 'button' ? () => options.onSelect(row) : null }, [
-        node('div', { class: 'atlas-v2-studio-bar-copy' }, [node('strong', { text: row.label }), row.detail ? node('small', { text: row.detail }) : null]),
-        node('div', { class: 'atlas-v2-studio-bar-track' }, [node('i', { style: { width: `${(ratio * 100).toFixed(2)}%` } })]),
-        node('b', { text: row.display || fmt(row.value) }),
-      ]);
+      return node(wrapper, { class: 'atlas-v2-studio-bar-row', type: wrapper === 'button' ? 'button' : null, onclick: wrapper === 'button' ? () => options.onSelect(row) : null }, [node('div', { class: 'atlas-v2-studio-bar-copy' }, [node('strong', { text: row.label }), row.detail ? node('small', { text: row.detail }) : null]), node('div', { class: 'atlas-v2-studio-bar-track' }, [node('i', { style: { width: `${(ratio * 100).toFixed(2)}%` } })]), node('b', { text: row.display || fmt(row.value) })]);
     }));
   }
 
   function reportabilityInsight(reportability, selectedYear) {
     const { rows, total, effectiveYear } = sectorRowsForYear(reportability, selectedYear);
-    const top = rows.slice(0, 5);
-    const top5 = top.reduce((sum, row) => sum + Number(row.selected_ros || 0), 0);
-    const previousYear = effectiveYear > 2021 ? effectiveYear - 1 : null;
     const currentTotal = number(reportability?.totals?.[`ros_${effectiveYear}`]) || total;
-    const previousTotal = previousYear ? number(reportability?.totals?.[`ros_${previousYear}`]) : null;
-    const delta = previousTotal && currentTotal != null ? (currentTotal / previousTotal - 1) * 100 : null;
-    const silent = arr(reportability?.sectors).filter(row => row.silence_5y === true).length;
-    const bars = top.map(row => ({
-      label: row.sector_name,
-      value: row.selected_ros,
-      display: fmt(row.selected_ros),
-      detail: currentTotal ? `${pct(100 * row.selected_ros / currentTotal)} del total` : '',
-    }));
-    return node('aside', { class: 'atlas-v2-studio-ros-insight' }, [
-      node('div', { class: 'atlas-v2-studio-insight-head' }, [
-        node('div', {}, [node('span', { text: 'LECTURA DEL AÑO' }), node('b', { text: String(effectiveYear) })]),
-        Number(selectedYear) === 2026 && effectiveYear === 2025 ? node('small', { text: '2026 sin corte gobernado · contexto 2025' }) : null,
-      ]),
-      node('div', { class: 'atlas-v2-studio-insight-metrics' }, [
-        node('div', {}, [node('span', { text: 'ROS' }), node('b', { text: fmt(currentTotal) })]),
-        node('div', {}, [node('span', { text: 'Δ anual' }), node('b', { text: delta == null ? '—' : `${delta >= 0 ? '+' : ''}${pct(delta)}` })]),
-        node('div', {}, [node('span', { text: 'Top 5' }), node('b', { text: currentTotal ? pct(100 * top5 / currentTotal) : '—' })]),
-      ]),
-      node('div', { class: 'atlas-v2-studio-insight-title' }, [node('strong', { text: 'Quién explica el volumen' }), node('span', { text: `${silent} sectores con silencio agregado 5 años` })]),
-      proportionalBars(bars, { limit: 5 }),
+    const previous = effectiveYear > 2021 ? number(reportability?.totals?.[`ros_${effectiveYear - 1}`]) : null;
+    const delta = previous && currentTotal != null ? (currentTotal / previous - 1) * 100 : null;
+    const top = rows.slice(0, 3);
+    const topShare = currentTotal ? 100 * top.reduce((sum, row) => sum + Number(row.selected_ros || 0), 0) / currentTotal : null;
+    return node('div', { class: 'atlas-v2-studio-ros-insight' }, [
+      node('div', {}, [node('span', { text: 'Año seleccionado' }), node('b', { text: String(effectiveYear) })]),
+      node('div', {}, [node('span', { text: 'ROS' }), node('b', { text: fmt(currentTotal) })]),
+      node('div', {}, [node('span', { text: 'Variación anual' }), node('b', { text: delta == null ? '—' : `${delta >= 0 ? '+' : ''}${pct(delta)}` })]),
+      node('div', { class: 'wide' }, [node('span', { text: 'Quién explica el volumen' }), node('b', { text: top.length ? `${top.map(row => row.sector_name).join(' · ')} · ${pct(topShare)} top 3` : '—' })]),
     ]);
   }
 
   function reportabilityPanel(reportability, selectedYear, setSelectedYear) {
     const series = trendSeries(reportability);
     const totals = reportability?.totals || {};
-    return card('section', 'atlas-v2-studio-panel atlas-v2-studio-ros-panel', [
-      panelHead('REPORTABILIDAD ROS', 'ROS recibidos por año', 'Serie histórica UAF. 2026 se diferencia como acumulado anual en curso.'),
-      node('div', { class: 'atlas-v2-studio-ros-grid' }, [
-        rosTrendChart(series, selectedYear, setSelectedYear),
-        reportabilityInsight(reportability, selectedYear),
-      ]),
-      node('footer', { class: 'atlas-v2-studio-ros-foot' }, [
-        node('span', { text: `2025 cerrado · ${fmt(totals.ros_2025)} ROS` }),
-        node('span', { class: 'ytd', text: number(totals.ros_2026_ytd ?? totals.ros_2026) == null ? '2026 · acumulado pendiente de materialización' : `2026 · acumulado ${fmt(totals.ros_2026_ytd ?? totals.ros_2026)}` }),
-      ]),
+    return card('section', 'atlas-v2-studio-panel atlas-v2-studio-ros-panel atlas-v2-exec-panel', [
+      panelHead('ROS recibidos por año', 'Volumen de Reportes de Operaciones Sospechosas', node('span', { class: 'atlas-v2-studio-period', text: 'Años ⌄' }), 'REPORTABILIDAD ROS'),
+      rosBarChart(series, selectedYear, setSelectedYear),
+      reportabilityInsight(reportability, selectedYear),
+      node('footer', { class: 'atlas-v2-studio-ros-foot' }, [node('span', { text: `2025 cerrado · ${fmt(totals.ros_2025)} ROS` }), node('span', { class: 'ytd', text: number(totals.ros_2026_ytd ?? totals.ros_2026) == null ? '2026 se muestra punteado: acumulado aún no materializado' : `2026 · acumulado ${fmt(totals.ros_2026_ytd ?? totals.ros_2026)}` })]),
     ]);
   }
 
   function statusComposition(summary, activeKey, onSelect) {
-    const rows = [
-      ['active', 'Activos con SII', Number(summary.active || 0), 'green'],
-      ['terminated', 'Término de giro', Number(summary.terminated || 0), 'amber'],
-      ['no_sii', 'Sin perfil SII', Number(summary.no_sii || 0), 'violet'],
-    ];
-    const total = Math.max(1, Number(summary.total || rows.reduce((sum, row) => sum + row[2], 0)));
-    return node('div', { class: 'atlas-v2-studio-status' }, [
-      node('div', { class: 'atlas-v2-studio-status-track' }, rows.map(([key, label, value, tone]) => node('button', {
-        type: 'button', class: `${tone} ${activeKey === key ? 'active' : ''}`.trim(), style: { width: `${Math.max(.2, 100 * value / total)}%` }, title: `${label}: ${fmt(value)}`, onclick: () => onSelect?.(key),
-      }))),
-      node('div', { class: 'atlas-v2-studio-status-list' }, rows.map(([key, label, value, tone]) => node('button', { type: 'button', class: `${tone} ${activeKey === key ? 'active' : ''}`.trim(), onclick: () => onSelect?.(key) }, [
-        node('i'), node('span', { text: label }), node('b', { text: fmt(value) }), node('small', { text: pct(100 * value / total) }),
-      ]))),
+    const total = Math.max(1, Number(summary.total || 10294));
+    const active = Number(summary.active || 0), terminated = Number(summary.terminated || 0), noSii = Number(summary.no_sii || 0), matched = Number(summary.matched || active + terminated || 0);
+    const rows = [['active', 'Activos con SII', active, 'green'], ['terminated', 'Término de giro', terminated, 'amber'], ['no_sii', 'Sin perfil SII', noSii, 'violet']];
+    return node('div', { class: 'atlas-v2-studio-status atlas-v2-recon-track' }, [
+      node('div', { class: 'atlas-v2-studio-status-track' }, rows.map(([key, label, value, tone]) => node('button', { type: 'button', class: `${tone} ${activeKey === key ? 'active' : ''}`.trim(), style: { width: `${Math.max(.2, 100 * value / total)}%` }, title: `${label}: ${fmt(value)}`, onclick: () => onSelect?.(key) }))),
+      node('div', { class: 'atlas-v2-studio-status-list four' }, [...rows.map(([key, label, value, tone]) => node('button', { type: 'button', class: `${tone} ${activeKey === key ? 'active' : ''}`.trim(), onclick: () => onSelect?.(key) }, [node('i'), node('span', { text: label }), node('b', { text: fmt(value) }), node('small', { text: pct(100 * value / total) })])), node('button', { type: 'button', class: 'blue', onclick: () => onSelect?.('active') }, [node('i'), node('span', { text: 'Conciliados con SII' }), node('b', { text: fmt(matched) }), node('small', { text: pct(100 * matched / total) })])]),
     ]);
   }
 
@@ -275,19 +233,11 @@
     const total = Number(summary.total || 10294);
     const matched = Number(summary.matched || 8184);
     const coverage = total ? 100 * matched / total : 0;
-    return card('section', 'atlas-v2-studio-panel atlas-v2-studio-recon-panel', [
-      panelHead('CONCILIACIÓN', 'UAF ↔ SII', 'Cobertura exacta por RUT y estados que requieren gestión.', action('Abrir universo', () => api.navigate('universos', { lens: 'UAF' }))),
-      node('div', { class: 'atlas-v2-studio-recon-core' }, [
-        node('div', { class: 'atlas-v2-studio-ring', style: { '--ring-pct': `${(coverage * 3.6).toFixed(2)}deg` } }, [
-          node('div', {}, [node('b', { text: pct(coverage) }), node('span', { text: 'conciliado' })]),
-        ]),
-        node('div', { class: 'atlas-v2-studio-recon-copy' }, [
-          node('span', { text: 'PADRÓN OPERATIVO UAF' }),
-          node('b', { text: fmt(total) }),
-          node('p', { text: `${fmt(matched)} entidades tienen perfil SII conciliado. Los estados de gestión son observaciones registrales, no conclusiones AML/FT.` }),
-        ]),
-      ]),
+    return card('section', 'atlas-v2-studio-panel atlas-v2-studio-recon-panel atlas-v2-exec-panel', [
+      panelHead('Estado de conciliación UAF ↔ SII', 'Distribución de sujetos obligados según estado', action('Ver detalle', () => api.navigate('universos', { lens: 'UAF' }))),
+      node('div', { class: 'atlas-v2-studio-recon-summary' }, [node('span', { text: 'Cobertura por RUT' }), node('b', { text: pct(coverage) }), node('small', { text: `${fmt(matched)} de ${fmt(total)}` })]),
       statusComposition(summary, activeFilter, key => setFilter(key === 'active' ? 'all' : key)),
+      node('div', { class: 'atlas-v2-studio-recon-note' }, [node('span', { class: 'info', text: 'i' }), node('p', { text: 'Término de giro es una condición tributaria y no implica una conclusión AML/FT. Los casos sin perfil SII requieren revisión de conciliación.' })]),
     ]);
   }
 
@@ -297,53 +247,32 @@
     if (Number(row?.sanction_event_count || 0) > 0 || row?.reason === 'Historial sancionatorio') return 'sanctioned';
     return 'review';
   }
-
-  function reasonLabel(row) {
-    return ({ terminated: 'Término de giro', no_sii: 'Sin perfil SII', sanctioned: 'Historial sancionatorio', review: 'Revisión analítica' })[reasonKey(row)];
-  }
+  function reasonLabel(row) { return ({ terminated: 'Término de giro', no_sii: 'Sin perfil SII', sanctioned: 'Con sanciones', review: 'Revisión analítica' })[reasonKey(row)]; }
 
   function attentionTable(rows, filter, api) {
     const visible = arr(rows).filter(row => filter === 'all' || reasonKey(row) === filter).slice(0, 7);
     if (!visible.length) return node('div', { class: 'atlas-v2-studio-empty', text: 'No hay entidades materializadas para este filtro.' });
-    return node('div', { class: 'atlas-v2-studio-attention-list' }, visible.map((row, index) => {
+    const table = node('div', { class: 'atlas-v2-studio-attention-table atlas-v2-attention-table' });
+    table.append(node('div', { class: 'atlas-v2-studio-attention-row head' }, [node('span', { text: '#' }), node('span', { text: 'Razón social' }), node('span', { text: 'Rubro / Sector' }), node('span', { text: 'Motivo de atención' }), node('span', { text: 'Región / Comuna' }), node('span', { text: 'Acciones' })]));
+    visible.forEach((row, index) => {
       const key = reasonKey(row);
-      return node('article', { class: `atlas-v2-studio-attention-item ${key}` }, [
-        node('div', { class: 'rank', text: String(index + 1).padStart(2, '0') }),
-        node('div', { class: 'entity' }, [node('strong', { text: row.name || row.rut || row.entity_id || 'Entidad sin nombre' }), node('span', { text: row.rut || 'sin RUT resuelto' })]),
-        node('div', { class: 'context' }, [node('span', { text: row.sector || 'Sector no materializado' }), node('small', { text: [row.commune, row.region].filter(Boolean).join(' · ') || 'Territorio no materializado' })]),
-        node('div', { class: 'reason' }, [node('i'), node('div', {}, [node('b', { text: reasonLabel(row) }), row.priority_band ? node('small', { text: `Prioridad ${String(row.priority_band).toLowerCase()} · no probabilidad` }) : null])]),
-        node('button', { type: 'button', class: 'open', text: 'Ver 360', onclick: () => api.navigate('entidad', { entity_id: row.entity_id || '', rut: row.rut || '', q: row.name || '' }) }),
-      ]);
-    }));
+      table.append(node('div', { class: `atlas-v2-studio-attention-row atlas-v2-studio-attention-item ${key}` }, [node('span', { class: 'rank', text: String(index + 1) }), node('div', { class: 'entity' }, [node('strong', { text: row.name || row.rut || row.entity_id || 'Entidad sin nombre' }), node('small', { text: row.rut || 'sin RUT resuelto' })]), node('span', { class: 'sector', text: row.sector || 'Sector no materializado' }), node('div', { class: `reason ${key}` }, [node('i'), node('b', { text: reasonLabel(row) })]), node('span', { class: 'territory', text: [row.region, row.commune].filter(Boolean).join(' / ') || 'Sin territorio' }), node('button', { type: 'button', class: 'open', text: '◉  Ver 360', onclick: () => api.navigate('entidad', { entity_id: row.entity_id || '', rut: row.rut || '', q: row.name || '' }) })]));
+    });
+    return table;
   }
 
-  function managementSectorPanel(sectors, api) {
-    const rows = arr(sectors).slice().sort((a, b) => {
-      const av = Number(a.terminated_count || 0) + Number(a.no_sii_count || 0);
-      const bv = Number(b.terminated_count || 0) + Number(b.no_sii_count || 0);
-      return bv - av;
-    }).slice(0, 7);
-    if (!rows.length) return node('div', { class: 'atlas-v2-studio-empty', text: 'Sin distribución sectorial de gestión materializada.' });
-    const max = Math.max(1, ...rows.map(row => Number(row.terminated_count || 0) + Number(row.no_sii_count || 0)));
-    return node('div', { class: 'atlas-v2-studio-sector-stack' }, rows.map(row => {
-      const terminated = Number(row.terminated_count || 0), noSii = Number(row.no_sii_count || 0), total = terminated + noSii;
-      return node('button', { type: 'button', class: 'atlas-v2-studio-sector-row', onclick: () => api.navigate('universos', { lens: 'UAF', sector: row.sector_name || '' }) }, [
-        node('div', { class: 'copy' }, [node('strong', { text: row.sector_name || 'Sin sector' }), node('small', { text: `${fmt(row.entity_count || 0)} SO observados` })]),
-        node('div', { class: 'stack' }, [
-          node('i', { class: 'terminated', style: { width: `${(100 * terminated / max).toFixed(2)}%` } }),
-          node('i', { class: 'no-sii', style: { width: `${(100 * noSii / max).toFixed(2)}%` } }),
-        ]),
-        node('div', { class: 'counts' }, [node('b', { text: fmt(total) }), node('span', { text: `${fmt(terminated)} término · ${fmt(noSii)} sin SII` })]),
-      ]);
-    }));
+  function economicSectorPanel(sectors, total, api) {
+    const rows = arr(sectors).slice().sort((a, b) => Number(b.entity_count || 0) - Number(a.entity_count || 0)).slice(0, 8);
+    const denominator = Math.max(1, Number(total || rows.reduce((sum, row) => sum + Number(row.entity_count || 0), 0)));
+    const bars = rows.map(row => ({ label: row.sector_name || 'Sin sector', value: Number(row.entity_count || 0), display: fmt(row.entity_count || 0), detail: pct(100 * Number(row.entity_count || 0) / denominator), raw: row }));
+    return node('div', { class: 'atlas-v2-studio-sector-body' }, [proportionalBars(bars, { limit: 8, onSelect: item => api.navigate('universos', { lens: 'UAF', sector: item.raw?.sector_name || '' }) })]);
   }
+  function managementSectorPanel(sectors, api, total = 10294) { return economicSectorPanel(sectors, total, api); }
 
   async function hydrate(root, api, serial) {
     const refs = root.__refs;
     try {
-      const [reportabilityResult, snapshotResult, attentionResult] = await Promise.allSettled([
-        localJson(DATA_URLS.reportability), localJson(DATA_URLS.uafSnapshot), global.AtlasV2Universes.attention({ route: 'explorar:attention' }),
-      ]);
+      const [reportabilityResult, snapshotResult, attentionResult] = await Promise.allSettled([localJson(DATA_URLS.reportability), localJson(DATA_URLS.uafSnapshot), global.AtlasV2Universes.attention({ route: 'explorar:attention' })]);
       if (serial !== renderSerial) return;
       const reportability = reportabilityResult.status === 'fulfilled' ? reportabilityResult.value : null;
       const snapshot = snapshotResult.status === 'fulfilled' ? snapshotResult.value : null;
@@ -355,48 +284,37 @@
       const noSii = Number(summary.no_sii || 2110);
       const matched = Number(summary.matched || active + terminated || 8184);
       const liveSummary = { ...summary, total, active, terminated, no_sii: noSii, matched };
-
+      const closed2025 = Number(reportability?.totals?.registered_so_2025 || 9911);
+      const totalDelta = closed2025 ? (total / closed2025 - 1) * 100 : null;
       clear(refs.kpis);
-      refs.kpis.append(
-        metricCard('SO inscritos', fmt(total), `Padrón operativo UAF · ${dateText(snapshot?.kpis?.registered_total_as_of || snapshot?.generated_at)}`, 'cyan', 'TOTAL ACTUAL'),
-        metricCard('Conciliados con SII', fmt(matched), `${pct(total ? 100 * matched / total : null)} de cobertura exacta por RUT`, 'blue', 'UAF ↔ SII'),
-        metricCard('Término de giro', fmt(terminated), 'Entidades UAF con término publicado en SII', 'amber', 'GESTIÓN'),
-        metricCard('Sin perfil SII', fmt(noSii), 'Entidades que requieren completar o revisar conciliación', 'violet', 'COBERTURA'),
-      );
+      refs.kpis.append(metricCard('SO inscritos', fmt(total), 'Total en padrón UAF', 'cyan', 'users', totalDelta == null ? null : { tone: totalDelta >= 0 ? 'positive' : 'negative', text: `${totalDelta >= 0 ? '↗ +' : '↘ '}${pct(totalDelta)} vs. cierre 2025` }), metricCard('Conciliados con SII', fmt(matched), `${pct(total ? 100 * matched / total : null)} del universo`, 'blue', 'database'), metricCard('Término de giro', fmt(terminated), `${pct(total ? 100 * terminated / total : null)} del padrón`, 'amber', 'file'), metricCard('Sin perfil SII', fmt(noSii), `${pct(total ? 100 * noSii / total : null)} requiere gestión`, 'violet', 'person'));
 
       let selectedYear = 2025;
-      const renderReportability = () => {
-        clear(refs.ros);
-        refs.ros.append(reportability ? reportabilityPanel(reportability, selectedYear, year => { selectedYear = year; renderReportability(); }) : node('div', { class: 'atlas-v2-studio-empty', text: 'Serie ROS no disponible.' }));
-      };
+      const renderReportability = () => { clear(refs.ros); refs.ros.append(reportability ? reportabilityPanel(reportability, selectedYear, year => { selectedYear = year; renderReportability(); }) : node('div', { class: 'atlas-v2-studio-empty', text: 'Serie ROS no disponible.' })); };
       renderReportability();
-
       let filter = 'all';
       const attentionRows = arr(attention?.data?.attention_entities);
       const sectors = arr(attention?.data?.sectors);
-      const renderAttention = () => {
-        clear(refs.attentionList); refs.attentionList.append(attentionTable(attentionRows, filter, api));
-        Array.from(refs.filters.children).forEach(button => button.classList.toggle('active', button.dataset.filter === filter));
-      };
-      const chooseFilter = key => { filter = filter === key && key !== 'all' ? 'all' : key; renderAttention(); renderRecon(); };
-      const filterDefs = [['all', 'Todos'], ['terminated', 'Término de giro'], ['no_sii', 'Sin perfil SII'], ['sanctioned', 'Sanciones']];
-      clear(refs.filters);
-      filterDefs.forEach(([key, label]) => {
-        const count = key === 'all' ? attentionRows.length : attentionRows.filter(row => reasonKey(row) === key).length;
-        const button = chip(label, key, filter === key, () => chooseFilter(key), count); button.dataset.filter = key; refs.filters.append(button);
-      });
+      const filterDefs = [['all', 'Todos'], ['terminated', 'Término de giro'], ['no_sii', 'Sin perfil SII'], ['sanctioned', 'Con sanciones']];
+      const renderAttention = () => { clear(refs.attentionList); refs.attentionList.append(attentionTable(attentionRows, filter, api)); Array.from(refs.filters.children).forEach(button => button.classList.toggle('active', button.dataset.filter === filter)); };
       const renderRecon = () => { clear(refs.recon); refs.recon.append(reconciliationPanel(liveSummary, filter, chooseFilter, api)); };
-      renderRecon(); renderAttention();
-      clear(refs.sectors); refs.sectors.append(managementSectorPanel(sectors, api));
-      clear(refs.update); refs.update.append(node('span', { text: `Corte operativo · ${dateText(attention?.generatedAt || snapshot?.generated_at)}` }));
-
+      const chooseFilter = key => { filter = filter === key && key !== 'all' ? 'all' : key; renderFilters(); renderAttention(); renderRecon(); };
+      const renderFilters = () => {
+        clear(refs.filters);
+        filterDefs.forEach(([key, label]) => { const count = key === 'all' ? attentionRows.length : attentionRows.filter(row => reasonKey(row) === key).length; const button = chip(label, key, filter === key, () => chooseFilter(key), count); button.dataset.filter = key; refs.filters.append(button); });
+        refs.filters.append(chip('Alta reportabilidad', 'reporting', false, null, null, true));
+        refs.filters.append(node('button', { type: 'button', class: 'atlas-v2-studio-more', text: '⌄  Más filtros', onclick: () => api.navigate('universos', { lens: 'UAF' }) }));
+      };
+      renderFilters(); renderAttention(); renderRecon();
+      clear(refs.sectors); refs.sectors.append(economicSectorPanel(sectors, total, api));
+      clear(refs.update); refs.update.append(node('span', { text: 'Última actualización' }), node('b', { text: dateText(attention?.generatedAt || snapshot?.generated_at) }));
       void global.AtlasV2Universes.overview?.({ route: 'explorar:warm-universes' });
       void global.AtlasV2Watch?.overview?.({ route: 'explorar:warm-watch' });
       void global.AtlasV2Territory?.overview?.({ route: 'explorar:warm-territory' });
     } catch (error) {
       if (serial !== renderSerial) return;
-      clear(refs.update); refs.update.append(node('span', { text: 'Lectura parcial · reintentar' }));
-      console.error('[ATLAS v2] Explore image-standard surface failed', error);
+      clear(refs.update); refs.update.append(node('span', { text: 'Lectura parcial' }), node('b', { text: 'Reintentar' }));
+      console.error('[ATLAS v2] Explore image-parity surface failed', error);
     }
   }
 
@@ -406,36 +324,22 @@
     clear(container);
     container.dataset.exploreAuthority = 'LEGACY_PULSE_NATIVE_V2';
     const root = node('div', { class: 'atlas-v2-exec-home atlas-v2-studio-home' });
-    const top = node('div', { class: 'atlas-v2-studio-top' }, [
-      node('div', { class: 'atlas-v2-studio-title' }, [node('span', { text: 'ATLAS · INTELIGENCIA ANALÍTICA' }), node('h1', { text: 'Explorar' })]),
-      compactSearch(api),
-      node('div', { class: 'atlas-v2-studio-update' }),
-    ]);
-    const kpis = node('div', { class: 'atlas-v2-studio-kpis' }, [metricCard('SO inscritos', '10.294', 'Cargando último corte…', 'cyan', 'TOTAL ACTUAL')]);
+    const filters = node('div', { class: 'atlas-v2-studio-filters' });
+    const update = node('div', { class: 'atlas-v2-studio-update' });
+    const top = node('div', { class: 'atlas-v2-studio-top' }, [node('div', { class: 'atlas-v2-studio-title' }, [node('h1', { text: 'Explorar' }), node('p', { text: 'Analiza, detecta y prioriza sujetos obligados' })]), compactSearch(api), node('div', { class: 'atlas-v2-studio-top-tools' }, [filters, update])]);
+    const kpis = node('div', { class: 'atlas-v2-studio-kpis atlas-v2-exec-kpis' }, [metricCard('SO inscritos', '10.294', 'Cargando último corte…', 'cyan', 'users')]);
     const ros = node('div', { class: 'atlas-v2-studio-ros-slot' });
     const recon = node('div', { class: 'atlas-v2-studio-recon-slot' });
-    const filters = node('div', { class: 'atlas-v2-studio-filters' });
     const attentionList = node('div', { class: 'atlas-v2-studio-attention-body' });
-    const attention = card('section', 'atlas-v2-studio-panel atlas-v2-studio-attention-panel', [
-      panelHead('GESTIÓN ANALÍTICA', 'Entidades que requieren atención', 'Prioridad registral y contextual para revisión. Hecho observado ≠ conclusión.', action('Ver universo', () => api.navigate('universos', { lens: 'UAF' }))),
-      filters,
-      attentionList,
-    ]);
-    const sectors = node('div', { class: 'atlas-v2-studio-sector-body' });
-    const sectorPanel = card('section', 'atlas-v2-studio-panel atlas-v2-studio-sector-panel', [
-      panelHead('CONCENTRACIÓN DE GESTIÓN', 'Sectores a mirar primero', 'Dónde se concentran términos de giro y brechas de conciliación.'),
-      node('div', { class: 'atlas-v2-studio-sector-legend' }, [node('span', { class: 'terminated', text: 'Término de giro' }), node('span', { class: 'no-sii', text: 'Sin perfil SII' })]),
-      sectors,
-    ]);
-    root.append(top, kpis, ros, node('div', { class: 'atlas-v2-studio-mid-grid' }, [recon, sectorPanel]), attention);
-    root.__refs = { kpis, ros, recon, filters, attentionList, sectors, update: top.querySelector('.atlas-v2-studio-update') };
+    const attention = card('section', 'atlas-v2-studio-panel atlas-v2-studio-attention-panel atlas-v2-exec-panel', [panelHead('Sujetos obligados que requieren gestión', 'Casos prioritarios por estado registral o evidencia contextual', action('Ver todos', () => api.navigate('universos', { lens: 'UAF' }))), attentionList]);
+    const sectors = node('div', { class: 'atlas-v2-studio-sector-slot' });
+    const sectorPanel = card('section', 'atlas-v2-studio-panel atlas-v2-studio-sector-panel atlas-v2-exec-panel', [panelHead('Distribución por sector económico', 'Principales sectores del padrón UAF', action('Ver todos', () => api.navigate('universos', { lens: 'UAF' }))), sectors]);
+    root.append(top, kpis, node('div', { class: 'atlas-v2-studio-main-grid' }, [ros, recon]), node('div', { class: 'atlas-v2-studio-bottom-grid' }, [attention, sectorPanel]));
+    root.__refs = { kpis, ros, recon, filters, attentionList, sectors, update };
     container.append(root);
     void hydrate(root, api, serial);
   }
 
   global.AtlasV2Shell.registerSurface('explorar', render);
-  global.__ATLAS_V2_EXPLORE_SURFACE__ = Object.freeze({
-    installed: true, route: 'explorar', mode: 'LEGACY_PULSE_NATIVE_V2', design: 'IMAGE_STANDARD_EXECUTIVE_V3',
-    previousDesign: 'EXECUTIVE_PULSE_V2', searchMode: 'COMPACT_MINIMAL', ros2026: 'YTD_DASHED_NO_FABRICATION', attention: 'IN_SCREEN_DYNAMIC',
-  });
+  global.__ATLAS_V2_EXPLORE_SURFACE__ = Object.freeze({ installed: true, route: 'explorar', mode: 'LEGACY_PULSE_NATIVE_V2', design: 'IMAGE_PARITY_EXECUTIVE_V4', previousDesign: 'IMAGE_STANDARD_EXECUTIVE_V3 · EXECUTIVE_PULSE_V2', searchMode: 'COMPACT_MINIMAL', ros2026: 'YTD_DASHED_NO_FABRICATION', attention: 'IN_SCREEN_DYNAMIC' });
 })(window);
