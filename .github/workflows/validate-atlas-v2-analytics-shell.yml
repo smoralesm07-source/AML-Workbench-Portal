@@ -13,8 +13,11 @@ on:
       - 'supabase/core-contracts/atlas-v2-territory-watch-query-v2.sql'
       - 'tests/atlas-v2-*.mjs'
       - 'tools/build_atlas_v2_primary.py'
+      - 'tools/e2e_atlas_runtime_smoke.mjs'
+      - 'tools/serve_atlas_v2_e2e.mjs'
       - 'docs/ATLAS_V2_ANALYTICS_FIRST.md'
       - '.github/workflows/validate-atlas-v2-analytics-shell.yml'
+      - '.github/workflows/e2e-atlas-runtime-smoke.yml'
       - '.github/workflows/deploy-atlas-pages-current.yml'
   pull_request:
     paths: *v2_paths
@@ -35,6 +38,7 @@ jobs:
           set -euo pipefail
           for f in \
             src/v2/atlas-v2-production-config.js \
+            src/v2/atlas-v2-health.js \
             src/v2/atlas-v2-core-auth.js \
             src/v2/atlas-v2-shell.js \
             src/v2/atlas-v2-boot.js \
@@ -54,9 +58,11 @@ jobs:
             node --check "$f"
           done
           for f in tests/atlas-v2-*.mjs; do node --check "$f"; done
+          node --check tools/e2e_atlas_runtime_smoke.mjs
+          node --check tools/serve_atlas_v2_e2e.mjs
           python3 -m py_compile tools/build_atlas_v2_primary.py
 
-      - name: Enforce analytics-first product contract
+      - name: Enforce analytics-first and launch-hardening contract
         run: |
           set -euo pipefail
           python3 - <<'PY'
@@ -66,6 +72,7 @@ jobs:
           html = Path('atlas-v2.html').read_text(encoding='utf-8')
           auth = Path('src/v2/atlas-v2-core-auth.js').read_text(encoding='utf-8')
           boot = Path('src/v2/atlas-v2-boot.js').read_text(encoding='utf-8')
+          health = Path('src/v2/atlas-v2-health.js').read_text(encoding='utf-8')
           config = Path('src/v2/atlas-v2-production-config.js').read_text(encoding='utf-8')
           contract = Path('docs/ATLAS_V2_ANALYTICS_FIRST.md').read_text(encoding='utf-8')
           assert 'MutationObserver' not in shell and '.innerHTML' not in shell
@@ -86,13 +93,19 @@ jobs:
           assert '--atlas-bg:' in css and '--atlas-surface:' in css and '--atlas-accent:' in css
           assert 'data-atlas-v2-foundation="analytics-first"' in html
           assert 'data-atlas-v2-primary="analytics"' in html
+          assert './v2/atlas-v2-health.js?v=v2-primary-1' in html
           assert "'unsafe-inline'" not in html
           assert 'signInWithOAuth' in auth and "provider: 'azure'" in auth
-          assert 'aml_allowed_users' in auth
+          assert '.auth.getUser()' in auth and 'aml_allowed_users' in auth
+          assert "event === 'TOKEN_REFRESHED'" in auth and 'resetFederatedSession' in auth
           assert 'AtlasCoreSession.ready' in boot
+          assert 'STRUCTURAL_SURFACE_LOAD_FAILED' in boot and 'INICIO BLOQUEADO' in boot
+          assert "ATLAS_V2_RUNTIME_HEALTH_V1" in health
+          for secret_word in ['access_token','refresh_token','authorization','email','rut','query']:
+              assert secret_word not in health.lower(), secret_word
           assert "mode: 'analytics-primary'" in config
           assert "legacyFallbackPath: './legacy.html'" in config
-          print('ATLAS v2 analytics-first + primary authority invariants: OK')
+          print('ATLAS v2 analytics-first + launch-hardening invariants: OK')
           PY
 
       - name: Validate analytical surfaces
@@ -123,15 +136,19 @@ jobs:
           assert report['primary_runtime']=='ATLAS_V2_ANALYTICS'
           assert report['legacy_fallback']=='legacy.html'
           assert report['legacy_authority_active_on_primary'] is False
+          assert report['v2_auth_boundary']=='ENTRA_SUPABASE_ALLOWLIST_VERIFIED_USER'
+          assert report['v2_runtime_health']=='SANITIZED_IN_MEMORY'
+          assert report['v2_structural_surface_policy']=='FAIL_CLOSED'
+          assert report['v2_e2e_proxy'] is False
           assert 'data-atlas-v2-primary="analytics"' in html
           assert 'atlas-runtime-current-' not in html
           assert 'atlas-module-current-' not in html
           assert 'ATLAS_RUNTIME_SCRIPTS' not in html
           assert 'raw.githubusercontent.com' not in html
           assert 'atlas-runtime-current-' in legacy
-          assert './legacy.html' not in html  # fallback is config metadata, not a competing visible runtime
+          assert './legacy.html' not in html
           required=[
-            'atlas-v2-production-config.js','atlas-v2-core-auth.js','atlas-v2-core-auth.css',
+            'atlas-v2-production-config.js','atlas-v2-health.js','atlas-v2-core-auth.js','atlas-v2-core-auth.css',
             'atlas-v2-shell.js','atlas-v2-shell.css','atlas-v2-boot.js','atlas-v2-data.js','atlas-v2-session.js','atlas-v2-access.js',
             'entity360-adapter.js','entity360-surface.js','entity360-surface.css',
             'public-spend-surface.js','public-spend-surface.css','relations-surface.js','relations-surface.css',
