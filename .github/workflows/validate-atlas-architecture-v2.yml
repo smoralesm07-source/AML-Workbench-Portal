@@ -103,7 +103,7 @@ jobs:
           assert 'ATLAS_READ_API_V2' in client
           assert 'ATLAS_V2_SESSION_EXCHANGE_V1' in session
           assert 'grantExpiresAt' in session and 'RENEW_SKEW_MS' in session
-          assert 'AtlasV2Access' in access and 'governedQuery' in access
+          assert 'AtlasV2Access' in access and 'global.AtlasV2Data.create' in access and 'getAccessToken' in access
           assert '.auth.getUser()' in auth and 'aml_allowed_users' in auth
           assert 'raw.githubusercontent.com' not in client
           assert 'raw.githubusercontent.com' not in access
@@ -115,7 +115,6 @@ jobs:
           assert 'const MAIN_REF = "refs/heads/main"' in broker
           assert 'refs/pull/231/merge' not in broker and 'atlas-architecture-v2' not in broker
 
-          # Foundation/grant/data migrations remain part of the governed backend.
           required_migrations=[
             '20260905010825_atlas_architecture_v2_foundation.sql',
             '20260905011305_atlas_architecture_v2_job_automation.sql',
@@ -146,7 +145,6 @@ jobs:
           assert 'budget_detail_state' in budget and 'finalize_budget_detail' in budget
           assert 'atlas_v2_ingest_budget_detail' in ingest
 
-          # Transition-only runtime must stay retired after production cutover.
           obsolete=[
             'src/v2/atlas-v2-preview-config.js',
             'src/v2/public-spend-shadow.js',
