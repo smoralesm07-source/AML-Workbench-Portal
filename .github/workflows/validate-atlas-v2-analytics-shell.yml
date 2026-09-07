@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - reengineering/atlas-v2-analytics-shell
-    paths:
+    paths: &v2_paths
       - 'atlas-v2.html'
       - 'src/v2/atlas-v2-shell.js'
       - 'src/v2/atlas-v2-shell.css'
@@ -16,27 +16,17 @@ on:
       - 'src/v2/entity360-surface.css'
       - 'src/v2/public-spend-surface.js'
       - 'src/v2/public-spend-surface.css'
+      - 'src/v2/relations-surface.js'
+      - 'src/v2/relations-surface.css'
+      - 'supabase/functions/atlas-v2-read/index.ts'
+      - 'supabase/migrations/20260907023000_atlas_v2_relations_query.sql'
       - 'tests/atlas-v2-entity360-analytics.mjs'
       - 'tests/atlas-v2-public-spend-native.mjs'
+      - 'tests/atlas-v2-relations-native.mjs'
       - 'docs/ATLAS_V2_ANALYTICS_FIRST.md'
       - '.github/workflows/validate-atlas-v2-analytics-shell.yml'
   pull_request:
-    paths:
-      - 'atlas-v2.html'
-      - 'src/v2/atlas-v2-shell.js'
-      - 'src/v2/atlas-v2-shell.css'
-      - 'src/v2/atlas-v2-boot.js'
-      - 'src/v2/atlas-v2-data.js'
-      - 'src/v2/atlas-v2-access.js'
-      - 'src/v2/entity360-adapter.js'
-      - 'src/v2/entity360-surface.js'
-      - 'src/v2/entity360-surface.css'
-      - 'src/v2/public-spend-surface.js'
-      - 'src/v2/public-spend-surface.css'
-      - 'tests/atlas-v2-entity360-analytics.mjs'
-      - 'tests/atlas-v2-public-spend-native.mjs'
-      - 'docs/ATLAS_V2_ANALYTICS_FIRST.md'
-      - '.github/workflows/validate-atlas-v2-analytics-shell.yml'
+    paths: *v2_paths
   workflow_dispatch:
 
 permissions:
@@ -59,45 +49,36 @@ jobs:
           node --check src/v2/entity360-adapter.js
           node --check src/v2/entity360-surface.js
           node --check src/v2/public-spend-surface.js
+          node --check src/v2/relations-surface.js
           node --check tests/atlas-v2-entity360-analytics.mjs
           node --check tests/atlas-v2-public-spend-native.mjs
+          node --check tests/atlas-v2-relations-native.mjs
 
       - name: Enforce analytics-first product contract
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-
           js = Path('src/v2/atlas-v2-shell.js').read_text(encoding='utf-8')
           css = Path('src/v2/atlas-v2-shell.css').read_text(encoding='utf-8')
           html = Path('atlas-v2.html').read_text(encoding='utf-8')
           contract = Path('docs/ATLAS_V2_ANALYTICS_FIRST.md').read_text(encoding='utf-8')
-
-          # One modern shell: no DOM repair layer and no HTML string renderer.
           assert 'MutationObserver' not in js
           assert '.innerHTML' not in js
           assert 'raw.githubusercontent.com' not in js
           assert 'supabase.from(' not in js
           assert 'select("*")' not in js and "select('*')" not in js
-
-          # URL-addressable navigation and keyboard-first access are mandatory.
           assert "addEventListener('hashchange', render)" in js
           assert 'URLSearchParams' in js
           assert "event.metaKey || event.ctrlKey" in js
           assert "toLocaleLowerCase() === 'k'" in js
-
-          # Analytics is primary. No top-level workflow/task route may appear.
           for route in ['explorar','universos','entidad','gasto-publico','territorio','relaciones','vigilancia','guardados','metodo']:
               assert f"id: '{route}'" in js, route
           for forbidden_route in ["id: 'casos'", "id: 'tareas'", "id: 'cola'", "id: 'asignaciones'", "id: 'sla'"]:
               assert forbidden_route not in js, forbidden_route
-
-          # Saved continuity is optional and cannot masquerade as case management.
           assert 'No se creó ningún caso ni tarea.' in js
           assert 'Exploración primero · seguimiento opcional' in js
           assert 'Exploration is free; follow-up is optional.' in contract
-
-          # Design decisions must flow through the shell token system.
           assert '--atlas-bg:' in css and '--atlas-surface:' in css and '--atlas-accent:' in css
           assert 'data-atlas-v2-foundation="analytics-first"' in html
           assert "'unsafe-inline'" not in html
@@ -109,6 +90,9 @@ jobs:
 
       - name: Validate native Public Spend analytical contract
         run: node tests/atlas-v2-public-spend-native.mjs
+
+      - name: Validate native Relations analytical contract
+        run: node tests/atlas-v2-relations-native.mjs
 
       - name: Build isolated preview artifact
         run: |
@@ -126,6 +110,8 @@ jobs:
           cp src/v2/entity360-surface.css _atlas_v2_preview/v2/
           cp src/v2/public-spend-surface.js _atlas_v2_preview/v2/
           cp src/v2/public-spend-surface.css _atlas_v2_preview/v2/
+          cp src/v2/relations-surface.js _atlas_v2_preview/v2/
+          cp src/v2/relations-surface.css _atlas_v2_preview/v2/
           touch _atlas_v2_preview/.nojekyll
 
       - name: Verify preview is isolated from production runtime
@@ -147,6 +133,8 @@ jobs:
               '_atlas_v2_preview/v2/entity360-surface.css',
               '_atlas_v2_preview/v2/public-spend-surface.js',
               '_atlas_v2_preview/v2/public-spend-surface.css',
+              '_atlas_v2_preview/v2/relations-surface.js',
+              '_atlas_v2_preview/v2/relations-surface.css',
           ]:
               assert Path(path).exists(), path
           assert not Path('_atlas_v2_preview/v2/public-spend-adapter.js').exists()
