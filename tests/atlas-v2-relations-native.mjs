@@ -7,9 +7,10 @@ const boot = fs.readFileSync('src/v2/atlas-v2-boot.js', 'utf8');
 const edge = fs.readFileSync('supabase/functions/atlas-v2-read/index.ts', 'utf8');
 const migration = fs.readFileSync('supabase/migrations/20260907023000_atlas_v2_relations_query.sql', 'utf8');
 
-assert.match(data, /operation: 'relations_query'/);
-assert.match(data, /ATLAS_RELATIONS_QUERY_V2/);
+assert.match(data, /governedQuery\('relations_query', 'ATLAS_RELATIONS_QUERY_V2'/);
 assert.match(data, /const relations = Object\.freeze/);
+assert.match(data, /function relationFocus/);
+assert.match(data, /hasExplicitId/);
 assert.match(data, /neighborhood:/);
 assert.match(data, /convergences:/);
 assert.match(data, /hypotheses:/);
