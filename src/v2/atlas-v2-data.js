@@ -59,7 +59,7 @@
           authorization: `Bearer ${token}`,
           apikey: publishableKey,
           'content-type': 'application/json',
-          'x-client-info': 'atlas-v2-data/2.3',
+          'x-client-info': 'atlas-v2-data/2.4',
         };
         if (options.etag) headers['if-none-match'] = options.etag;
 
@@ -165,17 +165,17 @@
       return value;
     }
 
-    async function publicSpendQuery(query = {}, options = {}) {
+    async function governedQuery(operation, expectedSchema, query = {}, options = {}) {
       if (!query || typeof query !== 'object') {
-        throw new AtlasV2ReadError('Invalid public-spend query', { code: 'INVALID_QUERY' });
+        throw new AtlasV2ReadError('Invalid governed query', { code: 'INVALID_QUERY' });
       }
       const kind = clean(query.kind, 80);
-      if (!kind) throw new AtlasV2ReadError('Public-spend query requires kind', { code: 'INVALID_QUERY' });
+      if (!kind) throw new AtlasV2ReadError('Governed query requires kind', { code: 'INVALID_QUERY' });
 
-      const out = await request({ operation: 'public_spend_query', query: { ...query, kind } }, options);
+      const out = await request({ operation, query: { ...query, kind } }, options);
       const body = out.body;
-      if (body?.schema !== 'ATLAS_PUBLIC_SPEND_QUERY_V2' || body?.kind !== kind) {
-        throw new AtlasV2ReadError('ATLAS public-spend contract mismatch', {
+      if (body?.schema !== expectedSchema || body?.kind !== kind) {
+        throw new AtlasV2ReadError('ATLAS governed-query contract mismatch', {
           code: 'CONTRACT_MISMATCH',
           status: out.status,
           traceId: body?.trace_id || out.meta.traceId,
@@ -184,11 +184,16 @@
 
       return {
         contract: body.schema,
-        domain: body.domain || (String(query.domain || '') || 'procurement'),
         snapshotId: body.snapshot_id,
         kind: body.kind,
         items: Array.isArray(body.items) ? body.items : [],
+        nodes: Array.isArray(body.nodes) ? body.nodes : [],
+        edges: Array.isArray(body.edges) ? body.edges : [],
+        evidence: Array.isArray(body.evidence) ? body.evidence : [],
+        center: body.center ?? null,
         detail: body.detail ?? null,
+        availability: body.availability ?? null,
+        semantics: body.semantics ?? null,
         page: body.page ?? null,
         data: body,
         meta: {
@@ -196,6 +201,14 @@
           snapshot: out.meta.snapshot || body.snapshot_id || null,
           cacheStatus: 'no-store',
         },
+      };
+    }
+
+    async function publicSpendQuery(query = {}, options = {}) {
+      const out = await governedQuery('public_spend_query', 'ATLAS_PUBLIC_SPEND_QUERY_V2', query, options);
+      return {
+        ...out,
+        domain: out.data?.domain || (String(query.domain || '') || 'procurement'),
       };
     }
 
@@ -245,6 +258,33 @@
       }, options),
     });
 
+    const relations = Object.freeze({
+      search: (search, options = {}) => governedQuery('relations_query', 'ATLAS_RELATIONS_QUERY_V2', {
+        kind: 'search', search: clean(search, 180), ...options.query,
+      }, options),
+      neighborhood: (focus = {}, options = {}) => governedQuery('relations_query', 'ATLAS_RELATIONS_QUERY_V2', {
+        kind: 'neighborhood',
+        rut: clean(focus.rut, 40) || undefined,
+        entity_id: clean(focus.entityId || focus.entity_id, 180) || undefined,
+        buyer_id: clean(focus.buyerId || focus.buyer_id, 180) || undefined,
+        supplier_id: clean(focus.supplierId || focus.supplier_id || focus.providerId || focus.provider_id, 180) || undefined,
+        ...options.query,
+      }, options),
+      convergences: (focus = {}, options = {}) => governedQuery('relations_query', 'ATLAS_RELATIONS_QUERY_V2', {
+        kind: 'convergences',
+        rut: clean(focus.rut, 40) || undefined,
+        buyer_id: clean(focus.buyerId || focus.buyer_id, 180) || undefined,
+        supplier_id: clean(focus.supplierId || focus.supplier_id || focus.providerId || focus.provider_id, 180) || undefined,
+        ...options.query,
+      }, options),
+      detail: (relationId, options = {}) => governedQuery('relations_query', 'ATLAS_RELATIONS_QUERY_V2', {
+        kind: 'relation_detail', relation_id: clean(relationId, 260), ...options.query,
+      }, options),
+      hypotheses: (options = {}) => governedQuery('relations_query', 'ATLAS_RELATIONS_QUERY_V2', {
+        kind: 'hypotheses', ...options.query,
+      }, options),
+    });
+
     function invalidate(modelName, scope = 'global') {
       cache.delete(cacheKey(clean(modelName), clean(scope)));
     }
@@ -253,7 +293,7 @@
       cache.clear();
     }
 
-    return Object.freeze({ readModel, publicSpendQuery, publicSpend, invalidate, clearCache });
+    return Object.freeze({ readModel, publicSpendQuery, publicSpend, relations, invalidate, clearCache });
   }
 
   global.AtlasV2Data = Object.freeze({ create, AtlasV2ReadError });
