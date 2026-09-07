@@ -54,6 +54,7 @@ try {
   const pulse = await page.evaluate(() => ({
     errors: document.querySelectorAll('.atlas-v2-explore-panel.is-error').length,
     panels: document.querySelectorAll('.atlas-v2-explore-panel').length,
+    panelTitles: [...document.querySelectorAll('.atlas-v2-explore-panel .atlas-v2-explore-panel-head h2')].map(node => node.textContent?.trim() || ''),
     visualizations: document.querySelectorAll('.atlas-v2-explore-panel .atlas-v2-viz').length,
     interactiveBars: document.querySelectorAll('.atlas-v2-explore-panel button.atlas-v2-viz-bar-row').length,
     interactiveSegments: document.querySelectorAll('.atlas-v2-explore-panel button.atlas-v2-viz-segment').length,
@@ -61,21 +62,22 @@ try {
     queryPresent: !!document.querySelector('.atlas-v2-explore-query input'),
     diagnostics: window.__ATLAS_V2_EXPLORE_DIAGNOSTICS__ || null,
     federation: window.AtlasV2Session?.state?.() || null,
-    text: (document.querySelector('.atlas-v2-content')?.innerText || '').slice(0, 1400),
   }));
   assert.equal(pulse.errors, 0, 'Explore live pulse contains unavailable panels');
   assert.equal(pulse.panels, 4, 'Explore live pulse must render four independent readings');
+  assert.deepEqual(pulse.panelTitles, [
+    'Cobertura observada',
+    'Señales que cambiaron la atención',
+    'Contexto geográfico',
+    'Compras y ejecución',
+  ], 'Explore live pulse panel titles do not match the four governed readings');
   assert.ok(pulse.visualizations >= 4, 'Explore must render a visualization in every live pulse panel');
   assert.ok(pulse.interactiveBars + pulse.interactiveSegments >= 4, 'Explore visualizations are not interactive');
   assert.equal(pulse.questions, 4, 'Explore should expose four analytical continuation questions');
   assert.equal(pulse.queryPresent, true, 'Explore analytical query box missing');
   assert.equal(pulse.federation?.status, 'ready', 'Federated v2 session was not warmed');
   assert.ok(pulseMs <= PULSE_BUDGET_MS, `live pulse exceeded ${PULSE_BUDGET_MS}ms: ${pulseMs}`);
-  assert.match(pulse.text, /Cobertura observada/);
-  assert.match(pulse.text, /Señales que cambiaron la atención/);
-  assert.match(pulse.text, /Contexto geográfico/);
-  assert.match(pulse.text, /Compras y ejecución/);
-  report.pulse = { ms: pulseMs, visualizations: pulse.visualizations, interactiveControls: pulse.interactiveBars + pulse.interactiveSegments, diagnostics: pulse.diagnostics, federationStatus: pulse.federation?.status || null };
+  report.pulse = { ms: pulseMs, panelTitles: pulse.panelTitles, visualizations: pulse.visualizations, interactiveControls: pulse.interactiveBars + pulse.interactiveSegments, diagnostics: pulse.diagnostics, federationStatus: pulse.federation?.status || null };
 
   // Visuals must be navigation controls, not decoration.
   const firstUniverseBar = page.locator('.atlas-v2-explore-panel').first().locator('button.atlas-v2-viz-bar-row').first();
