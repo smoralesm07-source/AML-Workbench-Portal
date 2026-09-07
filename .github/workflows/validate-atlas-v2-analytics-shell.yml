@@ -9,6 +9,11 @@ on:
       - 'src/v2/atlas-v2-shell.js'
       - 'src/v2/atlas-v2-shell.css'
       - 'src/v2/atlas-v2-boot.js'
+      - 'src/v2/atlas-v2-data.js'
+      - 'src/v2/entity360-adapter.js'
+      - 'src/v2/entity360-surface.js'
+      - 'src/v2/entity360-surface.css'
+      - 'tests/atlas-v2-entity360-analytics.mjs'
       - 'docs/ATLAS_V2_ANALYTICS_FIRST.md'
       - '.github/workflows/validate-atlas-v2-analytics-shell.yml'
   pull_request:
@@ -17,6 +22,11 @@ on:
       - 'src/v2/atlas-v2-shell.js'
       - 'src/v2/atlas-v2-shell.css'
       - 'src/v2/atlas-v2-boot.js'
+      - 'src/v2/atlas-v2-data.js'
+      - 'src/v2/entity360-adapter.js'
+      - 'src/v2/entity360-surface.js'
+      - 'src/v2/entity360-surface.css'
+      - 'tests/atlas-v2-entity360-analytics.mjs'
       - 'docs/ATLAS_V2_ANALYTICS_FIRST.md'
       - '.github/workflows/validate-atlas-v2-analytics-shell.yml'
   workflow_dispatch:
@@ -36,6 +46,10 @@ jobs:
           set -euo pipefail
           node --check src/v2/atlas-v2-shell.js
           node --check src/v2/atlas-v2-boot.js
+          node --check src/v2/atlas-v2-data.js
+          node --check src/v2/entity360-adapter.js
+          node --check src/v2/entity360-surface.js
+          node --check tests/atlas-v2-entity360-analytics.mjs
 
       - name: Enforce analytics-first product contract
         run: |
@@ -79,6 +93,9 @@ jobs:
           print('ATLAS v2 analytics-first invariants: OK')
           PY
 
+      - name: Validate Entity 360 analytical contract
+        run: node tests/atlas-v2-entity360-analytics.mjs
+
       - name: Build isolated preview artifact
         run: |
           set -euo pipefail
@@ -88,6 +105,10 @@ jobs:
           cp src/v2/atlas-v2-shell.js _atlas_v2_preview/v2/
           cp src/v2/atlas-v2-shell.css _atlas_v2_preview/v2/
           cp src/v2/atlas-v2-boot.js _atlas_v2_preview/v2/
+          cp src/v2/atlas-v2-data.js _atlas_v2_preview/v2/
+          cp src/v2/entity360-adapter.js _atlas_v2_preview/v2/
+          cp src/v2/entity360-surface.js _atlas_v2_preview/v2/
+          cp src/v2/entity360-surface.css _atlas_v2_preview/v2/
           touch _atlas_v2_preview/.nojekyll
 
       - name: Verify preview is isolated from production runtime
@@ -99,8 +120,15 @@ jobs:
           assert 'atlas-runtime-current' not in html
           assert 'atlas-public-spend-v2' not in html
           assert 'ATLAS_RUNTIME_SCRIPTS' not in html
-          assert Path('_atlas_v2_preview/v2/atlas-v2-shell.js').exists()
-          assert Path('_atlas_v2_preview/v2/atlas-v2-shell.css').exists()
+          for path in [
+              '_atlas_v2_preview/v2/atlas-v2-shell.js',
+              '_atlas_v2_preview/v2/atlas-v2-shell.css',
+              '_atlas_v2_preview/v2/atlas-v2-data.js',
+              '_atlas_v2_preview/v2/entity360-adapter.js',
+              '_atlas_v2_preview/v2/entity360-surface.js',
+              '_atlas_v2_preview/v2/entity360-surface.css',
+          ]:
+              assert Path(path).exists(), path
           print('Isolated v2 preview artifact: OK')
           PY
 
