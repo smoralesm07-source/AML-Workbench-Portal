@@ -59,9 +59,11 @@ jobs:
           assert "SURFACE_VERSION = 'v2-primary-5-entity-intelligence-1'" in boot
           explore=Path('src/v2/explore-surface.js').read_text()
           entity=Path('src/v2/entity360-surface.js').read_text()
+          entity_adapter=Path('src/v2/entity360-adapter.js').read_text()
           universe=Path('src/v2/universes-adapter.js').read_text()
           assert 'AtlasV2Universes.attention' in explore and 'SO UAF ↔ SII' in explore
           assert all(x in entity for x in ['screeningPanel','reportingPanel','reconciliationPanel','digitalIdentityPanel'])
+          assert all(x in entity_adapter for x in ['entity_intelligence','entity_screening_live','digital_identity_live','searchDigitalIdentity'])
           assert "query('attention'" in universe
           print('ATLAS 2.0.2 entity-intelligence source authority: OK')
           PY
@@ -162,7 +164,7 @@ jobs:
                   assert "STRUCTURAL_VERSION = 'v2-primary-5'" in boot and "SURFACE_VERSION = 'v2-primary-5-entity-intelligence-1'" in boot
                   assert 'AtlasV2Universes.attention' in explore and 'SO UAF ↔ SII' in explore
                   assert all(x in entity for x in ['screeningPanel','reportingPanel','reconciliationPanel','digitalIdentityPanel'])
-                  assert all(x in entity_adapter for x in ['entity_intelligence','international_screening','searchDigitalIdentity'])
+                  assert all(x in entity_adapter for x in ['entity_intelligence','entity_screening_live','digital_identity_live','searchDigitalIdentity'])
                   assert "query('attention'" in universe and 'recentTerminated' in universe
                   assert 'ATLAS_ENTITY_SEARCH_V2' in search and "operation: 'entity_search'" in search and 'resultTier' in search
                   assert all(x in viz for x in ['horizontalBars','lineChart','segmented'])
