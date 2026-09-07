@@ -5,6 +5,11 @@
 
   const scriptBase = new URL('./', document.currentScript?.src || document.baseURI);
   const NF = new Intl.NumberFormat('es-CL');
+  const DATA_URLS = Object.freeze({
+    reportability: new URL('../data/uaf_reportability_sector_2025.json', scriptBase).href,
+    uafSnapshot: new URL('../data/uaf_dashboard_snapshot.json', scriptBase).href,
+  });
+  const localCache = new Map();
   let renderSerial = 0;
 
   function node(tag, attrs = {}, children = []) {
@@ -13,6 +18,7 @@
       if (value == null) return;
       if (key === 'class') element.className = value;
       else if (key === 'text') element.textContent = String(value);
+      else if (key === 'dataset' && value && typeof value === 'object') Object.entries(value).forEach(([name, entry]) => { element.dataset[name] = String(entry); });
       else if (key.startsWith('on') && typeof value === 'function') element.addEventListener(key.slice(2).toLowerCase(), value);
       else element.setAttribute(key, String(value));
     });
@@ -24,191 +30,337 @@
   }
 
   function clear(element) { while (element?.firstChild) element.removeChild(element.firstChild); }
-  function replace(slot, next) { slot.replaceWith(next); }
-
-  function injectStyle() {
-    if (document.getElementById('atlas-v2-explore-style')) return;
-    document.head.appendChild(node('link', { id: 'atlas-v2-explore-style', rel: 'stylesheet', href: new URL('explore-surface.css?v=uaf-sii-attention-1', scriptBase).href }));
-  }
-
+  function arr(value) { return Array.isArray(value) ? value : []; }
+  function numeric(value) { const n = Number(value); return Number.isFinite(n) ? n : null; }
   function fmt(value, digits = 0) {
-    const n = Number(value);
-    return Number.isFinite(n) ? n.toLocaleString('es-CL', { maximumFractionDigits: digits }) : '—';
+    const n = numeric(value);
+    return n == null ? '—' : n.toLocaleString('es-CL', { maximumFractionDigits: digits, minimumFractionDigits: digits });
   }
-
   function compact(value) {
-    const n = Number(value);
-    if (!Number.isFinite(n)) return '—';
+    const n = numeric(value);
+    if (n == null) return '—';
     if (Math.abs(n) >= 1e6) return `${(n / 1e6).toLocaleString('es-CL', { maximumFractionDigits: 2 })} M`;
     if (Math.abs(n) >= 1e3) return `${(n / 1e3).toLocaleString('es-CL', { maximumFractionDigits: 1 })} mil`;
     return NF.format(n);
   }
-
-  function formatDate(value) {
+  function pct(value, digits = 1) {
+    const n = numeric(value);
+    return n == null ? '—' : `${n.toLocaleString('es-CL', { maximumFractionDigits: digits, minimumFractionDigits: digits })}%`;
+  }
+  function dateText(value) {
     if (!value) return 'corte no informado';
     const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return String(value);
-    return d.toLocaleString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString('es-CL');
   }
 
-  function shortDate(value) {
-    if (!value) return 'sin fecha';
-    const d = new Date(value);
-    return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString('es-CL');
+  function injectStyle() {
+    if (document.getElementById('atlas-v2-explore-style')) return;
+    document.head.appendChild(node('link', {
+      id: 'atlas-v2-explore-style',
+      rel: 'stylesheet',
+      href: new URL('explore-surface.css?v=reportability-first-2', scriptBase).href,
+    }));
+  }
+
+  async function localJson(url) {
+    if (localCache.has(url)) return localCache.get(url);
+    const request = fetch(url, { cache: 'no-store', headers: { accept: 'application/json' } }).then(async response => {
+      if (!response.ok) throw new Error(`HTTP_${response.status}`);
+      return response.json();
+    });
+    localCache.set(url, request);
+    try { return await request; }
+    catch (error) { localCache.delete(url); throw error; }
   }
 
   function looksLikeRut(value) {
     return /^\d{1,2}\.?\d{3}\.?\d{3}-?[0-9kK]$/.test(String(value || '').replace(/\s/g, ''));
   }
 
-  function routeQuery(api, value) {
-    const query = String(value || '').trim();
+  function routeQuery(api, raw) {
+    const query = String(raw || '').trim();
     if (!query) return;
     if (looksLikeRut(query)) return api.navigate('entidad', { rut: query });
     const normalized = query.toLocaleLowerCase('es-CL');
     if (/compra|proveedor|licit|gasto|presupuesto/.test(normalized)) return api.navigate('gasto-publico', { q: query });
     if (/comuna|regi[oó]n|territor|geograf/.test(normalized)) return api.navigate('territorio', { q: query });
     if (/relaci|red|v[ií]ncul|representante|socio/.test(normalized)) return api.navigate('relaciones', { q: query });
-    if (/cambio|señal|senal|vigil|snapshot|fuente/.test(normalized)) return api.navigate('vigilancia', { q: query });
     return api.navigate('entidad', { q: query });
   }
 
-  function queryBox(api) {
-    const input = node('input', { type: 'search', placeholder: 'RUT, razón social, email/web, entidad en prensa, proveedor, sector, región o pregunta analítica…', 'aria-label': 'Buscar o iniciar una pregunta analítica', autocomplete: 'off' });
-    const submit = () => routeQuery(api, input.value);
-    input.addEventListener('keydown', event => { if (event.key === 'Enter') submit(); });
-    return node('div', { class: 'atlas-v2-explore-query' }, [node('span', { class: 'atlas-v2-explore-query-icon', text: '⌕' }), input, node('button', { class: 'atlas-v2-button primary', type: 'button', text: 'Explorar', onclick: submit })]);
-  }
-
-  function hero(api, live) {
-    return node('header', { class: 'atlas-v2-explore-hero' }, [
-      node('div', { class: 'atlas-v2-explore-hero-grid' }, [
-        node('div', { class: 'atlas-v2-explore-hero-copy' }, [
-          node('div', { class: 'atlas-v2-eyebrow', text: 'ATLAS 2 · RADAR INTEGRADO' }),
-          node('h1', { text: 'Inteligencia analítica, en una sola superficie' }),
-          node('p', { text: 'Lee el universo, cambios, conciliación UAF–SII, territorio y gasto público desde un mismo pulso. Los gráficos y hallazgos son controles para profundizar, no conclusiones automáticas.' }),
-          queryBox(api),
-          node('div', { class: 'atlas-v2-explore-meta' }, [node('span', { text: 'Universos gobernados' }), node('span', { text: 'UAF ↔ SII' }), node('span', { text: 'ROS / ROE trazable' }), node('span', { text: 'Screening en Entidad 360' })]),
-        ]),
-        node('div', { class: 'atlas-v2-explore-hero-stat' }, [node('span', { text: 'SEÑALES VIGENTES' }), live.alerts, live.alertDetail, node('small', { text: 'Indicador de atención del snapshot, no probabilidad ni atribución LA/FT.' })]),
+  function compactSearch(api) {
+    const input = node('input', {
+      type: 'search',
+      placeholder: 'RUT, entidad o tema…',
+      autocomplete: 'off',
+      spellcheck: 'false',
+      'aria-label': 'Buscar en Atlas',
+    });
+    const run = () => routeQuery(api, input.value);
+    input.addEventListener('keydown', event => {
+      if (event.key === 'Enter') { event.preventDefault(); run(); }
+    });
+    return node('section', { class: 'atlas-v2-explore-search' }, [
+      node('div', { class: 'atlas-v2-explore-search-label' }, [node('span', { class: 'atlas-v2-explore-eyebrow', text: 'EXPLORAR' }), node('strong', { text: 'Atlas' })]),
+      node('div', { class: 'atlas-v2-explore-search-box' }, [
+        node('span', { class: 'atlas-v2-explore-search-icon', text: '⌕', 'aria-hidden': 'true' }),
+        input,
+        node('button', { type: 'button', class: 'atlas-v2-explore-search-go', text: 'Buscar', onclick: run }),
       ]),
-      node('div', { class: 'atlas-v2-explore-finding' }, [node('div', { class: 'atlas-v2-explore-finding-icon', text: '◎' }), node('div', {}, [node('strong', { text: 'Lectura integrada' }), live.finding])]),
     ]);
   }
 
-  function deckHead(index, title, description, action) {
-    return node('div', { class: 'atlas-v2-explore-deck-head' }, [node('span', { class: 'atlas-v2-explore-deck-index', text: index }), node('h2', { text: title }), node('p', { text: description }), action ? node('button', { class: 'atlas-v2-explore-link', type: 'button', text: 'Abrir análisis →', onclick: action }) : null]);
+  function sectionHead(index, tag, title, subtitle, action) {
+    return node('header', { class: 'atlas-v2-explore-section-head' }, [
+      node('span', { class: 'atlas-v2-explore-index', text: index }),
+      node('div', { class: 'atlas-v2-explore-section-copy' }, [
+        node('span', { class: 'atlas-v2-explore-eyebrow', text: tag }),
+        node('h2', { text: title }),
+        subtitle ? node('p', { text: subtitle }) : null,
+      ]),
+      action || null,
+    ]);
   }
 
-  function panelHeading(tag, title) {
-    return node('div', {}, [node('span', { class: 'atlas-v2-card-tag', text: tag }), node('h2', { text: title })]);
+  function actionButton(label, handler) {
+    return node('button', { class: 'atlas-v2-explore-link', type: 'button', text: `${label} →`, onclick: handler });
   }
 
-  function skeleton(label) {
-    return node('article', { class: 'atlas-v2-explore-panel is-loading', 'aria-busy': 'true' }, [node('div', { class: 'atlas-v2-explore-panel-head' }, [panelHeading(label, 'Actualizando…'), node('span', { class: 'atlas-v2-explore-status', text: 'LEYENDO' })]), node('div', { class: 'atlas-v2-explore-skeleton chart' }), node('div', { class: 'atlas-v2-explore-skeleton short' })]);
+  function metric(label, value, detail = '', cls = '') {
+    return node('div', { class: `atlas-v2-explore-metric ${cls}`.trim() }, [
+      node('span', { text: label }),
+      node('b', { text: value }),
+      detail ? node('small', { text: detail }) : null,
+    ]);
   }
 
-  function unavailable(label, title, error, retry) {
-    return node('article', { class: 'atlas-v2-explore-panel is-error' }, [
-      node('div', { class: 'atlas-v2-explore-panel-head' }, [panelHeading(label, title), node('span', { class: 'atlas-v2-explore-status', text: 'NO DISPONIBLE' })]),
-      node('p', { class: 'atlas-v2-explore-copy', text: 'Esta lectura no respondió ahora. El resto del radar continúa operativo.' }),
-      node('div', { class: 'atlas-v2-explore-foot' }, [error?.traceId ? node('small', { text: `Trazabilidad: ${error.traceId}` }) : node('small', { text: 'No se infiere ausencia de datos.' }), node('button', { class: 'atlas-v2-button', type: 'button', text: 'Reintentar', onclick: retry })]),
+  function skeleton(title = 'Cargando lectura…') {
+    return node('article', { class: 'atlas-v2-explore-panel atlas-v2-explore-loading', 'aria-busy': 'true' }, [
+      node('strong', { text: title }),
+      node('div', { class: 'atlas-v2-explore-skeleton wide' }),
+      node('div', { class: 'atlas-v2-explore-skeleton short' }),
+    ]);
+  }
+
+  function errorPanel(title, detail = 'La lectura no respondió en esta ejecución.') {
+    return node('article', { class: 'atlas-v2-explore-panel atlas-v2-explore-error' }, [
+      node('span', { class: 'atlas-v2-explore-eyebrow', text: 'NO DISPONIBLE' }),
+      node('h3', { text: title }),
+      node('p', { text: detail }),
+    ]);
+  }
+
+  function reportabilityPanel(data, api) {
+    const totals = data?.totals || {};
+    const sectors = arr(data?.sectors);
+    const series = [2021, 2022, 2023, 2024, 2025].map(year => ({
+      label: String(year),
+      value: Number(totals[`ros_${year}`] || 0),
+      display: fmt(totals[`ros_${year}`]),
+      year,
+    }));
+    const ros2025 = Number(totals.ros_2025 || 0);
+    const ros2024 = Number(totals.ros_2024 || 0);
+    const registered = Number(totals.registered_so_2025 || 0);
+    const delta = ros2024 > 0 ? 100 * (ros2025 / ros2024 - 1) : null;
+    const intensity = registered > 0 ? ros2025 / registered : null;
+    const silent5y = sectors.filter(row => row?.silence_5y === true).length;
+    const zero2025 = sectors.filter(row => Number(row?.ros_2025 || 0) === 0).length;
+    const top = sectors
+      .filter(row => Number(row?.ros_2025 || 0) > 0)
+      .sort((a, b) => Number(b.ros_2025 || 0) - Number(a.ros_2025 || 0))
+      .slice(0, 8);
+    const topShare = ros2025 > 0 && top.length ? 100 * Number(top[0].ros_2025 || 0) / ros2025 : null;
+
+    return node('section', { class: 'atlas-v2-explore-section atlas-v2-explore-reportability' }, [
+      sectionHead('01', 'REPORTABILIDAD ROS', 'Evolución y concentración sectorial', 'La portada vuelve a partir por la reportabilidad agregada UAF, como punto de entrada para detectar cambios y sectores que ameritan lectura.', actionButton('Universo UAF', () => api.navigate('universos', { lens: 'UAF' }))),
+      node('div', { class: 'atlas-v2-explore-metrics atlas-v2-explore-metrics-five' }, [
+        metric('ROS 2025', fmt(ros2025), delta == null ? 'último corte anual' : `${delta >= 0 ? '+' : ''}${pct(delta)} vs 2024`, 'primary'),
+        metric('ROS 2021–2025', fmt(totals.ros_total_2021_2025), 'acumulado quinquenal'),
+        metric('SO inscritos 2025', fmt(registered), 'padrón estadístico UAF'),
+        metric('ROS / SO 2025', intensity == null ? '—' : fmt(intensity, 2), 'intensidad agregada; no es cumplimiento'),
+        metric('Sectores sin ROS 2025', fmt(zero2025), `${fmt(silent5y)} sin ROS en todo 2021–2025`, zero2025 ? 'attention' : ''),
+      ]),
+      node('div', { class: 'atlas-v2-explore-report-grid' }, [
+        node('article', { class: 'atlas-v2-explore-panel atlas-v2-explore-chart-panel atlas-v2-explore-wide' }, [
+          node('div', { class: 'atlas-v2-explore-panel-head' }, [
+            node('div', {}, [node('span', { class: 'atlas-v2-explore-eyebrow', text: 'SERIE ANUAL' }), node('h3', { text: 'ROS recibidos por año' })]),
+            node('span', { class: 'atlas-v2-explore-chip', text: '2021–2025' }),
+          ]),
+          global.AtlasV2Viz.lineChart(series, {
+            ariaLabel: 'Evolución anual de reportes de operaciones sospechosas entre 2021 y 2025',
+            caption: 'Número total de ROS por año. La serie describe volumen de reporte, no calidad ni riesgo.',
+          }),
+        ]),
+        node('article', { class: 'atlas-v2-explore-panel atlas-v2-explore-chart-panel' }, [
+          node('div', { class: 'atlas-v2-explore-panel-head' }, [
+            node('div', {}, [node('span', { class: 'atlas-v2-explore-eyebrow', text: 'CONCENTRACIÓN' }), node('h3', { text: 'Sectores con más ROS en 2025' })]),
+            topShare == null ? null : node('span', { class: 'atlas-v2-explore-chip warn', text: `${pct(topShare)} líder` }),
+          ]),
+          global.AtlasV2Viz.horizontalBars(top.map(row => ({
+            label: row.sector_name,
+            value: Number(row.ros_2025 || 0),
+            display: fmt(row.ros_2025),
+            detail: `${fmt(row.registered_so_2025)} SO`,
+          })), { limit: 8 }),
+        ]),
+      ]),
+      node('div', { class: 'atlas-v2-explore-rule' }, [
+        node('strong', { text: 'Lectura. ' }),
+        'Reportabilidad es una señal agregada sectorial. Un sector con bajo volumen o silencio estadístico no implica incumplimiento individual.',
+      ]),
+      node('small', { class: 'atlas-v2-explore-source', text: `${data?.generated_from || 'Fuente UAF'} · período ${data?.period || '2021–2025'} · padrón ${data?.registered_snapshot || '2025'}` }),
+    ]);
+  }
+
+  function attentionPanel(out, dashboard, api) {
+    const summary = out?.summary || {};
+    const sectors = arr(out?.sectors || out?.data?.sectors);
+    const rows = [
+      { label: 'Activos en SII', value: Number(summary.active || 0), display: fmt(summary.active), status: 'ACTIVE' },
+      { label: 'Término de giro', value: Number(summary.terminated || 0), display: fmt(summary.terminated), status: 'TERMINATED' },
+      { label: 'Sin perfil SII', value: Number(summary.no_sii || 0), display: fmt(summary.no_sii), status: 'NO_SII' },
+    ];
+    const yearRows = arr(out?.terminatedByYear)
+      .slice()
+      .sort((a, b) => Number(a.termination_year || 0) - Number(b.termination_year || 0))
+      .filter(item => Number(item.termination_year || 0) >= 2019)
+      .map(item => ({ label: String(item.termination_year), value: Number(item.entity_count || 0), display: fmt(item.entity_count) }));
+    const sectorRows = sectors
+      .filter(row => Number(row?.terminated_count || 0) > 0)
+      .sort((a, b) => Number(b.terminated_count || 0) - Number(a.terminated_count || 0))
+      .slice(0, 8)
+      .map(row => ({
+        label: row.sector_name,
+        value: Number(row.terminated_count || 0),
+        display: fmt(row.terminated_count),
+        detail: `${pct(row.terminated_pct || (Number(row.entity_count || 0) ? 100 * Number(row.terminated_count || 0) / Number(row.entity_count || 1) : 0))} del sector`,
+      }));
+    const total = Number(summary.total || 0);
+    const coverage = total > 0 ? 100 * Number(summary.matched || 0) / total : null;
+    const operational = Number(dashboard?.kpis?.registered_total_latest || 0);
+    const reference2025 = 9911;
+    const operationalDelta = operational ? operational - reference2025 : null;
+
+    return node('section', { class: 'atlas-v2-explore-section atlas-v2-explore-reconciliation' }, [
+      sectionHead('02', 'SO UAF ↔ SII', 'Conciliación y vigencia tributaria', 'Cruce por RUT para reconocer rápidamente sujetos obligados activos, con término de giro o sin perfil SII materializado.', actionButton('Abrir UAF', () => api.navigate('universos', { lens: 'UAF' }))),
+      node('div', { class: 'atlas-v2-explore-metrics atlas-v2-explore-metrics-five' }, [
+        metric('Padrón operativo UAF', operational ? fmt(operational) : fmt(total), dashboard?.kpis?.registered_total_as_of ? `corte ${dateText(dashboard.kpis.registered_total_as_of)}` : 'último corte disponible', 'primary'),
+        metric('Con perfil SII', fmt(summary.matched), coverage == null ? 'conciliación por RUT' : `${pct(coverage)} del padrón conciliado`),
+        metric('Término de giro', fmt(summary.terminated), total ? `${pct(100 * Number(summary.terminated || 0) / total)} del padrón` : 'estado tributario', Number(summary.terminated || 0) ? 'attention' : ''),
+        metric('Sin perfil SII', fmt(summary.no_sii), total ? `${pct(100 * Number(summary.no_sii || 0) / total)} requiere revisión` : 'requiere revisión'),
+        metric('Variación vs 2025', operationalDelta == null ? '—' : `${operationalDelta >= 0 ? '+' : ''}${fmt(operationalDelta)}`, '9.911 = referencia estadística 2025'),
+      ]),
+      node('div', { class: 'atlas-v2-explore-recon-main' }, [
+        node('article', { class: 'atlas-v2-explore-panel atlas-v2-explore-chart-panel atlas-v2-explore-recon-status' }, [
+          node('div', { class: 'atlas-v2-explore-panel-head' }, [
+            node('div', {}, [node('span', { class: 'atlas-v2-explore-eyebrow', text: 'ESTADO DEL PADRÓN' }), node('h3', { text: 'Distribución UAF según SII' })]),
+            node('span', { class: 'atlas-v2-explore-chip', text: `${fmt(total)} entidades` }),
+          ]),
+          global.AtlasV2Viz.segmented(rows, { onSelect: item => api.navigate('universos', { lens: 'UAF', sii_status: item.status }) }),
+          node('p', { class: 'atlas-v2-explore-copy', text: 'Selecciona una categoría para profundizar el universo. Término de giro es una condición tributaria, no una señal AML/FT por sí sola.' }),
+        ]),
+        node('article', { class: 'atlas-v2-explore-panel atlas-v2-explore-chart-panel' }, [
+          node('div', { class: 'atlas-v2-explore-panel-head' }, [node('div', {}, [node('span', { class: 'atlas-v2-explore-eyebrow', text: 'SECTORES' }), node('h3', { text: 'Dónde se concentran los términos de giro' })])]),
+          global.AtlasV2Viz.horizontalBars(sectorRows, { limit: 8 }),
+        ]),
+      ]),
+      node('div', { class: 'atlas-v2-explore-recon-secondary' }, [
+        node('article', { class: 'atlas-v2-explore-panel atlas-v2-explore-chart-panel' }, [
+          node('div', { class: 'atlas-v2-explore-panel-head' }, [node('div', {}, [node('span', { class: 'atlas-v2-explore-eyebrow', text: 'EVOLUCIÓN' }), node('h3', { text: 'Términos de giro por año' })])]),
+          global.AtlasV2Viz.lineChart(yearRows, {
+            ariaLabel: 'Términos de giro observados por año en la conciliación UAF SII',
+            caption: 'Fecha tributaria observada en SII para entidades presentes en el padrón UAF.',
+          }),
+        ]),
+        node('article', { class: 'atlas-v2-explore-panel atlas-v2-explore-recent' }, [
+          node('div', { class: 'atlas-v2-explore-panel-head' }, [node('div', {}, [node('span', { class: 'atlas-v2-explore-eyebrow', text: 'RECIENTES' }), node('h3', { text: 'Últimos términos observados' })])]),
+          ...arr(out?.recentTerminated).slice(0, 6).map(item => node('button', {
+            type: 'button',
+            class: 'atlas-v2-explore-recent-row',
+            onclick: () => api.navigate('entidad', { entity_id: item.entity_id || '', rut: item.rut || '', q: item.resolved_name || '' }),
+          }, [
+            node('span', {}, [node('strong', { text: item.resolved_name || item.rut || 'Entidad' }), node('small', { text: `${dateText(item.termination_date)} · ${item.uaf_sector_label || 'sector UAF'}` })]),
+            node('b', { text: 'Abrir →' }),
+          ])),
+        ]),
+      ]),
+      node('small', { class: 'atlas-v2-explore-source', text: `Conciliación gobernada por RUT · ${dateText(out?.generatedAt)}` }),
     ]);
   }
 
   function universePanel(out, api) {
-    const rows = (out.items || []).map(item => ({ label: ({ SII: 'SII', UAF: 'UAF / SO', OSFL: 'OSFL', RES: 'RES', SANCIONES: 'Sanciones' })[String(item.lens || '').toUpperCase()] || item.lens, detail: 'personas / entidades observadas', value: Number(item.total_count || 0), display: compact(item.total_count), lens: String(item.lens || '').toUpperCase() })).sort((a, b) => b.value - a.value);
-    const panel = node('article', { class: 'atlas-v2-explore-panel atlas-v2-explore-panel-primary' }, [
-      node('div', { class: 'atlas-v2-explore-panel-head' }, [panelHeading('UNIVERSOS', 'Cobertura observada'), node('button', { class: 'atlas-v2-explore-link', type: 'button', text: 'Ver universos →', onclick: () => api.navigate('universos') })]),
-      node('p', { class: 'atlas-v2-explore-panel-intro', text: 'Lentes poblacionales disponibles. Selecciona una barra para entrar directamente al universo.' }),
+    const rows = arr(out?.items)
+      .map(item => ({
+        label: ({ SII: 'SII', UAF: 'UAF / SO', OSFL: 'OSFL', RES: 'RES', SANCIONES: 'Sanciones' })[String(item.lens || '').toUpperCase()] || item.lens,
+        value: Number(item.total_count || 0),
+        display: compact(item.total_count),
+        lens: String(item.lens || '').toUpperCase(),
+        detail: 'entidades observadas',
+      }))
+      .sort((a, b) => b.value - a.value);
+    return node('article', { class: 'atlas-v2-explore-panel atlas-v2-explore-chart-panel' }, [
+      node('div', { class: 'atlas-v2-explore-panel-head' }, [
+        node('div', {}, [node('span', { class: 'atlas-v2-explore-eyebrow', text: 'COBERTURA ATLAS' }), node('h3', { text: 'Universos disponibles' })]),
+        actionButton('Universos', () => api.navigate('universos')),
+      ]),
+      global.AtlasV2Viz.horizontalBars(rows, { limit: 7, onSelect: item => api.navigate('universos', { lens: item.lens }) }),
     ]);
-    panel.append(node('div', { class: 'atlas-v2-explore-chart atlas-v2-explore-chart-tall' }, [global.AtlasV2Viz.horizontalBars(rows, { limit: 7, onSelect: item => api.navigate('universos', { lens: item.lens }) })]));
-    panel.append(node('div', { class: 'atlas-v2-explore-panel-summary' }, [node('span', {}, [node('b', { text: compact(rows[0]?.value || 0) }), ' mayor cobertura individual']), node('span', {}, [node('b', { text: fmt(rows.length) }), ' lentes observadas'])]));
-    panel.append(node('small', { class: 'atlas-v2-explore-source', text: `Corte read model · ${formatDate(out.generatedAt || out.meta?.snapshot)}` }));
-    return panel;
   }
 
   function watchPanel(out, api) {
-    const s = out.summary || {};
-    const other = Math.max(0, Number(s.alert_count || 0) - Number(s.very_high_count || 0) - Number(s.high_count || 0));
-    const rows = [{ label: 'Muy alta', value: Number(s.very_high_count || 0), display: fmt(s.very_high_count), severity: 'VERY_HIGH' }, { label: 'Alta', value: Number(s.high_count || 0), display: fmt(s.high_count), severity: 'HIGH' }, { label: 'Otras vigentes', value: other, display: fmt(other), severity: 'OTHER' }];
-    const panel = node('article', { class: 'atlas-v2-explore-panel atlas-v2-explore-panel-watch' }, [
-      node('div', { class: 'atlas-v2-explore-panel-head' }, [panelHeading('VIGILANCIA', 'Señales que cambiaron la atención'), node('button', { class: 'atlas-v2-explore-link', type: 'button', text: 'Abrir vigilancia →', onclick: () => api.navigate('vigilancia') })]),
-      node('div', { class: 'atlas-v2-explore-bigline' }, [node('strong', { text: fmt(s.alert_count) }), node('span', { text: `señales vigentes · ${fmt(s.family_count)} familias` })]),
-    ]);
-    panel.append(node('div', { class: 'atlas-v2-explore-chart' }, [global.AtlasV2Viz.segmented(rows, { onSelect: item => api.navigate('vigilancia', { severity: item.severity }) })]));
-    panel.append(node('div', { class: 'atlas-v2-explore-watch-stats' }, rows.map(row => node('button', { type: 'button', onclick: () => api.navigate('vigilancia', { severity: row.severity }) }, [node('span', { text: row.label }), node('b', { text: row.display })]))));
-    panel.append(node('p', { class: 'atlas-v2-explore-copy', text: out.comparison?.available ? 'La comparación está habilitada: abre Vigilancia para revisar NEW, CHANGED y REMOVED.' : 'Baseline inicial: todavía no corresponde inferir estabilidad ni ausencia de cambios.' }));
-    panel.append(node('small', { class: 'atlas-v2-explore-source', text: `Snapshot · ${out.snapshotId || formatDate(out.generatedAt)}` }));
-    return panel;
-  }
-
-  function attentionPanel(out, api) {
-    const s = out.summary || {};
-    const reporting = out.reporting || {};
+    const summary = out?.summary || {};
+    const other = Math.max(0, Number(summary.alert_count || 0) - Number(summary.very_high_count || 0) - Number(summary.high_count || 0));
     const rows = [
-      { label: 'Activos en SII', value: Number(s.active || 0), display: fmt(s.active), status: 'ACTIVE' },
-      { label: 'Término de giro', value: Number(s.terminated || 0), display: fmt(s.terminated), status: 'TERMINATED' },
-      { label: 'Sin perfil SII', value: Number(s.no_sii || 0), display: fmt(s.no_sii), status: 'NO_SII' },
+      { label: 'Muy alta', value: Number(summary.very_high_count || 0), display: fmt(summary.very_high_count), severity: 'VERY_HIGH' },
+      { label: 'Alta', value: Number(summary.high_count || 0), display: fmt(summary.high_count), severity: 'HIGH' },
+      { label: 'Otras vigentes', value: other, display: fmt(other), severity: 'OTHER' },
     ];
-    const panel = node('article', { class: 'atlas-v2-explore-panel atlas-v2-explore-panel-primary' }, [
-      node('div', { class: 'atlas-v2-explore-panel-head' }, [panelHeading('SO UAF ↔ SII', 'Vigencia y consistencia del registro'), node('button', { class: 'atlas-v2-explore-link', type: 'button', text: 'Abrir universos →', onclick: () => api.navigate('universos', { lens: 'UAF' }) })]),
-      node('div', { class: 'atlas-v2-explore-bigline' }, [node('strong', { text: fmt(s.terminated) }), node('span', { text: `entidades UAF con término de giro observado · ${fmt(s.total)} universo conciliado` })]),
+    return node('article', { class: 'atlas-v2-explore-panel atlas-v2-explore-chart-panel' }, [
+      node('div', { class: 'atlas-v2-explore-panel-head' }, [
+        node('div', {}, [node('span', { class: 'atlas-v2-explore-eyebrow', text: 'VIGILANCIA' }), node('h3', { text: 'Señales vigentes' })]),
+        actionButton('Vigilancia', () => api.navigate('vigilancia')),
+      ]),
+      node('div', { class: 'atlas-v2-explore-panel-number' }, [node('strong', { text: fmt(summary.alert_count) }), node('span', { text: `${fmt(summary.family_count)} familias observadas` })]),
+      global.AtlasV2Viz.segmented(rows, { onSelect: item => api.navigate('vigilancia', { severity: item.severity }) }),
+      node('p', { class: 'atlas-v2-explore-copy', text: out?.comparison?.available ? 'Comparación de snapshots disponible.' : 'Baseline inicial: no se infiere estabilidad a partir de la ausencia de comparación.' }),
     ]);
-    panel.append(node('div', { class: 'atlas-v2-explore-chart' }, [global.AtlasV2Viz.segmented(rows, { onSelect: item => api.navigate('universos', { lens: 'UAF', sii_status: item.status }) })]));
-    panel.append(node('div', { class: 'atlas-v2-explore-panel-summary' }, [node('span', {}, [node('b', { text: fmt(s.matched) }), ' con perfil SII conciliado']), node('span', {}, [node('b', { text: fmt(s.review) }), ' requieren revisión operativa'])]));
-
-    if (reporting.source_state === 'NOT_MATERIALIZED' || Number(reporting.observed_entity_count || 0) === 0) {
-      panel.append(node('div', { class: 'atlas-v2-explore-guardrail', text: 'ROS / ROE · SIN OBSERVACIÓN MATERIALIZADA. ATLAS no convierte el faltante en cero.' }));
-    } else {
-      panel.append(node('div', { class: 'atlas-v2-explore-panel-summary' }, [node('span', {}, [node('b', { text: fmt(reporting.ros_total) }), ' ROS observados']), node('span', {}, [node('b', { text: fmt(reporting.roe_total) }), ' ROE observados'])]));
-    }
-
-    const recent = (out.recentTerminated || []).slice(0, 4);
-    if (recent.length) {
-      panel.append(node('p', { class: 'atlas-v2-explore-copy', text: 'Términos de giro más recientes observados en la conciliación UAF–SII:' }));
-      panel.append(node('div', { class: 'atlas-v2-explore-watch-stats' }, recent.map(item => node('button', { type: 'button', onclick: () => api.navigate('entidad', { entity_id: item.entity_id, rut: item.rut, q: item.resolved_name }) }, [node('span', { text: `${shortDate(item.termination_date)} · ${item.resolved_name || item.rut}` }), node('b', { text: 'Abrir →' })]))));
-    }
-    panel.append(node('small', { class: 'atlas-v2-explore-source', text: `Conciliación gobernada por RUT · ${formatDate(out.generatedAt)}` }));
-    panel.append(node('p', { class: 'atlas-v2-explore-copy', text: 'Término de giro es un estado tributario que merece revisión de vigencia UAF; no constituye por sí solo una señal AML/FT.' }));
-    return panel;
   }
 
   function territoryPanel(out, api) {
-    const rows = (out.items || []).filter(item => item.region).sort((a, b) => Number(b.igr_mean || 0) - Number(a.igr_mean || 0)).slice(0, 8).map(item => ({ label: item.region, detail: `${fmt(item.commune_count)} comuna(s)`, value: Number(item.igr_mean || 0), display: fmt(item.igr_mean, 1), region: item.region }));
-    const panel = node('article', { class: 'atlas-v2-explore-panel' }, [node('div', { class: 'atlas-v2-explore-panel-head' }, [panelHeading('TERRITORIO', 'Contexto geográfico'), node('button', { class: 'atlas-v2-explore-link', type: 'button', text: 'Abrir territorio →', onclick: () => api.navigate('territorio') })])]);
-    panel.append(node('div', { class: 'atlas-v2-explore-chart' }, [global.AtlasV2Viz.horizontalBars(rows, { limit: 7, onSelect: item => api.navigate('territorio', { region: item.region }) })]));
-    panel.append(node('div', { class: 'atlas-v2-explore-guardrail', text: 'IGR = contexto territorial beta. No se hereda como riesgo de una entidad.' }));
-    panel.append(node('small', { class: 'atlas-v2-explore-source', text: `Corte territorial · ${formatDate(out.generatedAt || out.meta?.snapshot)}` }));
-    return panel;
+    const rows = arr(out?.items)
+      .filter(item => item.region)
+      .sort((a, b) => Number(b.igr_mean || 0) - Number(a.igr_mean || 0))
+      .slice(0, 7)
+      .map(item => ({ label: item.region, value: Number(item.igr_mean || 0), display: fmt(item.igr_mean, 1), detail: `${fmt(item.commune_count)} comunas`, region: item.region }));
+    return node('article', { class: 'atlas-v2-explore-panel atlas-v2-explore-chart-panel' }, [
+      node('div', { class: 'atlas-v2-explore-panel-head' }, [
+        node('div', {}, [node('span', { class: 'atlas-v2-explore-eyebrow', text: 'TERRITORIO' }), node('h3', { text: 'Contexto geográfico' })]),
+        actionButton('Territorio', () => api.navigate('territorio')),
+      ]),
+      global.AtlasV2Viz.horizontalBars(rows, { limit: 7, onSelect: item => api.navigate('territorio', { region: item.region }) }),
+      node('p', { class: 'atlas-v2-explore-copy', text: 'IGR aporta contexto territorial y no se hereda como riesgo individual.' }),
+    ]);
   }
 
   function publicSpendPanel(out, api) {
-    const availability = out?.data?.availability || {};
     const procurement = out?.data?.domains?.procurement?.summary || {};
-    const rows = [{ label: 'Proveedores', value: Number(procurement.supplier_count || 0), display: compact(procurement.supplier_count), view: 'suppliers' }, { label: 'Compradores', value: Number(procurement.buyer_count || 0), display: compact(procurement.buyer_count), view: 'buyers' }];
-    const panel = node('article', { class: 'atlas-v2-explore-panel' }, [
-      node('div', { class: 'atlas-v2-explore-panel-head' }, [panelHeading('GASTO PÚBLICO', 'Compras y ejecución'), node('button', { class: 'atlas-v2-explore-link', type: 'button', text: 'Abrir gasto público →', onclick: () => api.navigate('gasto-publico') })]),
-      node('div', { class: 'atlas-v2-explore-spend-status' }, [node('span', {}, [node('i', { class: availability.procurement ? 'ok' : '' }), `ChileCompra · ${availability.procurement || 'sin estado'}`]), node('span', {}, [node('i', { class: availability.budget_execution ? 'ok' : '' }), `Presupuesto Abierto · ${availability.budget_execution || 'sin estado'}`])]),
+    const availability = out?.data?.availability || {};
+    const rows = [
+      { label: 'Proveedores', value: Number(procurement.supplier_count || 0), display: compact(procurement.supplier_count), tab: 'suppliers' },
+      { label: 'Compradores', value: Number(procurement.buyer_count || 0), display: compact(procurement.buyer_count), tab: 'buyers' },
+    ];
+    return node('article', { class: 'atlas-v2-explore-panel atlas-v2-explore-chart-panel' }, [
+      node('div', { class: 'atlas-v2-explore-panel-head' }, [
+        node('div', {}, [node('span', { class: 'atlas-v2-explore-eyebrow', text: 'GASTO PÚBLICO' }), node('h3', { text: 'Compras y proveedores' })]),
+        actionButton('Gasto público', () => api.navigate('gasto-publico')),
+      ]),
+      node('div', { class: 'atlas-v2-explore-status-row' }, [
+        node('span', { text: `ChileCompra · ${availability.procurement || 'sin estado'}` }),
+        node('span', { text: `Presupuesto · ${availability.budget_execution || 'sin estado'}` }),
+      ]),
+      global.AtlasV2Viz.horizontalBars(rows, { limit: 2, onSelect: item => api.navigate('gasto-publico', { tab: item.tab }) }),
     ]);
-    panel.append(node('div', { class: 'atlas-v2-explore-chart' }, [global.AtlasV2Viz.horizontalBars(rows, { limit: 2, onSelect: item => api.navigate('gasto-publico', { tab: item.view }) })]));
-    panel.append(node('div', { class: 'atlas-v2-explore-panel-summary' }, [node('span', {}, [node('b', { text: compact(procurement.supplier_count) }), ' proveedores']), node('span', {}, [node('b', { text: compact(procurement.buyer_count) }), ' compradores'])]));
-    panel.append(node('p', { class: 'atlas-v2-explore-copy', text: 'Compras y ejecución permanecen como dominios paralelos; sus montos no se mezclan.' }));
-    panel.append(node('small', { class: 'atlas-v2-explore-source', text: `Monitor · ${out.snapshotId || out.meta?.snapshot || 'snapshot no informado'}` }));
-    return panel;
-  }
-
-  function analysisCard(tag, title, description, signal, action) {
-    return node('button', { class: 'atlas-v2-explore-analysis-card atlas-v2-explore-question', type: 'button', onclick: action }, [node('span', { class: 'atlas-v2-card-tag', text: tag }), node('h3', { text: title }), node('p', { text: description }), node('div', { class: 'atlas-v2-explore-analysis-foot' }, [node('span', { text: signal }), node('b', { text: 'Abrir →' })])]);
-  }
-
-  function analysisMatrix(api) {
-    return node('section', { class: 'atlas-v2-explore-deck' }, [deckHead('03', 'Matriz de análisis', 'Entradas directas a las capacidades de Atlas, sin convertir la exploración en un flujo obligatorio.'), node('div', { class: 'atlas-v2-explore-analysis-grid' }, [
-      analysisCard('ENTIDAD 360', 'Explorar una entidad', 'Identidad exacta primero; luego contexto digital, prensa, screening internacional y demás fuentes.', 'Identidad + screening + trayectoria', () => api.navigate('entidad')),
-      analysisCard('RELACIONES', 'Cruzar vínculos', 'Representantes, sociedades, domicilios y contrapartes documentadas.', 'Convergencias explicables', () => api.navigate('relaciones')),
-      analysisCard('UNIVERSOS', 'Comparar coberturas', 'SII, UAF/SO, OSFL, RES y sanciones como lentes poblacionales separadas.', 'Cobertura por fuente', () => api.navigate('universos')),
-      analysisCard('VIGILANCIA', 'Revisar cambios', 'Señales vigentes y diferencias entre snapshots cuando existe baseline comparable.', 'NEW · CHANGED · REMOVED', () => api.navigate('vigilancia', { mode: 'changes' })),
-    ])]);
   }
 
   async function timed(label, reader) {
@@ -217,75 +369,104 @@
     catch (reason) { return { label, status: 'rejected', reason, ms: Math.round(performance.now() - started) }; }
   }
 
-  function updateHeroLive(live, results) {
-    const watch = results.find(result => result.label === 'watch' && result.status === 'fulfilled')?.value;
-    const universes = results.find(result => result.label === 'universes' && result.status === 'fulfilled')?.value;
-    const attention = results.find(result => result.label === 'attention' && result.status === 'fulfilled')?.value;
-    const territory = results.find(result => result.label === 'territory' && result.status === 'fulfilled')?.value;
-    const alertCount = Number(watch?.summary?.alert_count || 0);
-    live.alerts.textContent = alertCount ? fmt(alertCount) : '—';
-    live.alertDetail.textContent = alertCount ? `${fmt(watch?.summary?.family_count || 0)} familias activas en el snapshot` : 'Snapshot sin resumen de señales disponible';
-    const lensCount = Array.isArray(universes?.items) ? universes.items.length : 0;
-    const regionCount = Array.isArray(territory?.items) ? territory.items.filter(item => item.region).length : 0;
-    const terminated = Number(attention?.summary?.terminated || 0);
-    live.finding.textContent = ` ${lensCount ? `${lensCount} lentes poblacionales` : 'Lentes poblacionales'}, ${terminated ? `${fmt(terminated)} SO UAF con término de giro observado` : 'conciliación UAF–SII'} y ${regionCount ? `${regionCount} lecturas territoriales` : 'contexto territorial'} están disponibles para profundizar.`;
-  }
+  async function hydrate(root, api, serial) {
+    const reportSlot = root.querySelector('[data-slot="reportability"]');
+    const attentionSlot = root.querySelector('[data-slot="attention"]');
+    const coverageSlot = root.querySelector('[data-slot="coverage"]');
+    const watchSlot = root.querySelector('[data-slot="watch"]');
+    const territorySlot = root.querySelector('[data-slot="territory"]');
+    const spendSlot = root.querySelector('[data-slot="spend"]');
 
-  async function loadPulse(primaryGrid, contextGrid, api, serial, live) {
-    const slots = { universes: skeleton('UNIVERSOS'), watch: skeleton('VIGILANCIA'), attention: skeleton('SO UAF ↔ SII'), territory: skeleton('TERRITORIO'), spend: skeleton('GASTO PÚBLICO') };
-    clear(primaryGrid); clear(contextGrid);
-    primaryGrid.append(slots.universes, slots.watch, slots.attention);
-    contextGrid.append(slots.territory, slots.spend);
-    const tasks = [
-      timed('universes', () => global.AtlasV2Universes.overview({ route: 'explorar:pulse:universos' })),
-      timed('watch', () => global.AtlasV2Watch.overview({ route: 'explorar:pulse:vigilancia' })),
-      timed('attention', () => global.AtlasV2Universes.attention({ route: 'explorar:pulse:uaf-sii' })),
-      timed('territory', () => global.AtlasV2Territory.overview({ route: 'explorar:pulse:territorio' })),
-      timed('spend', () => global.AtlasV2Access.data().publicSpend.monitor({ route: 'explorar:pulse:gasto-publico' })),
-    ];
-    const results = await Promise.all(tasks);
-    if (serial !== renderSerial || !primaryGrid.isConnected) return;
-    const retry = () => { if (serial === renderSerial && primaryGrid.isConnected) void loadPulse(primaryGrid, contextGrid, api, serial, live); };
-    results.forEach(result => {
-      const slot = slots[result.label];
-      if (!slot?.isConnected) return;
-      if (result.status === 'fulfilled') {
-        if (result.label === 'universes') replace(slot, universePanel(result.value, api));
-        else if (result.label === 'watch') replace(slot, watchPanel(result.value, api));
-        else if (result.label === 'attention') replace(slot, attentionPanel(result.value, api));
-        else if (result.label === 'territory') replace(slot, territoryPanel(result.value, api));
-        else replace(slot, publicSpendPanel(result.value, api));
-      } else {
-        const titles = { universes: 'Cobertura observada', watch: 'Señales que cambiaron la atención', attention: 'Vigencia y consistencia del registro', territory: 'Contexto geográfico', spend: 'Compras y ejecución' };
-        replace(slot, unavailable(result.label.toUpperCase(), titles[result.label], result.reason, retry));
-      }
+    const results = await Promise.all([
+      timed('reportability', () => localJson(DATA_URLS.reportability)),
+      timed('uafSnapshot', () => localJson(DATA_URLS.uafSnapshot)),
+      timed('attention', () => global.AtlasV2Universes.attention({ route: 'explorar:reportabilidad:uaf-sii' })),
+      timed('universes', () => global.AtlasV2Universes.overview({ route: 'explorar:reportabilidad:universes' })),
+      timed('watch', () => global.AtlasV2Watch.overview({ route: 'explorar:reportabilidad:watch' })),
+      timed('territory', () => global.AtlasV2Territory.overview({ route: 'explorar:reportabilidad:territory' })),
+      timed('spend', () => global.AtlasV2Access.data().publicSpend.monitor({ route: 'explorar:reportabilidad:spend' })),
+    ]);
+    if (serial !== renderSerial || !root.isConnected) return;
+    const by = label => results.find(item => item.label === label);
+
+    const report = by('reportability');
+    clear(reportSlot);
+    reportSlot.append(report?.status === 'fulfilled'
+      ? reportabilityPanel(report.value, api)
+      : errorPanel('Reportabilidad ROS', 'No fue posible leer el snapshot estadístico UAF 2021–2025.'));
+
+    const attention = by('attention');
+    const dashboard = by('uafSnapshot');
+    clear(attentionSlot);
+    attentionSlot.append(attention?.status === 'fulfilled'
+      ? attentionPanel(attention.value, dashboard?.status === 'fulfilled' ? dashboard.value : null, api)
+      : errorPanel('Conciliación UAF ↔ SII', attention?.reason?.message || 'No fue posible consultar el read model de conciliación.'));
+
+    const universes = by('universes');
+    clear(coverageSlot);
+    coverageSlot.append(universes?.status === 'fulfilled' ? universePanel(universes.value, api) : errorPanel('Cobertura ATLAS'));
+
+    const watch = by('watch');
+    clear(watchSlot);
+    watchSlot.append(watch?.status === 'fulfilled' ? watchPanel(watch.value, api) : errorPanel('Vigilancia'));
+
+    const territory = by('territory');
+    clear(territorySlot);
+    territorySlot.append(territory?.status === 'fulfilled' ? territoryPanel(territory.value, api) : errorPanel('Territorio'));
+
+    const spend = by('spend');
+    clear(spendSlot);
+    spendSlot.append(spend?.status === 'fulfilled' ? publicSpendPanel(spend.value, api) : errorPanel('Gasto público'));
+
+    global.__ATLAS_V2_EXPLORE_DIAGNOSTICS__ = Object.freeze({
+      checkedAt: new Date().toISOString(),
+      mode: 'REPORTABILITY_FIRST_UAF_SII_SECOND',
+      timings: Object.freeze(Object.fromEntries(results.map(item => [item.label, { status: item.status, ms: item.ms }]))),
     });
-    updateHeroLive(live, results);
-    global.__ATLAS_V2_EXPLORE_DIAGNOSTICS__ = Object.freeze({ checkedAt: new Date().toISOString(), timings: Object.freeze(Object.fromEntries(results.map(result => [result.label, { status: result.status, ms: result.ms }]))) });
   }
 
   function render(container, _route, api) {
     injectStyle();
     const serial = ++renderSerial;
     clear(container);
-    const live = { alerts: node('b', { text: '…' }), alertDetail: node('em', { text: 'Leyendo snapshot…' }), finding: node('p', { text: ' Integrando cobertura, vigilancia, conciliación UAF–SII, territorio y gasto público…' }) };
-    container.append(hero(api, live));
-    const primaryGrid = node('div', { class: 'atlas-v2-explore-grid atlas-v2-explore-grid-primary' });
-    const primaryDeck = node('section', { class: 'atlas-v2-explore-deck' }, [deckHead('01', 'Pulso de atención', 'Cobertura, señales y conciliación UAF–SII en una lectura conjunta. Cada elemento es interactivo.'), primaryGrid]);
-    const contextGrid = node('div', { class: 'atlas-v2-explore-grid atlas-v2-explore-grid-context' });
-    const contextDeck = node('section', { class: 'atlas-v2-explore-deck' }, [deckHead('02', 'Contexto para interpretar', 'Territorio y gasto público aportan contexto; no transfieren riesgo a personas o entidades.'), contextGrid]);
-    const refresh = node('button', { class: 'atlas-v2-button atlas-v2-explore-refresh', type: 'button', text: 'Actualizar radar', onclick: () => { if (serial === renderSerial) void loadPulse(primaryGrid, contextGrid, api, serial, live); } });
-    container.append(node('div', { class: 'atlas-v2-explore-toolbar' }, [node('span', { text: 'Los gráficos son controles de navegación analítica.' }), refresh]), primaryDeck, contextDeck, analysisMatrix(api));
-    container.append(node('div', { class: 'atlas-v2-explore-rule' }, [node('strong', { text: 'Regla de lectura. ' }), 'Prioridad orienta atención; faltante no equivale a cero; término de giro es estado tributario; sanción administrativa no constituye por sí sola evidencia AML/FT; IGR es contexto territorial y no riesgo individual.']));
-    void loadPulse(primaryGrid, contextGrid, api, serial, live);
+    container.dataset.exploreAuthority = 'REPORTABILITY_FIRST_UAF_SII_SECOND';
+    const root = node('div', { class: 'atlas-v2-explore-baseline' });
+    root.append(compactSearch(api));
+
+    const reportSlot = node('div', { class: 'atlas-v2-explore-slot', dataset: { slot: 'reportability' } }, [skeleton('Recuperando reportabilidad ROS…')]);
+    const attentionSlot = node('div', { class: 'atlas-v2-explore-slot', dataset: { slot: 'attention' } }, [skeleton('Conciliando padrón UAF con SII…')]);
+    const coverageSlot = node('div', { class: 'atlas-v2-explore-slot', dataset: { slot: 'coverage' } }, [skeleton('Leyendo universos…')]);
+    const watchSlot = node('div', { class: 'atlas-v2-explore-slot', dataset: { slot: 'watch' } }, [skeleton('Leyendo señales…')]);
+    const territorySlot = node('div', { class: 'atlas-v2-explore-slot', dataset: { slot: 'territory' } }, [skeleton('Leyendo territorio…')]);
+    const spendSlot = node('div', { class: 'atlas-v2-explore-slot', dataset: { slot: 'spend' } }, [skeleton('Leyendo gasto público…')]);
+
+    root.append(
+      reportSlot,
+      attentionSlot,
+      node('section', { class: 'atlas-v2-explore-section atlas-v2-explore-compact-section' }, [
+        sectionHead('03', 'COBERTURA Y CAMBIOS', 'Qué está observando Atlas', 'Una segunda capa para abrir universos o cambios sólo cuando el pulso inicial lo justifica.'),
+        node('div', { class: 'atlas-v2-explore-two-grid' }, [coverageSlot, watchSlot]),
+      ]),
+      node('section', { class: 'atlas-v2-explore-section atlas-v2-explore-compact-section' }, [
+        sectionHead('04', 'CONTEXTO', 'Territorio y gasto público', 'Capas complementarias para interpretar hallazgos sin transferir riesgo automáticamente.'),
+        node('div', { class: 'atlas-v2-explore-two-grid' }, [territorySlot, spendSlot]),
+      ]),
+      node('div', { class: 'atlas-v2-explore-footer-rule' }, [
+        node('strong', { text: 'Criterio de portada. ' }),
+        'Primero reportabilidad; luego conciliación UAF–SII; después cobertura, cambios y contexto. Las cifras orientan preguntas analíticas y no constituyen conclusiones automáticas.',
+      ]),
+    );
+    container.append(root);
+    void hydrate(root, api, serial);
   }
 
-  function register() {
-    if (!global.AtlasV2Shell?.registerSurface) return false;
-    global.AtlasV2Shell.registerSurface('explorar', render);
-    global.__ATLAS_V2_EXPLORE_SURFACE__ = Object.freeze({ installed: true, route: 'explorar', mode: 'integrated-radar-uaf-sii', semantics: 'ANALYTICS_FIRST' });
-    return true;
-  }
-
-  if (!register()) global.addEventListener('atlas:v2-shell-ready', register, { once: true });
+  global.AtlasV2Shell.registerSurface('explorar', render);
+  global.__ATLAS_V2_EXPLORE_SURFACE__ = Object.freeze({
+    installed: true,
+    route: 'explorar',
+    mode: 'REPORTABILITY_FIRST_UAF_SII_SECOND',
+    searchMode: 'COMPACT',
+    reportabilitySource: 'UAF_SECTOR_REPORTABILITY_V1',
+    attentionSource: 'ATLAS_UNIVERSES_QUERY_V2',
+  });
 })(window);
