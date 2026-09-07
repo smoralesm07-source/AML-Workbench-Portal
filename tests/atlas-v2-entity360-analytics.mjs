@@ -52,9 +52,12 @@ assert.match(surface, /entity_id/);
 assert.match(surface, /ENTIDAD OBSERVADA · PRENSA/);
 assert.match(surface, /TRAYECTORIA SII/);
 assert.match(surface, /AtlasV2Viz\.lineChart/);
-assert.match(surface, /api\.navigate\('gasto-publico'/);
-assert.match(surface, /api\.navigate\('relaciones'/);
-assert.match(surface, /api\.navigate\('territorio'/);
+for (const route of ['gasto-publico', 'relaciones', 'territorio']) {
+  assert.match(surface, new RegExp(`'${route}'`), `missing analytical move ${route}`);
+}
+assert.match(surface, /api\.navigate\(route, params\)/);
+assert.match(surface, /if \(reference\?\.rut\) params\.rut = reference\.rut/);
+assert.match(surface, /if \(reference\?\.entityId\) params\.entity_id = reference\.entityId/);
 assert.doesNotMatch(surface, /SLA|kanban|asignar caso|cerrar caso/i);
 assert.doesNotMatch(surface, /innerHTML|MutationObserver|raw\.githubusercontent/);
 
