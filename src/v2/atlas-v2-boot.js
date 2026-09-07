@@ -24,7 +24,12 @@
   }
 
   async function installAnalyticalSurfaces() {
-    for (const file of ['entity360-adapter.js', 'entity360-surface.js']) {
+    for (const file of [
+      'atlas-v2-access.js',
+      'entity360-adapter.js',
+      'entity360-surface.js',
+      'public-spend-surface.js',
+    ]) {
       try {
         await loadScript(file);
       } catch (error) {
