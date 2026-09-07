@@ -127,10 +127,14 @@
     ]);
   }
 
+  function panelHeading(tag, title) {
+    return node('div', {}, [node('span', { class: 'atlas-v2-card-tag', text: tag }), node('h2', { text: title })]);
+  }
+
   function skeleton(label) {
     return node('article', { class: 'atlas-v2-explore-panel is-loading', 'aria-busy': 'true' }, [
       node('div', { class: 'atlas-v2-explore-panel-head' }, [
-        node('div', {}, [node('span', { class: 'atlas-v2-card-tag', text: label }), node('h3', { text: 'Actualizando…' })]),
+        panelHeading(label, 'Actualizando…'),
         node('span', { class: 'atlas-v2-explore-status', text: 'LEYENDO' }),
       ]),
       node('div', { class: 'atlas-v2-explore-skeleton chart' }),
@@ -141,7 +145,7 @@
   function unavailable(label, title, error, retry) {
     return node('article', { class: 'atlas-v2-explore-panel is-error' }, [
       node('div', { class: 'atlas-v2-explore-panel-head' }, [
-        node('div', {}, [node('span', { class: 'atlas-v2-card-tag', text: label }), node('h3', { text: title })]),
+        panelHeading(label, title),
         node('span', { class: 'atlas-v2-explore-status', text: 'NO DISPONIBLE' }),
       ]),
       node('p', { class: 'atlas-v2-explore-copy', text: 'Esta lectura no respondió ahora. El resto del radar continúa operativo.' }),
@@ -163,7 +167,7 @@
     const totalLargest = rows[0]?.value || 0;
     const panel = node('article', { class: 'atlas-v2-explore-panel atlas-v2-explore-panel-primary' }, [
       node('div', { class: 'atlas-v2-explore-panel-head' }, [
-        node('div', {}, [node('span', { class: 'atlas-v2-card-tag', text: 'UNIVERSOS' }), node('h3', { text: 'Cobertura observada' })]),
+        panelHeading('UNIVERSOS', 'Cobertura observada'),
         node('button', { class: 'atlas-v2-explore-link', type: 'button', text: 'Ver universos →', onclick: () => api.navigate('universos') }),
       ]),
       node('p', { class: 'atlas-v2-explore-panel-intro', text: 'Lectura comparativa de las lentes poblacionales disponibles. Selecciona una barra para entrar directamente a ese universo.' }),
@@ -189,7 +193,7 @@
     ];
     const panel = node('article', { class: 'atlas-v2-explore-panel atlas-v2-explore-panel-watch' }, [
       node('div', { class: 'atlas-v2-explore-panel-head' }, [
-        node('div', {}, [node('span', { class: 'atlas-v2-card-tag', text: 'VIGILANCIA' }), node('h3', { text: 'Señales que cambiaron la atención' })]),
+        panelHeading('VIGILANCIA', 'Señales que cambiaron la atención'),
         node('button', { class: 'atlas-v2-explore-link', type: 'button', text: 'Abrir vigilancia →', onclick: () => api.navigate('vigilancia') }),
       ]),
       node('div', { class: 'atlas-v2-explore-bigline' }, [
@@ -223,7 +227,7 @@
       }));
     const panel = node('article', { class: 'atlas-v2-explore-panel' }, [
       node('div', { class: 'atlas-v2-explore-panel-head' }, [
-        node('div', {}, [node('span', { class: 'atlas-v2-card-tag', text: 'TERRITORIO' }), node('h3', { text: 'Contexto geográfico' })]),
+        panelHeading('TERRITORIO', 'Contexto geográfico'),
         node('button', { class: 'atlas-v2-explore-link', type: 'button', text: 'Abrir territorio →', onclick: () => api.navigate('territorio') }),
       ]),
     ]);
@@ -244,7 +248,7 @@
     ];
     const panel = node('article', { class: 'atlas-v2-explore-panel' }, [
       node('div', { class: 'atlas-v2-explore-panel-head' }, [
-        node('div', {}, [node('span', { class: 'atlas-v2-card-tag', text: 'GASTO PÚBLICO' }), node('h3', { text: 'Compras y ejecución' })]),
+        panelHeading('GASTO PÚBLICO', 'Compras y ejecución'),
         node('button', { class: 'atlas-v2-explore-link', type: 'button', text: 'Abrir gasto público →', onclick: () => api.navigate('gasto-publico') }),
       ]),
       node('div', { class: 'atlas-v2-explore-spend-status' }, [
@@ -265,7 +269,7 @@
   }
 
   function analysisCard(tag, title, description, signal, action) {
-    return node('button', { class: 'atlas-v2-explore-analysis-card', type: 'button', onclick: action }, [
+    return node('button', { class: 'atlas-v2-explore-analysis-card atlas-v2-explore-question', type: 'button', onclick: action }, [
       node('span', { class: 'atlas-v2-card-tag', text: tag }),
       node('h3', { text: title }),
       node('p', { text: description }),
