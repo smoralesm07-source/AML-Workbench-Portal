@@ -4,6 +4,7 @@
   const baseUrl = new URL('./', document.currentScript?.src || document.baseURI);
   const STRUCTURAL_SURFACES = Object.freeze([
     'atlas-v2-access.js',
+    'explore-surface.js',
     'entity360-adapter.js',
     'entity360-surface.js',
     'public-spend-surface.js',
@@ -59,6 +60,22 @@
     }
   }
 
+  async function warmFederatedSession() {
+    if (!window.AtlasV2Session?.getAccessToken || !window.AtlasCoreSession?.getAccessToken) return false;
+    const started = performance.now();
+    try {
+      const token = await window.AtlasV2Session.getAccessToken(() => window.AtlasCoreSession.getAccessToken());
+      const durationMs = Math.round(performance.now() - started);
+      if (token) emit('federation_ready', { code: 'FEDERATION_WARM', durationMs });
+      return Boolean(token);
+    } catch (error) {
+      const durationMs = Math.round(performance.now() - started);
+      console.warn('[ATLAS v2] federation prewarm did not complete', error?.code || error?.message || error);
+      emit('federation_degraded', { code: error?.code || 'FEDERATION_WARM_FAILED', durationMs });
+      return false;
+    }
+  }
+
   function renderFatal(error) {
     const root = document.getElementById('atlas-v2-root');
     if (!root) return;
@@ -83,6 +100,11 @@
     const access = await window.AtlasCoreSession.ready();
     if (!access) return;
     if (!window.AtlasV2Shell?.mount) throw new Error('ATLAS v2 shell failed to load');
+
+    // Start the cross-project session exchange as soon as core authorization is
+    // verified. It runs in parallel with local surface installation so the first
+    // analytical read does not pay the entire federation cold-start penalty.
+    const federationWarm = warmFederatedSession();
     await installAnalyticalSurfaces();
     window.AtlasV2Shell.mount(root);
     emit('ok', { code: 'SHELL_READY' });
@@ -93,6 +115,7 @@
         runtime: 'analytics-primary',
       },
     }));
+    void federationWarm;
   }
 
   const start = () => {
