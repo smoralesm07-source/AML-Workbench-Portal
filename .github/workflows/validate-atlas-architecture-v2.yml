@@ -85,7 +85,7 @@ jobs:
           assert 'Exploration is free; follow-up is optional.' in product
           for forbidden in ["id: 'casos'","id: 'tareas'","id: 'cola'","id: 'asignaciones'","id: 'sla'"]:
               assert forbidden not in shell
-          assert "STRUCTURAL_VERSION = 'v2-primary-3'" in boot
+          assert "STRUCTURAL_VERSION = 'v2-primary-4'" in boot
           assert 'atlas-v2-viz.js' in boot and 'entity-search-adapter.js' in boot
           assert 'AtlasV2Viz.horizontalBars' in explore and 'AtlasV2Viz.segmented' in explore
           assert 'AtlasV2EntitySearch.search' in entity and 'lineChart' in entity
@@ -138,8 +138,10 @@ jobs:
           assert r['v2_explore_mode']=='LIVE_PULSE_VISUAL'
           assert r['v2_visual_navigation']=='INTERACTIVE_FIRST'
           assert r['v2_entity_search']=='RUT_NAME_UAF_PRESS'
+          assert r['v2_version']=='v2-primary-4'
+          assert 'v2-primary-4' in html
           assert 'atlas-runtime-current-' not in html and 'atlas-runtime-current-' in legacy
           assert r['legacy_authority_active_on_primary'] is False
           assert f'data-aml-version="{l["release"]}"' in legacy
-          print('ATLAS Architecture v2.0.2 dual-release build: OK')
+          print('ATLAS Architecture v2.0.2 fresh-asset dual-release build: OK')
           PY
