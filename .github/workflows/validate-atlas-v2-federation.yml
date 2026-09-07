@@ -121,7 +121,8 @@ jobs:
           assert 'ATLAS_V2_SESSION_EXCHANGE_V1' in session
           assert 'refreshToken' not in session
           assert 'AtlasV2Access' in access
-          assert 'governedQuery' in access
+          assert 'global.AtlasV2Data.create' in access
+          assert 'getAccessToken' in access
           assert 'raw.githubusercontent.com' not in access
           assert 'raw.githubusercontent.com' not in data
 
