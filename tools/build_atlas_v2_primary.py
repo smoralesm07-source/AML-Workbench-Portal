@@ -152,7 +152,7 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
     ], "Explore intelligence pulse")
     require(search, ["ATLAS_ENTITY_SEARCH_V2", "operation: 'entity_search'", "resultTier", "tierPriority"], "entity search")
     require(universes, ["attention: (options = {}) => query('attention'", "recentTerminated", "terminatedByYear"], "UAF-SII attention adapter")
-    require(entity_adapter, ["entity_intelligence", "international_screening", "digital_identity", "searchDigitalIdentity"], "Entity 360 intelligence adapter")
+    require(entity_adapter, ["entity_intelligence", "entity_screening_live", "digital_identity_live", "searchDigitalIdentity"], "Entity 360 intelligence adapter")
     require(entity, [
         "AtlasV2EntitySearch.search", "Radar Prensa", "entity_id", "reconciliationPanel", "reportingPanel",
         "screeningPanel", "digitalIdentityPanel", "searchDigitalIdentity", "SCREENING INTERNACIONAL", "ROS / ROE observados",
