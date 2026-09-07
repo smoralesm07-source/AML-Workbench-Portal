@@ -30,6 +30,8 @@
       'entity360-surface.js',
       'public-spend-surface.js',
       'relations-surface.js',
+      'universes-adapter.js',
+      'universes-surface.js',
     ]) {
       try {
         await loadScript(file);
