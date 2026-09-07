@@ -4,6 +4,7 @@
   const baseUrl = new URL('./', document.currentScript?.src || document.baseURI);
   const STRUCTURAL_VERSION = 'v2-primary-5';
   const SURFACE_VERSION = 'v2-primary-6-explore-legacy-pulse-1';
+  const ASSET_REVISION = 'executive-pulse-history-2';
   const STRUCTURAL_SURFACES = Object.freeze([
     'atlas-v2-access.js',
     'atlas-v2-viz.js',
@@ -29,7 +30,7 @@
 
   function loadScript(file) {
     return new Promise((resolve, reject) => {
-      const src = new URL(`${file}?v=${SURFACE_VERSION}`, baseUrl).href;
+      const src = new URL(`${file}?v=${SURFACE_VERSION}&r=${ASSET_REVISION}`, baseUrl).href;
       const existing = Array.from(document.scripts).find(script => script.src === src);
       if (existing) {
         if (existing.dataset.atlasLoaded === 'true') return resolve();
@@ -113,7 +114,7 @@
       throw error;
     }
     window.AtlasV2Shell.mount(root);
-    emit('ok', { code: 'SHELL_READY', visualNavigation: true, entitySearch: true, entityIntelligence: true });
+    emit('ok', { code: 'SHELL_READY', visualNavigation: true, entitySearch: true, entityIntelligence: true, assetRevision: ASSET_REVISION });
     window.dispatchEvent(new CustomEvent('atlas:v2-shell-ready', {
       detail: {
         route: window.AtlasV2Shell.currentRoute?.().id || 'explorar',
@@ -122,6 +123,7 @@
         visualNavigation: true,
         entitySearch: true,
         entityIntelligence: true,
+        assetRevision: ASSET_REVISION,
       },
     }));
     void federationWarm;
