@@ -1,0 +1,48 @@
+.atlas-v2-auth-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background:
+    radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--atlas-accent) 12%, transparent), transparent 34%),
+    var(--atlas-bg);
+}
+
+.atlas-v2-auth-card {
+  width: min(520px,100%);
+  padding: 34px;
+  background: var(--atlas-surface);
+  border: 1px solid var(--atlas-border);
+  border-radius: var(--atlas-radius-lg);
+  box-shadow: var(--atlas-shadow);
+}
+
+.atlas-v2-auth-brand {
+  margin-bottom: 30px;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: .15em;
+}
+
+.atlas-v2-auth-card h1 {
+  margin: 12px 0 0;
+  font-size: 30px;
+  line-height: 1.08;
+  letter-spacing: -.03em;
+}
+
+.atlas-v2-auth-card p {
+  margin: 14px 0 24px;
+  color: var(--atlas-text-2);
+  line-height: 1.65;
+}
+
+.atlas-v2-account {
+  white-space: nowrap;
+  color: var(--atlas-text-2);
+}
+
+@media (max-width: 760px) {
+  .atlas-v2-auth-card { padding: 24px; }
+  .atlas-v2-account { display: none; }
+}
