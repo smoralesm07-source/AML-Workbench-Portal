@@ -31,6 +31,8 @@ V2_FILES = [
     "entity360-adapter.js",
     "entity360-surface.js",
     "entity360-surface.css",
+    "entity360-parity-surface.js",
+    "entity360-parity-surface.css",
     "public-spend-surface.js",
     "public-spend-surface.css",
     "relations-surface.js",
@@ -105,6 +107,8 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
         './v2/atlas-v2-shell.js?v=v2-primary-5',
         './v2/atlas-v2-boot.js?v=v2-primary-5-entity-intelligence-1',
         './v2/atlas-v2-viz.css?v=v2-primary-5-viz1',
+        './v2/entity360-parity-surface.css?v=v2-primary-5-entity360-parity-1',
+        './v2/entity360-parity-surface.js?v=v2-primary-5-entity360-parity-1',
         './assets/supabase-js-2.111.0.umd.js?v=v2-primary-5',
     ], "root authority")
 
@@ -133,6 +137,8 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
     boot = read("atlas-v2-boot.js")
     explore = read("explore-surface.js")
     entity = read("entity360-surface.js")
+    parity = read("entity360-parity-surface.js")
+    parity_css = read("entity360-parity-surface.css")
     entity_adapter = read("entity360-adapter.js")
     search = read("entity-search-adapter.js")
     universes = read("universes-adapter.js")
@@ -157,6 +163,12 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
         "AtlasV2EntitySearch.search", "Radar Prensa", "entity_id", "reconciliationPanel", "reportingPanel",
         "screeningPanel", "digitalIdentityPanel", "searchDigitalIdentity", "SCREENING INTERNACIONAL", "ROS / ROE observados",
     ], "Entity 360 intelligence surface")
+    require(parity, [
+        "SIX_LENS_NATIVE_V2", "ENTITY360_LEGACY_PARITY_V2", "e360p-identidad", "e360p-caracterizacion",
+        "e360p-relaciones", "e360p-contexto", "e360p-senales", "e360p-evidencia", "ipa3_score",
+        "peer_positions", "res_lifecycle", "sanction_resolution", "AtlasV2Entity360.read", "registerSurface('entidad'",
+    ], "Entity 360 six-lens parity surface")
+    require(parity_css, [".e360p-hero", ".e360p-lens-nav", ".e360p-score-ring", ".e360p-rail", ".e360p-mark", ".e360p-timeline"], "Entity 360 parity visual contract")
     require(viz, ["horizontalBars", "lineChart", "segmented"], "visualization primitives")
     require(health, ["ATLAS_V2_RUNTIME_HEALTH_V1"], "runtime health")
 
@@ -166,7 +178,7 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
         require(config, ["mode: 'analytics-primary'"], "production config")
     require(config, ["legacyFallbackPath: './legacy.html'"], "legacy fallback contract")
 
-    for source in (auth, explore, entity, entity_adapter, search, universes, viz):
+    for source in (auth, explore, entity, parity, entity_adapter, search, universes, viz):
         if "MutationObserver" in source or ".innerHTML" in source:
             raise SystemExit("v2 primary build: runtime repair/HTML injection reintroduced")
 
@@ -197,6 +209,8 @@ def update_report(out_dir: Path, published_v2: list[str], primary_release: dict,
         "v2_visual_navigation": "INTERACTIVE_FIRST",
         "v2_entity_search": "IDENTITY_TIERED_DIGITAL_PRESS",
         "v2_entity_intelligence": "UAF_SII_REPORTING_SCREENING_DIGITAL",
+        "v2_entity360_parity": "SIX_LENS_NATIVE_V2",
+        "v2_entity360_dossier": "ENTITY360_LEGACY_PARITY_V2",
         "v2_federation_prewarm": True,
         "v2_e2e_proxy": e2e_proxy,
         "v2_version": V2_VERSION,
@@ -239,6 +253,7 @@ def build_primary(out_dir: Path, *, e2e_proxy: bool = False) -> None:
         "visual_navigation": "INTERACTIVE_FIRST",
         "entity_search": "IDENTITY_TIERED_DIGITAL_PRESS",
         "entity_intelligence": "UAF_SII_REPORTING_SCREENING_DIGITAL",
+        "entity360_parity": "SIX_LENS_NATIVE_V2",
         "e2e_proxy": e2e_proxy,
     }, ensure_ascii=False))
 
