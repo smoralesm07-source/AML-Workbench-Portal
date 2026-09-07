@@ -53,6 +53,7 @@
 
     rows.forEach(item => {
       const ratio = Math.max(0.015, item.value / max);
+      const widthPct = Math.max(1.5, Math.min(100, ratio * 100));
       const interactive = typeof options.onSelect === 'function';
       const row = node(interactive ? 'button' : 'div', {
         class: 'atlas-v2-viz-bar-row',
@@ -66,7 +67,7 @@
           item.detail ? node('span', { text: item.detail }) : null,
         ]),
         node('div', { class: 'atlas-v2-viz-bar-track' }, [
-          node('span', { class: `atlas-v2-viz-bar-fill ${item.tone || ''}`.trim(), style: `--atlas-viz-ratio:${ratio}` }),
+          node('span', { class: `atlas-v2-viz-bar-fill ${item.tone || ''}`.trim(), style: `width:${widthPct.toFixed(2)}%` }),
         ]),
         node('b', { class: 'atlas-v2-viz-bar-value', text: item.display ?? String(item.value) }),
       );
@@ -99,8 +100,7 @@
 
     [0, .5, 1].forEach(frac => {
       const gy = pad.top + frac * (height - pad.top - pad.bottom);
-      const line = svgNode('line', { x1: pad.left, y1: gy, x2: width - pad.right, y2: gy, class: 'atlas-v2-viz-gridline' });
-      svg.append(line);
+      svg.append(svgNode('line', { x1: pad.left, y1: gy, x2: width - pad.right, y2: gy, class: 'atlas-v2-viz-gridline' }));
     });
 
     const points = rows.map((row, index) => `${x(index)},${y(row.value)}`).join(' ');
@@ -116,12 +116,8 @@
         role: interactive ? 'button' : 'img',
         'aria-label': `${label(row.label)}: ${row.display ?? row.value}`,
       });
-
-      if (interactive) {
-        group.append(svgNode('circle', { cx, cy, r: 14, class: 'atlas-v2-viz-line-hit', 'aria-hidden': 'true' }));
-      }
+      if (interactive) group.append(svgNode('circle', { cx, cy, r: 14, class: 'atlas-v2-viz-line-hit', 'aria-hidden': 'true' }));
       group.append(svgNode('circle', { cx, cy, r: 6, class: 'atlas-v2-viz-line-dot', 'aria-hidden': 'true' }));
-
       if (interactive) {
         const activate = () => options.onSelect(row);
         group.addEventListener('click', activate);
@@ -129,12 +125,10 @@
           if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); activate(); }
         });
       }
-
       const title = svgNode('title');
       title.textContent = `${label(row.label)} · ${row.display ?? row.value}`;
       group.append(title);
       svg.append(group);
-
       if (index === 0 || index === rows.length - 1 || rows.length <= 7) {
         const tx = svgNode('text', { x: cx, y: height - 14, class: 'atlas-v2-viz-axis-label', 'text-anchor': 'middle', 'aria-hidden': 'true' });
         tx.textContent = label(row.label);
@@ -157,12 +151,12 @@
       return root;
     }
     rows.filter(item => item.value > 0).forEach((item, index) => {
-      const ratio = item.value / total;
+      const widthPct = Math.max(.5, Math.min(100, 100 * item.value / total));
       const interactive = typeof options.onSelect === 'function';
       track.append(node(interactive ? 'button' : 'span', {
         class: `atlas-v2-viz-segment tone-${index % 4}`,
         ...(interactive ? { type: 'button', onclick: () => options.onSelect(item) } : {}),
-        style: `--atlas-viz-ratio:${ratio}`,
+        style: `width:${widthPct.toFixed(3)}%`,
         title: `${label(item.label)} · ${item.display ?? item.value}`,
         'aria-label': `${label(item.label)}: ${item.display ?? item.value}`,
       }));
