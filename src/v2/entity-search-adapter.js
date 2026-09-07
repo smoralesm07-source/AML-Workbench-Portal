@@ -38,6 +38,9 @@
       matchType: clean(item.match_type, 60),
       matchScore: Number(item.match_score || 0) || 0,
       registryClass: clean(item.registry_class, 100),
+      resultTier: clean(item.result_tier, 60).toUpperCase() || 'IDENTITY',
+      tierPriority: Number(item.tier_priority || 9) || 9,
+      digitalIdentity: item.digital_identity && typeof item.digital_identity === 'object' ? item.digital_identity : null,
       sources: Array.isArray(item.sources) ? item.sources.map(value => clean(value, 80)).filter(Boolean) : [],
       roles: Array.isArray(item.roles) ? item.roles.map(value => clean(value, 100)).filter(Boolean) : [],
       eventCount: Number(item.event_count || 0) || 0,
@@ -45,9 +48,19 @@
     };
   }
 
+  function sortItems(items) {
+    return items.sort((a, b) => {
+      const tier = Number(a.tierPriority || 9) - Number(b.tierPriority || 9);
+      if (tier) return tier;
+      const score = Number(b.matchScore || 0) - Number(a.matchScore || 0);
+      if (score) return score;
+      return String(a.name || a.matchedLabel || '').localeCompare(String(b.name || b.matchedLabel || ''), 'es');
+    });
+  }
+
   async function search(searchInput, options = {}) {
     const search = clean(searchInput, 180);
-    if (search.length < 2) return { contract: 'ATLAS_ENTITY_SEARCH_V2', kind: 'results', items: [], page: { returned: 0 }, semantics: { query_status: 'INVALID_OR_TOO_SHORT' } };
+    if (search.length < 2) return { contract: 'ATLAS_ENTITY_SEARCH_V2', kind: 'results', items: [], page: { returned: 0 }, semantics: { query_status: 'INVALID_OR_TOO_SHORT' }, screeningSources: [] };
     const coreToken = await coreAccessToken();
     if (!coreToken) throw Object.assign(new Error('ATLAS core session is unavailable'), { code: 'CORE_SESSION_UNAVAILABLE' });
     const token = await v2AccessToken(coreToken);
@@ -71,7 +84,7 @@
           authorization: `Bearer ${token}`,
           apikey: publishableKey,
           'content-type': 'application/json',
-          'x-client-info': 'atlas-v2-entity-search/1.0',
+          'x-client-info': 'atlas-v2-entity-search/1.1',
           'x-atlas-core-authorization': `Bearer ${coreToken}`,
         },
         body: JSON.stringify({
@@ -98,13 +111,15 @@
       if (body?.schema !== 'ATLAS_ENTITY_SEARCH_V2' || body?.kind !== 'results') {
         throw Object.assign(new Error('ATLAS entity search contract mismatch'), { code: 'CONTRACT_MISMATCH' });
       }
+      const semantics = body.semantics || {};
       return {
         contract: body.schema,
         kind: body.kind,
         generatedAt: body.generated_at || null,
-        items: (Array.isArray(body.items) ? body.items : []).map(normalize),
+        items: sortItems((Array.isArray(body.items) ? body.items : []).map(normalize)),
         page: body.page || null,
-        semantics: body.semantics || {},
+        semantics,
+        screeningSources: Array.isArray(semantics.screening_sources) ? semantics.screening_sources : [],
         meta: {
           traceId: body.trace_id || response.headers.get('x-atlas-trace-id') || null,
           snapshot: response.headers.get('x-atlas-snapshot') || body.generated_at || null,

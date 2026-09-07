@@ -103,77 +103,108 @@
     return coreToken;
   }
 
+  async function gateway(operation, query, options = {}, expectedContract = null, defaultRoute = 'entity360') {
+    const coreToken = await coreAccessToken();
+    if (!coreToken) throw Object.assign(new Error('ATLAS core session is unavailable'), { code: 'CORE_SESSION_UNAVAILABLE' });
+    const token = await v2AccessToken(coreToken);
+    if (!token) throw Object.assign(new Error('ATLAS v2 session is unavailable'), { code: 'V2_SESSION_UNAVAILABLE' });
+    const config = global.__ATLAS_V2_CONFIG__ || {};
+    const supabaseUrl = String(config.supabaseUrl || DEFAULT_URL).replace(/\/$/, '');
+    const publishableKey = String(config.publishableKey || DEFAULT_PUBLISHABLE_KEY);
+    const controller = new AbortController();
+    const timeoutMs = Math.max(1000, Math.min(Number(options.timeoutMs || DEFAULT_TIMEOUT_MS), 50000));
+    const timer = setTimeout(() => controller.abort(new DOMException('ATLAS_V2_TIMEOUT', 'TimeoutError')), timeoutMs);
+    if (options.signal) {
+      if (options.signal.aborted) controller.abort(options.signal.reason);
+      else options.signal.addEventListener('abort', () => controller.abort(options.signal.reason), { once: true });
+    }
+    try {
+      const res = await fetch(`${supabaseUrl}${ENDPOINT}`, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${token}`,
+          apikey: publishableKey,
+          'content-type': 'application/json',
+          'x-client-info': 'atlas-v2-entity360/2.2',
+          'x-atlas-core-authorization': `Bearer ${coreToken}`,
+        },
+        body: JSON.stringify({ operation, query, route: text(options.route || defaultRoute, 120) || defaultRoute }),
+        signal: controller.signal,
+        cache: 'no-store',
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const error = new Error(body?.error || `ATLAS ${operation} failed (${res.status})`);
+        error.code = body?.error || 'ENTITY_READ_FAILED';
+        error.status = res.status;
+        error.traceId = body?.trace_id || res.headers.get('x-atlas-trace-id') || null;
+        throw error;
+      }
+      if (expectedContract && body?.contract !== expectedContract) {
+        const error = new Error(`ATLAS ${operation} contract mismatch`);
+        error.code = 'CONTRACT_MISMATCH';
+        error.traceId = body?.trace_id || res.headers.get('x-atlas-trace-id') || null;
+        throw error;
+      }
+      return {
+        body,
+        traceId: body?.trace_id || res.headers.get('x-atlas-trace-id') || null,
+        snapshotId: res.headers.get('x-atlas-snapshot') || body?.generated_at || null,
+        serverTiming: res.headers.get('server-timing'),
+      };
+    } catch (error) {
+      if (controller.signal.aborted && error?.name !== 'AbortError') {
+        const timeout = new Error('ATLAS Entity 360 read timed out or was cancelled');
+        timeout.code = 'TIMEOUT_OR_CANCELLED';
+        throw timeout;
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async function readCore(input, options = {}) {
     const reference = normalizeReference(input, options);
     if (!reference.entityId) return { status: 'invalid', code: 'INVALID_ENTITY', message: 'Se requiere RUT o identificador de entidad para Entidad 360.' };
-    const coreToken = await coreAccessToken();
-    if (!coreToken) return errorState(Object.assign(new Error('ATLAS core session is unavailable'), { code: 'CORE_SESSION_UNAVAILABLE' }));
-
     try {
-      const token = await v2AccessToken(coreToken);
-      if (!token) throw Object.assign(new Error('ATLAS v2 session is unavailable'), { code: 'V2_SESSION_UNAVAILABLE' });
-      const config = global.__ATLAS_V2_CONFIG__ || {};
-      const supabaseUrl = String(config.supabaseUrl || DEFAULT_URL).replace(/\/$/, '');
-      const publishableKey = String(config.publishableKey || DEFAULT_PUBLISHABLE_KEY);
-      const controller = new AbortController();
-      const timeoutMs = Math.max(1000, Math.min(Number(options.timeoutMs || DEFAULT_TIMEOUT_MS), 30000));
-      const timer = setTimeout(() => controller.abort(new DOMException('ATLAS_V2_TIMEOUT', 'TimeoutError')), timeoutMs);
-      if (options.signal) {
-        if (options.signal.aborted) controller.abort(options.signal.reason);
-        else options.signal.addEventListener('abort', () => controller.abort(options.signal.reason), { once: true });
-      }
+      const out = await gateway('entity360_read', { entity_id: reference.entityId, rut: reference.rut || null }, options, 'ATLAS_ENTITY360_READ_V2', `entity360:core:${reference.entityId}`);
+      return normalizeEntityCore({ contract: out.body.contract, model: 'atlas_v2_entity360_read', snapshotId: out.snapshotId, generatedAt: out.body.generated_at || null, sourceVersions: out.body.source_status || {}, traceId: out.traceId, data: out.body }, reference);
+    } catch (error) {
+      return errorState(error);
+    }
+  }
 
-      try {
-        const res = await fetch(`${supabaseUrl}${ENDPOINT}`, {
-          method: 'POST',
-          headers: {
-            authorization: `Bearer ${token}`,
-            apikey: publishableKey,
-            'content-type': 'application/json',
-            'x-client-info': 'atlas-v2-entity360/2.1',
-            'x-atlas-core-authorization': `Bearer ${coreToken}`,
-          },
-          body: JSON.stringify({
-            operation: 'entity360_read',
-            query: { entity_id: reference.entityId, rut: reference.rut || null },
-            route: text(options.route || `entity360:core:${reference.entityId}`, 120) || 'entity360:core',
-          }),
-          signal: controller.signal,
-          cache: 'no-store',
-        });
-        const body = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          const error = new Error(body?.error || `ATLAS Entity 360 read failed (${res.status})`);
-          error.code = body?.error || 'ENTITY360_READ_FAILED';
-          error.status = res.status;
-          error.traceId = body?.trace_id || res.headers.get('x-atlas-trace-id') || null;
-          throw error;
-        }
-        if (body?.contract !== 'ATLAS_ENTITY360_READ_V2') {
-          const error = new Error('ATLAS Entity 360 contract mismatch');
-          error.code = 'CONTRACT_MISMATCH';
-          error.traceId = body?.trace_id || res.headers.get('x-atlas-trace-id') || null;
-          throw error;
-        }
-        return normalizeEntityCore({
-          contract: body.contract,
-          model: 'atlas_v2_entity360_read',
-          snapshotId: res.headers.get('x-atlas-snapshot') || body.generated_at || null,
-          generatedAt: body.generated_at || null,
-          sourceVersions: body.source_status || {},
-          traceId: body.trace_id || res.headers.get('x-atlas-trace-id') || null,
-          data: body,
-        }, reference);
-      } catch (error) {
-        if (controller.signal.aborted && error?.name !== 'AbortError') {
-          const timeout = new Error('ATLAS Entity 360 read timed out or was cancelled');
-          timeout.code = 'TIMEOUT_OR_CANCELLED';
-          return errorState(timeout);
-        }
-        return errorState(error);
-      } finally {
-        clearTimeout(timer);
-      }
+  async function readIntelligence(input, options = {}) {
+    const reference = normalizeReference(input, options);
+    if (!reference.entityId) return { status: 'invalid', message: 'Se requiere identidad resuelta para consultar inteligencia contextual.' };
+    try {
+      const out = await gateway('entity_intelligence', { entity_id: reference.entityId, rut: reference.rut || null }, { ...options, timeoutMs: options.timeoutMs || 16000 }, 'ATLAS_ENTITY_INTELLIGENCE_V2', `entity360:intelligence:${reference.entityId}`);
+      return { status: 'ready', contract: out.body.contract, data: out.body, traceId: out.traceId, snapshotId: out.snapshotId };
+    } catch (error) {
+      return errorState(error);
+    }
+  }
+
+  async function readScreening(input, options = {}) {
+    const name = text(input?.name || '', 280);
+    const rut = validRutShape(input?.rut) ? canonicalRut(input.rut) : '';
+    const entityType = text(input?.entityType || input?.entity_type || '', 100);
+    if (!name && !rut) return { status: 'skipped', reason: 'IDENTITY_NOT_RESOLVED', sources: {} };
+    try {
+      const out = await gateway('entity_screening_live', { name: name || null, rut: rut || null, entity_type: entityType || null }, { ...options, timeoutMs: options.timeoutMs || 45000 }, 'ATLAS_ENTITY_SCREENING_LIVE_V2', `entity360:screening:${rut || name}`);
+      return { status: 'ready', contract: out.body.contract, checkedAt: out.body.checked_at || null, mode: out.body.mode || null, sources: out.body.sources || {}, routing: out.body.routing || {}, guardrails: out.body.guardrails || {}, data: out.body, traceId: out.traceId };
+    } catch (error) {
+      return errorState(error);
+    }
+  }
+
+  async function searchDigitalIdentity(usernameInput, options = {}) {
+    const username = text(usernameInput, 80).replace(/^@/, '');
+    if (username.length < 2) return { status: 'invalid', code: 'USERNAME_REQUIRED', message: 'Ingresa un alias o username de al menos 2 caracteres.' };
+    try {
+      const out = await gateway('digital_identity_live', { username, depth: options.depth === 'deep' ? 'deep' : 'quick' }, { ...options, timeoutMs: options.timeoutMs || 30000 }, 'ATLAS_DIGITAL_IDENTITY_LIVE_V2', `entity360:digital:${username}`);
+      return { status: 'ready', contract: out.body.contract, username, checkedAt: out.body.checked_at || null, analytics: out.body.analytics || {}, records: Array.isArray(out.body.records) ? out.body.records : [], graph: out.body.graph || {}, engineHealth: out.body.engine_health || {}, guardrails: out.body.guardrails || {}, data: out.body, traceId: out.traceId };
     } catch (error) {
       return errorState(error);
     }
@@ -208,12 +239,7 @@
   async function readPublicSpend(rutInput, options = {}) {
     const rut = canonicalRut(rutInput);
     if (!validRutShape(rut)) {
-      return {
-        status: 'skipped',
-        reason: 'RUT_NOT_RESOLVED',
-        budget: { status: 'skipped', items: [] },
-        procurement: { status: 'skipped', items: [] },
-      };
+      return { status: 'skipped', reason: 'RUT_NOT_RESOLVED', budget: { status: 'skipped', items: [] }, procurement: { status: 'skipped', items: [] } };
     }
     const query = { search: rut, offset: 0, limit: Math.max(1, Math.min(Number(options.limit || DEFAULT_LIMIT), 20)) };
     let data;
@@ -235,23 +261,31 @@
 
   async function read(input, options = {}) {
     const reference = normalizeReference(input, options);
-    if (!reference.entityId) {
-      return { status: 'invalid', reference, message: 'Selecciona una coincidencia de entidad o ingresa un RUT válido.' };
-    }
+    if (!reference.entityId) return { status: 'invalid', reference, message: 'Selecciona una coincidencia de entidad o ingresa un RUT válido.' };
 
     const core = await readCore(reference, options);
     const resolvedRut = core?.identity?.rut || reference.rut || '';
-    const publicSpend = validRutShape(resolvedRut)
-      ? await readPublicSpend(resolvedRut, options)
-      : { status: 'skipped', reason: 'RUT_NOT_RESOLVED', budget: { status: 'skipped', items: [] }, procurement: { status: 'skipped', items: [] } };
+    const resolved = {
+      entityId: core?.identity?.entityId || reference.entityId,
+      rut: resolvedRut,
+      name: core?.identity?.name || reference.name,
+      entityType: core?.identity?.entityType || '',
+    };
+    const [publicSpend, intelligence, screening] = await Promise.all([
+      validRutShape(resolvedRut) ? readPublicSpend(resolvedRut, options) : Promise.resolve({ status: 'skipped', reason: 'RUT_NOT_RESOLVED', budget: { status: 'skipped', items: [] }, procurement: { status: 'skipped', items: [] } }),
+      readIntelligence(resolved, options),
+      readScreening(resolved, options),
+    ]);
 
-    const hasLiveLens = publicSpend.status === 'ready' || core.status === 'ready';
+    const hasLiveLens = publicSpend.status === 'ready' || core.status === 'ready' || intelligence.status === 'ready' || screening.status === 'ready';
     return {
       status: hasLiveLens ? 'ready' : 'unavailable',
-      reference: { ...reference, rut: resolvedRut || reference.rut },
+      reference: { ...reference, ...resolved },
       rut: resolvedRut || reference.rut,
-      entityId: reference.entityId,
+      entityId: resolved.entityId,
       core,
+      intelligence,
+      screening,
       publicSpend,
       checkedAt: new Date().toISOString(),
     };
@@ -265,6 +299,9 @@
     normalizeReference,
     read,
     readCore,
+    readIntelligence,
+    readScreening,
+    searchDigitalIdentity,
     readPublicSpend,
   });
 })(window);

@@ -36,8 +36,8 @@ async function handleGovernedQuery(sb: any, operation: keyof typeof QUERY_OPERAT
   const spec = QUERY_OPERATIONS[operation]; const kind = clean(query?.kind, 80);
   if (!kind) return response({ error: "INVALID_QUERY", trace_id: traceId }, 400, { "x-atlas-trace-id": traceId });
   const dbStarted = performance.now(); const { data, error } = await sb.rpc(spec.rpc, { p_request: query }); const dbMs = Math.round(performance.now() - dbStarted); const totalMs = Math.round(performance.now() - started);
-  if (error) { const status = error.code === "42501" ? 403 : 500; console.error(JSON.stringify({ type: "atlas_v2_read", trace_id: traceId, operation, kind, route, status: "ERROR", db_ms: dbMs, total_ms: totalMs, code: error.code })); return response({ error: status === 403 ? "FORBIDDEN" : spec.error, trace_id: traceId }, status, { "x-atlas-trace-id": traceId, "server-timing": `db;dur=${dbMs}, total;dur=${totalMs}`, "cache-control": "private, no-store" }); }
-  if (data?.schema !== spec.contract || data?.kind !== kind) return response({ error: "CONTRACT_MISMATCH", trace_id: traceId }, 502, { "x-atlas-trace-id": traceId, "server-timing": `db;dur=${dbMs}, total;dur=${totalMs}`, "cache-control": "private, no-store" });
+  if (error) { const status = error.code === "42501" ? 403 : 500; return response({ error: status === 403 ? "FORBIDDEN" : spec.error, trace_id: traceId }, status, { "x-atlas-trace-id": traceId, "server-timing": `db;dur=${dbMs}, total;dur=${totalMs}`, "cache-control": "private, no-store" }); }
+  if (data?.schema !== spec.contract || data?.kind !== kind) return response({ error: "CONTRACT_MISMATCH", trace_id: traceId }, 502, { "x-atlas-trace-id": traceId, "cache-control": "private, no-store" });
   const snapshotId = String(data?.snapshot_id || data?.generated_at || "");
   persistTelemetry(sb, { trace_id: traceId, route, operation: `${operation}:${kind}`, phase: "edge_read", duration_ms: totalMs, status: "OK", metadata: { kind, snapshot_id: snapshotId, db_ms: dbMs, contract: spec.contract } }, traceId);
   return response({ ...data, trace_id: traceId }, 200, { "x-atlas-trace-id": traceId, "x-atlas-snapshot": snapshotId, "server-timing": `db;dur=${dbMs}, total;dur=${totalMs}`, "cache-control": "private, no-store" });
@@ -47,21 +47,47 @@ async function handleCoreQuery(v2Client: any, operation: keyof typeof CORE_QUERY
   if (!kind) return response({ error: "INVALID_QUERY", trace_id: traceId }, 400, { "x-atlas-trace-id": traceId });
   if (!coreAuth.startsWith("Bearer ")) return response({ error: "MISSING_CORE_AUTH", trace_id: traceId }, 401, { "x-atlas-trace-id": traceId });
   const core = userClient(CORE_URL, CORE_PUBLISHABLE_KEY, coreAuth); const dbStarted = performance.now(); const { data, error } = await core.rpc(spec.rpc, { p_request: query }); const dbMs = Math.round(performance.now() - dbStarted); const totalMs = Math.round(performance.now() - started);
-  if (error) { const status = error.code === "42501" ? 403 : 500; console.error(JSON.stringify({ type: "atlas_v2_read", trace_id: traceId, operation, kind, route, status: "ERROR", db_ms: dbMs, total_ms: totalMs, code: error.code })); return response({ error: status === 403 ? "FORBIDDEN" : spec.error, trace_id: traceId }, status, { "x-atlas-trace-id": traceId, "server-timing": `coredb;dur=${dbMs}, total;dur=${totalMs}`, "cache-control": "private, no-store" }); }
-  if (data?.schema !== spec.contract || data?.kind !== kind) return response({ error: `${operation.toUpperCase()}_CONTRACT_MISMATCH`, trace_id: traceId }, 502, { "x-atlas-trace-id": traceId, "server-timing": `coredb;dur=${dbMs}, total;dur=${totalMs}`, "cache-control": "private, no-store" });
-  const snapshotId = String(data?.snapshot_id || data?.generated_at || ""); persistTelemetry(v2Client, { trace_id: traceId, route, operation: `${operation}:${kind}`, phase: "edge_read", duration_ms: totalMs, status: "OK", metadata: { kind, snapshot_id: snapshotId, core_db_ms: dbMs, contract: spec.contract } }, traceId);
+  if (error) { const status = error.code === "42501" ? 403 : 500; return response({ error: status === 403 ? "FORBIDDEN" : spec.error, trace_id: traceId }, status, { "x-atlas-trace-id": traceId, "server-timing": `coredb;dur=${dbMs}, total;dur=${totalMs}`, "cache-control": "private, no-store" }); }
+  if (data?.schema !== spec.contract || data?.kind !== kind) return response({ error: `${operation.toUpperCase()}_CONTRACT_MISMATCH`, trace_id: traceId }, 502, { "x-atlas-trace-id": traceId, "cache-control": "private, no-store" });
+  const snapshotId = String(data?.snapshot_id || data?.generated_at || "");
+  persistTelemetry(v2Client, { trace_id: traceId, route, operation: `${operation}:${kind}`, phase: "edge_read", duration_ms: totalMs, status: "OK", metadata: { kind, snapshot_id: snapshotId, core_db_ms: dbMs, contract: spec.contract } }, traceId);
   return response({ ...data, trace_id: traceId }, 200, { "x-atlas-trace-id": traceId, "x-atlas-snapshot": snapshotId, "server-timing": `coredb;dur=${dbMs}, total;dur=${totalMs}`, "cache-control": "private, no-store" });
 }
-async function handleEntity360(v2Client: any, coreAuth: string, query: Record<string, unknown>, route: string, traceId: string, started: number) {
+async function handleEntityRpc(v2Client: any, coreAuth: string, query: Record<string, unknown>, route: string, traceId: string, started: number, mode: "entity360_read" | "entity_intelligence") {
   if (!coreAuth.startsWith("Bearer ")) return response({ error: "MISSING_CORE_AUTH", trace_id: traceId }, 401, { "x-atlas-trace-id": traceId });
   const rut = canonicalRut(query?.rut); const entityId = clean(query?.entity_id, 180) || entityIdFromRut(rut);
   if (!entityId || (rut && !/^\d{7,8}-[0-9K]$/.test(rut))) return response({ error: "INVALID_ENTITY", trace_id: traceId }, 400, { "x-atlas-trace-id": traceId });
-  const core = userClient(CORE_URL, CORE_PUBLISHABLE_KEY, coreAuth); const dbStarted = performance.now(); const { data, error } = await core.rpc("atlas_v2_entity360_read", { p_entity_id: entityId, p_rut: rut || null }); const dbMs = Math.round(performance.now() - dbStarted); const totalMs = Math.round(performance.now() - started);
-  if (error) { const status = error.code === "42501" ? 403 : 500; console.error(JSON.stringify({ type: "atlas_v2_read", trace_id: traceId, operation: "entity360_read", route, status: "ERROR", db_ms: dbMs, total_ms: totalMs, code: error.code })); return response({ error: status === 403 ? "FORBIDDEN" : "ENTITY360_READ_ERROR", trace_id: traceId }, status, { "x-atlas-trace-id": traceId, "server-timing": `coredb;dur=${dbMs}, total;dur=${totalMs}`, "cache-control": "private, no-store" }); }
-  if (data?.contract !== "ATLAS_ENTITY360_READ_V2") return response({ error: "ENTITY360_CONTRACT_MISMATCH", trace_id: traceId }, 502, { "x-atlas-trace-id": traceId, "server-timing": `coredb;dur=${dbMs}, total;dur=${totalMs}`, "cache-control": "private, no-store" });
-  const snapshotId = String(data?.generated_at || ""); persistTelemetry(v2Client, { trace_id: traceId, route, operation: "entity360_read", phase: "edge_read", duration_ms: totalMs, status: "OK", metadata: { snapshot_id: snapshotId, core_db_ms: dbMs, contract: "ATLAS_ENTITY360_READ_V2" } }, traceId);
+  const rpc = mode === "entity_intelligence" ? "atlas_v2_entity_intelligence_read" : "atlas_v2_entity360_read";
+  const contract = mode === "entity_intelligence" ? "ATLAS_ENTITY_INTELLIGENCE_V2" : "ATLAS_ENTITY360_READ_V2";
+  const core = userClient(CORE_URL, CORE_PUBLISHABLE_KEY, coreAuth); const dbStarted = performance.now(); const { data, error } = await core.rpc(rpc, { p_entity_id: entityId, p_rut: rut || null }); const dbMs = Math.round(performance.now() - dbStarted); const totalMs = Math.round(performance.now() - started);
+  if (error) { const status = error.code === "42501" ? 403 : 500; return response({ error: status === 403 ? "FORBIDDEN" : mode === "entity_intelligence" ? "ENTITY_INTELLIGENCE_ERROR" : "ENTITY360_READ_ERROR", trace_id: traceId }, status, { "x-atlas-trace-id": traceId, "server-timing": `coredb;dur=${dbMs}, total;dur=${totalMs}`, "cache-control": "private, no-store" }); }
+  if (data?.contract !== contract) return response({ error: `${mode.toUpperCase()}_CONTRACT_MISMATCH`, trace_id: traceId }, 502, { "x-atlas-trace-id": traceId, "cache-control": "private, no-store" });
+  const snapshotId = String(data?.generated_at || "");
+  persistTelemetry(v2Client, { trace_id: traceId, route, operation: mode, phase: "edge_read", duration_ms: totalMs, status: "OK", metadata: { snapshot_id: snapshotId, core_db_ms: dbMs, contract } }, traceId);
   return response({ ...data, trace_id: traceId }, 200, { "x-atlas-trace-id": traceId, "x-atlas-snapshot": snapshotId, "server-timing": `coredb;dur=${dbMs}, total;dur=${totalMs}`, "cache-control": "private, no-store" });
 }
+async function handleCoreLive(v2Client: any, coreAuth: string, operation: "entity_screening_live" | "digital_identity_live", query: Record<string, unknown>, route: string, traceId: string, started: number) {
+  if (!coreAuth.startsWith("Bearer ")) return response({ error: "MISSING_CORE_AUTH", trace_id: traceId }, 401, { "x-atlas-trace-id": traceId });
+  const slug = operation === "entity_screening_live" ? "aml-entity-global-watchlists-live" : "aml-digital-identity-live";
+  let payload: Record<string, unknown>;
+  if (operation === "entity_screening_live") {
+    const name = clean(query?.name, 280); const rut = canonicalRut(query?.rut); const entityType = clean(query?.entity_type, 100);
+    if (!name && !rut) return response({ error: "ENTITY_REQUIRED", trace_id: traceId }, 400, { "x-atlas-trace-id": traceId });
+    payload = { name: name || null, rut: rut || null, entity_type: entityType || null };
+  } else {
+    const username = clean(query?.username, 80); const depth = query?.depth === "deep" ? "deep" : "quick";
+    if (username.length < 2) return response({ error: "USERNAME_REQUIRED", trace_id: traceId }, 400, { "x-atlas-trace-id": traceId });
+    payload = { username, depth };
+  }
+  const liveStarted = performance.now();
+  const res = await fetch(`${CORE_URL}/functions/v1/${slug}`, { method: "POST", headers: { authorization: coreAuth, apikey: CORE_PUBLISHABLE_KEY, "content-type": "application/json", "x-client-info": "atlas-v2-read/live-intelligence" }, body: JSON.stringify(payload), signal: AbortSignal.timeout(operation === "entity_screening_live" ? 45000 : 30000) });
+  const data = await res.json().catch(() => ({})); const liveMs = Math.round(performance.now() - liveStarted); const totalMs = Math.round(performance.now() - started);
+  if (!res.ok || data?.ok === false) return response({ error: operation === "entity_screening_live" ? "ENTITY_SCREENING_LIVE_ERROR" : "DIGITAL_IDENTITY_LIVE_ERROR", source_error: clean(data?.error, 180) || null, trace_id: traceId }, res.status >= 400 ? res.status : 502, { "x-atlas-trace-id": traceId, "server-timing": `corelive;dur=${liveMs}, total;dur=${totalMs}`, "cache-control": "private, no-store" });
+  const contract = operation === "entity_screening_live" ? "ATLAS_ENTITY_SCREENING_LIVE_V2" : "ATLAS_DIGITAL_IDENTITY_LIVE_V2";
+  persistTelemetry(v2Client, { trace_id: traceId, route, operation, phase: "edge_live", duration_ms: totalMs, status: "OK", metadata: { core_live_ms: liveMs, contract } }, traceId);
+  return response({ contract, ...data, trace_id: traceId }, 200, { "x-atlas-trace-id": traceId, "server-timing": `corelive;dur=${liveMs}, total;dur=${totalMs}`, "cache-control": "private, no-store" });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return response({ error: "METHOD_NOT_ALLOWED" }, 405);
@@ -70,16 +96,17 @@ Deno.serve(async (req: Request) => {
   if (!url || !publishableKey) return response({ error: "SERVER_CONFIG", trace_id: traceId }, 500, { "x-atlas-trace-id": traceId });
   try {
     const body = await req.json().catch(() => ({})); const requestedOperation = clean(body?.operation || "read_model", 80); const route = clean(body?.route || "unknown", 120) || "unknown"; const sb = userClient(url, publishableKey, auth); const query = body?.query && typeof body.query === "object" ? body.query : {};
-    const operationAliases: Record<string, string> = { public_spend: "public_spend_query", relations: "relations_query", universes: "universes_query", universe_explorer: "universes_query", territory: "territory_query", territory_explorer: "territory_query", watch: "watch_query", vigilance: "watch_query", entity_search: "entity_search", search_entities: "entity_search", entity360: "entity360_read", entity: "entity360_read" };
+    const operationAliases: Record<string, string> = { public_spend: "public_spend_query", relations: "relations_query", universes: "universes_query", universe_explorer: "universes_query", territory: "territory_query", territory_explorer: "territory_query", watch: "watch_query", vigilance: "watch_query", entity_search: "entity_search", search_entities: "entity_search", entity360: "entity360_read", entity: "entity360_read", entity_intelligence: "entity_intelligence", screening: "entity_screening_live", digital_identity: "digital_identity_live" };
     const operation = operationAliases[requestedOperation] || requestedOperation;
     if (operation === "public_spend_query" || operation === "relations_query") return await handleGovernedQuery(sb, operation, query, route, traceId, started);
     if (operation === "universes_query" || operation === "territory_query" || operation === "watch_query" || operation === "entity_search") return await handleCoreQuery(sb, operation, coreAuth, query, route, traceId, started);
-    if (operation === "entity360_read") return await handleEntity360(sb, coreAuth, query, route, traceId, started);
+    if (operation === "entity360_read" || operation === "entity_intelligence") return await handleEntityRpc(sb, coreAuth, query, route, traceId, started, operation);
+    if (operation === "entity_screening_live" || operation === "digital_identity_live") return await handleCoreLive(sb, coreAuth, operation, query, route, traceId, started);
     if (operation !== "read_model") return response({ error: "INVALID_OPERATION", trace_id: traceId }, 400, { "x-atlas-trace-id": traceId });
     const model = clean(body?.model); const scope = clean(body?.scope || "global"); if (!ALLOWED_MODELS.has(model) || !scope) return response({ error: "INVALID_MODEL", trace_id: traceId }, 400, { "x-atlas-trace-id": traceId });
     const dbStarted = performance.now(); const { data, error } = await sb.rpc("atlas_v2_get_read_model", { p_model_key: model, p_scope_key: scope }); const dbMs = Math.round(performance.now() - dbStarted);
-    if (error) { const totalMs = Math.round(performance.now() - started); console.error(JSON.stringify({ type: "atlas_v2_read", trace_id: traceId, model, scope, route, status: "ERROR", db_ms: dbMs, total_ms: totalMs, code: error.code })); return response({ error: "READ_MODEL_ERROR", trace_id: traceId }, 500, { "x-atlas-trace-id": traceId, "server-timing": `db;dur=${dbMs}, total;dur=${totalMs}` }); }
-    if (!data) { const totalMs = Math.round(performance.now() - started); console.warn(JSON.stringify({ type: "atlas_v2_read", trace_id: traceId, model, scope, route, status: "NOT_AVAILABLE", db_ms: dbMs, total_ms: totalMs })); return response({ error: "MODEL_NOT_AVAILABLE", trace_id: traceId }, 404, { "x-atlas-trace-id": traceId, "server-timing": `db;dur=${dbMs}, total;dur=${totalMs}` }); }
+    if (error) { const totalMs = Math.round(performance.now() - started); return response({ error: "READ_MODEL_ERROR", trace_id: traceId }, 500, { "x-atlas-trace-id": traceId, "server-timing": `db;dur=${dbMs}, total;dur=${totalMs}` }); }
+    if (!data) { const totalMs = Math.round(performance.now() - started); return response({ error: "MODEL_NOT_AVAILABLE", trace_id: traceId }, 404, { "x-atlas-trace-id": traceId, "server-timing": `db;dur=${dbMs}, total;dur=${totalMs}` }); }
     const checksum = String(data.payload_checksum || ""); const etag = checksum ? `\"${checksum}\"` : ""; const ifNoneMatch = req.headers.get("if-none-match") || ""; const totalMs = Math.round(performance.now() - started);
     persistTelemetry(sb, { trace_id: traceId, route, operation: `read_model:${model}`, phase: "edge_read", duration_ms: totalMs, status: "OK", metadata: { model, scope, snapshot_id: data.snapshot_id, db_ms: dbMs, contract: "ATLAS_READ_API_V2" } }, traceId);
     const headers: Record<string, string> = { "x-atlas-trace-id": traceId, "x-atlas-snapshot": String(data.snapshot_id || ""), "server-timing": `db;dur=${dbMs}, total;dur=${totalMs}` }; if (etag) headers.etag = etag; if (etag && ifNoneMatch === etag) return response(null, 304, headers); return response({ ...data, trace_id: traceId }, 200, headers);

@@ -7,6 +7,7 @@ on:
     branches: [main]
     paths:
       - 'atlas-v2-release.json'
+      - 'atlas-v2.html'
       - 'docs/ARCHITECTURE_V2.md'
       - 'docs/ATLAS_V2_ANALYTICS_FIRST.md'
       - 'src/v2/**'
@@ -66,6 +67,8 @@ jobs:
           boot=Path('src/v2/atlas-v2-boot.js').read_text()
           explore=Path('src/v2/explore-surface.js').read_text()
           entity=Path('src/v2/entity360-surface.js').read_text()
+          entity_adapter=Path('src/v2/entity360-adapter.js').read_text()
+          universes=Path('src/v2/universes-adapter.js').read_text()
           viz=Path('src/v2/atlas-v2-viz.js').read_text()
           search=Path('src/v2/entity-search-adapter.js').read_text()
           read_edge=Path('supabase/functions/atlas-v2-read/index.ts').read_text()
@@ -85,13 +88,19 @@ jobs:
           assert 'Exploration is free; follow-up is optional.' in product
           for forbidden in ["id: 'casos'","id: 'tareas'","id: 'cola'","id: 'asignaciones'","id: 'sla'"]:
               assert forbidden not in shell
-          assert "STRUCTURAL_VERSION = 'v2-primary-4'" in boot
+          assert "STRUCTURAL_VERSION = 'v2-primary-5'" in boot
+          assert "SURFACE_VERSION = 'v2-primary-5-entity-intelligence-1'" in boot
           assert 'atlas-v2-viz.js' in boot and 'entity-search-adapter.js' in boot
           assert 'AtlasV2Viz.horizontalBars' in explore and 'AtlasV2Viz.segmented' in explore
+          assert 'AtlasV2Universes.attention' in explore and 'SO UAF ↔ SII' in explore
           assert 'AtlasV2EntitySearch.search' in entity and 'lineChart' in entity
+          assert all(x in entity for x in ['reconciliationPanel','reportingPanel','screeningPanel','digitalIdentityPanel'])
+          assert all(x in entity_adapter for x in ['entity_intelligence','entity_screening_live','digital_identity_live','searchDigitalIdentity'])
+          assert "query('attention'" in universes and 'recentTerminated' in universes
           assert all(x in viz for x in ['horizontalBars','lineChart','segmented'])
-          assert 'ATLAS_ENTITY_SEARCH_V2' in search and "operation: 'entity_search'" in search
+          assert 'ATLAS_ENTITY_SEARCH_V2' in search and "operation: 'entity_search'" in search and 'resultTier' in search
           assert 'atlas_v2_entity_search' in read_edge and 'entity_search' in read_edge
+          assert 'entity_intelligence' in read_edge and 'entity_screening_live' in read_edge and 'digital_identity_live' in read_edge
           assert 'x-atlas-trace-id' in read_edge and 'server-timing' in read_edge
           assert 'SUPABASE_SERVICE_ROLE_KEY' not in read_edge
           assert 'aml_allowed_users' in search_sql and 'auth.uid()' in search_sql
@@ -118,7 +127,7 @@ jobs:
           assert not [x for x in required_migrations if not (mdir/x).is_file()]
           obsolete=['src/v2/public-spend-shadow.js','src/v2/public-spend-adapter.js','src/v2/public-spend-route-bridge.js','tools/build_atlas_v2_cutover.py']
           assert not [x for x in obsolete if Path(x).exists()]
-          print('ATLAS Architecture v2.0.2 invariants: OK')
+          print('ATLAS Architecture v2.0.2 primary-5 invariants: OK')
           PY
 
       - name: Build production primary and frozen fallback
@@ -135,13 +144,14 @@ jobs:
           html=(root/'index.html').read_text()
           legacy=(root/'legacy.html').read_text()
           assert r['release']=='2.0.2' and r['build']=='2002'
-          assert r['v2_explore_mode']=='LIVE_PULSE_VISUAL'
+          assert r['v2_explore_mode']=='LIVE_PULSE_VISUAL_UAF_SII'
           assert r['v2_visual_navigation']=='INTERACTIVE_FIRST'
-          assert r['v2_entity_search']=='RUT_NAME_UAF_PRESS'
-          assert r['v2_version']=='v2-primary-4'
-          assert 'v2-primary-4' in html
+          assert r['v2_entity_search']=='IDENTITY_TIERED_DIGITAL_PRESS'
+          assert r['v2_entity_intelligence']=='UAF_SII_REPORTING_SCREENING_DIGITAL'
+          assert r['v2_version']=='v2-primary-5'
+          assert 'v2-primary-5' in html
           assert 'atlas-runtime-current-' not in html and 'atlas-runtime-current-' in legacy
           assert r['legacy_authority_active_on_primary'] is False
           assert f'data-aml-version="{l["release"]}"' in legacy
-          print('ATLAS Architecture v2.0.2 fresh-asset dual-release build: OK')
+          print('ATLAS Architecture v2.0.2 primary-5 dual-release build: OK')
           PY

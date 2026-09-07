@@ -15,8 +15,15 @@ const searchPerfSql = fs.readFileSync('supabase/core-migrations/20260907115225_o
 
 assert.match(access, /AtlasV2Data\.create/);
 assert.match(adapter, /AtlasV2Access\.data/);
-assert.match(adapter, /operation: 'entity360_read'/);
+assert.match(adapter, /gateway\('entity360_read'/);
 assert.match(adapter, /ATLAS_ENTITY360_READ_V2/);
+assert.match(adapter, /gateway\('entity_intelligence'/);
+assert.match(adapter, /ATLAS_ENTITY_INTELLIGENCE_V2/);
+assert.match(adapter, /gateway\('entity_screening_live'/);
+assert.match(adapter, /ATLAS_ENTITY_SCREENING_LIVE_V2/);
+assert.match(adapter, /gateway\('digital_identity_live'/);
+assert.match(adapter, /ATLAS_DIGITAL_IDENTITY_LIVE_V2/);
+assert.match(adapter, /searchDigitalIdentity/);
 assert.match(adapter, /normalizeReference/);
 assert.match(adapter, /entityId/);
 assert.match(adapter, /RUT_NOT_RESOLVED/);
@@ -26,6 +33,8 @@ assert.doesNotMatch(adapter, /rest\/v1|supabase\.from|raw\.githubusercontent/);
 
 assert.match(search, /ATLAS_ENTITY_SEARCH_V2/);
 assert.match(search, /operation: 'entity_search'/);
+assert.match(search, /resultTier/);
+assert.match(search, /tierPriority/);
 assert.match(search, /x-atlas-core-authorization/);
 assert.doesNotMatch(search, /supabase\.from|raw\.githubusercontent|rest\/v1/);
 
@@ -34,6 +43,9 @@ assert.match(edge, /atlas_v2_entity_search/);
 assert.match(edge, /ATLAS_ENTITY_SEARCH_V2/);
 assert.match(edge, /entity360_read/);
 assert.match(edge, /atlas_v2_entity360_read/);
+assert.match(edge, /entity_intelligence/);
+assert.match(edge, /entity_screening_live/);
+assert.match(edge, /digital_identity_live/);
 assert.doesNotMatch(edge, /metadata:\s*\{[^}]*rut/s);
 assert.doesNotMatch(edge, /metadata:\s*\{[^}]*entity_id/s);
 
@@ -58,9 +70,19 @@ assert.match(surface, /AtlasV2EntitySearch\.search/);
 assert.match(surface, /Radar Prensa/);
 assert.match(surface, /Sin RUT resuelto/);
 assert.match(surface, /entity_id/);
-assert.match(surface, /ENTIDAD OBSERVADA · PRENSA/);
+assert.match(surface, /PRENSA · CONTEXTO/);
 assert.match(surface, /TRAYECTORIA SII/);
 assert.match(surface, /AtlasV2Viz\.lineChart/);
+assert.match(surface, /reconciliationPanel/);
+assert.match(surface, /UAF ↔ SII/);
+assert.match(surface, /reportingPanel/);
+assert.match(surface, /ROS \/ ROE observados/);
+assert.match(surface, /faltante como “0”/);
+assert.match(surface, /screeningPanel/);
+assert.match(surface, /SCREENING INTERNACIONAL/);
+assert.match(surface, /digitalIdentityPanel/);
+assert.match(surface, /Buscar identidad digital/);
+assert.match(surface, /Username ≠ identidad/);
 for (const route of ['gasto-publico', 'relaciones', 'territorio']) {
   assert.match(surface, new RegExp(`'${route}'`), `missing analytical move ${route}`);
 }
@@ -81,7 +103,8 @@ assert.match(boot, /atlas-v2-viz\.js/);
 assert.match(boot, /entity-search-adapter\.js/);
 assert.match(boot, /entity360-adapter\.js/);
 assert.match(boot, /entity360-surface\.js/);
+assert.match(boot, /STRUCTURAL_VERSION = 'v2-primary-5'/);
 assert.match(shell, /Guardar una vista, seguir una entidad o registrar un resultado nunca será requisito/);
 assert.doesNotMatch(shell, /Comercial Andina SpA|76\.123\.456-7/);
 
-console.log('ATLAS 2.0.2 Entity 360 cross-source search + trajectory contract OK');
+console.log('ATLAS 2.0.2 Entity 360 governed intelligence + screening + digital identity contract OK');
