@@ -57,7 +57,7 @@
           authorization: `Bearer ${token}`,
           apikey: publishableKey,
           'content-type': 'application/json',
-          'x-client-info': 'atlas-v2-universes/1.1',
+          'x-client-info': 'atlas-v2-universes/1.2',
           'x-atlas-core-authorization': `Bearer ${coreToken}`,
         },
         body: JSON.stringify({
@@ -91,6 +91,10 @@
         membership: body.membership || null,
         rut: body.rut || null,
         page: body.page || null,
+        summary: body.summary || null,
+        reporting: body.reporting || null,
+        terminatedByYear: Array.isArray(body.terminated_by_year) ? body.terminated_by_year : [],
+        recentTerminated: Array.isArray(body.recent_terminated) ? body.recent_terminated : [],
         semantics: body.semantics || {},
         data: body,
         meta: {
@@ -126,6 +130,7 @@
 
   const api = Object.freeze({
     overview,
+    attention: (options = {}) => query('attention', {}, options),
     distribution: (lens, dimension, options = {}) => query('distribution', {
       lens: clean(lens, 40).toUpperCase(),
       dimension: clean(dimension, 80).toLowerCase(),
