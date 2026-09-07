@@ -10,6 +10,9 @@ const territory = fs.readFileSync('src/v2/territory-adapter.js', 'utf8');
 const watch = fs.readFileSync('src/v2/watch-adapter.js', 'utf8');
 const builder = fs.readFileSync('tools/build_atlas_v2_primary.py', 'utf8');
 const html = fs.readFileSync('atlas-v2.html', 'utf8');
+const reconciliationSql = fs.readFileSync('supabase/core-migrations/20260907185500_atlas_v2_uaf_sii_attention_sectors.sql', 'utf8');
+const reportability = JSON.parse(fs.readFileSync('data/uaf_reportability_sector_2025.json', 'utf8'));
+const uafSnapshot = JSON.parse(fs.readFileSync('data/uaf_dashboard_snapshot.json', 'utf8'));
 const release = JSON.parse(fs.readFileSync('atlas-v2-release.json', 'utf8'));
 
 assert.equal(release.release, '2.0.2');
@@ -17,11 +20,29 @@ assert.equal(String(release.build), '2002');
 assert.equal(release.visual_navigation, 'INTERACTIVE_FIRST');
 assert.equal(release.entity_search, 'RUT_NAME_UAF_PRESS');
 
+assert.equal(reportability.schema, 'UAF_SECTOR_REPORTABILITY_V1');
+assert.equal(reportability.period, '2021-2025');
+assert.equal(reportability.totals.registered_so_2025, 9911);
+assert.equal(reportability.totals.ros_2025, 21828);
+assert.ok(Array.isArray(reportability.sectors) && reportability.sectors.length > 20);
+assert.equal(uafSnapshot.kpis.registered_total_latest, 10294);
+
 assert.match(explore, /registerSurface\('explorar'/);
+assert.match(explore, /REPORTABILITY_FIRST_UAF_SII_SECOND/);
+assert.match(explore, /uaf_reportability_sector_2025\.json/);
+assert.match(explore, /uaf_dashboard_snapshot\.json/);
+assert.match(explore, /RUT, entidad o tema…/);
+assert.match(explore, /REPORTABILIDAD ROS/);
+assert.match(explore, /ROS recibidos por año/);
+assert.match(explore, /Sectores con más ROS en 2025/);
+assert.match(explore, /AtlasV2Viz\.lineChart/);
 assert.match(explore, /AtlasV2Universes\.overview/);
 assert.match(explore, /AtlasV2Universes\.attention/);
 assert.match(explore, /SO UAF ↔ SII/);
 assert.match(explore, /attentionPanel/);
+assert.match(explore, /Padrón operativo UAF/);
+assert.match(explore, /Término de giro/);
+assert.match(explore, /Variación vs 2025/);
 assert.match(explore, /AtlasV2Watch\.overview/);
 assert.match(explore, /AtlasV2Territory\.overview/);
 assert.match(explore, /AtlasV2Access\.data\(\)\.publicSpend\.monitor/);
@@ -31,15 +52,25 @@ assert.match(explore, /onSelect:\s*item\s*=>\s*api\.navigate/);
 assert.match(explore, /return api\.navigate\('entidad', \{ q: query \}\)/);
 assert.doesNotMatch(explore, /innerHTML|MutationObserver|supabase\.from|rest\/v1|raw\.githubusercontent/);
 
+assert.match(reconciliationSql, /v_sectors jsonb/);
+assert.match(reconciliationSql, /aml_v0434_uaf_sii_sector/);
+assert.match(reconciliationSql, /terminated_pct/);
+assert.match(reconciliationSql, /sector_aggregation/);
+assert.match(reconciliationSql, /security definer/i);
+assert.match(reconciliationSql, /aml_allowed_users/);
+
 assert.match(viz, /function horizontalBars/);
 assert.match(viz, /function lineChart/);
 assert.match(viz, /function segmented/);
 assert.match(viz, /onclick:\s*\(\)\s*=>\s*options\.onSelect/);
 assert.doesNotMatch(viz, /innerHTML|MutationObserver/);
 
-assert.match(css, /grid-template-columns: repeat\(2/);
-assert.match(css, /@media \(max-width: 760px\)/);
-assert.match(css, /prefers-reduced-motion/);
+assert.match(css, /\.atlas-v2-explore-search\{/);
+assert.match(css, /max-width:920px/);
+assert.match(css, /\.atlas-v2-explore-report-grid\{/);
+assert.match(css, /grid-template-columns:repeat\(2/);
+assert.match(css, /@media \(max-width:860px\)/);
+assert.match(css, /@media \(max-width:560px\)/);
 assert.doesNotMatch(css, /#[0-9a-fA-F]{3,8}/);
 
 assert.match(boot, /atlas-v2-viz\.js/);
@@ -73,4 +104,4 @@ for (const marker of [
   'atlas-v2-viz.css?v=v2-primary-5-viz1',
 ]) assert.ok(html.includes(marker), marker);
 
-console.log('ATLAS 2.0.2 UAF-SII Explore + entity-intelligence asset contract OK');
+console.log('ATLAS 2.0.2 Explore reportabilidad primero + conciliación UAF-SII contract OK');
