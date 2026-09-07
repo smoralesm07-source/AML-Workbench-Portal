@@ -9,6 +9,7 @@ on:
       - 'src/v2/**'
       - 'supabase/functions/atlas-v2-read/index.ts'
       - 'supabase/core-migrations/*atlas_v2_entity_search*'
+      - 'supabase/core-migrations/*atlas_v2_entity360*'
       - 'supabase/migrations/20260907023000_atlas_v2_relations_query.sql'
       - 'supabase/core-contracts/atlas-v2-universes-query-v2.sql'
       - 'supabase/core-contracts/atlas-v2-territory-watch-query-v2.sql'
@@ -45,7 +46,7 @@ jobs:
             src/v2/atlas-v2-production-config.js src/v2/atlas-v2-health.js src/v2/atlas-v2-core-auth.js \
             src/v2/atlas-v2-shell.js src/v2/atlas-v2-boot.js src/v2/atlas-v2-data.js src/v2/atlas-v2-session.js \
             src/v2/atlas-v2-access.js src/v2/atlas-v2-viz.js src/v2/entity-search-adapter.js \
-            src/v2/explore-surface.js src/v2/entity360-adapter.js src/v2/entity360-surface.js \
+            src/v2/explore-surface.js src/v2/entity360-adapter.js src/v2/entity360-surface.js src/v2/entity360-parity-surface.js \
             src/v2/public-spend-surface.js src/v2/relations-surface.js src/v2/universes-adapter.js \
             src/v2/universes-surface.js src/v2/territory-adapter.js src/v2/territory-surface.js \
             src/v2/watch-adapter.js src/v2/watch-surface.js; do node --check "$f"; done
@@ -67,6 +68,7 @@ jobs:
           boot=Path('src/v2/atlas-v2-boot.js').read_text()
           explore=Path('src/v2/explore-surface.js').read_text()
           entity=Path('src/v2/entity360-surface.js').read_text()
+          parity=Path('src/v2/entity360-parity-surface.js').read_text()
           entity_adapter=Path('src/v2/entity360-adapter.js').read_text()
           universes=Path('src/v2/universes-adapter.js').read_text()
           adapter=Path('src/v2/entity-search-adapter.js').read_text()
@@ -75,6 +77,7 @@ jobs:
           primary=json.loads(Path('atlas-v2-release.json').read_text())
           legacy=json.loads(Path('atlas-release.json').read_text())
           sql=Path('supabase/core-migrations/20260907111841_atlas_v2_entity_search_allowlist_hardening.sql').read_text()
+          dossier_sql=Path('supabase/core-migrations/20260907173100_atlas_v2_entity360_legacy_parity_res.sql').read_text()
           edge=Path('supabase/functions/atlas-v2-read/index.ts').read_text()
 
           assert primary['release']=='2.0.2' and str(primary['build'])=='2002'
@@ -106,11 +109,17 @@ jobs:
           assert all(x in edge for x in ['entity_intelligence','entity_screening_live','digital_identity_live'])
           assert './v2/atlas-v2-boot.js?v=v2-primary-5-entity-intelligence-1' in html
           assert './v2/atlas-v2-viz.css?v=v2-primary-5-viz1' in html
-          for source in [shell,boot,explore,entity,entity_adapter,universes,adapter,viz]:
+          assert './v2/entity360-parity-surface.js?v=v2-primary-5-entity360-parity-1' in html
+          assert './v2/entity360-parity-surface.css?v=v2-primary-5-entity360-parity-1' in html
+          for marker in ['SIX_LENS_NATIVE_V2','ENTITY360_LEGACY_PARITY_V2','e360p-identidad','e360p-caracterizacion','e360p-relaciones','e360p-contexto','e360p-senales','e360p-evidencia','ipa3_score','peer_positions','res_lifecycle','sanction_resolution']:
+              assert marker in parity
+          for marker in ['aml_ipa3_entity_score_snapshot_v0_4','aml_ipa3_mark_scores_snapshot_v0_4','aml_entity_peer_position_snapshot','aml_entity_res_lifecycle_v0556','aml_entity_res_relationship_v0556','aml_entity_res_evidence_v0556']:
+              assert marker in dossier_sql
+          for source in [shell,boot,explore,entity,parity,entity_adapter,universes,adapter,viz]:
               assert 'MutationObserver' not in source
               assert '.innerHTML' not in source
-          assert 'raw.githubusercontent.com' not in explore and 'raw.githubusercontent.com' not in entity
-          print('ATLAS 2.0.2 analytics-first primary-5 intelligence invariants: OK')
+          assert 'raw.githubusercontent.com' not in explore and 'raw.githubusercontent.com' not in entity and 'raw.githubusercontent.com' not in parity
+          print('ATLAS 2.0.2 analytics-first primary-5 + Entity 360 six-lens parity invariants: OK')
           PY
 
       - name: Validate analytical surfaces
@@ -142,14 +151,17 @@ jobs:
           assert r['v2_visual_navigation']=='INTERACTIVE_FIRST'
           assert r['v2_entity_search']=='IDENTITY_TIERED_DIGITAL_PRESS'
           assert r['v2_entity_intelligence']=='UAF_SII_REPORTING_SCREENING_DIGITAL'
+          assert r['v2_entity360_parity']=='SIX_LENS_NATIVE_V2'
+          assert r['v2_entity360_dossier']=='ENTITY360_LEGACY_PARITY_V2'
           assert r['v2_version']=='v2-primary-5'
           assert 'v2-primary-5' in html
+          assert 'entity360-parity-surface.js?v=v2-primary-5-entity360-parity-1' in html
           assert 'atlas-runtime-current-' not in html and 'atlas-runtime-current-' in legacy
           assert f'data-aml-version="{p["release"]}"' in html
           assert f'data-aml-version="{l["release"]}"' in legacy
-          for name in ['atlas-v2-viz.js','atlas-v2-viz.css','entity-search-adapter.js','explore-surface.js','entity360-adapter.js','entity360-surface.js','universes-adapter.js']:
+          for name in ['atlas-v2-viz.js','atlas-v2-viz.css','entity-search-adapter.js','explore-surface.js','entity360-adapter.js','entity360-surface.js','entity360-parity-surface.js','entity360-parity-surface.css','universes-adapter.js']:
               assert (root/'v2'/name).is_file(), name
-          print('ATLAS 2.0.2 primary-5 production artifact: OK')
+          print('ATLAS 2.0.2 primary-5 + Entity 360 parity production artifact: OK')
           PY
 
       - uses: actions/upload-artifact@v4
