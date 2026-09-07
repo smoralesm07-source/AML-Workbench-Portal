@@ -10,7 +10,7 @@ from pathlib import Path
 from build_atlas_site import build as build_legacy
 
 ROOT = Path(__file__).resolve().parents[1]
-V2_VERSION = "v2-primary-4"
+V2_VERSION = "v2-primary-5"
 V2_RELEASE_FILE = "atlas-v2-release.json"
 V2_FILES = [
     "atlas-v2-production-config.js",
@@ -71,8 +71,7 @@ def copy_v2(out_dir: Path, *, e2e_proxy: bool = False) -> list[str]:
         if not src.is_file():
             raise SystemExit(f"v2 primary build: missing source {src.relative_to(ROOT)}")
         dst = target / name
-        text = src.read_text(encoding="utf-8")
-        dst.write_text(productionize(name, text, e2e_proxy=e2e_proxy), encoding="utf-8")
+        dst.write_text(productionize(name, src.read_text(encoding="utf-8"), e2e_proxy=e2e_proxy), encoding="utf-8")
         published.append(f"v2/{name}")
     return published
 
@@ -81,46 +80,44 @@ def production_index(primary_release: dict) -> str:
     html = (ROOT / "atlas-v2.html").read_text(encoding="utf-8")
     rel = str(primary_release["release"])
     bid = str(primary_release["build"])
-    if "data-atlas-v2-primary=\"analytics\"" not in html:
+    if 'data-atlas-v2-primary="analytics"' not in html:
         raise SystemExit("v2 primary build: atlas-v2.html is not marked as primary")
-    html = re.sub(
-        r"<html lang=\"es\"",
+    return re.sub(
+        r'<html lang="es"',
         f'<html lang="es" data-aml-version="{rel}" data-aml-build="{bid}" data-atlas-release="{rel}"',
         html,
         count=1,
     )
-    return html
+
+
+def require(source: str, markers: list[str], label: str) -> None:
+    missing = [marker for marker in markers if marker not in source]
+    if missing:
+        raise SystemExit(f"v2 primary build: {label} missing: {', '.join(missing)}")
 
 
 def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, e2e_proxy: bool = False) -> None:
-    required_markers = [
+    require(html, [
         'data-atlas-v2-primary="analytics"',
-        './v2/atlas-v2-production-config.js?v=v2-primary-4',
-        './v2/atlas-v2-health.js?v=v2-primary-4',
-        './v2/atlas-v2-core-auth.js?v=v2-primary-4',
-        './v2/atlas-v2-shell.js?v=v2-primary-4',
-        './v2/atlas-v2-boot.js?v=v2-primary-4',
-        './assets/supabase-js-2.111.0.umd.js?v=v2-primary-4',
-    ]
-    for marker in required_markers:
-        if marker not in html:
-            raise SystemExit(f"v2 primary build: root marker missing: {marker}")
+        './v2/atlas-v2-production-config.js?v=v2-primary-5',
+        './v2/atlas-v2-health.js?v=v2-primary-5',
+        './v2/atlas-v2-core-auth.js?v=v2-primary-5',
+        './v2/atlas-v2-shell.js?v=v2-primary-5',
+        './v2/atlas-v2-boot.js?v=v2-primary-5-entity-intelligence-1',
+        './v2/atlas-v2-viz.css?v=v2-primary-5-viz1',
+        './assets/supabase-js-2.111.0.umd.js?v=v2-primary-5',
+    ], "root authority")
 
-    forbidden_root = [
-        "ATLAS_RUNTIME_SCRIPTS",
-        "atlas-runtime-current-",
-        "atlas-module-current-",
-        "atlas-public-spend-route-authority-0578.js",
-        "atlas-gasto-publico-1000.js",
-        "raw.githubusercontent.com",
-    ]
-    for marker in forbidden_root:
+    for marker in [
+        "ATLAS_RUNTIME_SCRIPTS", "atlas-runtime-current-", "atlas-module-current-",
+        "atlas-public-spend-route-authority-0578.js", "atlas-gasto-publico-1000.js", "raw.githubusercontent.com",
+    ]:
         if marker in html:
             raise SystemExit(f"v2 primary build: legacy authority leaked into root: {marker}")
 
     if "atlas-runtime-current-" not in legacy:
         raise SystemExit("v2 primary build: explicit legacy fallback lost compiled runtime")
-    if "data-atlas-v2-primary=\"analytics\"" in legacy:
+    if 'data-atlas-v2-primary="analytics"' in legacy:
         raise SystemExit("v2 primary build: legacy fallback incorrectly marked as primary")
 
     for item in published_v2:
@@ -129,54 +126,52 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
     if not (out_dir / V2_RELEASE_FILE).is_file():
         raise SystemExit("v2 primary build: primary release manifest missing")
 
-    auth = (out_dir / "v2" / "atlas-v2-core-auth.js").read_text(encoding="utf-8")
-    boot = (out_dir / "v2" / "atlas-v2-boot.js").read_text(encoding="utf-8")
-    explore = (out_dir / "v2" / "explore-surface.js").read_text(encoding="utf-8")
-    entity = (out_dir / "v2" / "entity360-surface.js").read_text(encoding="utf-8")
-    search = (out_dir / "v2" / "entity-search-adapter.js").read_text(encoding="utf-8")
-    viz = (out_dir / "v2" / "atlas-v2-viz.js").read_text(encoding="utf-8")
-    config = (out_dir / "v2" / "atlas-v2-production-config.js").read_text(encoding="utf-8")
-    health = (out_dir / "v2" / "atlas-v2-health.js").read_text(encoding="utf-8")
-    if "aml_allowed_users" not in auth or "signInWithOAuth" not in auth or "provider: 'azure'" not in auth or ".auth.getUser()" not in auth:
-        raise SystemExit("v2 primary build: autonomous verified Entra/allowlist auth contract missing")
-    if "AtlasCoreSession.ready" not in boot or "STRUCTURAL_SURFACE_LOAD_FAILED" not in boot:
-        raise SystemExit("v2 primary build: shell is not auth-gated/fail-closed")
-    if "warmFederatedSession" not in boot:
-        raise SystemExit("v2 primary build: federation prewarm missing")
-    if "atlas-v2-viz.js" not in boot or "entity-search-adapter.js" not in boot or "VISUAL_SEARCH_CAPABILITY_MISSING" not in boot:
-        raise SystemExit("v2 primary build: visual/search capabilities are not structural")
-    if "registerSurface('explorar'" not in explore or "AtlasV2Universes.overview" not in explore or "AtlasV2Watch.overview" not in explore or "AtlasV2Territory.overview" not in explore:
-        raise SystemExit("v2 primary build: live Explore pulse contract missing")
-    if "AtlasV2Viz.horizontalBars" not in explore or "AtlasV2Viz.segmented" not in explore:
-        raise SystemExit("v2 primary build: Explore visual navigation contract missing")
-    if "ATLAS_ENTITY_SEARCH_V2" not in search or "operation: 'entity_search'" not in search:
-        raise SystemExit("v2 primary build: governed entity search contract missing")
-    if "AtlasV2EntitySearch.search" not in entity or "Radar Prensa" not in entity or "entity_id" not in entity:
-        raise SystemExit("v2 primary build: cross-source Entity 360 search missing")
-    if "horizontalBars" not in viz or "lineChart" not in viz or "segmented" not in viz:
-        raise SystemExit("v2 primary build: interactive visualization primitives missing")
-    if "ATLAS_V2_RUNTIME_HEALTH_V1" not in health:
-        raise SystemExit("v2 primary build: sanitized runtime health boundary missing")
+    def read(name: str) -> str:
+        return (out_dir / "v2" / name).read_text(encoding="utf-8")
+
+    auth = read("atlas-v2-core-auth.js")
+    boot = read("atlas-v2-boot.js")
+    explore = read("explore-surface.js")
+    entity = read("entity360-surface.js")
+    entity_adapter = read("entity360-adapter.js")
+    search = read("entity-search-adapter.js")
+    universes = read("universes-adapter.js")
+    viz = read("atlas-v2-viz.js")
+    config = read("atlas-v2-production-config.js")
+    health = read("atlas-v2-health.js")
+
+    require(auth, ["aml_allowed_users", "signInWithOAuth", "provider: 'azure'", ".auth.getUser()"], "auth contract")
+    require(boot, [
+        "AtlasCoreSession.ready", "STRUCTURAL_SURFACE_LOAD_FAILED", "warmFederatedSession",
+        "atlas-v2-viz.js", "entity-search-adapter.js", "VISUAL_SEARCH_CAPABILITY_MISSING",
+        "STRUCTURAL_VERSION = 'v2-primary-5'", "SURFACE_VERSION = 'v2-primary-5-entity-intelligence-1'",
+    ], "boot authority")
+    require(explore, [
+        "registerSurface('explorar'", "AtlasV2Universes.overview", "AtlasV2Watch.overview", "AtlasV2Territory.overview",
+        "AtlasV2Universes.attention", "attentionPanel", "SO UAF ↔ SII", "AtlasV2Viz.horizontalBars", "AtlasV2Viz.segmented",
+    ], "Explore intelligence pulse")
+    require(search, ["ATLAS_ENTITY_SEARCH_V2", "operation: 'entity_search'", "resultTier", "tierPriority"], "entity search")
+    require(universes, ["attention: (options = {}) => query('attention'", "recentTerminated", "terminatedByYear"], "UAF-SII attention adapter")
+    require(entity_adapter, ["entity_intelligence", "international_screening", "digital_identity", "searchDigitalIdentity"], "Entity 360 intelligence adapter")
+    require(entity, [
+        "AtlasV2EntitySearch.search", "Radar Prensa", "entity_id", "reconciliationPanel", "reportingPanel",
+        "screeningPanel", "digitalIdentityPanel", "searchDigitalIdentity", "SCREENING INTERNACIONAL", "ROS / ROE observados",
+    ], "Entity 360 intelligence surface")
+    require(viz, ["horizontalBars", "lineChart", "segmented"], "visualization primitives")
+    require(health, ["ATLAS_V2_RUNTIME_HEALTH_V1"], "runtime health")
+
     if e2e_proxy:
-        if "location.origin + '/__atlas_v2'" not in config or "mode: 'analytics-primary-e2e-proxy'" not in config:
-            raise SystemExit("v2 primary build: E2E proxy config missing")
-    elif "mode: 'analytics-primary'" not in config:
-        raise SystemExit("v2 primary build: production mode contract missing")
-    if "legacyFallbackPath: './legacy.html'" not in config:
-        raise SystemExit("v2 primary build: production fallback contract missing")
-    for source in (auth, explore, entity, search, viz):
+        require(config, ["location.origin + '/__atlas_v2'", "mode: 'analytics-primary-e2e-proxy'"], "E2E proxy config")
+    else:
+        require(config, ["mode: 'analytics-primary'"], "production config")
+    require(config, ["legacyFallbackPath: './legacy.html'"], "legacy fallback contract")
+
+    for source in (auth, explore, entity, entity_adapter, search, universes, viz):
         if "MutationObserver" in source or ".innerHTML" in source:
             raise SystemExit("v2 primary build: runtime repair/HTML injection reintroduced")
 
 
-def update_report(
-    out_dir: Path,
-    published_v2: list[str],
-    primary_release: dict,
-    legacy_release: dict,
-    *,
-    e2e_proxy: bool = False,
-) -> None:
+def update_report(out_dir: Path, published_v2: list[str], primary_release: dict, legacy_release: dict, *, e2e_proxy: bool = False) -> None:
     path = out_dir / "atlas-runtime-report.json"
     report = json.loads(path.read_text(encoding="utf-8"))
     report.update({
@@ -198,9 +193,10 @@ def update_report(
         "v2_runtime_health": "SANITIZED_IN_MEMORY",
         "v2_structural_surface_policy": "FAIL_CLOSED",
         "v2_followup_policy": "OPTIONAL_NOT_WORKFLOW",
-        "v2_explore_mode": "LIVE_PULSE_VISUAL",
+        "v2_explore_mode": "LIVE_PULSE_VISUAL_UAF_SII",
         "v2_visual_navigation": "INTERACTIVE_FIRST",
-        "v2_entity_search": "RUT_NAME_UAF_PRESS",
+        "v2_entity_search": "IDENTITY_TIERED_DIGITAL_PRESS",
+        "v2_entity_intelligence": "UAF_SII_REPORTING_SCREENING_DIGITAL",
         "v2_federation_prewarm": True,
         "v2_e2e_proxy": e2e_proxy,
         "v2_version": V2_VERSION,
@@ -217,7 +213,6 @@ def build_primary(out_dir: Path, *, e2e_proxy: bool = False) -> None:
         raise SystemExit("v2 primary build: frozen legacy release contract drifted")
 
     build_legacy(out_dir)
-
     legacy_path = out_dir / "index.html"
     legacy = legacy_path.read_text(encoding="utf-8")
     if f'data-aml-version="{legacy_release["release"]}"' not in legacy or f'data-aml-build="{legacy_release["build"]}"' not in legacy:
@@ -242,7 +237,8 @@ def build_primary(out_dir: Path, *, e2e_proxy: bool = False) -> None:
         "legacy_authority_active_on_primary": False,
         "published_v2_count": len(published_v2),
         "visual_navigation": "INTERACTIVE_FIRST",
-        "entity_search": "RUT_NAME_UAF_PRESS",
+        "entity_search": "IDENTITY_TIERED_DIGITAL_PRESS",
+        "entity_intelligence": "UAF_SII_REPORTING_SCREENING_DIGITAL",
         "e2e_proxy": e2e_proxy,
     }, ensure_ascii=False))
 
