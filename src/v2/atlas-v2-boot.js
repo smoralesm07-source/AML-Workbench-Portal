@@ -32,6 +32,10 @@
       'relations-surface.js',
       'universes-adapter.js',
       'universes-surface.js',
+      'territory-adapter.js',
+      'territory-surface.js',
+      'watch-adapter.js',
+      'watch-surface.js',
     ]) {
       try {
         await loadScript(file);
