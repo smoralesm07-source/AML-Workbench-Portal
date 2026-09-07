@@ -10,7 +10,7 @@ from pathlib import Path
 from build_atlas_site import build as build_legacy
 
 ROOT = Path(__file__).resolve().parents[1]
-V2_VERSION = "v2-primary-1"
+V2_VERSION = "v2-primary-2"
 V2_RELEASE_FILE = "atlas-v2-release.json"
 V2_FILES = [
     "atlas-v2-production-config.js",
@@ -23,6 +23,8 @@ V2_FILES = [
     "atlas-v2-shell.js",
     "atlas-v2-shell.css",
     "atlas-v2-boot.js",
+    "explore-surface.js",
+    "explore-surface.css",
     "entity360-adapter.js",
     "entity360-surface.js",
     "entity360-surface.css",
@@ -90,12 +92,12 @@ def production_index(primary_release: dict) -> str:
 def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, e2e_proxy: bool = False) -> None:
     required_markers = [
         'data-atlas-v2-primary="analytics"',
-        './v2/atlas-v2-production-config.js?v=v2-primary-1',
-        './v2/atlas-v2-health.js?v=v2-primary-1',
-        './v2/atlas-v2-core-auth.js?v=v2-primary-1',
-        './v2/atlas-v2-shell.js?v=v2-primary-1',
-        './v2/atlas-v2-boot.js?v=v2-primary-1',
-        './assets/supabase-js-2.111.0.umd.js?v=v2-primary-1',
+        './v2/atlas-v2-production-config.js?v=v2-primary-2',
+        './v2/atlas-v2-health.js?v=v2-primary-2',
+        './v2/atlas-v2-core-auth.js?v=v2-primary-2',
+        './v2/atlas-v2-shell.js?v=v2-primary-2',
+        './v2/atlas-v2-boot.js?v=v2-primary-2',
+        './assets/supabase-js-2.111.0.umd.js?v=v2-primary-2',
     ]
     for marker in required_markers:
         if marker not in html:
@@ -126,12 +128,17 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
 
     auth = (out_dir / "v2" / "atlas-v2-core-auth.js").read_text(encoding="utf-8")
     boot = (out_dir / "v2" / "atlas-v2-boot.js").read_text(encoding="utf-8")
+    explore = (out_dir / "v2" / "explore-surface.js").read_text(encoding="utf-8")
     config = (out_dir / "v2" / "atlas-v2-production-config.js").read_text(encoding="utf-8")
     health = (out_dir / "v2" / "atlas-v2-health.js").read_text(encoding="utf-8")
     if "aml_allowed_users" not in auth or "signInWithOAuth" not in auth or "provider: 'azure'" not in auth or ".auth.getUser()" not in auth:
         raise SystemExit("v2 primary build: autonomous verified Entra/allowlist auth contract missing")
     if "AtlasCoreSession.ready" not in boot or "STRUCTURAL_SURFACE_LOAD_FAILED" not in boot:
         raise SystemExit("v2 primary build: shell is not auth-gated/fail-closed")
+    if "warmFederatedSession" not in boot:
+        raise SystemExit("v2 primary build: federation prewarm missing")
+    if "registerSurface('explorar'" not in explore or "AtlasV2Universes.overview" not in explore or "AtlasV2Watch.overview" not in explore or "AtlasV2Territory.overview" not in explore:
+        raise SystemExit("v2 primary build: live Explore pulse contract missing")
     if "ATLAS_V2_RUNTIME_HEALTH_V1" not in health:
         raise SystemExit("v2 primary build: sanitized runtime health boundary missing")
     if e2e_proxy:
@@ -141,8 +148,8 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
         raise SystemExit("v2 primary build: production mode contract missing")
     if "legacyFallbackPath: './legacy.html'" not in config:
         raise SystemExit("v2 primary build: production fallback contract missing")
-    if "MutationObserver" in auth or ".innerHTML" in auth:
-        raise SystemExit("v2 primary build: auth boundary reintroduced runtime repair/HTML injection")
+    if "MutationObserver" in auth or ".innerHTML" in auth or "MutationObserver" in explore or ".innerHTML" in explore:
+        raise SystemExit("v2 primary build: runtime repair/HTML injection reintroduced")
 
 
 def update_report(
@@ -174,6 +181,8 @@ def update_report(
         "v2_runtime_health": "SANITIZED_IN_MEMORY",
         "v2_structural_surface_policy": "FAIL_CLOSED",
         "v2_followup_policy": "OPTIONAL_NOT_WORKFLOW",
+        "v2_explore_mode": "LIVE_PULSE",
+        "v2_federation_prewarm": True,
         "v2_e2e_proxy": e2e_proxy,
         "v2_version": V2_VERSION,
         "published_v2": published_v2,
