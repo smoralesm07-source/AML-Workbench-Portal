@@ -7,6 +7,8 @@
   const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_3nrUSbZMWfTYUtXnyjDklg_EjyZIzko';
   const ENDPOINT = '/functions/v1/atlas-v2-read';
   const DEFAULT_TIMEOUT_MS = 12000;
+  const OVERVIEW_CACHE_TTL_MS = 30000;
+  let overviewCache = null;
 
   function clean(value, max = 180) {
     const out = String(value ?? '').trim();
@@ -35,6 +37,10 @@
     const controller = new AbortController();
     const timeoutMs = Math.max(1000, Math.min(Number(options.timeoutMs || DEFAULT_TIMEOUT_MS), 30000));
     const timer = setTimeout(() => controller.abort(new DOMException('ATLAS_V2_TIMEOUT', 'TimeoutError')), timeoutMs);
+    if (options.signal) {
+      if (options.signal.aborted) controller.abort(options.signal.reason);
+      else options.signal.addEventListener('abort', () => controller.abort(options.signal.reason), { once: true });
+    }
 
     try {
       const res = await fetch(`${supabaseUrl}${ENDPOINT}`, {
@@ -43,7 +49,7 @@
           authorization: `Bearer ${token}`,
           apikey: publishableKey,
           'content-type': 'application/json',
-          'x-client-info': 'atlas-v2-watch/1.0',
+          'x-client-info': 'atlas-v2-watch/1.1',
           'x-atlas-core-authorization': `Bearer ${coreToken}`,
         },
         body: JSON.stringify({ operation: 'watch_query', query: { ...payload, kind }, route: clean(options.route || location.hash || 'vigilancia', 120) || 'vigilancia' }),
@@ -75,11 +81,32 @@
         page: body.page || null,
         semantics: body.semantics || {},
         data: body,
-        meta: { traceId: body.trace_id || res.headers.get('x-atlas-trace-id') || null, snapshot: res.headers.get('x-atlas-snapshot') || body.snapshot_id || null },
+        meta: {
+          traceId: body.trace_id || res.headers.get('x-atlas-trace-id') || null,
+          snapshot: res.headers.get('x-atlas-snapshot') || body.snapshot_id || null,
+          cacheStatus: 'network',
+        },
       };
+    } catch (error) {
+      if (controller.signal.aborted && error?.name !== 'AbortError') {
+        const timeout = new Error('ATLAS Watch read timed out or was cancelled');
+        timeout.code = 'TIMEOUT_OR_CANCELLED';
+        throw timeout;
+      }
+      throw error;
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  async function overview(options = {}) {
+    const now = Date.now();
+    if (!options.force && overviewCache && now - overviewCache.at < OVERVIEW_CACHE_TTL_MS) {
+      return { ...overviewCache.value, meta: { ...(overviewCache.value.meta || {}), cacheStatus: 'memory' } };
+    }
+    const value = await query('overview', {}, options);
+    overviewCache = { at: Date.now(), value };
+    return value;
   }
 
   function filters(options = {}) {
@@ -93,12 +120,15 @@
     };
   }
 
+  function clearCache() { overviewCache = null; }
+
   global.AtlasV2Watch = Object.freeze({
     installed: true,
-    overview: (options = {}) => query('overview', {}, options),
+    overview,
     signals: (options = {}) => query('signals', filters(options), options),
     changes: (options = {}) => query('changes', filters(options), options),
     sources: (options = {}) => query('sources', { search: clean(options.search, 160), limit: Math.max(1, Math.min(Number(options.limit || 100), 200)), offset: Math.max(0, Number(options.offset || 0)) }, options),
     timeline: (options = {}) => query('timeline', { limit: Math.max(1, Math.min(Number(options.limit || 30), 100)), offset: Math.max(0, Number(options.offset || 0)) }, options),
+    clearCache,
   });
 })(window);

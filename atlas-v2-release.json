@@ -1,8 +1,8 @@
 {
   "schema": "ATLAS_V2_RELEASE_V1",
   "product": "ATLAS AML",
-  "release": "2.0.0",
-  "build": "2000",
+  "release": "2.0.1",
+  "build": "2001",
   "channel": "current",
   "runtime": "ATLAS_V2_ANALYTICS",
   "primary_entry": "index.html",
@@ -41,5 +41,5 @@
     "RELATION_DOES_NOT_TRANSFER_RISK",
     "FOLLOWUP_OPTIONAL_NOT_CASE_WORKFLOW"
   ],
-  "release_notes": "ATLAS 2.0.0 establece la arquitectura v2 analítica como autoridad productiva primaria. Integra Foundation, Entidad 360, Gasto Público, Relaciones, Universos, Territorio y Vigilancia mediante contratos gobernados, autenticación autónoma y runtime fail-closed. El runtime 0.96.4/0964 se conserva exclusivamente en legacy.html como rollback congelado y no compite por rutas productivas."
+  "release_notes": "ATLAS 2.0.1 es el candidato de primera prueba de experiencia usuaria. Convierte Explorar en un pulso analítico vivo con lecturas gobernadas de Universos, Vigilancia, Territorio y Gasto Público; precalienta la federación entre proyectos y reutiliza por 30 segundos los overview ya leídos para eliminar esperas redundantes al profundizar. Mantiene intactos los guardarraíles analytics-first y el rollback 0.96.4/0964 exclusivamente en legacy.html."
 }

@@ -10,6 +10,7 @@ on:
       - 'src/v2/**'
       - 'tools/build_atlas_v2_primary.py'
       - 'tools/e2e_atlas_runtime_smoke.mjs'
+      - 'tools/e2e_atlas_v2_ux_preflight.mjs'
       - 'tools/serve_atlas_v2_e2e.mjs'
       - 'tools/test_atlas_v2_data_client.js'
       - 'tools/test_atlas_v2_session.js'
@@ -52,6 +53,7 @@ jobs:
             src/v2/atlas-v2-access.js \
             src/v2/atlas-v2-shell.js \
             src/v2/atlas-v2-boot.js \
+            src/v2/explore-surface.js \
             src/v2/entity360-adapter.js \
             src/v2/entity360-surface.js \
             src/v2/public-spend-surface.js \
@@ -63,6 +65,7 @@ jobs:
             src/v2/watch-adapter.js \
             src/v2/watch-surface.js \
             tools/e2e_atlas_runtime_smoke.mjs \
+            tools/e2e_atlas_v2_ux_preflight.mjs \
             tools/serve_atlas_v2_e2e.mjs \
             tools/test_atlas_v2_data_client.js \
             tools/test_atlas_v2_session.js; do
@@ -93,6 +96,8 @@ jobs:
           session=Path('src/v2/atlas-v2-session.js').read_text(encoding='utf-8')
           access=Path('src/v2/atlas-v2-access.js').read_text(encoding='utf-8')
           data=Path('src/v2/atlas-v2-data.js').read_text(encoding='utf-8')
+          explore=Path('src/v2/explore-surface.js').read_text(encoding='utf-8')
+          boot=Path('src/v2/atlas-v2-boot.js').read_text(encoding='utf-8')
           builder=Path('tools/build_atlas_v2_primary.py').read_text(encoding='utf-8')
           broker=Path('supabase/core-functions/atlas-v2-e2e-auth/index.ts').read_text(encoding='utf-8')
           exchange=Path('supabase/functions/atlas-v2-session-exchange/index.ts').read_text(encoding='utf-8')
@@ -100,7 +105,7 @@ jobs:
           e2e=Path('.github/workflows/e2e-atlas-runtime-smoke.yml').read_text(encoding='utf-8')
 
           assert primary['schema']=='ATLAS_V2_RELEASE_V1'
-          assert primary['release']=='2.0.0' and str(primary['build'])=='2000'
+          assert primary['release']=='2.0.1' and str(primary['build'])=='2001'
           assert primary['runtime']=='ATLAS_V2_ANALYTICS'
           assert primary['product_contract']=='ANALYTICS_FIRST'
           assert primary['followup_policy']=='OPTIONAL_NOT_WORKFLOW'
@@ -111,72 +116,51 @@ jobs:
           assert primary['legacy_fallback']['policy']=='FROZEN_ROLLBACK_ONLY'
 
           assert 'data-atlas-v2-primary="analytics"' in html
+          assert 'v2-primary-2' in html
           assert 'atlas-runtime-current-' not in html
           assert "mode: 'analytics-primary'" in production
           assert "legacyFallbackPath: './legacy.html'" in production
 
-          assert '.auth.getUser()' in auth
-          assert 'aml_allowed_users' in auth
-          assert "provider: 'azure'" in auth
-          assert 'ATLAS_V2_SESSION_EXCHANGE_V1' in session
-          assert 'refreshToken' not in session
-          assert 'AtlasV2Access' in access
-          assert 'global.AtlasV2Data.create' in access
-          assert 'getAccessToken' in access
-          assert 'raw.githubusercontent.com' not in access
-          assert 'raw.githubusercontent.com' not in data
+          assert '.auth.getUser()' in auth and 'aml_allowed_users' in auth and "provider: 'azure'" in auth
+          assert 'ATLAS_V2_SESSION_EXCHANGE_V1' in session and 'refreshToken' not in session
+          assert 'AtlasV2Access' in access and 'global.AtlasV2Data.create' in access and 'getAccessToken' in access
+          assert 'raw.githubusercontent.com' not in access and 'raw.githubusercontent.com' not in data
+          assert 'registerSurface(\'explorar\'' in explore and 'publicSpend.monitor' in explore
+          assert 'warmFederatedSession' in boot and "STRUCTURAL_VERSION = 'v2-primary-2'" in boot
 
           assert 'V2_RELEASE_FILE = "atlas-v2-release.json"' in builder
+          assert 'V2_VERSION = "v2-primary-2"' in builder
           assert 'FROZEN_ROLLBACK_ONLY' in builder
-          assert 'legacy_release' in builder and 'legacy_build' in builder
+          assert 'v2_explore_mode' in builder and 'v2_federation_prewarm' in builder
 
           assert 'const MAIN_REF = "refs/heads/main"' in broker
           assert '.github/workflows/e2e-atlas-runtime-smoke.yml@${MAIN_REF}' in broker
-          assert 'refs/pull/231/merge' not in broker
-          assert 'atlas-architecture-v2' not in broker
-          assert 'pull_request' not in broker
-          assert 'ALLOWED_WORKFLOWS' not in broker
-          assert 'ALLOWED_REFS' not in broker
-          assert 'SUPABASE_SECRET_KEYS' in broker
-          assert 'SUPABASE_SERVICE_ROLE_KEY' not in broker
+          assert 'refs/pull/231/merge' not in broker and 'atlas-architecture-v2' not in broker
+          assert 'pull_request' not in broker and 'ALLOWED_WORKFLOWS' not in broker and 'ALLOWED_REFS' not in broker
+          assert 'SUPABASE_SECRET_KEYS' in broker and 'SUPABASE_SERVICE_ROLE_KEY' not in broker
 
-          assert 'ATLAS_V2_SESSION_EXCHANGE_V1' in exchange
-          assert 'aml_allowed_users' in exchange
-          assert 'SUPABASE_SECRET_KEYS' in exchange
-          assert 'SUPABASE_SERVICE_ROLE_KEY' not in exchange
+          assert 'ATLAS_V2_SESSION_EXCHANGE_V1' in exchange and 'aml_allowed_users' in exchange
+          assert 'SUPABASE_SECRET_KEYS' in exchange and 'SUPABASE_SERVICE_ROLE_KEY' not in exchange
           assert 'atlas-v2-read' in read_gateway or 'ATLAS_READ_API_V2' in read_gateway
 
           assert 'pull_request:' not in e2e
-          assert 'branches: [main]' in e2e
-          assert 'id-token: write' in e2e
-          assert 'audience=atlas-v2-e2e' in e2e
+          assert 'branches: [main]' in e2e and 'id-token: write' in e2e and 'audience=atlas-v2-e2e' in e2e
+          assert 'e2e_atlas_v2_ux_preflight.mjs' in e2e
 
           obsolete=[
             '.github/workflows/build-atlas-v2-shadow-preview.yml',
             '.github/workflows/e2e-atlas-v2-public-spend.yml',
             '.github/workflows/validate-atlas-v2-cutover-build.yml',
-            'src/v2/atlas-v2-preview-config.js',
-            'src/v2/public-spend-shadow.js',
-            'src/v2/public-spend-adapter.js',
-            'src/v2/public-spend-adapter.css',
-            'src/v2/public-spend-route-bridge.js',
-            'tools/build_atlas_v2_cutover.py',
+            'src/v2/atlas-v2-preview-config.js','src/v2/public-spend-shadow.js','src/v2/public-spend-adapter.js',
+            'src/v2/public-spend-adapter.css','src/v2/public-spend-route-bridge.js','tools/build_atlas_v2_cutover.py',
             'tools/e2e_atlas_v2_public_spend.mjs',
           ]
-          leaked=[p for p in obsolete if Path(p).exists()]
-          assert not leaked, f'obsolete transition assets remain: {leaked}'
+          assert not [p for p in obsolete if Path(p).exists()]
 
-          required_surfaces=[
-            'entity360-surface.js',
-            'public-spend-surface.js',
-            'relations-surface.js',
-            'universes-surface.js',
-            'territory-surface.js',
-            'watch-surface.js',
-          ]
+          required_surfaces=['explore-surface.js','entity360-surface.js','public-spend-surface.js','relations-surface.js','universes-surface.js','territory-surface.js','watch-surface.js']
           missing=[p for p in required_surfaces if not Path('src/v2',p).is_file()]
-          assert not missing, f'current analytical surfaces missing: {missing}'
-          print('ATLAS v2 production federation invariants: OK')
+          assert not missing, missing
+          print('ATLAS 2.0.1 federation + UX-candidate invariants: OK')
           PY
 
       - name: Build and verify dual release identities
@@ -195,13 +179,11 @@ jobs:
           legacy=(root/'legacy.html').read_text(encoding='utf-8')
           assert report['release']==str(primary['release']) and report['build']==str(primary['build'])
           assert report['legacy_release']==str(legacy_release['release']) and report['legacy_build']==str(legacy_release['build'])
-          assert f'data-aml-version="{primary["release"]}"' in html
-          assert f'data-aml-build="{primary["build"]}"' in html
+          assert report['v2_explore_mode']=='LIVE_PULSE' and report['v2_federation_prewarm'] is True
+          assert f'data-aml-version="{primary["release"]}"' in html and f'data-aml-build="{primary["build"]}"' in html
           assert 'atlas-runtime-current-' not in html
-          assert f'data-aml-version="{legacy_release["release"]}"' in legacy
-          assert f'data-aml-build="{legacy_release["build"]}"' in legacy
+          assert f'data-aml-version="{legacy_release["release"]}"' in legacy and f'data-aml-build="{legacy_release["build"]}"' in legacy
           assert 'atlas-runtime-current-' in legacy
-          assert report['legacy_fallback_policy']=='FROZEN_ROLLBACK_ONLY'
-          assert report['legacy_authority_active_on_primary'] is False
-          print('ATLAS 2.0.0 primary + frozen 0.96.4 rollback build: OK')
+          assert report['legacy_fallback_policy']=='FROZEN_ROLLBACK_ONLY' and report['legacy_authority_active_on_primary'] is False
+          print('ATLAS 2.0.1 primary + frozen 0.96.4 rollback build: OK')
           PY

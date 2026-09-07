@@ -7,6 +7,8 @@
   const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_3nrUSbZMWfTYUtXnyjDklg_EjyZIzko';
   const ENDPOINT = '/functions/v1/atlas-v2-read';
   const DEFAULT_TIMEOUT_MS = 12000;
+  const OVERVIEW_CACHE_TTL_MS = 30000;
+  let overviewCache = null;
 
   function clean(value, max = 180) {
     const out = String(value ?? '').trim();
@@ -55,7 +57,7 @@
           authorization: `Bearer ${token}`,
           apikey: publishableKey,
           'content-type': 'application/json',
-          'x-client-info': 'atlas-v2-universes/1.0',
+          'x-client-info': 'atlas-v2-universes/1.1',
           'x-atlas-core-authorization': `Bearer ${coreToken}`,
         },
         body: JSON.stringify({
@@ -95,6 +97,7 @@
           traceId: body.trace_id || res.headers.get('x-atlas-trace-id') || null,
           serverTiming: res.headers.get('server-timing'),
           snapshot: res.headers.get('x-atlas-snapshot') || body.generated_at || null,
+          cacheStatus: 'network',
         },
       };
     } catch (error) {
@@ -109,8 +112,20 @@
     }
   }
 
+  async function overview(options = {}) {
+    const now = Date.now();
+    if (!options.force && overviewCache && now - overviewCache.at < OVERVIEW_CACHE_TTL_MS) {
+      return { ...overviewCache.value, meta: { ...(overviewCache.value.meta || {}), cacheStatus: 'memory' } };
+    }
+    const value = await query('overview', {}, options);
+    overviewCache = { at: Date.now(), value };
+    return value;
+  }
+
+  function clearCache() { overviewCache = null; }
+
   const api = Object.freeze({
-    overview: (options = {}) => query('overview', {}, options),
+    overview,
     distribution: (lens, dimension, options = {}) => query('distribution', {
       lens: clean(lens, 40).toUpperCase(),
       dimension: clean(dimension, 80).toLowerCase(),
@@ -124,6 +139,7 @@
       offset: Math.max(0, Number(options.offset || 0)),
     }, options),
     membership: (rut, options = {}) => query('membership', { rut: canonicalRut(rut) }, options),
+    clearCache,
   });
 
   global.AtlasV2Universes = Object.freeze({ installed: true, canonicalRut, ...api });
