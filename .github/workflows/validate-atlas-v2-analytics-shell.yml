@@ -2,10 +2,10 @@ name: Validate ATLAS v2 analytics shell
 
 on:
   push:
-    branches:
-      - reengineering/atlas-v2-analytics-shell
+    branches: [main]
     paths: &v2_paths
       - 'atlas-v2.html'
+      - 'atlas-v2-release.json'
       - 'src/v2/**'
       - 'supabase/functions/atlas-v2-read/index.ts'
       - 'supabase/migrations/20260907023000_atlas_v2_relations_query.sql'
@@ -16,10 +16,12 @@ on:
       - 'tools/e2e_atlas_runtime_smoke.mjs'
       - 'tools/serve_atlas_v2_e2e.mjs'
       - 'docs/ATLAS_V2_ANALYTICS_FIRST.md'
+      - 'docs/ATLAS_V2_POST_LAUNCH.md'
       - '.github/workflows/validate-atlas-v2-analytics-shell.yml'
       - '.github/workflows/e2e-atlas-runtime-smoke.yml'
       - '.github/workflows/deploy-atlas-pages-current.yml'
   pull_request:
+    branches: [main]
     paths: *v2_paths
   workflow_dispatch:
 
@@ -62,10 +64,11 @@ jobs:
           node --check tools/serve_atlas_v2_e2e.mjs
           python3 -m py_compile tools/build_atlas_v2_primary.py
 
-      - name: Enforce analytics-first and launch-hardening contract
+      - name: Enforce analytics-first and post-launch contract
         run: |
           set -euo pipefail
           python3 - <<'PY'
+          import json
           from pathlib import Path
           shell = Path('src/v2/atlas-v2-shell.js').read_text(encoding='utf-8')
           css = Path('src/v2/atlas-v2-shell.css').read_text(encoding='utf-8')
@@ -75,6 +78,13 @@ jobs:
           health = Path('src/v2/atlas-v2-health.js').read_text(encoding='utf-8')
           config = Path('src/v2/atlas-v2-production-config.js').read_text(encoding='utf-8')
           contract = Path('docs/ATLAS_V2_ANALYTICS_FIRST.md').read_text(encoding='utf-8')
+          primary = json.loads(Path('atlas-v2-release.json').read_text(encoding='utf-8'))
+          legacy = json.loads(Path('atlas-release.json').read_text(encoding='utf-8'))
+          assert primary['release']=='2.0.0' and str(primary['build'])=='2000'
+          assert primary['runtime']=='ATLAS_V2_ANALYTICS'
+          assert str(primary['legacy_fallback']['release'])==str(legacy['release'])
+          assert str(primary['legacy_fallback']['build'])==str(legacy['build'])
+          assert primary['legacy_fallback']['authority_active_on_primary'] is False
           assert 'MutationObserver' not in shell and '.innerHTML' not in shell
           assert 'MutationObserver' not in auth and '.innerHTML' not in auth
           assert 'raw.githubusercontent.com' not in shell
@@ -105,7 +115,7 @@ jobs:
               assert secret_word not in health.lower(), secret_word
           assert "mode: 'analytics-primary'" in config
           assert "legacyFallbackPath: './legacy.html'" in config
-          print('ATLAS v2 analytics-first + launch-hardening invariants: OK')
+          print('ATLAS 2.0.0 analytics-first + post-launch invariants: OK')
           PY
 
       - name: Validate analytical surfaces
@@ -118,35 +128,43 @@ jobs:
           node tests/atlas-v2-territory-native.mjs
           node tests/atlas-v2-watch-native.mjs
 
-      - name: Build primary cutover artifact
+      - name: Build primary production artifact
         run: |
           set -euo pipefail
           python3 tools/build_atlas_v2_primary.py --out _atlas_v2_primary
 
-      - name: Verify primary authority and reversible fallback
+      - name: Verify primary authority and frozen rollback
         run: |
           set -euo pipefail
           python3 - <<'PY'
           import json
           from pathlib import Path
           root=Path('_atlas_v2_primary')
+          primary=json.loads((root/'atlas-v2-release.json').read_text(encoding='utf-8'))
+          legacy_release=json.loads((root/'atlas-release.json').read_text(encoding='utf-8'))
           html=(root/'index.html').read_text(encoding='utf-8')
           legacy=(root/'legacy.html').read_text(encoding='utf-8')
           report=json.loads((root/'atlas-runtime-report.json').read_text(encoding='utf-8'))
           assert report['primary_runtime']=='ATLAS_V2_ANALYTICS'
+          assert report['release']==str(primary['release']) and report['build']==str(primary['build'])
+          assert report['legacy_release']==str(legacy_release['release']) and report['legacy_build']==str(legacy_release['build'])
           assert report['legacy_fallback']=='legacy.html'
+          assert report['legacy_fallback_policy']=='FROZEN_ROLLBACK_ONLY'
           assert report['legacy_authority_active_on_primary'] is False
           assert report['v2_auth_boundary']=='ENTRA_SUPABASE_ALLOWLIST_VERIFIED_USER'
           assert report['v2_runtime_health']=='SANITIZED_IN_MEMORY'
           assert report['v2_structural_surface_policy']=='FAIL_CLOSED'
           assert report['v2_e2e_proxy'] is False
+          assert f'data-aml-version="{primary["release"]}"' in html
+          assert f'data-aml-build="{primary["build"]}"' in html
           assert 'data-atlas-v2-primary="analytics"' in html
           assert 'atlas-runtime-current-' not in html
           assert 'atlas-module-current-' not in html
           assert 'ATLAS_RUNTIME_SCRIPTS' not in html
           assert 'raw.githubusercontent.com' not in html
+          assert f'data-aml-version="{legacy_release["release"]}"' in legacy
+          assert f'data-aml-build="{legacy_release["build"]}"' in legacy
           assert 'atlas-runtime-current-' in legacy
-          assert './legacy.html' not in html
           required=[
             'atlas-v2-production-config.js','atlas-v2-health.js','atlas-v2-core-auth.js','atlas-v2-core-auth.css',
             'atlas-v2-shell.js','atlas-v2-shell.css','atlas-v2-boot.js','atlas-v2-data.js','atlas-v2-session.js','atlas-v2-access.js',
@@ -158,7 +176,7 @@ jobs:
           ]
           for name in required: assert (root/'v2'/name).is_file(), name
           assert (root/'assets'/'supabase-js-2.111.0.umd.js').is_file()
-          print('ATLAS v2 primary artifact + explicit legacy rollback: OK')
+          print('ATLAS 2.0.0 primary artifact + frozen legacy rollback: OK')
           PY
 
       - name: Upload v2 primary preview
