@@ -33,6 +33,18 @@
     return `ENT-RUT-${body}-${dv}`;
   }
 
+  function normalizeReference(input, options = {}) {
+    if (input && typeof input === 'object') {
+      const rut = canonicalRut(input.rut || options.rut || '');
+      const entityId = text(input.entityId || input.entity_id || options.entityId || '', 220) || (validRutShape(rut) ? entityIdFromRut(rut) : '');
+      return { entityId, rut: validRutShape(rut) ? rut : '', name: text(input.name || options.name || '', 280) };
+    }
+    const raw = text(input, 220);
+    const rut = validRutShape(raw) ? canonicalRut(raw) : canonicalRut(options.rut || '');
+    const entityId = text(options.entityId || (!validRutShape(raw) ? raw : ''), 220) || (validRutShape(rut) ? entityIdFromRut(rut) : '');
+    return { entityId, rut: validRutShape(rut) ? rut : '', name: text(options.name || '', 280) };
+  }
+
   function api() {
     if (!global.AtlasV2Access?.data) throw new Error('ATLAS v2 access bridge no está disponible');
     return global.AtlasV2Access.data();
@@ -47,10 +59,13 @@
     };
   }
 
-  function normalizeEntityCore(out) {
+  function normalizeEntityCore(out, reference = {}) {
     const data = out?.data && typeof out.data === 'object' ? out.data : {};
     const identity = data.identity || data.entity || data.subject || {};
+    const profile = identity.profile && typeof identity.profile === 'object' ? identity.profile : {};
     const tax = data.tax || {};
+    const resolvedRut = canonicalRut(identity.rut || tax.rut || data.resolved_rut || data.rut || reference.rut || '');
+    const sourceStatus = data.source_status || {};
     return {
       status: 'ready',
       model: out.model || 'atlas_v2_entity360_read',
@@ -58,16 +73,22 @@
       snapshotId: out.snapshotId || data.generated_at || null,
       generatedAt: out.generatedAt || data.generated_at || null,
       sourceVersions: out.sourceVersions || {},
-      sourceStatus: data.source_status || {},
+      sourceStatus,
       traceId: out.traceId || null,
       data,
       identity: {
-        name: text(identity.name || identity.legal_name || identity.razon_social || tax.legal_name || tax.name || data.name || data.legal_name, 240),
-        rut: canonicalRut(identity.rut || tax.rut || data.resolved_rut || data.rut || ''),
+        entityId: text(data.entity_id || identity.entity_id || reference.entityId, 220),
+        name: text(identity.name || identity.legal_name || identity.razon_social || profile.nombre || tax.legal_name || tax.name || data.name || data.legal_name || reference.name, 280),
+        rut: validRutShape(resolvedRut) ? resolvedRut : '',
         status: text(identity.status || identity.tax_status || tax.current_status || tax.status || data.status, 120),
-        region: text(identity.region || tax.region || data.region, 120),
-        commune: text(identity.commune || identity.comuna || tax.commune || tax.comuna || data.commune || data.comuna, 120),
-        activity: text(identity.activity || identity.giro || tax.activity || tax.main_activity || tax.giro || data.activity || data.giro, 240),
+        region: text(identity.region || profile?.ubicacion?.region || tax.region || data.region, 120),
+        commune: text(identity.commune || identity.comuna || profile?.ubicacion?.comuna || tax.commune || tax.comuna || data.commune || data.comuna, 120),
+        activity: text(identity.activity || identity.giro || tax.activity || tax.main_activity || tax.giro || data.activity || data.giro, 280),
+        entityType: text(identity.entity_type || identity.tipo_entidad_es || profile.tipo_entidad_es || data.entity_type, 120),
+        sources: Array.isArray(profile.fuentes) ? profile.fuentes.map(value => text(value, 80)).filter(Boolean) : [],
+        roles: Array.isArray(profile.roles) ? profile.roles.map(value => text(value, 100)).filter(Boolean) : [],
+        eventCount: Number(profile.event_count || 0) || 0,
+        identityConfidence: Number(profile.identity_confidence ?? identity.identity_confidence ?? 0) || 0,
       },
     };
   }
@@ -82,9 +103,9 @@
     return coreToken;
   }
 
-  async function readCore(rutInput, options = {}) {
-    const rut = canonicalRut(rutInput);
-    if (!validRutShape(rut)) return { status: 'invalid', code: 'INVALID_RUT', message: 'RUT inválido para Entidad 360.' };
+  async function readCore(input, options = {}) {
+    const reference = normalizeReference(input, options);
+    if (!reference.entityId) return { status: 'invalid', code: 'INVALID_ENTITY', message: 'Se requiere RUT o identificador de entidad para Entidad 360.' };
     const coreToken = await coreAccessToken();
     if (!coreToken) return errorState(Object.assign(new Error('ATLAS core session is unavailable'), { code: 'CORE_SESSION_UNAVAILABLE' }));
 
@@ -109,13 +130,13 @@
             authorization: `Bearer ${token}`,
             apikey: publishableKey,
             'content-type': 'application/json',
-            'x-client-info': 'atlas-v2-entity360/2.0',
+            'x-client-info': 'atlas-v2-entity360/2.1',
             'x-atlas-core-authorization': `Bearer ${coreToken}`,
           },
           body: JSON.stringify({
             operation: 'entity360_read',
-            query: { entity_id: text(options.entityId, 180) || entityIdFromRut(rut), rut },
-            route: text(options.route || `entity360:core:${rut}`, 120) || 'entity360:core',
+            query: { entity_id: reference.entityId, rut: reference.rut || null },
+            route: text(options.route || `entity360:core:${reference.entityId}`, 120) || 'entity360:core',
           }),
           signal: controller.signal,
           cache: 'no-store',
@@ -142,7 +163,7 @@
           sourceVersions: body.source_status || {},
           traceId: body.trace_id || res.headers.get('x-atlas-trace-id') || null,
           data: body,
-        });
+        }, reference);
       } catch (error) {
         if (controller.signal.aborted && error?.name !== 'AbortError') {
           const timeout = new Error('ATLAS Entity 360 read timed out or was cancelled');
@@ -159,9 +180,7 @@
   }
 
   function compactItem(row = {}, domain) {
-    const amount = Number(
-      row._context_amount ?? row.context_amount ?? row.amount_l12 ?? row.amount_clp ?? row.total_amount ?? 0,
-    );
+    const amount = Number(row._context_amount ?? row.context_amount ?? row.amount_l12 ?? row.amount_clp ?? row.total_amount ?? 0);
     return {
       domain,
       id: text(row.provider_id || row.supplier_id || row.id || row.rut || '', 220),
@@ -186,59 +205,52 @@
     };
   }
 
-  async function readPublicSpend(rut, options = {}) {
+  async function readPublicSpend(rutInput, options = {}) {
+    const rut = canonicalRut(rutInput);
+    if (!validRutShape(rut)) {
+      return {
+        status: 'skipped',
+        reason: 'RUT_NOT_RESOLVED',
+        budget: { status: 'skipped', items: [] },
+        procurement: { status: 'skipped', items: [] },
+      };
+    }
     const query = { search: rut, offset: 0, limit: Math.max(1, Math.min(Number(options.limit || DEFAULT_LIMIT), 20)) };
     let data;
-    try {
-      data = api();
-    } catch (error) {
+    try { data = api(); } catch (error) {
       const failed = errorState(error);
       return { status: 'error', budget: failed, procurement: failed };
     }
 
     const [budget, procurement] = await Promise.allSettled([
-      data.publicSpend.budgetProviders({
-        filters: {},
-        query,
-        signal: options.signal,
-        route: `entity360:budget-provider:${rut}`,
-      }),
-      data.publicSpend.suppliers({
-        query,
-        signal: options.signal,
-        route: `entity360:procurement-supplier:${rut}`,
-      }),
+      data.publicSpend.budgetProviders({ filters: {}, query, signal: options.signal, route: `entity360:budget-provider:${rut}` }),
+      data.publicSpend.suppliers({ query, signal: options.signal, route: `entity360:procurement-supplier:${rut}` }),
     ]);
 
     const budgetState = fulfilled(budget, 'budget_execution');
     const procurementState = fulfilled(procurement, 'procurement');
     const ready = [budgetState, procurementState].filter(part => part.status === 'ready');
-    return {
-      status: ready.length ? 'ready' : 'error',
-      budget: budgetState,
-      procurement: procurementState,
-    };
+    return { status: ready.length ? 'ready' : 'error', budget: budgetState, procurement: procurementState };
   }
 
-  async function read(rutInput, options = {}) {
-    const rut = canonicalRut(rutInput);
-    if (!validRutShape(rut)) {
-      return {
-        status: 'invalid',
-        rut,
-        message: 'Ingresa un RUT con formato válido para iniciar la lectura analítica.',
-      };
+  async function read(input, options = {}) {
+    const reference = normalizeReference(input, options);
+    if (!reference.entityId) {
+      return { status: 'invalid', reference, message: 'Selecciona una coincidencia de entidad o ingresa un RUT válido.' };
     }
 
-    const [core, publicSpend] = await Promise.all([
-      readCore(rut, options),
-      readPublicSpend(rut, options),
-    ]);
+    const core = await readCore(reference, options);
+    const resolvedRut = core?.identity?.rut || reference.rut || '';
+    const publicSpend = validRutShape(resolvedRut)
+      ? await readPublicSpend(resolvedRut, options)
+      : { status: 'skipped', reason: 'RUT_NOT_RESOLVED', budget: { status: 'skipped', items: [] }, procurement: { status: 'skipped', items: [] } };
 
     const hasLiveLens = publicSpend.status === 'ready' || core.status === 'ready';
     return {
       status: hasLiveLens ? 'ready' : 'unavailable',
-      rut,
+      reference: { ...reference, rut: resolvedRut || reference.rut },
+      rut: resolvedRut || reference.rut,
+      entityId: reference.entityId,
       core,
       publicSpend,
       checkedAt: new Date().toISOString(),
@@ -250,6 +262,7 @@
     canonicalRut,
     validRutShape,
     entityIdFromRut,
+    normalizeReference,
     read,
     readCore,
     readPublicSpend,
