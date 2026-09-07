@@ -4,7 +4,6 @@
   if (global.AtlasV2Entity360?.installed) return;
 
   const DEFAULT_LIMIT = 8;
-  let client = null;
 
   function text(value, max = 180) {
     const out = String(value ?? '').trim();
@@ -23,26 +22,9 @@
     return /^\d{7,8}-[0-9K]$/.test(canonicalRut(value));
   }
 
-  async function accessToken() {
-    if (global.sb?.auth?.getSession) {
-      const { data, error } = await global.sb.auth.getSession();
-      if (error) throw error;
-      return data?.session?.access_token || null;
-    }
-    if (global.AtlasV2Session?.requireAccessToken) return global.AtlasV2Session.requireAccessToken();
-    return null;
-  }
-
   function api() {
-    if (client) return client;
-    if (!global.AtlasV2Data?.create) throw new Error('ATLAS v2 data client no está disponible');
-    const config = global.__ATLAS_V2_CONFIG__ || {};
-    client = global.AtlasV2Data.create({
-      supabaseUrl: config.supabaseUrl,
-      publishableKey: config.publishableKey,
-      getAccessToken: accessToken,
-    });
-    return client;
+    if (!global.AtlasV2Access?.data) throw new Error('ATLAS v2 access bridge no está disponible');
+    return global.AtlasV2Access.data();
   }
 
   function errorState(error) {
