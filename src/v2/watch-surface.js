@@ -132,7 +132,7 @@
       if (serial !== renderSerial || !live.isConnected) return;
       clear(live);
       if (!out.comparison?.available) {
-        live.append(node('div', { class: 'atlas-v2-watch-baseline' }, [node('strong', { text: 'BASELINE_ONLY. ' }), 'Se requiere al menos una publicación READY adicional para comparar snapshots. No hay inferencia de estabilidad ni de ausencia de cambios.']);
+        live.append(node('div', { class: 'atlas-v2-watch-baseline' }, [node('strong', { text: 'BASELINE_ONLY. ' }), 'Se requiere al menos una publicación READY adicional para comparar snapshots. No hay inferencia de estabilidad ni de ausencia de cambios.']));
         return;
       }
       if (!out.items.length) { live.append(node('div', { class: 'atlas-v2-watch-empty' }, [node('strong', { text: 'Sin diferencias observadas entre estos dos snapshots.' }), node('span', { text: 'Esto describe solamente las señales historizadas y no implica bajo riesgo ni ausencia de cambios fuera de la cobertura.' })])); return; }
