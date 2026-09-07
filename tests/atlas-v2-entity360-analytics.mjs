@@ -10,6 +10,7 @@ const boot = fs.readFileSync('src/v2/atlas-v2-boot.js', 'utf8');
 const shell = fs.readFileSync('src/v2/atlas-v2-shell.js', 'utf8');
 const edge = fs.readFileSync('supabase/functions/atlas-v2-read/index.ts', 'utf8');
 const sql = fs.readFileSync('supabase/core-migrations/20260907111841_atlas_v2_entity_search_allowlist_hardening.sql', 'utf8');
+const searchPerfSql = fs.readFileSync('supabase/core-migrations/20260907115225_optimize_atlas_v2_entity_search_enrichment.sql', 'utf8');
 
 assert.match(access, /AtlasV2Data\.create/);
 assert.match(adapter, /AtlasV2Access\.data/);
@@ -43,6 +44,13 @@ assert.match(sql, /ATLAS_CORE_FORBIDDEN/);
 assert.match(sql, /PRESS/);
 assert.match(sql, /UAF_NAME/);
 assert.match(sql, /match_not_identity_assertion/);
+
+assert.match(searchPerfSql, /security definer/i);
+assert.match(searchPerfSql, /aml_allowed_users/);
+assert.match(searchPerfSql, /left join public\.aml_entities e on e\.entity_id=p\.entity_id/);
+assert.match(searchPerfSql, /e\.profile->'fuentes'/);
+assert.match(searchPerfSql, /e\.profile->'roles'/);
+assert.doesNotMatch(searchPerfSql, /aml_entity_master_v0553/);
 
 assert.match(surface, /registerSurface\('entidad'/);
 assert.match(surface, /AtlasV2EntitySearch\.search/);
