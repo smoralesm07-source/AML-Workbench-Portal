@@ -233,7 +233,8 @@ def update_report(out_dir: Path, published_v2: list[str], primary_release: dict,
         "v2_followup_policy": "OPTIONAL_NOT_WORKFLOW",
         "v2_explore_mode": "LIVE_PULSE_VISUAL_UAF_SII",
         "v2_visual_navigation": "INTERACTIVE_FIRST",
-        "v2_entity_search": "EXACT_RECONCILED_THEN_PRESS_HIGH",
+        "v2_entity_search": "IDENTITY_TIERED_DIGITAL_PRESS",
+        "v2_entity_search_policy": "EXACT_RECONCILED_THEN_PRESS_HIGH",
         "v2_entity_search_press_min_confidence": 0.86,
         "v2_entity_explorer": "ENTITY_EXPLORER_CLASSIC_V2",
         "v2_entity_explorer_asset": ENTITY_EXPLORER_VERSION,
@@ -301,6 +302,6 @@ def main() -> None:
         target = (ROOT / target).resolve()
     build_primary(target, e2e_proxy=args.e2e_proxy)
 
-    
+
 if __name__ == "__main__":
     main()
