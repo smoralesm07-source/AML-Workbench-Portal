@@ -11,6 +11,7 @@ from build_atlas_site import build as build_legacy
 
 ROOT = Path(__file__).resolve().parents[1]
 V2_VERSION = "v2-primary-1"
+V2_RELEASE_FILE = "atlas-v2-release.json"
 V2_FILES = [
     "atlas-v2-production-config.js",
     "atlas-v2-health.js",
@@ -71,10 +72,10 @@ def copy_v2(out_dir: Path, *, e2e_proxy: bool = False) -> list[str]:
     return published
 
 
-def production_index(release: dict) -> str:
+def production_index(primary_release: dict) -> str:
     html = (ROOT / "atlas-v2.html").read_text(encoding="utf-8")
-    rel = str(release["release"])
-    bid = str(release["build"])
+    rel = str(primary_release["release"])
+    bid = str(primary_release["build"])
     if "data-atlas-v2-primary=\"analytics\"" not in html:
         raise SystemExit("v2 primary build: atlas-v2.html is not marked as primary")
     html = re.sub(
@@ -120,6 +121,8 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
     for item in published_v2:
         if not (out_dir / item).is_file():
             raise SystemExit(f"v2 primary build: published asset missing: {item}")
+    if not (out_dir / V2_RELEASE_FILE).is_file():
+        raise SystemExit("v2 primary build: primary release manifest missing")
 
     auth = (out_dir / "v2" / "atlas-v2-core-auth.js").read_text(encoding="utf-8")
     boot = (out_dir / "v2" / "atlas-v2-boot.js").read_text(encoding="utf-8")
@@ -142,13 +145,28 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
         raise SystemExit("v2 primary build: auth boundary reintroduced runtime repair/HTML injection")
 
 
-def update_report(out_dir: Path, published_v2: list[str], *, e2e_proxy: bool = False) -> None:
+def update_report(
+    out_dir: Path,
+    published_v2: list[str],
+    primary_release: dict,
+    legacy_release: dict,
+    *,
+    e2e_proxy: bool = False,
+) -> None:
     path = out_dir / "atlas-runtime-report.json"
     report = json.loads(path.read_text(encoding="utf-8"))
     report.update({
+        "release": str(primary_release["release"]),
+        "build": str(primary_release["build"]),
+        "release_schema": primary_release.get("schema", "ATLAS_V2_RELEASE_V1"),
+        "primary_release_manifest": V2_RELEASE_FILE,
         "primary_runtime": "ATLAS_V2_ANALYTICS",
         "primary_entry": "index.html",
         "legacy_fallback": "legacy.html",
+        "legacy_release": str(legacy_release["release"]),
+        "legacy_build": str(legacy_release["build"]),
+        "legacy_release_manifest": "atlas-release.json",
+        "legacy_fallback_policy": "FROZEN_ROLLBACK_ONLY",
         "legacy_authority_active_on_primary": False,
         "legacy_runtime_published_as_fallback": True,
         "v2_auth_boundary": "ENTRA_SUPABASE_ALLOWLIST_VERIFIED_USER",
@@ -164,28 +182,38 @@ def update_report(out_dir: Path, published_v2: list[str], *, e2e_proxy: bool = F
 
 
 def build_primary(out_dir: Path, *, e2e_proxy: bool = False) -> None:
-    release = load_json("atlas-release.json")
+    primary_release = load_json(V2_RELEASE_FILE)
+    legacy_release = load_json("atlas-release.json")
+    fallback = primary_release.get("legacy_fallback") or {}
+    if str(fallback.get("release")) != str(legacy_release.get("release")) or str(fallback.get("build")) != str(legacy_release.get("build")):
+        raise SystemExit("v2 primary build: frozen legacy release contract drifted")
+
     build_legacy(out_dir)
 
     legacy_path = out_dir / "index.html"
     legacy = legacy_path.read_text(encoding="utf-8")
+    if f'data-aml-version="{legacy_release["release"]}"' not in legacy or f'data-aml-build="{legacy_release["build"]}"' not in legacy:
+        raise SystemExit("v2 primary build: legacy fallback identity is not frozen to its release")
     (out_dir / "legacy.html").write_text(legacy, encoding="utf-8")
 
+    shutil.copy2(ROOT / V2_RELEASE_FILE, out_dir / V2_RELEASE_FILE)
     published_v2 = copy_v2(out_dir, e2e_proxy=e2e_proxy)
-    html = production_index(release)
+    html = production_index(primary_release)
     validate(out_dir, html, legacy, published_v2, e2e_proxy=e2e_proxy)
     legacy_path.write_text(html, encoding="utf-8")
-    update_report(out_dir, published_v2, e2e_proxy=e2e_proxy)
+    update_report(out_dir, published_v2, primary_release, legacy_release, e2e_proxy=e2e_proxy)
 
     print(json.dumps({
         "primary_runtime": "ATLAS_V2_ANALYTICS",
         "root": "index.html",
+        "release": primary_release["release"],
+        "build": primary_release["build"],
         "legacy_fallback": "legacy.html",
+        "legacy_release": legacy_release["release"],
+        "legacy_build": legacy_release["build"],
         "legacy_authority_active_on_primary": False,
         "published_v2_count": len(published_v2),
         "e2e_proxy": e2e_proxy,
-        "release": release["release"],
-        "build": release["build"],
     }, ensure_ascii=False))
 
 
