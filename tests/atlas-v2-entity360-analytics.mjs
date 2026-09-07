@@ -1,12 +1,15 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 
+const access = fs.readFileSync('src/v2/atlas-v2-access.js', 'utf8');
 const adapter = fs.readFileSync('src/v2/entity360-adapter.js', 'utf8');
 const surface = fs.readFileSync('src/v2/entity360-surface.js', 'utf8');
 const boot = fs.readFileSync('src/v2/atlas-v2-boot.js', 'utf8');
 const shell = fs.readFileSync('src/v2/atlas-v2-shell.js', 'utf8');
 
-assert.match(adapter, /AtlasV2Data\.create/);
+assert.match(access, /AtlasV2Data\.create/);
+assert.match(access, /__ATLAS_V2_ACCESS_TOKEN_PROVIDER__/);
+assert.match(adapter, /AtlasV2Access\.data/);
 assert.match(adapter, /publicSpend\.budgetProviders/);
 assert.match(adapter, /publicSpend\.suppliers/);
 assert.match(adapter, /ENTITY360_MODEL_NOT_PUBLISHED/);
@@ -19,6 +22,7 @@ assert.match(surface, /Compras públicas/);
 assert.match(surface, /Presupuesto Abierto v2/);
 assert.doesNotMatch(surface, /SLA|kanban|asignar caso|cerrar caso/i);
 
+assert.match(boot, /atlas-v2-access\.js/);
 assert.match(boot, /entity360-adapter\.js/);
 assert.match(boot, /entity360-surface\.js/);
 assert.match(shell, /Guardar una vista, seguir una entidad o registrar un resultado nunca será requisito/);
