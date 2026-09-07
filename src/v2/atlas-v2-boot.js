@@ -2,7 +2,7 @@
 
 (function bootAtlasV2() {
   const baseUrl = new URL('./', document.currentScript?.src || document.baseURI);
-  const STRUCTURAL_VERSION = 'v2-primary-3';
+  const STRUCTURAL_VERSION = 'v2-primary-4';
   const STRUCTURAL_SURFACES = Object.freeze([
     'atlas-v2-access.js',
     'atlas-v2-viz.js',
@@ -10,6 +10,8 @@
     'explore-surface.js',
     'entity360-adapter.js',
     'entity360-surface.js',
+    'entity360-parity-adapter.js',
+    'entity360-parity-surface.js',
     'public-spend-surface.js',
     'relations-surface.js',
     'universes-adapter.js',
@@ -106,13 +108,13 @@
 
     const federationWarm = warmFederatedSession();
     await installAnalyticalSurfaces();
-    if (!window.AtlasV2Viz?.installed || !window.AtlasV2EntitySearch?.installed) {
-      const error = new Error('ATLAS v2 visual/search capabilities failed to initialize');
+    if (!window.AtlasV2Viz?.installed || !window.AtlasV2EntitySearch?.installed || !window.AtlasV2Entity360Parity?.installed || !window.__ATLAS_V2_ENTITY360_PARITY_SURFACE__?.installed) {
+      const error = new Error('ATLAS v2 visual/search/entity-intelligence capabilities failed to initialize');
       error.code = 'VISUAL_SEARCH_CAPABILITY_MISSING';
       throw error;
     }
     window.AtlasV2Shell.mount(root);
-    emit('ok', { code: 'SHELL_READY', visualNavigation: true, entitySearch: true });
+    emit('ok', { code: 'SHELL_READY', visualNavigation: true, entitySearch: true, entity360Parity: true });
     window.dispatchEvent(new CustomEvent('atlas:v2-shell-ready', {
       detail: {
         route: window.AtlasV2Shell.currentRoute?.().id || 'explorar',
@@ -120,6 +122,7 @@
         runtime: 'analytics-primary',
         visualNavigation: true,
         entitySearch: true,
+        entity360Parity: true,
       },
     }));
     void federationWarm;
