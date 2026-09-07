@@ -85,7 +85,7 @@ jobs:
               assert f"id: '{route}'" in shell
           for forbidden in ["id: 'casos'","id: 'tareas'","id: 'cola'","id: 'sla'"]:
               assert forbidden not in shell
-          assert "STRUCTURAL_VERSION = 'v2-primary-3'" in boot
+          assert "STRUCTURAL_VERSION = 'v2-primary-4'" in boot
           assert 'atlas-v2-viz.js' in boot and 'entity-search-adapter.js' in boot
           assert 'VISUAL_SEARCH_CAPABILITY_MISSING' in boot
           assert 'AtlasV2Viz.horizontalBars' in explore and 'AtlasV2Viz.segmented' in explore
@@ -96,7 +96,7 @@ jobs:
           assert 'aml_allowed_users' in sql and 'auth.uid()' in sql and 'security definer' in sql.lower()
           assert 'security invoker' in sql.lower()
           assert 'entity_search' in edge and 'atlas_v2_entity_search' in edge
-          assert './v2/atlas-v2-boot.js?v=v2-primary-3' in html
+          assert './v2/atlas-v2-boot.js?v=v2-primary-4' in html
           for source in [shell,boot,explore,entity,adapter,viz]:
               assert 'MutationObserver' not in source
               assert '.innerHTML' not in source
@@ -132,12 +132,14 @@ jobs:
           assert r['v2_explore_mode']=='LIVE_PULSE_VISUAL'
           assert r['v2_visual_navigation']=='INTERACTIVE_FIRST'
           assert r['v2_entity_search']=='RUT_NAME_UAF_PRESS'
+          assert r['v2_version']=='v2-primary-4'
+          assert 'v2-primary-4' in html
           assert 'atlas-runtime-current-' not in html and 'atlas-runtime-current-' in legacy
           assert f'data-aml-version="{p["release"]}"' in html
           assert f'data-aml-version="{l["release"]}"' in legacy
           for name in ['atlas-v2-viz.js','atlas-v2-viz.css','entity-search-adapter.js','explore-surface.js','entity360-surface.js']:
               assert (root/'v2'/name).is_file(), name
-          print('ATLAS 2.0.2 production artifact: OK')
+          print('ATLAS 2.0.2 fresh-asset production artifact: OK')
           PY
 
       - uses: actions/upload-artifact@v4
