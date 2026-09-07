@@ -13,6 +13,7 @@ on:
       - 'src/v2/**'
       - 'tools/build_atlas_v2_primary.py'
       - 'tools/e2e_atlas_runtime_smoke.mjs'
+      - 'tools/e2e_atlas_v2_ux_preflight.mjs'
       - 'supabase/functions/atlas-v2-read/**'
       - 'supabase/functions/atlas-v2-source-ingest/**'
       - 'supabase/functions/atlas-v2-session-exchange/**'
@@ -49,6 +50,7 @@ jobs:
             src/v2/atlas-v2-access.js \
             src/v2/atlas-v2-shell.js \
             src/v2/atlas-v2-boot.js \
+            src/v2/explore-surface.js \
             src/v2/entity360-adapter.js \
             src/v2/entity360-surface.js \
             src/v2/public-spend-surface.js \
@@ -59,7 +61,8 @@ jobs:
             src/v2/territory-surface.js \
             src/v2/watch-adapter.js \
             src/v2/watch-surface.js \
-            tools/e2e_atlas_runtime_smoke.mjs; do
+            tools/e2e_atlas_runtime_smoke.mjs \
+            tools/e2e_atlas_v2_ux_preflight.mjs; do
             node --check "$f"
           done
           python3 -m py_compile tools/build_atlas_v2_primary.py
@@ -82,13 +85,15 @@ jobs:
           access=Path('src/v2/atlas-v2-access.js').read_text(encoding='utf-8')
           auth=Path('src/v2/atlas-v2-core-auth.js').read_text(encoding='utf-8')
           shell=Path('src/v2/atlas-v2-shell.js').read_text(encoding='utf-8')
+          boot=Path('src/v2/atlas-v2-boot.js').read_text(encoding='utf-8')
+          explore=Path('src/v2/explore-surface.js').read_text(encoding='utf-8')
           read_edge=Path('supabase/functions/atlas-v2-read/index.ts').read_text(encoding='utf-8')
           ingest=Path('supabase/functions/atlas-v2-source-ingest/index.ts').read_text(encoding='utf-8')
           exchange=Path('supabase/functions/atlas-v2-session-exchange/index.ts').read_text(encoding='utf-8')
           broker=Path('supabase/core-functions/atlas-v2-e2e-auth/index.ts').read_text(encoding='utf-8')
           mdir=Path('supabase/migrations')
 
-          assert primary['release']=='2.0.0' and str(primary['build'])=='2000'
+          assert primary['release']=='2.0.1' and str(primary['build'])=='2001'
           assert primary['runtime']=='ATLAS_V2_ANALYTICS'
           assert str(primary['legacy_fallback']['release'])==str(legacy['release'])
           assert str(primary['legacy_fallback']['build'])==str(legacy['build'])
@@ -100,6 +105,10 @@ jobs:
           for forbidden in ["id: 'casos'", "id: 'tareas'", "id: 'cola'", "id: 'asignaciones'", "id: 'sla'"]:
               assert forbidden not in shell
 
+          assert 'registerSurface(\'explorar\'' in explore
+          assert 'AtlasV2Universes.overview' in explore and 'AtlasV2Territory.overview' in explore and 'AtlasV2Watch.overview' in explore
+          assert 'publicSpend.monitor' in explore
+          assert 'warmFederatedSession' in boot and "STRUCTURAL_VERSION = 'v2-primary-2'" in boot
           assert 'ATLAS_READ_API_V2' in client
           assert 'ATLAS_V2_SESSION_EXCHANGE_V1' in session
           assert 'grantExpiresAt' in session and 'RENEW_SKEW_MS' in session
@@ -107,6 +116,7 @@ jobs:
           assert '.auth.getUser()' in auth and 'aml_allowed_users' in auth
           assert 'raw.githubusercontent.com' not in client
           assert 'raw.githubusercontent.com' not in access
+          assert 'raw.githubusercontent.com' not in explore
           assert 'SUPABASE_SERVICE_ROLE_KEY' not in read_edge
           assert 'x-atlas-trace-id' in read_edge and 'server-timing' in read_edge
           assert 'SUPABASE_SECRET_KEYS' in exchange and 'SUPABASE_SERVICE_ROLE_KEY' not in exchange
@@ -161,12 +171,12 @@ jobs:
           assert not leaked, f'transition authority resurrected: {leaked}'
 
           required_surfaces=[
-            'entity360-surface.js','public-spend-surface.js','relations-surface.js',
+            'explore-surface.js','entity360-surface.js','public-spend-surface.js','relations-surface.js',
             'universes-surface.js','territory-surface.js','watch-surface.js',
           ]
           missing_surfaces=[p for p in required_surfaces if not Path('src/v2',p).is_file()]
           assert not missing_surfaces, missing_surfaces
-          print('ATLAS Architecture v2 invariants OK: production runtime, federation, migrations and decommission boundaries')
+          print('ATLAS Architecture v2 invariants OK: production runtime, live Explore, federation, migrations and decommission boundaries')
           PY
 
       - name: Build production primary and frozen fallback
@@ -185,8 +195,10 @@ jobs:
           assert report['primary_runtime']=='ATLAS_V2_ANALYTICS'
           assert report['release']==str(primary['release']) and report['build']==str(primary['build'])
           assert report['legacy_release']==str(legacy_release['release']) and report['legacy_build']==str(legacy_release['build'])
+          assert report['v2_explore_mode']=='LIVE_PULSE'
+          assert report['v2_federation_prewarm'] is True
           assert 'atlas-runtime-current-' not in html
           assert 'atlas-runtime-current-' in legacy
           assert report['legacy_authority_active_on_primary'] is False
-          print('ATLAS Architecture v2 dual-release build OK')
+          print('ATLAS Architecture v2 UX-candidate dual-release build OK')
           PY
