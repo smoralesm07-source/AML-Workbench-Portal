@@ -32,7 +32,6 @@
   }
 
   function clear(el) { while (el?.firstChild) el.removeChild(el.firstChild); }
-
   function root() { return document.getElementById('atlas-v2-root'); }
 
   function renderGate(kind, title, body, action) {
@@ -61,6 +60,11 @@
     return client;
   }
 
+  function resetFederatedSession() {
+    try { global.AtlasV2Access?.reset?.(); } catch (_) {}
+    try { global.AtlasV2Session?.clear?.(); } catch (_) {}
+  }
+
   async function signIn() {
     const sb = ensureClient();
     const { error } = await sb.auth.signInWithOAuth({
@@ -71,6 +75,7 @@
   }
 
   async function signOut() {
+    resetFederatedSession();
     const sb = ensureClient();
     await sb.auth.signOut();
     location.href = cfg().redirectTo;
@@ -83,9 +88,16 @@
     return data?.session?.access_token || null;
   }
 
-  async function authorize(session) {
+  async function verifiedUser() {
     const sb = ensureClient();
-    const userId = session?.user?.id;
+    const { data, error } = await sb.auth.getUser();
+    if (error) throw error;
+    return data?.user || null;
+  }
+
+  async function authorize(user) {
+    const sb = ensureClient();
+    const userId = user?.id;
     if (!userId) return null;
     const { data, error } = await sb
       .from('aml_allowed_users')
@@ -110,7 +122,7 @@
         payload: { role: role || 'viewer' },
       });
     } catch (_) {
-      // Audit is best-effort here; data reads remain protected independently by RLS/gateway contracts.
+      // Audit is best-effort; authorization and data access remain independently enforced.
     }
   }
 
@@ -119,7 +131,7 @@
       const sb = ensureClient();
       const { data: { session }, error } = await sb.auth.getSession();
       if (error) throw error;
-      if (!session) {
+      if (!session?.access_token) {
         current = { status: 'signed_out', user: null, role: null, checkedAt: new Date().toISOString() };
         const button = node('button', { class: 'atlas-v2-button primary', type: 'button', text: 'Ingresar con Microsoft' });
         button.addEventListener('click', () => { void signIn().catch(err => renderError(err)); });
@@ -127,18 +139,22 @@
         return null;
       }
 
-      const access = await authorize(session);
+      // getSession() is used only to obtain the raw token. Identity used for authorization
+      // is revalidated against Supabase Auth before consulting the institutional allowlist.
+      const user = await verifiedUser();
+      if (!user?.id) throw new Error('La sesión no pudo ser verificada por el servidor de identidad');
+      const access = await authorize(user);
       if (!access) {
-        current = { status: 'denied', user: session.user, role: null, checkedAt: new Date().toISOString() };
+        current = { status: 'denied', user, role: null, checkedAt: new Date().toISOString() };
         const button = node('button', { class: 'atlas-v2-button', type: 'button', text: 'Cerrar sesión', onclick: () => { void signOut(); } });
         renderGate('AUTENTICACIÓN CORRECTA', 'Acceso no habilitado', 'La identidad fue autenticada, pero la autorización analítica permanece cerrada por allowlist/RLS.', button);
         return null;
       }
 
-      current = { status: 'ready', user: session.user, role: access.role || 'viewer', checkedAt: new Date().toISOString() };
+      current = { status: 'ready', user, role: access.role || 'viewer', checkedAt: new Date().toISOString() };
       global.__ATLAS_V2_ACCESS_TOKEN_PROVIDER__ = getAccessToken;
-      await auditSession(session.user, current.role);
-      return { user: session.user, role: current.role };
+      await auditSession(user, current.role);
+      return { user, role: current.role };
     } catch (error) {
       renderError(error);
       return null;
@@ -169,7 +185,9 @@
 
   const sb = ensureClient();
   sb.auth.onAuthStateChange((event) => {
+    if (event === 'TOKEN_REFRESHED') resetFederatedSession();
     if (event === 'SIGNED_OUT') {
+      resetFederatedSession();
       current = { status: 'signed_out', user: null, role: null, checkedAt: new Date().toISOString() };
       location.href = cfg().redirectTo;
     }
