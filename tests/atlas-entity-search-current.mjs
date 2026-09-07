@@ -33,37 +33,63 @@ assert.ok(manifest.scripts.indexOf(entityRoute)>manifest.scripts.indexOf(entityS
 assert.ok(manifest.scripts.indexOf(entityDocauth)>manifest.scripts.indexOf(entityRoute));
 assert.ok(manifest.forbidden_runtime_assets.includes('v041-entity-search-ux.js'));
 assert.ok(manifest.forbidden_runtime_assets.includes('v041-entity-search-ux.css'));
+assert.ok(manifest.forbidden_runtime_assets.includes('atlas-entity-search-current.js'));
+assert.ok(manifest.forbidden_runtime_assets.includes('atlas-entity-search-current.css'));
 
-const sandbox={
-  window:{},document:{querySelector:()=>null,querySelectorAll:()=>[],addEventListener:()=>{}},console,
-  setTimeout:()=>0,clearTimeout:()=>{},requestAnimationFrame:(fn)=>fn(),queueMicrotask:(fn)=>fn(),
-  MutationObserver:class{observe(){} disconnect(){}},CustomEvent:class{},URLSearchParams,
-};
-sandbox.window.window=sandbox.window;
-sandbox.window.document=sandbox.document;
+for(const needle of [
+  "ENTITY360_INLINE_AUTOCOMPLETE_0447",
+  "const LIMIT=8",
+  "FETCH_LIMIT=20",
+  "CACHE_TTL=2*60*1000",
+  "PRESS_TTL=5*60*1000",
+  "atlas-press-state/atlas_prensa.json",
+  "setTimeout(()=>void suggest(term),220)",
+  "aria-autocomplete=\"list\"",
+  "a47-suggestions",
+  "a47-entity-q",
+  "SINGLE_DARK_DOSSIER_NO_SEPARATE_SEARCH_LANDING",
+  "FEDERATED_AML_ENTITIES_PLUS_PRESS_UNRECONCILED_NO_AUTOMATIC_IDENTITY_JOIN",
+  "unreconciledPressVisible:true",
+  "automaticPressReconciliation:false",
+  "openPressObservation",
+  "NO CONCILIADA",
+  "selectionScopesAllEntityGraphics:true",
+  "window.loadEntities=loadWorkspace",
+  "window.openEntity=openWorkspace"
+]) assert.ok(js.includes(needle),`missing 0447 entity workspace contract: ${needle}`);
+
+// Regression: a press observation must stay discoverable even when the press
+// entity index has not materialized the person yet. Instrument only the test
+// copy so the private fallback extractor can be exercised without widening the
+// production API surface.
+const hookNeedle="ENTRY.version='0447';";
+assert.ok(js.includes(hookNeedle),'0447 test-hook insertion point missing');
+const instrumented=js.replace(hookNeedle,"window.__ATLAS_ENTITY_PRESS_DISCOVERY_TEST__={observedNameFromText,pressRank};\n  "+hookNeedle);
+const sandbox={window:{__ATLAS_ENTITY_ENTRY__:{open(){}}}};
 vm.createContext(sandbox);
+vm.runInContext(instrumented,sandbox,{filename:'v0447-entity-workspace.js'});
+const pressTest=sandbox.window.__ATLAS_ENTITY_PRESS_DISCOVERY_TEST__;
+assert.ok(pressTest?.observedNameFromText,'press fallback extractor unavailable in regression harness');
+const fodichSummary='Mientras Vinko Fodich, hijo de un condenado por megafraude tributario, fue formalizado por lavado de activos tras comprar seis propiedades y superar los $121 millones en gastos.';
+assert.equal(pressTest.observedNameFromText(fodichSummary,'fodich'),'Vinko Fodich');
+assert.equal(pressTest.observedNameFromText(fodichSummary,'Vinko Fodich'),'Vinko Fodich');
+assert.ok(js.includes("reconciled:false"),'press-only rows must remain explicitly unreconciled');
+assert.ok(!js.includes("rut:row.rut||row.name"),'press discovery must never fabricate a canonical RUT from a name');
 
 for(const needle of [
-  'ENTITY360_SEARCH_AUTOCOMPLETE_0447',
-  'FEDERATED_ENTITY_SEARCH_UNRECONCILED_PRESS_V1',
-  'UNRECONCILED_PRESS_DISCOVERY_ONLY',
-  'canonical_entities',
-  'unreconciled_press',
-  'openEntity',
-]) assert.ok(js.includes(needle),`missing entity workspace contract: ${needle}`);
+  "ENTITY360_ROUTE_AUTHORITY_0448",
+  "if(view==='entities')return entityLoad(...args)",
+  "legacyCapturedLoaderBypassed:true",
+  "window.navigate=navigate0448",
+  "window.loadEntities=entityLoad"
+]) assert.ok(route.includes(needle),`missing 0448 entity route contract: ${needle}`);
 
 for(const needle of [
-  'ENTITY360_ROUTE_AUTHORITY_0448',
-  'legacyCapturedLoaderBypassed',
-]) assert.ok(route.includes(needle),`missing entity route contract: ${needle}`);
-
-for(const needle of [
-  'SII_DOCUMENT_AUTHORIZATION_0449',
-  'LATEST_OBSERVED_AUTHORIZATION_NOT_ABSOLUTE_LAST_TIMBRAJE',
-  'MISSING_IS_NOT_NO_TIMBRAJE',
-  'Última autorización documental observada',
-  'observation_kind',
-  'AtlasSiiDocumentAuthorization'
+  "aml_v0449_sii_latest_document_authorization",
+  "LATEST_OBSERVED_AUTHORIZATION_NOT_ABSOLUTE_LAST_TIMBRAJE",
+  "Última autorización documental observada",
+  "observation_kind",
+  "AtlasSiiDocumentAuthorization"
 ]) assert.ok(docauth.includes(needle),`missing 0449 SII document authorization contract: ${needle}`);
 
 assert.ok(!js.includes('MutationObserver'));
@@ -82,16 +108,14 @@ assert.ok(css.includes('#content>.panel:has(#entity-search)'));
 assert.ok(docauthCss.includes('.a49-docauth'));
 assert.ok(docauthCss.includes('.a49-timeline'));
 
-// The final authority deliberately preserves the advanced Entity/Digital
-// Identity explorer while keeping global navigation unwrapped. Entity clicks
-// are captured at their own boundary, so routePinned must remain false.
+// The final authority now deliberately preserves the advanced Entity/Digital
+// Identity explorer instead of pinning the retired single-workspace surface.
 assert.ok(finalModule.includes('singleWorkspacePinned:false'));
 assert.ok(finalModule.includes('landingPinned:true'));
 assert.ok(finalModule.includes('advancedExplorerPinned:true'));
 assert.ok(finalModule.includes('legacyRendererPinRetired:true'));
 assert.ok(finalModule.includes("finalCleanEntryAuthority:'FINAL_CLEAN_ENTITY_ENTRY_ADVANCED_PRESERVING'"));
-assert.ok(finalModule.includes('routePinned:false'));
-assert.ok(finalModule.includes("navigationPolicy:'CAPTURE_ENTITIES_ONLY_NO_GLOBAL_NAVIGATE_WRAP'"));
+assert.ok(finalModule.includes('routePinned:true'));
 assert.ok(finalModule.includes('legacyCapturedLoaderBypassed:true'));
 assert.ok(finalModule.includes('autocompletePinned'));
 assert.ok(finalModule.includes('siiDocumentAuthorizationPinned'));
@@ -103,4 +127,4 @@ assert.match(release.entity_search_policy,/ENTITY360_ROUTE_AUTHORITY_0448/);
 assert.match(release.entity360_document_authorization_policy,/SPECIFIC_DOCUMENT_VERIFICATION/);
 assert.match(release.entity360_document_authorization_policy,/MISSING_IS_NOT_NO_TIMBRAJE/);
 
-console.log(`ATLAS Entity 360 workspace + federated unreconciled press discovery + advanced explorer preservation + nav-safe route + SII document authorization contract OK under release ${release.release}/${release.build}`);
+console.log(`ATLAS Entity 360 workspace + federated unreconciled press discovery + advanced explorer preservation + route + SII document authorization contract OK under release ${release.release}/${release.build}`);
