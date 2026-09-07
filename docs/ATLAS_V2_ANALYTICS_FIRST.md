@@ -46,7 +46,7 @@ It can be entered or ignored at any point.
 4. **Gasto público** — specialized procurement/budget analytical workspace.
 5. **Territorio** — contextual geographic analysis; context is never inherited as entity risk.
 6. **Relaciones** — graph/network and convergence analysis.
-7. **Vigilancia** — optional saved rules and changes over time.
+7. **Vigilancia** — detection of signals, source health and changes across published snapshots.
 
 ### Secondary utilities
 
@@ -91,7 +91,42 @@ Forbidden as mandatory fields for analytical access:
 
 `review_outcome` is optional but valuable for model evaluation. An analyst decision is never automated risk truth and must retain evidence/version context.
 
-## 7. Technical invariants
+## 7. Territory analytical contract
+
+Territory is a contextual lens, not an entity-risk engine.
+
+The native v2 contract is `ATLAS_TERRITORY_QUERY_V2`. It exposes bounded operations for regional overview, communes, commune detail, territorial signals and entity drill-down.
+
+Binding semantics:
+
+- `IGR v4` is labeled **BETA_CONTEXTUAL** until explicitly promoted by methodology/version governance;
+- a territorial score describes the observed territory, not every person or entity present there;
+- territorial context never inherits automatically to entity risk;
+- CEAD contributes contextual evidence and never proves conduct by an entity located in the territory;
+- missing geographic coverage or missing data does not equal zero exposure;
+- ordering entities inside a territory is based on observability for exploration, not a probability of LA/FT;
+- every view preserves snapshot, coverage and source semantics.
+
+## 8. Vigilance analytical contract
+
+Vigilance is a detector of change and analytical attention, not a workflow authority.
+
+The native v2 contract is `ATLAS_WATCH_QUERY_V2`. It exposes overview, current signals, changes, source health and snapshot timeline.
+
+Binding semantics:
+
+- signal ≠ finding;
+- priority ≠ probability;
+- a signal may be explored or ignored without changing its analytical state;
+- no signal requires owner, assignment, due date, SLA, closure or disposition;
+- every published `READY` Observatorio snapshot is captured immutably for future comparison;
+- changes are represented as `NEW`, `CHANGED` and `REMOVED`;
+- `REMOVED` means not present in the latest published snapshot, never “resolved” or “closed”;
+- until two comparable snapshots exist, the UI must show `BASELINE_ONLY`; it must not translate missing history into “no changes”;
+- source health is shown alongside signals because source silence limits interpretation;
+- absence of changes does not imply low risk or absence of phenomena outside coverage.
+
+## 9. Technical invariants
 
 The analytics-first shell must follow `docs/ARCHITECTURE_V2.md`:
 
@@ -105,20 +140,23 @@ The analytics-first shell must follow `docs/ARCHITECTURE_V2.md`:
 - no competing legacy renderer after cutover;
 - no self-sustaining MutationObserver repair layer.
 
-## 8. Migration order under this contract
+## 10. Migration order under this contract
 
-1. Foundation: shell, router, command palette, tokens, loading/error/empty primitives.
-2. Explore: analytical landing and universal search; no task inbox.
-3. Entidad 360: first complete cross-source v2 experience.
-4. Gasto Público: move the existing v2 data boundary into the new shell.
-5. Universos: population analysis with source lenses.
-6. Territorio and Relaciones.
-7. Vigilancia and optional saved analytical objects.
-8. Outcome capture as a contextual action, not a mandatory workflow.
-9. Delete legacy authority as each route completes parity/security/performance gates.
+1. Foundation: shell, router, command palette, tokens, loading/error/empty primitives. **Complete in branch.**
+2. Entidad 360: complete cross-source v2 experience. **Complete in branch.**
+3. Gasto Público: existing v2 data boundary mounted in the new shell. **Complete in branch.**
+4. Relaciones: governed network/convergence analysis. **Complete in branch.**
+5. Universos: SII, UAF/SO, OSFL, RES and Sanciones as population lenses. **Complete in branch.**
+6. Territorio: governed contextual geographic analysis. **Complete in branch.**
+7. Vigilancia: snapshot-based signals/change/source-health surface. **Complete in branch.**
+8. Integration cut: make v2 the route authority only after authenticated end-to-end parity, security and performance gates pass; retire the corresponding legacy authority instead of layering another renderer.
+9. Launch hardening: authentication, regression, observability, performance, error handling and controlled production cutover.
+10. Optional continuity/outcome objects may be added contextually after launch gates, without becoming mandatory workflow.
 
-## 9. Acceptance test
+## 11. Acceptance test
 
 A new analyst must be able to open ATLAS, search or browse a universe, find an anomaly, drill into an entity, inspect its evidence and move to another analytical question **without once being asked to take, assign, close or manage a case**.
 
-If that test fails, the product has drifted from analytics into case management and the change must not ship.
+A second acceptance test applies to Vigilancia: the analyst must be able to inspect a new or changed signal, examine its evidence and pivot to another analytical surface **without changing a workflow state or accepting responsibility for the signal**.
+
+If either test fails, the product has drifted from analytics into case management and the change must not ship.
