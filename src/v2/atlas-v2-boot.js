@@ -2,8 +2,8 @@
 
 (function bootAtlasV2() {
   const baseUrl = new URL('./', document.currentScript?.src || document.baseURI);
-  const STRUCTURAL_VERSION = 'v2-primary-4';
-  const SURFACE_VERSION = 'v2-primary-4-legacy-power-1';
+  const STRUCTURAL_VERSION = 'v2-primary-5';
+  const SURFACE_VERSION = 'v2-primary-5-entity-intelligence-1';
   const STRUCTURAL_SURFACES = Object.freeze([
     'atlas-v2-access.js',
     'atlas-v2-viz.js',
@@ -113,7 +113,7 @@
       throw error;
     }
     window.AtlasV2Shell.mount(root);
-    emit('ok', { code: 'SHELL_READY', visualNavigation: true, entitySearch: true });
+    emit('ok', { code: 'SHELL_READY', visualNavigation: true, entitySearch: true, entityIntelligence: true });
     window.dispatchEvent(new CustomEvent('atlas:v2-shell-ready', {
       detail: {
         route: window.AtlasV2Shell.currentRoute?.().id || 'explorar',
@@ -121,6 +121,7 @@
         runtime: 'analytics-primary',
         visualNavigation: true,
         entitySearch: true,
+        entityIntelligence: true,
       },
     }));
     void federationWarm;
