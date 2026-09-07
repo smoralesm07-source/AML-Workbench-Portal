@@ -140,6 +140,17 @@ The analytics-first shell must follow `docs/ARCHITECTURE_V2.md`:
 - no competing legacy renderer after cutover;
 - no self-sustaining MutationObserver repair layer.
 
+### Primary runtime authority
+
+The integration artifact makes the analytics-first v2 shell the only runtime authority mounted at `/`.
+
+- `index.html` mounts only the v2 auth, session, shell and native analytical surfaces;
+- Microsoft Entra + Supabase Auth + `aml_allowed_users` form the autonomous core authorization boundary;
+- analytical adapters continue to use governed v2 gateway/read contracts rather than direct operational-table reads;
+- the compiled 0.96.4 runtime is retained only as `legacy.html` for controlled rollback and does not execute in the primary page;
+- rollback availability must never be used as justification for layering a legacy renderer back into a v2 route;
+- production authority changes only after merge/deploy and launch-hardening gates pass.
+
 ## 10. Migration order under this contract
 
 1. Foundation: shell, router, command palette, tokens, loading/error/empty primitives. **Complete in branch.**
@@ -149,8 +160,8 @@ The analytics-first shell must follow `docs/ARCHITECTURE_V2.md`:
 5. Universos: SII, UAF/SO, OSFL, RES and Sanciones as population lenses. **Complete in branch.**
 6. Territorio: governed contextual geographic analysis. **Complete in branch.**
 7. Vigilancia: snapshot-based signals/change/source-health surface. **Complete in branch.**
-8. Integration cut: make v2 the route authority only after authenticated end-to-end parity, security and performance gates pass; retire the corresponding legacy authority instead of layering another renderer.
-9. Launch hardening: authentication, regression, observability, performance, error handling and controlled production cutover.
+8. Integration cut: autonomous authentication, v2 primary build authority and explicit non-competing legacy rollback. **Complete in branch; pending launch hardening and merge.**
+9. Launch hardening: authenticated browser E2E, regression, observability, performance, error handling, responsive behavior and controlled production cutover.
 10. Optional continuity/outcome objects may be added contextually after launch gates, without becoming mandatory workflow.
 
 ## 11. Acceptance test
