@@ -83,6 +83,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # The broker accepts only the exact GitHub repository/workflow/ref/event OIDC claims.
           request_url="${ACTIONS_ID_TOKEN_REQUEST_URL}"
           sep='?'; [[ "$request_url" == *'?'* ]] && sep='&'
           oidc_json="$(curl --fail-with-body --silent --show-error -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${request_url}${sep}audience=atlas-v2-e2e")"
