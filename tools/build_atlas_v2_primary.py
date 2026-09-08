@@ -46,6 +46,12 @@ V2_FILES = [
     "universes-adapter.js",
     "universes-surface.js",
     "universes-surface.css",
+    "osfl-adapter.js",
+    "osfl-surface.js",
+    "osfl-surface.css",
+    "sanctions-adapter.js",
+    "sanctions-surface.js",
+    "sanctions-surface.css",
     "territory-adapter.js",
     "territory-surface.js",
     "territory-surface.css",
@@ -156,6 +162,12 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
     explorer = read("entity-explorer-classic-surface.js")
     explorer_css = read("entity-explorer-classic-surface.css")
     universes = read("universes-adapter.js")
+    osfl_adapter = read("osfl-adapter.js")
+    osfl = read("osfl-surface.js")
+    osfl_css = read("osfl-surface.css")
+    sanctions_adapter = read("sanctions-adapter.js")
+    sanctions = read("sanctions-surface.js")
+    sanctions_css = read("sanctions-surface.css")
     viz = read("atlas-v2-viz.js")
     config = read("atlas-v2-production-config.js")
     health = read("atlas-v2-health.js")
@@ -164,6 +176,7 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
     require(boot, [
         "AtlasCoreSession.ready", "STRUCTURAL_SURFACE_LOAD_FAILED", "warmFederatedSession",
         "atlas-v2-viz.js", "entity-search-adapter.js", "entity360-surface.js", "entity360-parity-surface.js",
+        "osfl-adapter.js", "osfl-surface.js", "sanctions-adapter.js", "sanctions-surface.js",
         "VISUAL_SEARCH_CAPABILITY_MISSING", "STRUCTURAL_VERSION = 'v2-primary-5'",
         f"SURFACE_VERSION = '{SURFACE_VERSION}'", "ENTITY360_LEGACY_PARITY_V2",
     ], "boot authority")
@@ -198,6 +211,12 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
     ], "classic Entidades visual contract")
 
     require(universes, ["attention: (options = {}) => query('attention'", "recentTerminated", "terminatedByYear"], "UAF-SII attention adapter")
+    require(osfl_adapter, ["ATLAS_OSFL_QUERY_V2", "operation: 'osfl_query'", "AtlasV2Osfl"], "OSFL governed adapter")
+    require(osfl, ["registerSurface('osfl'", "M19", "M20", "M21", "AtlasV2Osfl"], "OSFL native surface")
+    require(osfl_css, [".atlas-v2-osfl", ".osfl-kpis", ".osfl-signals", ".osfl-entity"], "OSFL visual contract")
+    require(sanctions_adapter, ["ATLAS_SANCTIONS_QUERY_V2", "operation: 'sanctions_query'", "AtlasV2Sanctions"], "sanctions governed adapter")
+    require(sanctions, ["registerSurface('sanciones'", "AtlasV2Sanctions", "CGR", "Entidad 360"], "sanctions native surface")
+    require(sanctions_css, [".atlas-v2-sanctions", ".san-kpis", ".san-events", ".san-event"], "sanctions visual contract")
     require(entity_adapter, ["entity_intelligence", "entity_screening_live", "digital_identity_live", "searchDigitalIdentity"], "Entity 360 intelligence adapter")
     require(entity, [
         "timelineEvents", "timelinePanel", "whatToReview", "Qué mirar primero", "Línea de tiempo de hechos críticos",
@@ -223,7 +242,10 @@ def validate(out_dir: Path, html: str, legacy: str, published_v2: list[str], *, 
         require(config, ["mode: 'analytics-primary'"], "production config")
     require(config, ["legacyFallbackPath: './legacy.html'"], "legacy fallback contract")
 
-    for source in (auth, explore, entity, parity, entity_adapter, search, explorer_adapter, explorer, universes, viz):
+    for source in (
+        auth, explore, entity, parity, entity_adapter, search, explorer_adapter, explorer, universes,
+        osfl_adapter, osfl, sanctions_adapter, sanctions, viz,
+    ):
         if "MutationObserver" in source or ".innerHTML" in source:
             raise SystemExit("v2 primary build: runtime repair/HTML injection reintroduced")
 
@@ -267,6 +289,8 @@ def update_report(out_dir: Path, published_v2: list[str], primary_release: dict,
         "v2_entity360_parity": "SIX_LENS_NATIVE_V2",
         "v2_entity360_dossier": "ENTITY360_LEGACY_PARITY_V2",
         "v2_entity360_executive_fallback": "HISTORY_CLEAN_EXECUTIVE_V2",
+        "v2_osfl_authority": "OSFL_NATIVE_V2",
+        "v2_sanctions_authority": "SANCTIONS_NATIVE_V2",
         "v2_surface_version": SURFACE_VERSION,
         "v2_federation_prewarm": True,
         "v2_e2e_proxy": e2e_proxy,
@@ -314,6 +338,8 @@ def build_primary(out_dir: Path, *, e2e_proxy: bool = False) -> None:
         "entity_screening": "EVERY_IDENTITY_SEARCH",
         "entity_intelligence": "UAF_SII_REPORTING_SCREENING_DIGITAL",
         "entity360_authority": "ENTITY360_LEGACY_PARITY_V2",
+        "osfl_authority": "OSFL_NATIVE_V2",
+        "sanctions_authority": "SANCTIONS_NATIVE_V2",
         "surface_version": SURFACE_VERSION,
         "e2e_proxy": e2e_proxy,
     }, ensure_ascii=False))
