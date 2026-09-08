@@ -15,6 +15,7 @@
       if (key === 'class') el.className = value;
       else if (key === 'text') el.textContent = String(value);
       else if (key === 'dataset') Object.entries(value).forEach(([name, entry]) => { el.dataset[name] = entry; });
+      else if (key === 'style') el.style.cssText = String(value);
       else if (key.startsWith('on') && typeof value === 'function') el.addEventListener(key.slice(2).toLowerCase(), value);
       else if (key === 'checked' || key === 'selected') el[key] = Boolean(value);
       else el.setAttribute(key, String(value));
@@ -35,7 +36,7 @@
     if (document.getElementById('atlas-v2-sanctions-style')) return;
     const link = document.createElement('link');
     link.id = 'atlas-v2-sanctions-style'; link.rel = 'stylesheet';
-    link.href = new URL('sanctions-surface.css?v=command-center-1', scriptBase).href;
+    link.href = new URL('sanctions-surface.css?v=command-center-2', scriptBase).href;
     document.head.appendChild(link);
   }
   function count(v) { const n = Number(v); return Number.isFinite(n) ? NF.format(n) : '—'; }
