@@ -161,21 +161,39 @@
     ]);
   }
 
-  function chileRibbon(regions) {
-    const top = (regions || []).filter(r => r.region !== 'Sin región informada').slice(0, 16); const max = Math.max(1, ...top.map(r => Number(r.event_count || 0)));
-    return node('div', { class: 'san-chile' }, top.map((r, i) => {
-      const intensity = Math.max(.15, Number(r.event_count || 0) / max);
-      return node('span', { class: 'san-chile-segment', style: `--i:${intensity};margin-left:${[18,11,23,8,19,14,27,10,22,16,28,13,20,25,17,29][i] || 15}px`, title: `${r.region}: ${count(r.event_count)}` });
-    }));
-  }
-
   function regionPanel(api, state, rows) {
-    const data = (rows || []).filter(r => r.region !== 'Sin región informada').slice(0, 10); const max = Math.max(1, ...data.map(r => Number(r.event_count || 0)));
+    const all = (rows || []).filter(r => r.region !== 'Sin región informada');
+    const data = all.slice(0, 10);
+    const total = all.reduce((sum, r) => sum + Number(r.event_count || 0), 0) || 1;
+    const max = Math.max(1, ...data.map(r => Number(r.event_count || 0)));
+    const share = n => Number(n || 0) / total * 100;
+    const top3 = all.slice(0, 3).reduce((sum, r) => sum + Number(r.event_count || 0), 0);
+    const top5 = all.slice(0, 5).reduce((sum, r) => sum + Number(r.event_count || 0), 0);
+    const leader = all[0];
+    const metric = (label, value, detail, tone = 'cyan') => node('article', { style: `padding:9px 10px;border:1px solid ${tone === 'orange' ? 'rgba(255,137,29,.28)' : 'rgba(24,211,223,.22)'};border-radius:9px;background:${tone === 'orange' ? 'rgba(255,137,29,.055)' : 'rgba(24,211,223,.045)'};display:grid;gap:2px;` }, [
+      node('small', { text: label, style: 'font-size:8px;letter-spacing:.04em;text-transform:uppercase;color:#8ea8b1;font-weight:700;' }),
+      node('strong', { text: value, style: `font-size:17px;letter-spacing:-.02em;color:${tone === 'orange' ? '#ff9a3b' : '#e8f7f9'};` }),
+      node('span', { text: detail, style: 'font-size:8px;line-height:1.25;color:#86a2aa;' }),
+    ]);
     return node('section', { class: 'san-panel san-regions' }, [
-      panelTitle('Sanciones por región', 'Concentración territorial de eventos con base geográfica informada.'),
-      node('div', { class: 'san-region-layout' }, [
-        node('div', { class: 'san-region-list' }, data.map((r, i) => node('button', { type: 'button', class: state.region === r.region ? 'active' : '', onclick: () => nav(api, state, { region: state.region === r.region ? '' : r.region, offset: 0 }) }, [node('b', { text: String(i + 1) }), node('span', { text: r.region }), node('i', {}, node('em', { style: `width:${Math.max(2, Number(r.event_count || 0) / max * 100)}%` })), node('strong', { text: count(r.event_count) })]))),
-        chileRibbon(rows),
+      panelTitle('Sanciones por región', 'Ranking interactivo y concentración territorial sobre eventos con región informada.'),
+      node('div', { class: 'san-region-layout', style: 'grid-template-columns:minmax(0,1fr) 132px;gap:14px;min-height:198px;' }, [
+        node('div', { class: 'san-region-list' }, data.map((r, i) => {
+          const regionalShare = share(r.event_count);
+          return node('button', { type: 'button', class: state.region === r.region ? 'active' : '', style: 'grid-template-columns:18px minmax(100px,1fr) minmax(58px,.85fr) 38px 42px;', onclick: () => nav(api, state, { region: state.region === r.region ? '' : r.region, offset: 0 }) }, [
+            node('b', { text: String(i + 1) }),
+            node('span', { text: r.region }),
+            node('i', {}, node('em', { style: `width:${Math.max(2, Number(r.event_count || 0) / max * 100)}%` })),
+            node('strong', { text: count(r.event_count) }),
+            node('span', { text: pct(regionalShare), style: 'text-align:right;color:#6fc8d6;font-size:8px;font-weight:700;' }),
+          ]);
+        })),
+        node('aside', { 'aria-label': 'Indicadores de concentración regional', style: 'display:grid;gap:7px;align-content:start;' }, [
+          metric('Región líder', leader ? pct(share(leader.event_count)) : '—', leader?.region || 'Sin datos', 'orange'),
+          metric('Concentración Top 3', pct(share(top3)), `${count(top3)} eventos`),
+          metric('Concentración Top 5', pct(share(top5)), `${count(top5)} eventos`),
+          metric('Cobertura territorial', count(all.length), 'regiones con eventos informados'),
+        ]),
       ])
     ]);
   }
