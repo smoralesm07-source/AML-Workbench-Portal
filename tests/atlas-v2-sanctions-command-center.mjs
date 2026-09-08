@@ -22,6 +22,11 @@ for (const marker of [
   'Universos analizados',
   'Sanciones por supervisor',
   'Sanciones por región',
+  'Ranking interactivo y concentración territorial',
+  'Región líder',
+  'Concentración Top 3',
+  'Concentración Top 5',
+  'Cobertura territorial',
   'Sanciones por tipo',
   'Evolución de sanciones',
   'Casos prioritarios',
@@ -39,6 +44,7 @@ assert.match(surface, /total \/ max \* 100/);
 assert.match(surface, /event_count \|\| 0\) \/ max \* 100/);
 assert.match(surface, /conic-gradient/);
 assert.match(surface, /sanctions-surface\.css\?v=command-center-2/);
+assert.doesNotMatch(surface, /chileRibbon|san-chile-segment/);
 assert.doesNotMatch(surface, /innerHTML|MutationObserver|supabase\.from|rest\/v1|raw\.githubusercontent|ldmtlwzqaqmegedktlxr/);
 
 for (const selector of [
@@ -67,8 +73,8 @@ assert.doesNotMatch(migration, /grant execute .* to anon/i);
 
 assert.match(boot, /sanctions-adapter\.js/);
 assert.match(boot, /sanctions-surface\.js/);
-assert.match(boot, /ASSET_REVISION = 'sanctions-chart-variability-2'/);
-assert.match(entry, /s=sanctions-chart-variability-2/);
+assert.match(boot, /ASSET_REVISION = 'sanctions-region-card-3'/);
+assert.match(entry, /s=sanctions-region-card-3/);
 
 new Function(adapter);
 new Function(surface);
