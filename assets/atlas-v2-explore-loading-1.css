@@ -88,3 +88,12 @@
     min-height: 260px;
   }
 }
+
+/* Explorar · limpieza de alineación del panel ROS.
+   La franja de resumen y el pie bajo el gráfico duplicaban información y
+   desalineaban visualmente el gráfico de barras respecto de las tarjetas del
+   panel de conciliación situado a su derecha. */
+.atlas-v2-studio-ros-panel .atlas-v2-studio-ros-insight,
+.atlas-v2-studio-ros-panel .atlas-v2-studio-ros-foot {
+  display: none !important;
+}
