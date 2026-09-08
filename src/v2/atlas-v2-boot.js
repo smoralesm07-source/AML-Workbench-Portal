@@ -4,7 +4,7 @@
   const baseUrl = new URL('./', document.currentScript?.src || document.baseURI);
   const STRUCTURAL_VERSION = 'v2-primary-5';
   const SURFACE_VERSION = 'v2-primary-7-executive-pulse-entity360-classic-1';
-  const ASSET_REVISION = 'universos-intelligence-1';
+  const ASSET_REVISION = 'universos-intelligence-osfl-sanctions-1';
   const LEGACY_ASSET_REVISION_MARKER = "ASSET_REVISION = 'executive-pulse-entity360-classic-1'";
   void LEGACY_ASSET_REVISION_MARKER;
   const STRUCTURAL_SURFACES = Object.freeze([
@@ -21,6 +21,10 @@
     'relations-surface.js',
     'universes-adapter.js',
     'universes-surface.js',
+    'osfl-adapter.js',
+    'osfl-surface.js',
+    'sanctions-adapter.js',
+    'sanctions-surface.js',
     'territory-adapter.js',
     'territory-surface.js',
     'watch-adapter.js',
@@ -113,15 +117,15 @@
 
     const federationWarm = warmFederatedSession();
     await installAnalyticalSurfaces();
-    if (!window.AtlasV2Viz?.installed || !window.AtlasV2EntitySearch?.installed || !window.__ATLAS_V2_ENTITY360_PARITY__?.installed) {
-      const error = new Error('ATLAS v2 visual/search/entity360 capabilities failed to initialize');
+    if (!window.AtlasV2Viz?.installed || !window.AtlasV2EntitySearch?.installed || !window.__ATLAS_V2_ENTITY360_PARITY__?.installed || !window.AtlasV2Osfl || !window.__ATLAS_V2_OSFL_SURFACE__ || !window.AtlasV2Sanctions || !window.__ATLAS_V2_SANCTIONS_SURFACE__) {
+      const error = new Error('ATLAS v2 visual/search/entity360/osfl/sanctions capabilities failed to initialize');
       error.code = 'VISUAL_SEARCH_CAPABILITY_MISSING';
       throw error;
     }
     window.AtlasV2Shell.mount(root);
     emit('ok', {
       code: 'SHELL_READY', visualNavigation: true, entitySearch: true, entityIntelligence: true,
-      entity360: 'ENTITY360_LEGACY_PARITY_V2', assetRevision: ASSET_REVISION,
+      entity360: 'ENTITY360_LEGACY_PARITY_V2', osfl: true, sanctions: true, assetRevision: ASSET_REVISION,
     });
     window.dispatchEvent(new CustomEvent('atlas:v2-shell-ready', {
       detail: {
@@ -132,6 +136,8 @@
         entitySearch: true,
         entityIntelligence: true,
         entity360: 'ENTITY360_LEGACY_PARITY_V2',
+        osfl: true,
+        sanctions: true,
         assetRevision: ASSET_REVISION,
       },
     }));
