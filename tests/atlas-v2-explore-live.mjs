@@ -6,6 +6,9 @@ const css = fs.readFileSync('src/v2/explore-surface.css', 'utf8');
 const viz = fs.readFileSync('src/v2/atlas-v2-viz.js', 'utf8');
 const boot = fs.readFileSync('src/v2/atlas-v2-boot.js', 'utf8');
 const universes = fs.readFileSync('src/v2/universes-adapter.js', 'utf8');
+const universesSurface = fs.readFileSync('src/v2/universes-surface.js', 'utf8');
+const universesCss = fs.readFileSync('src/v2/universes-surface.css', 'utf8');
+const universesMigration = fs.readFileSync('supabase/core-migrations/20260908002000_atlas_v2_universos_intelligence.sql', 'utf8');
 const builder = fs.readFileSync('tools/build_atlas_v2_primary.py', 'utf8');
 const html = fs.readFileSync('atlas-v2.html', 'utf8');
 const reportability = JSON.parse(fs.readFileSync('data/uaf_reportability_sector_2025.json', 'utf8'));
@@ -76,15 +79,38 @@ assert.doesNotMatch(viz, /innerHTML|MutationObserver/);
 
 assert.match(boot, /STRUCTURAL_VERSION = 'v2-primary-5'/);
 assert.match(boot, /SURFACE_VERSION = 'v2-primary-7-executive-pulse-entity360-classic-1'/);
-assert.match(boot, /ASSET_REVISION = 'image-parity-4'/);
+assert.match(boot, /ASSET_REVISION = 'universos-intelligence-1'/);
 assert.match(boot, /entity360-surface\.js/);
 assert.match(boot, /entity360-parity-surface\.js/);
 assert.ok(boot.indexOf("'entity360-surface.js'") < boot.indexOf("'entity360-parity-surface.js'"));
 assert.match(boot, /ENTITY360_LEGACY_PARITY_V2/);
 
 assert.match(universes, /attention:\s*\(options = \{\}\)\s*=>\s*query\('attention'/);
+assert.match(universes, /intelligence\(lens/);
+assert.match(universes, /query\('slice'/);
+assert.match(universes, /POPULATION_INTELLIGENCE_V2/);
 assert.match(universes, /recentTerminated/);
 assert.match(universes, /terminatedByYear/);
+
+for (const marker of [
+  "registerSurface('universos'",
+  'POPULATION_INTELLIGENCE_V2',
+  'Dónde se concentra el universo',
+  'Presencia en otros universos',
+  'Qué mirar primero',
+  'Entidades que conviene mirar',
+  'RUT exacto',
+  'AtlasV2Universes.slice',
+  'AtlasV2Universes.membership',
+]) assert.ok(universesSurface.includes(marker), `Universos surface missing ${marker}`);
+assert.doesNotMatch(universesSurface, /innerHTML|MutationObserver|supabase\.from|rest\/v1/);
+for (const selector of ['.uiv2-shell','.uiv2-kpis','.uiv2-grid-main','.uiv2-bar-row','.uiv2-overlap-row','.uiv2-insight','.uiv2-entity-row','.uiv2-membership']) {
+  assert.ok(universesCss.includes(selector), `Universos CSS missing ${selector}`);
+}
+assert.match(universesMigration, /universe_intelligence/);
+assert.match(universesMigration, /universe_slice/);
+assert.match(universesMigration, /REGISTRY_COMPANY_MATERIALIZED/);
+assert.match(universesMigration, /RES_COMPANY_MATERIALIZED_ALL_FILES/);
 
 assert.match(builder, /SURFACE_VERSION = "v2-primary-7-executive-pulse-entity360-classic-1"/);
 assert.match(builder, /"v2_explore_design": "EXECUTIVE_PULSE_V2"/);
@@ -94,11 +120,14 @@ assert.match(builder, /"v2_ros_2026_semantics": "YTD_DASHED_NO_FABRICATION"/);
 for (const marker of [
   'atlas-v2-shell.css?v=v2-primary-5',
   'atlas-v2-core-auth.css?v=v2-primary-5',
-  'atlas-v2-boot.js?v=v2-primary-7-executive-pulse-entity360-classic-1&r=image-parity-4',
+  'atlas-v2-boot.js?v=v2-primary-7-executive-pulse-entity360-classic-1&r=universos-intelligence-1',
   'atlas-v2-session.js?v=v2-primary-5',
   'atlas-v2-viz.css?v=v2-primary-5-viz1',
   'entity360-parity-surface.css?v=v2-primary-5-entity360-parity-1',
 ]) assert.ok(html.includes(marker), marker);
 assert.doesNotMatch(html, /entity360-parity-surface\.js\?v=/);
 
-console.log('ATLAS 2.0.2 Explore approved image parity + recovered Entity 360 boot contract OK');
+new Function(universes);
+new Function(universesSurface);
+
+console.log('ATLAS 2.0.2 Explore + dynamic Universos intelligence + recovered Entity 360 contract OK');

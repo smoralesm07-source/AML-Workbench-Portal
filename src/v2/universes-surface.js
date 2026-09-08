@@ -4,18 +4,36 @@
   if (global.__ATLAS_V2_UNIVERSES_SURFACE__) return;
   const scriptBase = new URL('./', document.currentScript?.src || document.baseURI);
   const NF = new Intl.NumberFormat('es-CL');
+  const CLP = new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
   let renderSerial = 0;
 
   const LENSES = Object.freeze({
-    SII: { label: 'SII', detail: 'Tributario', dimensions: [['region','Región'],['sector','Sector económico'],['status','Estado']] },
-    UAF: { label: 'UAF / SO', detail: 'Sujetos obligados', dimensions: [['region','Región'],['sector','Sector UAF'],['band','Banda IPF']] },
-    OSFL: { label: 'OSFL', detail: 'Universo observado', dimensions: [['region','Región'],['activity','Actividad'],['confirmation','Confirmación']] },
-    RES: { label: 'RES', detail: 'Sociedades', dimensions: [['region','Región social'],['constitution_year','Año constitución']] },
-    SANCIONES: { label: 'Sanciones', detail: 'Eventos administrativos', dimensions: [['region','Región'],['entity_type','Tipo entidad']] },
+    SII: {
+      label: 'SII', title: 'Universo tributario', short: 'Tributario', icon: '▦',
+      description: 'Empresas y contribuyentes observados en el padrón SII materializado.',
+      dimensions: [['region','Región'],['sector','Sector económico'],['status','Estado tributario']],
+    },
+    UAF: {
+      label: 'UAF / SO', title: 'Sujetos obligados', short: 'SO', icon: '◎',
+      description: 'Padrón UAF reconciliado con SII, supervisión y contexto multifuente.',
+      dimensions: [['sector','Sector UAF'],['region','Región'],['band','Banda IPF']],
+    },
+    OSFL: {
+      label: 'OSFL', title: 'Organizaciones sin fines de lucro', short: 'OSFL', icon: '◇',
+      description: 'Universo OSFL observado y materializado; no equivale al total legal nacional.',
+      dimensions: [['activity','Actividad'],['region','Región'],['confirmation','Confirmación']],
+    },
+    RES: {
+      label: 'RES', title: 'Empresas y sociedades', short: 'RES', icon: '⬡',
+      description: 'Constituciones y presencia registral del Registro de Empresas y Sociedades.',
+      dimensions: [['constitution_year','Año de constitución'],['region','Región social']],
+    },
+    SANCIONES: {
+      label: 'Sanciones', title: 'Antecedentes administrativos', short: 'Sanciones', icon: '!',
+      description: 'Entidades con eventos sancionatorios o de enforcement, preservando su semántica propia.',
+      dimensions: [['region','Región'],['entity_type','Tipo de entidad']],
+    },
   });
-  const MODES = Object.freeze([
-    ['overview','Panorama'],['distribution','Distribución'],['entities','Entidades'],['membership','Cruces'],['method','Método'],
-  ]);
 
   function node(tag, attrs = {}, children = []) {
     const element = document.createElement(tag);
@@ -23,6 +41,7 @@
       if (value == null) return;
       if (key === 'class') element.className = value;
       else if (key === 'text') element.textContent = String(value);
+      else if (key === 'style' && typeof value === 'object') Object.assign(element.style, value);
       else if (key.startsWith('on') && typeof value === 'function') element.addEventListener(key.slice(2).toLowerCase(), value);
       else element.setAttribute(key, String(value));
     });
@@ -40,309 +59,448 @@
     const link = document.createElement('link');
     link.id = 'atlas-v2-universes-style';
     link.rel = 'stylesheet';
-    link.href = new URL('universes-surface.css?v=1', scriptBase).href;
+    link.href = new URL('universes-surface.css?v=population-intelligence-1', scriptBase).href;
     document.head.appendChild(link);
   }
 
-  function formatCount(value) {
+  function count(value) {
     const n = Number(value);
     if (!Number.isFinite(n)) return '—';
-    if (n >= 1e6) return `${(n / 1e6).toLocaleString('es-CL', { maximumFractionDigits: 2 })} M`;
-    if (n >= 1e3) return `${(n / 1e3).toLocaleString('es-CL', { maximumFractionDigits: 1 })} mil`;
     return NF.format(n);
   }
 
-  function formatDate(value) {
-    if (!value) return 'Sin fecha publicada';
+  function compact(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '—';
+    if (Math.abs(n) >= 1e6) return `${(n / 1e6).toLocaleString('es-CL', { maximumFractionDigits: 2 })} M`;
+    if (Math.abs(n) >= 1e3) return `${(n / 1e3).toLocaleString('es-CL', { maximumFractionDigits: 1 })} mil`;
+    return NF.format(n);
+  }
+
+  function pct(part, total, digits = 1) {
+    const p = Number(part), t = Number(total);
+    if (!Number.isFinite(p) || !Number.isFinite(t) || t <= 0) return '—';
+    return `${(100 * p / t).toLocaleString('es-CL', { maximumFractionDigits: digits })}%`;
+  }
+
+  function date(value) {
+    if (!value) return 'Sin fecha';
     const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return String(value);
+    if (Number.isNaN(d.getTime())) return String(value).slice(0, 10);
     return d.toLocaleDateString('es-CL', { year: 'numeric', month: 'short', day: '2-digit' });
   }
 
-  function pageHead(lens) {
-    return node('header', { class: 'atlas-v2-pagehead' }, [
-      node('div', { class: 'atlas-v2-eyebrow', text: 'ANÁLISIS POBLACIONAL · UNIVERSOS V2' }),
-      node('h1', { text: 'Universos' }),
-      node('p', { text: `${LENSES[lens].label} es una lente sobre su propia fuente y grano. Cambiar de lente no transforma SII, UAF, OSFL, RES y sanciones en una única tabla ni homologa automáticamente sus significados.` }),
-    ]);
+  function money(value) {
+    const n = Number(value);
+    return Number.isFinite(n) ? CLP.format(n) : '—';
+  }
+
+  function validRut(value) {
+    const compactRut = String(value || '').toUpperCase().replace(/[^0-9K]/g, '');
+    return /^\d{7,8}[0-9K]$/.test(compactRut);
   }
 
   function paramsFrom(route) {
-    const requestedLens = String(route.params.get('lens') || 'SII').toUpperCase();
-    const lens = LENSES[requestedLens] ? requestedLens : 'SII';
-    const requestedMode = String(route.params.get('mode') || 'overview').toLowerCase();
-    const mode = MODES.some(([id]) => id === requestedMode) ? requestedMode : 'overview';
-    const allowedDimensions = LENSES[lens].dimensions.map(([id]) => id);
-    const requestedDimension = String(route.params.get('dimension') || allowedDimensions[0]).toLowerCase();
-    const dimension = allowedDimensions.includes(requestedDimension) ? requestedDimension : allowedDimensions[0];
+    const requested = String(route.params.get('lens') || 'UAF').toUpperCase();
+    const lens = LENSES[requested] ? requested : 'UAF';
+    const dims = LENSES[lens].dimensions.map(([id]) => id);
+    const requestedDim = String(route.params.get('dimension') || dims[0]).toLowerCase();
     return {
       lens,
-      mode,
-      dimension,
+      dimension: dims.includes(requestedDim) ? requestedDim : dims[0],
+      key: route.params.get('key') || '',
       q: route.params.get('q') || '',
-      rut: route.params.get('rut') || '',
     };
   }
 
   function nav(api, state, patch = {}) {
-    api.navigate('universos', { ...state, ...patch });
+    const next = { lens: state.lens, dimension: state.dimension, key: state.key, q: state.q, ...patch };
+    Object.keys(next).forEach(k => { if (next[k] == null || next[k] === '') delete next[k]; });
+    api.navigate('universos', next);
   }
 
-  function lensToolbar(api, state) {
-    return node('div', { class: 'atlas-v2-univ-toolbar', role: 'navigation', 'aria-label': 'Lentes poblacionales' },
-      Object.entries(LENSES).map(([id, lens]) => node('button', {
-        type: 'button',
-        'aria-current': state.lens === id ? 'true' : 'false',
-        text: `${lens.label} · ${lens.detail}`,
-        onclick: () => nav(api, state, { lens: id, dimension: LENSES[id].dimensions[0][0], q: '', rut: '' }),
-      })));
-  }
-
-  function modeToolbar(api, state) {
-    return node('div', { class: 'atlas-v2-univ-toolbar', role: 'navigation', 'aria-label': 'Modos de análisis' },
-      MODES.map(([id, label]) => node('button', {
-        type: 'button', 'aria-current': state.mode === id ? 'true' : 'false', text: label,
-        onclick: () => nav(api, state, { mode: id }),
-      })));
-  }
-
-  function loading() {
-    return node('div', { class: 'atlas-v2-univ-loading', role: 'status' }, [
-      node('strong', { text: 'Consultando read model gobernado…' }),
-      node('div', { text: 'Los agregados se calculan fuera del navegador; la vista sólo recibe resultados acotados.' }),
+  function loading(label = 'Construyendo lectura poblacional…') {
+    return node('div', { class: 'uiv2-loading', role: 'status' }, [
+      node('span', { class: 'uiv2-spinner' }),
+      node('div', {}, [node('strong', { text: label }), node('small', { text: 'Agregados gobernados · sin cálculo masivo en navegador' })]),
     ]);
   }
 
   function errorBox(error) {
-    return node('div', { class: 'atlas-v2-notice' }, [
-      node('strong', { text: 'No fue posible leer Universos. ' }),
+    return node('div', { class: 'uiv2-error' }, [
+      node('strong', { text: 'Universos no pudo completar la lectura. ' }),
       node('span', { text: String(error?.message || error || 'Error de lectura') }),
-      error?.traceId ? node('small', { text: ` · trace ${error.traceId}` }) : null,
+      error?.traceId ? node('small', { text: `trace ${error.traceId}` }) : null,
     ]);
   }
 
-  function qualityText(item) {
-    const q = item?.quality || {};
-    if (item?.lens === 'SII') {
-      const future = Number(q.future_activity_start_dates || 0) + Number(q.future_termination_dates || 0);
-      return future ? `${NF.format(future)} fecha(s) futura(s) detectadas como incidencia de calidad.` : 'Sin incidencias temporales futuras en el read model.';
-    }
-    if (item?.lens === 'OSFL') return `RUT observado: ${formatCount(q.with_rut)} · Región observada: ${formatCount(q.with_region)}.`;
-    if (item?.lens === 'SANCIONES') return `${formatCount(q.events_outside_or_unresolved_universe)} evento(s) fuera o no resueltos contra el universo unificado.`;
-    if (item?.lens === 'UAF') return `Cobertura SII: ${q.sii_coverage_pct ?? '—'}% · Sin territorio: ${formatCount(q.without_territory)}.`;
-    if (item?.lens === 'RES') return `${formatCount(q.future_constitution_dates)} constitución(es) futuras detectadas como incidencia de calidad.`;
-    return 'Calidad publicada por la fuente.';
-  }
-
-  function auxLine(item) {
-    const a = item?.aux || {};
-    if (item?.lens === 'UAF') {
-      return `50 sectores observados · potenciales de screening: ${formatCount(a.potential_actionable)} (hipótesis, no SO acreditados).`;
-    }
-    if (item?.lens === 'OSFL') {
-      return `Perfiles expandidos: ${formatCount(a.expanded_profiles)} · candidatos R.8: ${formatCount(a.r8_candidates)}.`;
-    }
-    if (item?.lens === 'SANCIONES') {
-      return `${formatCount(a.event_count)} eventos · ${formatCount(a.regulatory_events)} sancionatorios · ${formatCount(a.cgr_enforcement_events)} CGR/enforcement.`;
-    }
-    if (item?.lens === 'RES') return `Corte de fuente: ${a.cutoff_date || 'no informado'}.`;
-    if (item?.lens === 'SII') return `Registros fuente: ${formatCount(a.record_count)} · aceptados: ${formatCount(a.accepted_count)}.`;
-    return '';
-  }
-
-  async function renderOverview(host, api, state, serial) {
-    host.append(loading());
-    try {
-      const out = await global.AtlasV2Universes.overview({ route: 'universos:overview' });
-      if (serial !== renderSerial || !host.isConnected) return;
-      clear(host);
-      const grid = node('div', { class: 'atlas-v2-univ-summary' });
-      out.items.forEach(item => {
-        const id = String(item.lens || '').toUpperCase();
-        if (!LENSES[id]) return;
-        grid.append(node('article', { class: 'atlas-v2-univ-card' }, [
-          node('span', { class: 'atlas-v2-card-tag', text: LENSES[id].detail.toUpperCase() }),
-          node('h3', { text: LENSES[id].label }),
-          node('div', { class: 'atlas-v2-univ-number', text: formatCount(item.total_count) }),
-          node('div', { class: 'atlas-v2-univ-meta', text: auxLine(item) }),
-          node('div', { class: 'atlas-v2-univ-meta', text: `Actualización fuente: ${formatDate(item.source_refreshed_at)}` }),
-          node('div', { class: 'atlas-v2-univ-quality', text: qualityText(item) }),
-          node('button', { class: 'atlas-v2-button', type: 'button', text: 'Abrir lente', onclick: () => nav(api, state, { lens: id, mode: 'distribution', dimension: LENSES[id].dimensions[0][0] }) }),
-        ]));
-      });
-      host.append(grid, node('div', { class: 'atlas-v2-univ-guard' }, [
-        node('strong', { text: 'Lectura correcta. ' }),
-        'Los totales pertenecen a fuentes y materializaciones distintas. No deben sumarse para obtener un “total Atlas”. OSFL corresponde al universo observado/materializado del corte, no al universo legal nacional completo.',
-      ]));
-    } catch (error) {
-      if (serial !== renderSerial || !host.isConnected) return;
-      clear(host); host.append(errorBox(error));
-    }
-  }
-
-  async function renderDistribution(host, api, state, serial) {
-    const dimensions = LENSES[state.lens].dimensions;
-    host.append(node('div', { class: 'atlas-v2-univ-toolbar' }, dimensions.map(([id,label]) => node('button', {
-      type: 'button', 'aria-current': state.dimension === id ? 'true' : 'false', text: label,
-      onclick: () => nav(api, state, { dimension: id }),
-    }))));
-    const live = node('div', {}, [loading()]);
-    host.append(live);
-    try {
-      const out = await global.AtlasV2Universes.distribution(state.lens, state.dimension, { limit: 40, route: `universos:${state.lens}:${state.dimension}` });
-      if (serial !== renderSerial || !live.isConnected) return;
-      clear(live);
-      const max = Math.max(1, ...out.items.map(item => Number(item.entity_count) || 0));
-      const chart = node('div', { class: 'atlas-v2-univ-chart' });
-      out.items.forEach(item => chart.append(node('div', { class: 'atlas-v2-univ-row' }, [
-        node('strong', { text: item.label || item.key || 'Sin etiqueta' }),
-        node('meter', { min: '0', max: String(max), value: String(Number(item.entity_count) || 0), title: `${NF.format(Number(item.entity_count) || 0)} entidades` }),
-        node('span', { text: formatCount(item.entity_count) }),
+  function lensRail(api, state) {
+    return node('nav', { class: 'uiv2-lens-rail', 'aria-label': 'Seleccionar universo' },
+      Object.entries(LENSES).map(([id, lens]) => node('button', {
+        type: 'button', class: state.lens === id ? 'active' : '', 'aria-current': state.lens === id ? 'true' : 'false',
+        onclick: () => nav(api, state, { lens: id, dimension: LENSES[id].dimensions[0][0], key: '', q: '' }),
+      }, [
+        node('span', { class: 'uiv2-lens-icon', text: lens.icon }),
+        node('span', {}, [node('strong', { text: lens.label }), node('small', { text: lens.short })]),
       ])));
-      live.append(chart, node('div', { class: 'atlas-v2-univ-guard' }, [
-        node('strong', { text: 'Distribución de snapshot. ' }),
-        'La categoría describe la fuente seleccionada. Comparar lentes requiere conservar diferencias de cobertura, fecha y definición.',
-      ]));
-    } catch (error) {
-      if (serial !== renderSerial || !live.isConnected) return;
-      clear(live); live.append(errorBox(error));
-    }
   }
 
-  function searchBar(api, state, placeholder) {
-    const input = node('input', { type: 'search', value: state.q, placeholder, 'aria-label': placeholder });
-    const submit = () => nav(api, state, { q: input.value.trim() });
-    input.addEventListener('keydown', event => { if (event.key === 'Enter') submit(); });
-    return node('div', { class: 'atlas-v2-univ-search' }, [
-      input,
-      node('button', { class: 'atlas-v2-button primary', type: 'button', text: 'Buscar', onclick: submit }),
+  function pageHead(api, state) {
+    const lens = LENSES[state.lens];
+    const search = node('input', { type: 'search', value: state.q, placeholder: 'RUT o razón social…', 'aria-label': 'Buscar en universo' });
+    const submit = () => nav(api, state, { q: search.value.trim(), key: '' });
+    search.addEventListener('keydown', event => { if (event.key === 'Enter') submit(); });
+    return node('header', { class: 'uiv2-head' }, [
+      node('div', { class: 'uiv2-head-copy' }, [
+        node('span', { class: 'uiv2-eyebrow', text: 'UNIVERSOS · INTELIGENCIA POBLACIONAL' }),
+        node('h1', { text: lens.title }),
+        node('p', { text: lens.description }),
+      ]),
+      node('div', { class: 'uiv2-search' }, [
+        search,
+        node('button', { type: 'button', class: 'uiv2-icon-button', title: 'Buscar', onclick: submit, text: '⌕' }),
+        state.q ? node('button', { type: 'button', class: 'uiv2-clear', onclick: () => nav(api, state, { q: '', key: '' }), text: 'Limpiar' }) : null,
+      ]),
     ]);
   }
 
-  function entityFields(item, lens) {
-    if (lens === 'UAF') return [item.sector, item.region, item.ipf_band ? `IPF ${item.ipf_band}` : ''].filter(Boolean).join(' · ');
-    if (lens === 'OSFL') return [item.main_activity, item.region, item.confirmation_level].filter(Boolean).join(' · ');
-    if (lens === 'RES') return [item.constitution_date ? `Constitución ${item.constitution_date}` : '', item.region ? `Región ${item.region}` : ''].filter(Boolean).join(' · ');
-    if (lens === 'SANCIONES') return [`${NF.format(Number(item.event_count) || 0)} evento(s)`, item.region, item.last_event_date ? `Último ${item.last_event_date}` : ''].filter(Boolean).join(' · ');
-    return [item.status, item.sector, item.region, item.sales_band].filter(Boolean).join(' · ');
+  function kpiConfig(lens, s) {
+    if (lens === 'SII') return [
+      ['Padrón materializado', s.total, 'Entidades únicas observadas', 'accent'],
+      ['Vigentes', s.active, pct(s.active, s.total), 'good'],
+      ['Término de giro', s.terminated, pct(s.terminated, s.total), 'warn'],
+      [`Perfil anual ${s.latest_profile_year || '—'}`, s.profiled_latest_year, `${s.profile_coverage_pct ?? '—'}% del padrón`, 'info'],
+    ];
+    if (lens === 'UAF') return [
+      ['SO inscritos', s.total, 'Padrón operativo actual', 'accent'],
+      ['Conciliados activos', s.active_sii, pct(s.active_sii, s.total), 'good'],
+      ['Término de giro', s.terminated_sii, pct(s.terminated_sii, s.total), 'warn'],
+      ['Sin perfil SII', s.without_sii, pct(s.without_sii, s.total), 'violet'],
+    ];
+    if (lens === 'OSFL') return [
+      ['OSFL observadas', s.total, 'Materialización actual', 'accent'],
+      ['Con territorio', s.with_region, pct(s.with_region, s.total), 'good'],
+      ['Candidatas R.8', s.r8_candidates, pct(s.r8_candidates, s.total), 'warn'],
+      ['Confirmadas directas', s.direct_confirmed, pct(s.direct_confirmed, s.total), 'info'],
+    ];
+    if (lens === 'RES') return [
+      ['Sociedades materializadas', s.total, 'Todos los archivos observados', 'accent'],
+      ['Último año', s.latest_constitution_year, 'Año máximo observado', 'info'],
+      ['Constituciones último año', s.latest_year_count, pct(s.latest_year_count, s.total), 'good'],
+      ['Con región social', s.with_region, pct(s.with_region, s.total), 'violet'],
+    ];
+    return [
+      ['Entidades observadas', s.total, 'Dossier sancionatorio', 'accent'],
+      ['Eventos', s.events, 'Eventos administrativos', 'warn'],
+      ['SO UAF', s.uaf_registered, pct(s.uaf_registered, s.total), 'info'],
+      ['Monto CLP observado', money(s.amount_clp_total), 'Acumulado en eventos con monto', 'violet'],
+    ];
   }
 
-  async function renderEntities(host, api, state, serial) {
-    host.append(searchBar(api, state, 'Buscar por RUT o nombre dentro de la lente'));
-    if ((state.lens === 'SII' || state.lens === 'RES') && state.q.trim().length < 2) {
-      host.append(node('div', { class: 'atlas-v2-empty' }, [
-        node('strong', { text: 'Escribe al menos 2 caracteres' }),
-        node('span', { text: 'SII y RES son universos masivos; Atlas exige búsqueda acotada para evitar barridos innecesarios.' }),
-      ]));
-      return;
+  function kpiStrip(lens, summary) {
+    return node('section', { class: 'uiv2-kpis' }, kpiConfig(lens, summary).map(([label, value, sub, tone]) =>
+      node('article', { class: `uiv2-kpi ${tone}` }, [
+        node('span', { text: label }),
+        node('strong', { text: typeof value === 'number' ? count(value) : value ?? '—' }),
+        node('small', { text: sub }),
+      ])
+    ));
+  }
+
+  function dimensionTabs(api, state) {
+    return node('div', { class: 'uiv2-dim-tabs', role: 'tablist' }, LENSES[state.lens].dimensions.map(([id, label]) =>
+      node('button', {
+        type: 'button', role: 'tab', 'aria-selected': state.dimension === id ? 'true' : 'false',
+        class: state.dimension === id ? 'active' : '', text: label,
+        onclick: () => nav(api, state, { dimension: id, key: '', q: '' }),
+      })
+    ));
+  }
+
+  function distributionBasis(state, out, rows) {
+    const sum = rows.reduce((acc, item) => acc + (Number(item.entity_count) || 0), 0);
+    if (state.lens === 'SII' && ['region','sector'].includes(state.dimension)) {
+      const coverage = out.semantics?.regional_sector_coverage_pct;
+      return `Perfil anual observado · ${compact(sum)} entidades · cobertura ${coverage ?? '—'}% del padrón`;
     }
-    const live = node('div', {}, [loading()]); host.append(live);
-    try {
-      const out = await global.AtlasV2Universes.entities(state.lens, state.q, { limit: 40, route: `universos:${state.lens}:entities` });
-      if (serial !== renderSerial || !live.isConnected) return;
-      clear(live);
-      if (!out.items.length) {
-        live.append(node('div', { class: 'atlas-v2-empty' }, [node('strong', { text: 'Sin resultados en este snapshot' }), node('span', { text: 'No observado aquí no equivale a inexistencia fuera de esta fuente o corte.' })]));
+    return `${compact(sum)} observaciones en esta dimensión`;
+  }
+
+  function distributionChart(api, state, out) {
+    const rows = Array.isArray(out.distributions?.[state.dimension]) ? out.distributions[state.dimension] : [];
+    const top = rows.slice(0, state.dimension === 'sector' ? 12 : 16);
+    const max = Math.max(1, ...top.map(item => Number(item.entity_count) || 0));
+    const section = node('section', { class: 'uiv2-panel uiv2-distribution' }, [
+      node('header', { class: 'uiv2-panel-head' }, [
+        node('div', {}, [node('span', { class: 'uiv2-panel-kicker', text: 'COMPOSICIÓN' }), node('h2', { text: 'Dónde se concentra el universo' })]),
+        dimensionTabs(api, state),
+      ]),
+      node('div', { class: 'uiv2-panel-note', text: distributionBasis(state, out, rows) }),
+    ]);
+    const chart = node('div', { class: 'uiv2-bar-chart' });
+    top.forEach((item, index) => {
+      const n = Number(item.entity_count) || 0;
+      const selected = state.key && String(item.key) === state.key;
+      const row = node('button', {
+        type: 'button', class: `uiv2-bar-row ${selected ? 'selected' : ''}`,
+        title: `${item.label || item.key}: ${count(n)}`,
+        onclick: () => nav(api, state, { key: selected ? '' : String(item.key || ''), q: '' }),
+      }, [
+        node('span', { class: 'uiv2-bar-rank', text: String(index + 1).padStart(2, '0') }),
+        node('span', { class: 'uiv2-bar-label', text: item.label || item.key || 'Sin etiqueta' }),
+        node('span', { class: 'uiv2-bar-track' }, [node('i', { style: { width: `${Math.max(2, 100 * n / max)}%` } })]),
+        node('strong', { text: compact(n) }),
+        node('small', { text: pct(n, rows.reduce((a, b) => a + (Number(b.entity_count) || 0), 0)) }),
+      ]);
+      chart.append(row);
+    });
+    if (!top.length) chart.append(node('div', { class: 'uiv2-empty', text: 'Sin distribución materializada para esta dimensión.' }));
+    section.append(chart);
+    return section;
+  }
+
+  function intersectionsPanel(api, state, out) {
+    const total = Number(out.summary?.total) || 0;
+    const rows = [...(out.intersections || [])].sort((a, b) => (Number(b.entity_count) || 0) - (Number(a.entity_count) || 0));
+    const max = Math.max(1, ...rows.map(item => Number(item.entity_count) || 0));
+    return node('section', { class: 'uiv2-panel uiv2-overlaps' }, [
+      node('header', { class: 'uiv2-panel-head' }, [
+        node('div', {}, [node('span', { class: 'uiv2-panel-kicker', text: 'CRUCES EXACTOS' }), node('h2', { text: 'Presencia en otros universos' })]),
+        node('span', { class: 'uiv2-badge', text: 'RUT exacto' }),
+      ]),
+      node('div', { class: 'uiv2-overlap-list' }, rows.map(item => {
+        const n = Number(item.entity_count) || 0;
+        const target = LENSES[item.lens] || { label: item.lens };
+        return node('button', {
+          type: 'button', class: 'uiv2-overlap-row',
+          onclick: () => nav(api, state, { lens: item.lens, dimension: LENSES[item.lens]?.dimensions?.[0]?.[0] || 'region', key: '', q: '' }),
+        }, [
+          node('span', { class: 'uiv2-overlap-name', text: target.label }),
+          node('span', { class: 'uiv2-overlap-track' }, [node('i', { style: { width: `${Math.max(2, 100 * n / max)}%` } })]),
+          node('strong', { text: compact(n) }),
+          node('small', { text: pct(n, total) }),
+        ]);
+      })),
+      node('p', { class: 'uiv2-footnote', text: 'El cruce sólo usa RUT exacto. Presencia compartida no transmite riesgo ni condición entre fuentes.' }),
+    ]);
+  }
+
+  function deriveInsights(state, out) {
+    const s = out.summary || {};
+    const dist = out.distributions || {};
+    const current = Array.isArray(dist[state.dimension]) ? dist[state.dimension] : [];
+    const currentTotal = current.reduce((a, b) => a + (Number(b.entity_count) || 0), 0);
+    const top = current[0];
+    const top3 = current.slice(0, 3).reduce((a, b) => a + (Number(b.entity_count) || 0), 0);
+    const intersections = [...(out.intersections || [])].sort((a, b) => (Number(b.entity_count) || 0) - (Number(a.entity_count) || 0));
+    const items = [];
+
+    if (top) items.push({ level: 'info', title: 'Mayor concentración', body: `${top.label || top.key} concentra ${pct(top.entity_count, currentTotal)} de la dimensión seleccionada (${compact(top.entity_count)} entidades).` });
+    if (current.length >= 3) items.push({ level: top3 / Math.max(1, currentTotal) >= .6 ? 'warn' : 'ctx', title: 'Concentración Top 3', body: `Las tres primeras categorías explican ${pct(top3, currentTotal)} de la distribución visible.` });
+    if (intersections[0]) items.push({ level: 'ctx', title: 'Cruce dominante', body: `${LENSES[intersections[0].lens]?.label || intersections[0].lens} comparte ${compact(intersections[0].entity_count)} RUT con este universo.` });
+
+    if (state.lens === 'UAF') {
+      if (Number(s.terminated_sii)) items.unshift({ level: 'warn', title: 'Vigencia tributaria a revisar', body: `${count(s.terminated_sii)} SO presentan término de giro publicado en SII.` });
+      if (Number(s.without_sii)) items.push({ level: 'violet', title: 'Brecha de conciliación', body: `${count(s.without_sii)} SO no tienen perfil SII materializado en el corte.` });
+    } else if (state.lens === 'SII') {
+      items.unshift({ level: 'ctx', title: 'Cobertura anual desigual', body: `Región y sector corresponden al perfil comercial ${s.latest_profile_year || 'más reciente'} y cubren ${s.profile_coverage_pct ?? '—'}% del padrón materializado. Estado tributario usa el padrón completo.` });
+    } else if (state.lens === 'OSFL') {
+      items.unshift({ level: 'warn', title: 'Candidatas R.8', body: `${count(s.r8_candidates)} entidades cumplen reglas de candidatura R.8; es una hipótesis de revisión, no una clasificación jurídica.` });
+    } else if (state.lens === 'RES') {
+      items.unshift({ level: 'info', title: 'Pulso de constituciones', body: `${count(s.latest_year_count)} sociedades corresponden al último año observado (${s.latest_constitution_year || '—'}).` });
+    } else if (state.lens === 'SANCIONES') {
+      items.unshift({ level: 'warn', title: 'Volumen administrativo', body: `${count(s.events)} eventos se agrupan en ${count(s.total)} entidades; sanción administrativa no equivale a señal LA/FT.` });
+    }
+    return items.slice(0, 5);
+  }
+
+  function insightsPanel(state, out) {
+    return node('section', { class: 'uiv2-panel uiv2-insights' }, [
+      node('header', { class: 'uiv2-panel-head' }, [node('div', {}, [node('span', { class: 'uiv2-panel-kicker', text: 'LECTURA AUTOMÁTICA' }), node('h2', { text: 'Qué mirar primero' })])]),
+      node('div', { class: 'uiv2-insight-list' }, deriveInsights(state, out).map((item, i) => node('article', { class: `uiv2-insight ${item.level}` }, [
+        node('span', { class: 'uiv2-insight-index', text: String(i + 1).padStart(2, '0') }),
+        node('div', {}, [node('strong', { text: item.title }), node('p', { text: item.body })]),
+      ]))),
+    ]);
+  }
+
+  function entityMeta(item, lens) {
+    const bits = [];
+    if (item.sector) bits.push(item.sector);
+    if (item.region != null && item.region !== '') bits.push(`Región ${item.region}`);
+    if (item.commune) bits.push(item.commune);
+    if (lens === 'UAF' && item.ipf_band) bits.push(`IPF ${item.ipf_band}`);
+    if (lens === 'SANCIONES' && item.event_count != null) bits.push(`${count(item.event_count)} evento(s)`);
+    if (lens === 'RES' && item.constitution_date) bits.push(`Constitución ${String(item.constitution_date).slice(0, 10)}`);
+    if (lens === 'SII' && item.status) bits.push(item.status === 'TERMINATED_AS_PUBLISHED' ? 'Término de giro' : 'Vigente');
+    return bits.join(' · ');
+  }
+
+  function entityRows(api, state, items, title, subtitle) {
+    const section = node('section', { class: 'uiv2-panel uiv2-entities' }, [
+      node('header', { class: 'uiv2-panel-head' }, [
+        node('div', {}, [node('span', { class: 'uiv2-panel-kicker', text: 'DRILL-DOWN' }), node('h2', { text: title }), node('p', { text: subtitle })]),
+      ]),
+    ]);
+    const list = node('div', { class: 'uiv2-entity-list' });
+    (items || []).slice(0, 24).forEach(item => {
+      const rut = String(item.rut || '').trim();
+      list.append(node('article', { class: 'uiv2-entity-row' }, [
+        node('div', { class: 'uiv2-entity-main' }, [
+          node('strong', { text: item.name || item.legal_name || item.entity_id || 'Entidad sin nombre' }),
+          node('small', { text: rut || item.entity_id || 'Sin RUT observado' }),
+        ]),
+        node('div', { class: 'uiv2-entity-context' }, [
+          node('span', { text: item.reason || entityMeta(item, state.lens) || 'Entidad del universo seleccionado' }),
+          item.reason && entityMeta(item, state.lens) ? node('small', { text: entityMeta(item, state.lens) }) : null,
+        ]),
+        node('div', { class: 'uiv2-entity-score' }, [
+          item.ipf_score != null ? node('span', {}, [node('small', { text: 'IPF' }), node('strong', { text: Number(item.ipf_score).toLocaleString('es-CL', { maximumFractionDigits: 1 }) })]) : null,
+          item.ipa3_score != null ? node('span', {}, [node('small', { text: 'IPA3' }), node('strong', { text: Number(item.ipa3_score).toLocaleString('es-CL', { maximumFractionDigits: 1 }) })]) : null,
+          item.sanction_event_count > 0 ? node('span', { class: 'warn' }, [node('small', { text: 'Sanc.' }), node('strong', { text: count(item.sanction_event_count) })]) : null,
+        ]),
+        node('div', { class: 'uiv2-entity-actions' }, [
+          rut ? node('button', { type: 'button', text: 'Ver 360', onclick: () => api.navigate('entidad', { rut }) }) : null,
+          rut ? node('button', { type: 'button', text: 'Relaciones', onclick: () => api.navigate('relaciones', { rut }) }) : null,
+        ]),
+      ]));
+    });
+    if (!items?.length) list.append(node('div', { class: 'uiv2-empty', text: 'No hay entidades para esta selección.' }));
+    section.append(list);
+    return section;
+  }
+
+  function membershipPanel(out, rut) {
+    const map = out?.membership || {};
+    return node('section', { class: 'uiv2-membership' }, [
+      node('div', {}, [node('span', { class: 'uiv2-panel-kicker', text: 'CRUCE DE IDENTIDAD' }), node('strong', { text: `RUT ${rut}` })]),
+      node('div', { class: 'uiv2-membership-grid' }, Object.entries(LENSES).map(([id, lens]) => {
+        const item = map[id] || { present: false };
+        return node('article', { class: item.present ? 'present' : '' }, [
+          node('span', { text: lens.label }), node('strong', { text: item.present ? 'Observado' : 'No observado' }),
+          item.name ? node('small', { text: item.name }) : null,
+        ]);
+      })),
+      node('small', { text: '“No observado” significa ausencia en el snapshot consultado; no inexistencia jurídica ni material.' }),
+    ]);
+  }
+
+  async function renderEntityWorkbench(host, api, state, intelligence, serial) {
+    const q = state.q.trim();
+    if (q) {
+      if ((state.lens === 'SII' || state.lens === 'RES') && q.length < 2) {
+        host.append(entityRows(api, state, [], 'Búsqueda acotada', 'Escribe al menos 2 caracteres para consultar universos masivos.'));
         return;
       }
-      const table = node('div', { class: 'atlas-v2-univ-table' });
-      out.items.forEach(item => {
-        const rut = String(item.rut || '').trim();
-        table.append(node('article', { class: 'atlas-v2-univ-entity' }, [
-          node('div', {}, [node('strong', { text: item.name || item.legal_name || item.entity_id || 'Entidad sin etiqueta' }), node('small', { text: rut || item.entity_id || 'Sin RUT publicado' })]),
-          node('div', { text: entityFields(item, state.lens) || 'Sin atributos adicionales publicados' }),
-          node('div', { class: 'atlas-v2-univ-meta', text: state.lens === 'SANCIONES' ? 'Evento administrativo: revisar evidencia antes de interpretar.' : `Lente ${LENSES[state.lens].label}` }),
-          node('div', { class: 'atlas-v2-univ-actions' }, [
-            rut ? node('button', { class: 'atlas-v2-button', type: 'button', text: 'Entidad 360', onclick: () => api.navigate('entidad', { rut }) }) : null,
-            rut ? node('button', { class: 'atlas-v2-button', type: 'button', text: 'Relaciones', onclick: () => api.navigate('relaciones', { rut }) }) : null,
-          ]),
-        ]));
-      });
-      live.append(table);
-    } catch (error) {
-      if (serial !== renderSerial || !live.isConnected) return;
-      clear(live); live.append(errorBox(error));
-    }
-  }
-
-  function validRutShape(value) {
-    const compact = String(value || '').toUpperCase().replace(/[^0-9K]/g, '');
-    return /^\d{7,8}[0-9K]$/.test(compact);
-  }
-
-  async function renderMembership(host, api, state, serial) {
-    const value = state.rut || state.q;
-    const input = node('input', { type: 'search', value, placeholder: 'RUT exacto para cruzar lentes', 'aria-label': 'RUT exacto para cruzar lentes' });
-    const submit = () => nav(api, state, { rut: input.value.trim(), q: '' });
-    input.addEventListener('keydown', event => { if (event.key === 'Enter') submit(); });
-    host.append(node('div', { class: 'atlas-v2-univ-search' }, [input, node('button', { class: 'atlas-v2-button primary', type: 'button', text: 'Cruzar RUT', onclick: submit })]));
-    if (!value) {
-      host.append(node('div', { class: 'atlas-v2-empty' }, [node('strong', { text: 'Cruce exacto entre lentes' }), node('span', { text: 'No se concilian entidades por similitud nominal en esta vista.' })]));
+      const holder = node('div', {}, [loading('Buscando entidades…')]); host.append(holder);
+      try {
+        const jobs = [global.AtlasV2Universes.entities(state.lens, q, { limit: 40, route: `universos:${state.lens}:search` })];
+        if (validRut(q)) jobs.push(global.AtlasV2Universes.membership(q, { route: 'universos:membership' }));
+        const results = await Promise.all(jobs);
+        if (serial !== renderSerial || !holder.isConnected) return;
+        clear(holder);
+        const entities = results[0];
+        if (results[1]) holder.append(membershipPanel(results[1], global.AtlasV2Universes.canonicalRut(q)));
+        holder.append(entityRows(api, state, entities.items, 'Resultados de búsqueda', `${entities.items.length} resultado(s) en la lente ${LENSES[state.lens].label}.`));
+      } catch (error) {
+        if (serial !== renderSerial || !holder.isConnected) return;
+        clear(holder); holder.append(errorBox(error));
+      }
       return;
     }
-    if (!validRutShape(value)) {
-      host.append(node('div', { class: 'atlas-v2-notice' }, [node('strong', { text: 'Formato de RUT no válido para cruce exacto.' })]));
+
+    if (state.key) {
+      const selected = intelligence.distributions?.[state.dimension]?.find(item => String(item.key) === state.key);
+      const holder = node('div', {}, [loading('Abriendo selección…')]); host.append(holder);
+      try {
+        const out = await global.AtlasV2Universes.slice(state.lens, state.dimension, state.key, { limit: 40, route: `universos:${state.lens}:slice` });
+        if (serial !== renderSerial || !holder.isConnected) return;
+        clear(holder);
+        holder.append(entityRows(
+          api, state, out.items,
+          selected?.label || state.key,
+          `${count(out.summary?.entity_count)} entidades en esta categoría · ${out.items.length} visibles para revisión.`,
+        ));
+      } catch (error) {
+        if (serial !== renderSerial || !holder.isConnected) return;
+        clear(holder); holder.append(errorBox(error));
+      }
       return;
     }
-    const live = node('div', {}, [loading()]); host.append(live);
-    try {
-      const out = await global.AtlasV2Universes.membership(value, { route: 'universos:membership' });
-      if (serial !== renderSerial || !live.isConnected) return;
-      clear(live);
-      const grid = node('div', { class: 'atlas-v2-univ-membership' });
-      Object.keys(LENSES).forEach(id => {
-        const item = out.membership?.[id] || { present: false };
-        grid.append(node('article', { class: `atlas-v2-univ-member ${item.present ? 'present' : ''}` }, [
-          node('strong', { text: LENSES[id].label }),
-          node('div', { text: item.present ? 'Observado en este snapshot' : 'No observado en este snapshot' }),
-          item.name ? node('small', { text: item.name }) : null,
-          item.sector ? node('small', { text: item.sector }) : null,
-          item.event_count != null ? node('small', { text: `${NF.format(Number(item.event_count) || 0)} evento(s)` }) : null,
-        ]));
-      });
-      live.append(grid, node('div', { class: 'atlas-v2-univ-guard' }, [
-        node('strong', { text: 'Identidad por RUT exacto. ' }),
-        '“No observado” significa ausencia en el snapshot consultado, no inexistencia jurídica, tributaria ni material. La presencia en Sanciones tampoco transmite condición AML/FT.',
-      ]), node('button', { class: 'atlas-v2-button', type: 'button', text: 'Abrir Entidad 360', onclick: () => api.navigate('entidad', { rut: value }) }));
-    } catch (error) {
-      if (serial !== renderSerial || !live.isConnected) return;
-      clear(live); live.append(errorBox(error));
-    }
+
+    host.append(entityRows(api, state, intelligence.items, 'Entidades que conviene mirar', 'Selección priorizada por hechos o condiciones observables de esta lente; no constituye una conclusión AML/FT.'));
   }
 
-  function renderMethod(host) {
-    host.append(node('div', { class: 'atlas-v2-univ-method' }, [
-      node('article', {}, [node('h3', { text: 'Lentes, no una megatabla' }), node('p', { text: 'SII, UAF, OSFL, RES y Sanciones mantienen población, cobertura, fecha y significado propios. Los totales no son aditivos.' })]),
-      node('article', {}, [node('h3', { text: 'Pertenencia exacta' }), node('p', { text: 'El cruce transversal usa RUT exacto. La similitud de nombre puede servir como pista en otros procesos, pero no crea pertenencia ni identidad aquí.' })]),
-      node('article', {}, [node('h3', { text: 'OSFL observado' }), node('p', { text: 'La lente OSFL reporta la materialización actualmente disponible en Atlas. No debe describirse como el total legal nacional de organizaciones sin fines de lucro.' })]),
-      node('article', {}, [node('h3', { text: 'Sanciones' }), node('p', { text: 'CMF/UAF/SCJ y enforcement CGR son antecedentes administrativos con semántica propia. Una sanción no equivale por sí sola a riesgo o evidencia LA/FT.' })]),
-      node('article', {}, [node('h3', { text: 'Potenciales SO' }), node('p', { text: 'El screening de potenciales sujetos obligados es una hipótesis basada en actividad y reglas de inclusión/exclusión; nunca se mezcla con el padrón UAF acreditado.' })]),
-      node('article', {}, [node('h3', { text: 'Calidad visible' }), node('p', { text: 'Fechas futuras, ausencia territorial y registros no resueltos se exponen como incidencias de calidad. Atlas no los corrige ni transforma silenciosamente.' })]),
-    ]));
+  function secondaryDistribution(state, out) {
+    const dims = LENSES[state.lens].dimensions.filter(([id]) => id !== state.dimension);
+    if (!dims.length) return null;
+    const [dim, label] = dims[0];
+    const rows = Array.isArray(out.distributions?.[dim]) ? out.distributions[dim].slice(0, 8) : [];
+    const total = rows.reduce((a, b) => a + (Number(b.entity_count) || 0), 0);
+    return node('section', { class: 'uiv2-panel uiv2-mini-distribution' }, [
+      node('header', { class: 'uiv2-panel-head' }, [node('div', {}, [node('span', { class: 'uiv2-panel-kicker', text: 'SEGUNDA LECTURA' }), node('h2', { text: label })])]),
+      node('div', { class: 'uiv2-mini-list' }, rows.map(item => node('div', {}, [
+        node('span', { text: item.label || item.key }),
+        node('strong', { text: compact(item.entity_count) }),
+        node('small', { text: pct(item.entity_count, total) }),
+      ]))),
+    ]);
   }
 
-  function render(container, route, api) {
+  function methodology(out) {
+    const basis = out.semantics?.population_basis || 'Fuente materializada';
+    return node('details', { class: 'uiv2-method' }, [
+      node('summary', { text: 'Método, cobertura y cautelas' }),
+      node('div', {}, [
+        node('p', { text: `Base poblacional: ${basis}. Las lentes conservan su propio grano y no deben sumarse entre sí.` }),
+        node('p', { text: 'Los cruces entre universos usan RUT exacto. Una coincidencia de presencia no hereda sanción, riesgo ni condición desde otra fuente.' }),
+        out.semantics?.regional_sector_basis ? node('p', { text: `Región/sector SII: ${out.semantics.regional_sector_basis}; cobertura ${out.semantics.regional_sector_coverage_pct ?? '—'}%.` }) : null,
+      ]),
+    ]);
+  }
+
+  async function render(container, route, api) {
     injectStyle();
     const serial = ++renderSerial;
     const state = paramsFrom(route);
-    container.append(pageHead(state.lens), lensToolbar(api, state), modeToolbar(api, state));
-    const host = node('section', { class: 'atlas-v2-section' });
-    container.append(host);
-    if (!global.AtlasV2Universes?.installed) {
-      host.append(node('div', { class: 'atlas-v2-notice' }, [node('strong', { text: 'Adapter de Universos no disponible.' })]));
-      return;
+    container.append(node('main', { class: 'uiv2-shell' }, [pageHead(api, state), lensRail(api, state)]));
+    const shell = container.querySelector('.uiv2-shell');
+    const live = node('section', { class: 'uiv2-live' }, [loading()]);
+    shell.append(live);
+
+    if (!global.AtlasV2Universes?.intelligence) {
+      clear(live); live.append(errorBox(new Error('Adapter de inteligencia poblacional no disponible.'))); return;
     }
-    if (state.mode === 'overview') void renderOverview(host, api, state, serial);
-    else if (state.mode === 'distribution') void renderDistribution(host, api, state, serial);
-    else if (state.mode === 'entities') void renderEntities(host, api, state, serial);
-    else if (state.mode === 'membership') void renderMembership(host, api, state, serial);
-    else renderMethod(host);
+
+    try {
+      const out = await global.AtlasV2Universes.intelligence(state.lens, { route: `universos:${state.lens}:intelligence` });
+      if (serial !== renderSerial || !live.isConnected) return;
+      clear(live);
+      live.append(
+        kpiStrip(state.lens, out.summary || {}),
+        node('section', { class: 'uiv2-grid-main' }, [distributionChart(api, state, out), intersectionsPanel(api, state, out)]),
+        node('section', { class: 'uiv2-grid-secondary' }, [insightsPanel(state, out), secondaryDistribution(state, out)]),
+      );
+      const entitiesHost = node('section', { class: 'uiv2-workbench' });
+      live.append(entitiesHost, methodology(out));
+      void renderEntityWorkbench(entitiesHost, api, state, out, serial);
+      global.__ATLAS_V2_UNIVERSES_SURFACE__ = Object.freeze({
+        installed: true,
+        route: 'universos',
+        mode: 'POPULATION_INTELLIGENCE_V2',
+        lens: state.lens,
+        interactiveDrilldown: true,
+      });
+    } catch (error) {
+      if (serial !== renderSerial || !live.isConnected) return;
+      clear(live); live.append(errorBox(error));
+    }
   }
 
   function register() {
     if (!global.AtlasV2Shell?.registerSurface) return false;
     global.AtlasV2Shell.registerSurface('universos', render);
-    global.__ATLAS_V2_UNIVERSES_SURFACE__ = Object.freeze({ installed: true, route: 'universos', mode: 'analytics-first' });
+    global.__ATLAS_V2_UNIVERSES_SURFACE__ = Object.freeze({ installed: true, route: 'universos', mode: 'POPULATION_INTELLIGENCE_V2' });
     return true;
   }
 

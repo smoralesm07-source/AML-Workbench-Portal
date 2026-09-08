@@ -8,7 +8,9 @@
   const ENDPOINT = '/functions/v1/atlas-v2-read';
   const DEFAULT_TIMEOUT_MS = 12000;
   const OVERVIEW_CACHE_TTL_MS = 30000;
+  const INTELLIGENCE_CACHE_TTL_MS = 30000;
   let overviewCache = null;
+  const intelligenceCache = new Map();
 
   function clean(value, max = 180) {
     const out = String(value ?? '').trim();
@@ -57,7 +59,7 @@
           authorization: `Bearer ${token}`,
           apikey: publishableKey,
           'content-type': 'application/json',
-          'x-client-info': 'atlas-v2-universes/1.2',
+          'x-client-info': 'atlas-v2-universes/2.0',
           'x-atlas-core-authorization': `Bearer ${coreToken}`,
         },
         body: JSON.stringify({
@@ -86,6 +88,7 @@
         kind: body.kind,
         lens: body.lens || null,
         dimension: body.dimension || null,
+        key: body.key || null,
         generatedAt: body.generated_at || null,
         items: Array.isArray(body.items) ? body.items : [],
         membership: body.membership || null,
@@ -93,6 +96,8 @@
         page: body.page || null,
         summary: body.summary || null,
         reporting: body.reporting || null,
+        distributions: body.distributions && typeof body.distributions === 'object' ? body.distributions : {},
+        intersections: Array.isArray(body.intersections) ? body.intersections : [],
         terminatedByYear: Array.isArray(body.terminated_by_year) ? body.terminated_by_year : [],
         recentTerminated: Array.isArray(body.recent_terminated) ? body.recent_terminated : [],
         semantics: body.semantics || {},
@@ -126,10 +131,26 @@
     return value;
   }
 
-  function clearCache() { overviewCache = null; }
+  async function intelligence(lens, options = {}) {
+    const id = clean(lens, 40).toUpperCase() || 'UAF';
+    const cached = intelligenceCache.get(id);
+    const now = Date.now();
+    if (!options.force && cached && now - cached.at < INTELLIGENCE_CACHE_TTL_MS) {
+      return { ...cached.value, meta: { ...(cached.value.meta || {}), cacheStatus: 'memory' } };
+    }
+    const value = await query('intelligence', { lens: id }, { ...options, timeoutMs: options.timeoutMs || 20000 });
+    intelligenceCache.set(id, { at: Date.now(), value });
+    return value;
+  }
+
+  function clearCache() {
+    overviewCache = null;
+    intelligenceCache.clear();
+  }
 
   const api = Object.freeze({
     overview,
+    intelligence,
     attention: (options = {}) => query('attention', {}, options),
     distribution: (lens, dimension, options = {}) => query('distribution', {
       lens: clean(lens, 40).toUpperCase(),
@@ -137,6 +158,12 @@
       limit: Math.max(1, Math.min(Number(options.limit || 30), 100)),
       offset: Math.max(0, Number(options.offset || 0)),
     }, options),
+    slice: (lens, dimension, key, options = {}) => query('slice', {
+      lens: clean(lens, 40).toUpperCase(),
+      dimension: clean(dimension, 80).toLowerCase(),
+      key: clean(key, 180),
+      limit: Math.max(1, Math.min(Number(options.limit || 40), 80)),
+    }, { ...options, timeoutMs: options.timeoutMs || 20000 }),
     entities: (lens, search = '', options = {}) => query('entities', {
       lens: clean(lens, 40).toUpperCase(),
       search: clean(search, 180),
@@ -147,5 +174,10 @@
     clearCache,
   });
 
-  global.AtlasV2Universes = Object.freeze({ installed: true, canonicalRut, ...api });
+  global.AtlasV2Universes = Object.freeze({
+    installed: true,
+    mode: 'POPULATION_INTELLIGENCE_V2',
+    canonicalRut,
+    ...api,
+  });
 })(window);
