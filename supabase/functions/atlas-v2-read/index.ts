@@ -14,6 +14,8 @@ const CORE_QUERY_OPERATIONS = Object.freeze({
   territory_query: { rpc: "atlas_v2_territory_query", contract: "ATLAS_TERRITORY_QUERY_V2", error: "TERRITORY_QUERY_ERROR" },
   watch_query: { rpc: "atlas_v2_watch_query", contract: "ATLAS_WATCH_QUERY_V2", error: "WATCH_QUERY_ERROR" },
   entity_search: { rpc: "atlas_v2_entity_search", contract: "ATLAS_ENTITY_SEARCH_V2", error: "ENTITY_SEARCH_ERROR" },
+  osfl_query: { rpc: "atlas_v2_osfl_query", contract: "ATLAS_OSFL_QUERY_V2", error: "OSFL_QUERY_ERROR" },
+  sanctions_query: { rpc: "atlas_v2_sanctions_query", contract: "ATLAS_SANCTIONS_QUERY_V2", error: "SANCTIONS_QUERY_ERROR" },
 });
 const CORS = {
   "access-control-allow-origin": "https://smoralesm07-source.github.io",
@@ -96,10 +98,10 @@ Deno.serve(async (req: Request) => {
   if (!url || !publishableKey) return response({ error: "SERVER_CONFIG", trace_id: traceId }, 500, { "x-atlas-trace-id": traceId });
   try {
     const body = await req.json().catch(() => ({})); const requestedOperation = clean(body?.operation || "read_model", 80); const route = clean(body?.route || "unknown", 120) || "unknown"; const sb = userClient(url, publishableKey, auth); const query = body?.query && typeof body.query === "object" ? body.query : {};
-    const operationAliases: Record<string, string> = { public_spend: "public_spend_query", relations: "relations_query", universes: "universes_query", universe_explorer: "universes_query", territory: "territory_query", territory_explorer: "territory_query", watch: "watch_query", vigilance: "watch_query", entity_search: "entity_search", search_entities: "entity_search", entity360: "entity360_read", entity: "entity360_read", entity_intelligence: "entity_intelligence", screening: "entity_screening_live", digital_identity: "digital_identity_live" };
+    const operationAliases: Record<string, string> = { public_spend: "public_spend_query", relations: "relations_query", universes: "universes_query", universe_explorer: "universes_query", territory: "territory_query", territory_explorer: "territory_query", watch: "watch_query", vigilance: "watch_query", entity_search: "entity_search", search_entities: "entity_search", osfl: "osfl_query", radar_osfl: "osfl_query", sanctions: "sanctions_query", sanciones: "sanctions_query", radar_sanciones: "sanctions_query", entity360: "entity360_read", entity: "entity360_read", entity_intelligence: "entity_intelligence", screening: "entity_screening_live", digital_identity: "digital_identity_live" };
     const operation = operationAliases[requestedOperation] || requestedOperation;
     if (operation === "public_spend_query" || operation === "relations_query") return await handleGovernedQuery(sb, operation, query, route, traceId, started);
-    if (operation === "universes_query" || operation === "territory_query" || operation === "watch_query" || operation === "entity_search") return await handleCoreQuery(sb, operation, coreAuth, query, route, traceId, started);
+    if (operation === "universes_query" || operation === "territory_query" || operation === "watch_query" || operation === "entity_search" || operation === "osfl_query" || operation === "sanctions_query") return await handleCoreQuery(sb, operation, coreAuth, query, route, traceId, started);
     if (operation === "entity360_read" || operation === "entity_intelligence") return await handleEntityRpc(sb, coreAuth, query, route, traceId, started, operation);
     if (operation === "entity_screening_live" || operation === "digital_identity_live") return await handleCoreLive(sb, coreAuth, operation, query, route, traceId, started);
     if (operation !== "read_model") return response({ error: "INVALID_OPERATION", trace_id: traceId }, 400, { "x-atlas-trace-id": traceId });
