@@ -1,0 +1,1 @@
+Verificación previa: `dashboard` retorna 1.045 eventos, 786 entidades, 984 sanciones regulatorias, 61 acciones CGR y 4 supervisores. `events` devuelve prioridad explicable y `detail` recupera evento + recurrencia. Se comprobó filtrado OSFL, UAF y CGR.
