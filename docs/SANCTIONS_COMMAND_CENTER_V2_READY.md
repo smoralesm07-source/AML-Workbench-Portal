@@ -1,0 +1,1 @@
+La rama `ux/sanctions-command-center-v2` queda lista para validación CI y revisión de artefacto antes de merge.
