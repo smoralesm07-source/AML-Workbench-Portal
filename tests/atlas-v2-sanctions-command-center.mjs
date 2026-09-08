@@ -5,6 +5,7 @@ const adapter = fs.readFileSync('src/v2/sanctions-adapter.js', 'utf8');
 const surface = fs.readFileSync('src/v2/sanctions-surface.js', 'utf8');
 const css = fs.readFileSync('src/v2/sanctions-surface.css', 'utf8');
 const boot = fs.readFileSync('src/v2/atlas-v2-boot.js', 'utf8');
+const entry = fs.readFileSync('atlas-v2.html', 'utf8');
 const edge = fs.readFileSync('supabase/functions/atlas-v2-read/index.ts', 'utf8');
 const migration = fs.readFileSync('supabase/core-migrations/20260908132200_atlas_v2_sanctions_command_center.sql', 'utf8');
 
@@ -33,6 +34,11 @@ for (const marker of [
 assert.match(surface, /AtlasV2Sanctions\.dashboard/);
 assert.match(surface, /AtlasV2Sanctions\.events/);
 assert.match(surface, /AtlasV2Sanctions\.detail/);
+assert.match(surface, /el\.style\.cssText = String\(value\)/);
+assert.match(surface, /total \/ max \* 100/);
+assert.match(surface, /event_count \|\| 0\) \/ max \* 100/);
+assert.match(surface, /conic-gradient/);
+assert.match(surface, /sanctions-surface\.css\?v=command-center-2/);
 assert.doesNotMatch(surface, /innerHTML|MutationObserver|supabase\.from|rest\/v1|raw\.githubusercontent|ldmtlwzqaqmegedktlxr/);
 
 for (const selector of [
@@ -61,7 +67,8 @@ assert.doesNotMatch(migration, /grant execute .* to anon/i);
 
 assert.match(boot, /sanctions-adapter\.js/);
 assert.match(boot, /sanctions-surface\.js/);
-assert.match(boot, /ASSET_REVISION = 'sanctions-command-center-1'/);
+assert.match(boot, /ASSET_REVISION = 'sanctions-chart-variability-2'/);
+assert.match(entry, /s=sanctions-chart-variability-2/);
 
 new Function(adapter);
 new Function(surface);
