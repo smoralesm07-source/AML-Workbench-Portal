@@ -38,15 +38,18 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Validate Sanciones cache and proportional rendering contract
+      - name: Validate Sanciones regional card contract
         run: |
           set -euo pipefail
           node --check src/v2/atlas-v2-boot.js
           node --check src/v2/sanctions-surface.js
-          grep -q "ASSET_REVISION = 'sanctions-chart-variability-2'" src/v2/atlas-v2-boot.js
-          grep -q 's=sanctions-chart-variability-2' atlas-v2.html
-          grep -q "el.style.cssText = String(value)" src/v2/sanctions-surface.js
-          grep -q 'sanctions-surface.css?v=command-center-2' src/v2/sanctions-surface.js
+          node tests/atlas-v2-sanctions-command-center.mjs
+          grep -q "ASSET_REVISION = 'sanctions-region-card-3'" src/v2/atlas-v2-boot.js
+          grep -q 's=sanctions-region-card-3' atlas-v2.html
+          grep -q 'Concentración Top 3' src/v2/sanctions-surface.js
+          grep -q 'Concentración Top 5' src/v2/sanctions-surface.js
+          grep -q 'Cobertura territorial' src/v2/sanctions-surface.js
+          ! grep -q 'chileRibbon' src/v2/sanctions-surface.js
 
       - name: Build production artifact
         run: |
@@ -54,10 +57,11 @@ jobs:
           python3 tools/build_atlas_v2_primary.py --out _site
           test -f _site/v2/sanctions-surface.js
           test -f _site/v2/sanctions-surface.css
-          grep -q "ASSET_REVISION = 'sanctions-chart-variability-2'" _site/v2/atlas-v2-boot.js
-          grep -q 's=sanctions-chart-variability-2' _site/index.html
-          grep -q "el.style.cssText = String(value)" _site/v2/sanctions-surface.js
-          grep -q 'sanctions-surface.css?v=command-center-2' _site/v2/sanctions-surface.js
+          grep -q "ASSET_REVISION = 'sanctions-region-card-3'" _site/v2/atlas-v2-boot.js
+          grep -q 's=sanctions-region-card-3' _site/index.html
+          grep -q 'Concentración Top 3' _site/v2/sanctions-surface.js
+          grep -q 'Concentración Top 5' _site/v2/sanctions-surface.js
+          ! grep -q 'chileRibbon' _site/v2/sanctions-surface.js
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
@@ -68,7 +72,7 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      - name: Verify live Sanciones asset authority
+      - name: Verify live Sanciones regional card authority
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
@@ -87,21 +91,22 @@ jobs:
           for n in range(1,13):
               try:
                   html=get('/',n)
-                  boot=get('/v2/atlas-v2-boot.js?v=v2-primary-7-executive-pulse-entity360-classic-1&s=sanctions-chart-variability-2',n)
-                  sanctions=get('/v2/sanctions-surface.js?v=v2-primary-7-executive-pulse-entity360-classic-1&r=sanctions-chart-variability-2',n)
-                  assert 's=sanctions-chart-variability-2' in html
-                  assert "ASSET_REVISION = 'sanctions-chart-variability-2'" in boot
-                  assert "el.style.cssText = String(value)" in sanctions
-                  assert 'sanctions-surface.css?v=command-center-2' in sanctions
+                  boot=get('/v2/atlas-v2-boot.js?v=v2-primary-7-executive-pulse-entity360-classic-1&s=sanctions-region-card-3',n)
+                  sanctions=get('/v2/sanctions-surface.js?v=v2-primary-7-executive-pulse-entity360-classic-1&r=sanctions-region-card-3',n)
+                  assert 's=sanctions-region-card-3' in html
+                  assert "ASSET_REVISION = 'sanctions-region-card-3'" in boot
+                  assert 'Concentración Top 3' in sanctions
+                  assert 'Concentración Top 5' in sanctions
+                  assert 'Cobertura territorial' in sanctions
+                  assert 'chileRibbon' not in sanctions
                   assert 'total / max * 100' in sanctions
-                  assert 'event_count || 0) / max * 100' in sanctions
                   assert 'conic-gradient' in sanctions
-                  print('ATLAS v2 live Sanciones authority: OK')
+                  print('ATLAS v2 live Sanciones regional card authority: OK')
                   break
               except Exception as exc:
                   last=exc
                   print(f'live authority attempt {n}/12 not ready: {exc}')
                   if n < 12: time.sleep(8)
           else:
-              raise SystemExit(f'ATLAS v2 live Sanciones authority failed: {last}')
+              raise SystemExit(f'ATLAS v2 live Sanciones regional card failed: {last}')
           PY
