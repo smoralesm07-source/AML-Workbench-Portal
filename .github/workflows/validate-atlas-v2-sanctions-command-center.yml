@@ -1,0 +1,51 @@
+name: Validate ATLAS v2 Sanciones command center
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/v2/sanctions-*'
+      - 'src/v2/atlas-v2-boot.js'
+      - 'supabase/core-migrations/*sanctions*'
+      - 'supabase/functions/atlas-v2-read/index.ts'
+      - 'tests/atlas-v2-sanctions-command-center.mjs'
+      - 'tools/build_atlas_v2_primary.py'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/v2/sanctions-*'
+      - 'src/v2/atlas-v2-boot.js'
+      - 'supabase/core-migrations/*sanctions*'
+      - 'supabase/functions/atlas-v2-read/index.ts'
+      - 'tests/atlas-v2-sanctions-command-center.mjs'
+      - 'tools/build_atlas_v2_primary.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sanctions-command-center:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax and regression contract
+        run: |
+          set -euo pipefail
+          node --check src/v2/sanctions-adapter.js
+          node --check src/v2/sanctions-surface.js
+          node --check tests/atlas-v2-sanctions-command-center.mjs
+          node tests/atlas-v2-sanctions-command-center.mjs
+          git diff --check
+      - name: Validate production artifact
+        run: |
+          set -euo pipefail
+          python3 tools/build_atlas_v2_primary.py --out _atlas_v2_primary
+          test -f _atlas_v2_primary/v2/sanctions-adapter.js
+          test -f _atlas_v2_primary/v2/sanctions-surface.js
+          test -f _atlas_v2_primary/v2/sanctions-surface.css
+          grep -q 'SANCTIONS_COMMAND_CENTER_V2' _atlas_v2_primary/v2/sanctions-surface.js

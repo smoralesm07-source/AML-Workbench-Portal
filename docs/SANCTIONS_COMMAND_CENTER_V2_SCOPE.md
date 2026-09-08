@@ -1,0 +1,1 @@
+Alcance final: UI v2, adapter, contrato Core, filtros, visualizaciones, tabla priorizada, ficha lateral, evidencia, Entidad 360 y gate de regresión. Sin cambios a OSFL, Entidad 360 ni otros módulos.
