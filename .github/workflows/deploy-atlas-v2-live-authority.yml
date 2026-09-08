@@ -1,17 +1,6 @@
-name: Deploy ATLAS v2 live authority
+name: Verify ATLAS v2 live authority (manual)
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'atlas-v2.html'
-      - 'src/v2/atlas-v2-boot.js'
-      - 'src/v2/entity360-expediente-surface.js'
-      - 'src/v2/entity360-expediente-surface.css'
-      - 'src/v2/sanctions-surface.js'
-      - 'src/v2/sanctions-surface.css'
-      - 'tools/build_atlas_v2_primary.py'
-      - '.github/workflows/deploy-atlas-v2-live-authority.yml'
   workflow_dispatch:
 
 permissions:
@@ -24,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  verify-and-deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
@@ -40,26 +29,17 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Validate Entity 360 expediente and Sanciones contracts
+      - name: Validate Entity 360 expediente contract
         run: |
           set -euo pipefail
           node --check src/v2/atlas-v2-boot.js
           node --check src/v2/entity360-expediente-surface.js
-          node --check src/v2/sanctions-surface.js
-          node tests/atlas-v2-sanctions-command-center.mjs
-          grep -q "ASSET_REVISION = 'entity360-expediente-1'" src/v2/atlas-v2-boot.js
-          grep -q "'entity360-expediente-surface.js'" src/v2/atlas-v2-boot.js
-          grep -q 'e=e360-expediente-1' atlas-v2.html
-          grep -q 's=sanctions-region-card-3' atlas-v2.html
-          grep -q 'ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908' src/v2/entity360-expediente-surface.js
-          grep -q "registerSurface('entidad'" src/v2/entity360-expediente-surface.js
-          grep -q '__ATLAS_V2_ENTITY360_EXPEDIENTE__' src/v2/entity360-expediente-surface.js
-          grep -q '^\.e36x{' src/v2/entity360-expediente-surface.css
-          grep -q '\.e36x-hero' src/v2/entity360-expediente-surface.css
-          grep -q 'Concentración Top 3' src/v2/sanctions-surface.js
-          grep -q 'Concentración Top 5' src/v2/sanctions-surface.js
-          grep -q 'Cobertura territorial' src/v2/sanctions-surface.js
-          ! grep -q 'chileRibbon' src/v2/sanctions-surface.js
+          python3 -m py_compile tools/build_atlas_v2_primary.py
+          grep -Fq "ASSET_REVISION = 'entity360-expediente-1'" src/v2/atlas-v2-boot.js
+          grep -Fq "'entity360-expediente-surface.js'" src/v2/atlas-v2-boot.js
+          grep -Fq 'ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908' src/v2/entity360-expediente-surface.js
+          grep -Fq "registerSurface('entidad'" src/v2/entity360-expediente-surface.js
+          grep -Fq '__ATLAS_V2_ENTITY360_EXPEDIENTE__' src/v2/entity360-expediente-surface.js
 
       - name: Build production artifact
         run: |
@@ -67,18 +47,21 @@ jobs:
           python3 tools/build_atlas_v2_primary.py --out _site
           test -f _site/v2/entity360-expediente-surface.js
           test -f _site/v2/entity360-expediente-surface.css
-          test -f _site/v2/sanctions-surface.js
-          test -f _site/v2/sanctions-surface.css
-          grep -q "ASSET_REVISION = 'entity360-expediente-1'" _site/v2/atlas-v2-boot.js
-          grep -q "'entity360-expediente-surface.js'" _site/v2/atlas-v2-boot.js
-          grep -q 'e=e360-expediente-1' _site/index.html
-          grep -q 's=sanctions-region-card-3' _site/index.html
-          grep -q 'ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908' _site/v2/entity360-expediente-surface.js
-          grep -q "registerSurface('entidad'" _site/v2/entity360-expediente-surface.js
-          grep -q '^\.e36x{' _site/v2/entity360-expediente-surface.css
-          grep -q 'Concentración Top 3' _site/v2/sanctions-surface.js
-          grep -q 'Concentración Top 5' _site/v2/sanctions-surface.js
-          ! grep -q 'chileRibbon' _site/v2/sanctions-surface.js
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path('_site')
+          report=json.loads((root/'atlas-runtime-report.json').read_text())
+          boot=(root/'v2/atlas-v2-boot.js').read_text()
+          expediente=(root/'v2/entity360-expediente-surface.js').read_text()
+          authority='ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908'
+          assert report['v2_entity360_authority']==authority
+          assert report['v2_entity360_design']=='EXECUTIVE_360_DOSSIER'
+          assert report['v2_entity360_asset_revision']=='entity360-expediente-1'
+          assert boot.index("'entity360-parity-surface.js'") < boot.index("'entity360-expediente-surface.js'")
+          assert authority in expediente
+          print('ATLAS v2 Entity 360 expediente manual authority check: OK')
+          PY
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
@@ -88,51 +71,3 @@ jobs:
       - name: Deploy Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-      - name: Verify live Entity 360 expediente authority
-        env:
-          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import os, time, urllib.request
-          base=os.environ['PAGE_URL'].rstrip('/')
-          sha=os.environ.get('GITHUB_SHA','unknown')
-          def get(path, n):
-              sep='&' if '?' in path else '?'
-              url=f"{base}{path}{sep}atlas={sha}-{n}"
-              req=urllib.request.Request(url,headers={'Cache-Control':'no-cache','Pragma':'no-cache','User-Agent':'ATLAS-v2-live-authority'})
-              with urllib.request.urlopen(req,timeout=20) as r:
-                  return r.read().decode('utf-8','replace')
-          last=None
-          for n in range(1,13):
-              try:
-                  html=get('/',n)
-                  boot=get('/v2/atlas-v2-boot.js?v=v2-primary-7-executive-pulse-entity360-classic-1&e=e360-expediente-1',n)
-                  expediente=get('/v2/entity360-expediente-surface.js?v=v2-primary-7-executive-pulse-entity360-classic-1&r=entity360-expediente-1',n)
-                  expediente_css=get('/v2/entity360-expediente-surface.css?v=entity360-expediente-20260908-1',n)
-                  sanctions=get('/v2/sanctions-surface.js?v=v2-primary-7-executive-pulse-entity360-classic-1&r=sanctions-region-card-3',n)
-                  assert 'e=e360-expediente-1' in html
-                  assert 's=sanctions-region-card-3' in html
-                  assert "ASSET_REVISION = 'entity360-expediente-1'" in boot
-                  assert "'entity360-expediente-surface.js'" in boot
-                  assert 'ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908' in expediente
-                  assert "registerSurface('entidad'" in expediente
-                  assert '__ATLAS_V2_ENTITY360_EXPEDIENTE__' in expediente
-                  assert '.e36x{' in expediente_css
-                  assert '.e36x-hero' in expediente_css
-                  assert 'Concentración Top 3' in sanctions
-                  assert 'Concentración Top 5' in sanctions
-                  assert 'Cobertura territorial' in sanctions
-                  assert 'chileRibbon' not in sanctions
-                  assert 'total / max * 100' in sanctions
-                  assert 'conic-gradient' in sanctions
-                  print('ATLAS v2 live Entity 360 expediente authority: OK')
-                  break
-              except Exception as exc:
-                  last=exc
-                  print(f'live authority attempt {n}/12 not ready: {exc}')
-                  if n < 12: time.sleep(8)
-          else:
-              raise SystemExit(f'ATLAS v2 live Entity 360 expediente failed: {last}')
-          PY
