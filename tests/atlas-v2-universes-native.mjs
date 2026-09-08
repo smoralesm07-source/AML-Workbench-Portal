@@ -10,6 +10,7 @@ const auth = fs.readFileSync('src/v2/atlas-v2-core-auth.js', 'utf8');
 const edge = fs.readFileSync('supabase/functions/atlas-v2-read/index.ts', 'utf8');
 const core = fs.readFileSync('supabase/core-contracts/atlas-v2-universes-query-v2.sql', 'utf8');
 const migration = fs.readFileSync('supabase/core-migrations/20260908002000_atlas_v2_universos_intelligence.sql', 'utf8');
+const cacheMigration = fs.readFileSync('supabase/core-migrations/20260908123000_atlas_v2_universos_intelligence_cache.sql', 'utf8');
 
 // Analytical adapters reach only the v2 gateway. The core host is owned by the
 // dedicated auth/session boundary and must never leak into a surface/adapter.
@@ -78,6 +79,18 @@ assert.match(migration, /SANCTIONS_ENTITY_DOSSIER_CURRENT/);
 assert.match(migration, /slice_is_exact_category/);
 assert.match(migration, /risk_inheritance',false/);
 
+// Massive SII/RES intelligence reads must not execute their large exact joins in
+// the interactive request path. They are materialized and refreshed by cron.
+assert.match(cacheMigration, /universe_intelligence_cache/);
+assert.match(cacheMigration, /refresh_universe_intelligence_cache_lens/);
+assert.match(cacheMigration, /universe_intelligence_cached/);
+assert.match(cacheMigration, /MATERIALIZED_POPULATION_INTELLIGENCE/);
+assert.match(cacheMigration, /interactive_heavy_joins',false/);
+assert.match(cacheMigration, /atlas_v2_universe_cache_sii/);
+assert.match(cacheMigration, /atlas_v2_universe_cache_res/);
+assert.match(cacheMigration, /return atlas_v2_private\.universe_intelligence_cached\(p_request\)/);
+assert.doesNotMatch(cacheMigration, /grant execute .* to anon/i);
+
 // The primary document can connect to core only for authentication/authorization.
 assert.match(html, /atlas-v2-core-auth\.js/);
 assert.match(html, /atlas-v2-session\.js/);
@@ -92,4 +105,4 @@ assert.match(boot, /ASSET_REVISION = 'universos-intelligence-1'/);
 new Function(adapter);
 new Function(surface);
 
-console.log('ATLAS v2 dynamic Universos population intelligence contract OK');
+console.log('ATLAS v2 dynamic Universos population intelligence + heavy-read cache contract OK');
