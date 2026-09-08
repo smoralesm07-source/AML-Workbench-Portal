@@ -1,0 +1,69 @@
+/* ATLAS v2 · Explorar loading guard
+   Hide the unfinished analytical shell while the first governed read is pending.
+   Chrome/Edge used by ATLAS support :has(); once hydration replaces the single
+   provisional KPI with the four live KPIs, the normal dashboard becomes visible. */
+
+.atlas-v2-studio-home:has(.atlas-v2-studio-kpis > .atlas-v2-studio-kpi:only-child) .atlas-v2-studio-top-tools,
+.atlas-v2-studio-home:has(.atlas-v2-studio-kpis > .atlas-v2-studio-kpi:only-child) .atlas-v2-studio-main-grid,
+.atlas-v2-studio-home:has(.atlas-v2-studio-kpis > .atlas-v2-studio-kpi:only-child) .atlas-v2-studio-bottom-grid {
+  display: none !important;
+}
+
+.atlas-v2-studio-kpis:has(> .atlas-v2-studio-kpi:only-child) {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  place-items: center;
+  min-height: 330px;
+  margin-top: 12px;
+  border: 1px solid rgba(49, 166, 202, .24);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(31, 223, 225, .055), transparent 24%),
+    linear-gradient(180deg, rgba(8, 27, 41, .68), rgba(5, 18, 28, .50));
+  overflow: hidden;
+}
+
+.atlas-v2-studio-kpis:has(> .atlas-v2-studio-kpi:only-child) > .atlas-v2-studio-kpi:only-child {
+  display: none !important;
+}
+
+.atlas-v2-studio-kpis:has(> .atlas-v2-studio-kpi:only-child)::before {
+  content: '';
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(77, 165, 197, .18);
+  border-top-color: #27d9dc;
+  border-right-color: rgba(39, 217, 220, .62);
+  border-radius: 50%;
+  animation: atlas-v2-explore-spin .82s linear infinite;
+  box-shadow: 0 0 28px rgba(39, 217, 220, .09);
+}
+
+.atlas-v2-studio-kpis:has(> .atlas-v2-studio-kpi:only-child)::after {
+  content: 'Cargando panorama analítico…';
+  position: absolute;
+  top: calc(50% + 38px);
+  left: 50%;
+  transform: translateX(-50%);
+  color: #89a9bb;
+  font: 650 11px/1.35 inherit;
+  letter-spacing: .01em;
+  white-space: nowrap;
+}
+
+@keyframes atlas-v2-explore-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atlas-v2-studio-kpis:has(> .atlas-v2-studio-kpi:only-child)::before {
+    animation-duration: 1.8s;
+  }
+}
+
+@media (max-width: 760px) {
+  .atlas-v2-studio-kpis:has(> .atlas-v2-studio-kpi:only-child) {
+    min-height: 260px;
+  }
+}
