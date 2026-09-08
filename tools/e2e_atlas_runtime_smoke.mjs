@@ -8,7 +8,7 @@ const refreshToken = process.env.ATLAS_E2E_REFRESH_TOKEN || '';
 const expectedEmail = process.env.ATLAS_E2E_EMAIL || '';
 if (!accessToken || !refreshToken || !expectedEmail) throw new Error('E2E session inputs are missing');
 
-const ROUTES = ['explorar','universos','entidad','gasto-publico','territorio','relaciones','vigilancia','guardados','metodo'];
+const ROUTES = ['explorar','universos','osfl','sanciones','entidad','gasto-publico','territorio','relaciones','vigilancia','guardados','metodo'];
 const STARTUP_BUDGET_MS = 15000;
 const ROUTE_BUDGET_MS = 12000;
 const CONTRACT_BUDGET_MS = 15000;
@@ -137,6 +137,8 @@ try {
 
     const results = [];
     results.push(await timed('universos', () => window.AtlasV2Universes.overview({ route: 'e2e:universos' })));
+    results.push(await timed('osfl', () => window.AtlasV2Osfl.overview({ route: 'e2e:osfl' })));
+    results.push(await timed('sanciones', () => window.AtlasV2Sanctions.dashboard({}, { route: 'e2e:sanciones', force: true })));
     results.push(await timed('territorio', () => window.AtlasV2Territory.overview({ route: 'e2e:territorio' })));
     results.push(await timed('vigilancia', () => window.AtlasV2Watch.overview({ route: 'e2e:vigilancia' })));
     results.push(await timed('gasto-publico', () => window.AtlasV2Access.data().publicSpend.monitor({ force: true, route: 'e2e:gasto-publico' })));
@@ -224,8 +226,8 @@ try {
   assert.equal(routeFailures.length, 0, `route failures: ${routeFailures.map(item => `${item.route}:${item.detail}`).join(' | ')}`);
 
   const successfulGateway = gatewayResponses.filter(item => item.status >= 200 && item.status < 300);
-  assert.ok(successfulGateway.length >= 7, `expected >=7 successful governed reads, got ${successfulGateway.length}`);
-  assert.ok(successfulGateway.filter(item => item.traceId).length >= 5, 'insufficient governed reads with trace ids');
+  assert.ok(successfulGateway.length >= 9, `expected >=9 successful governed reads, got ${successfulGateway.length}`);
+  assert.ok(successfulGateway.filter(item => item.traceId).length >= 7, 'insufficient governed reads with trace ids');
 
   for (const viewport of [{ width: 390, height: 844, name: 'mobile' }, { width: 1024, height: 768, name: 'tablet' }]) {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
