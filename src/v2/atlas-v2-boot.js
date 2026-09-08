@@ -4,13 +4,15 @@
   const baseUrl = new URL('./', document.currentScript?.src || document.baseURI);
   const STRUCTURAL_VERSION = 'v2-primary-5';
   const SURFACE_VERSION = 'v2-primary-7-executive-pulse-entity360-classic-1';
-  const ASSET_REVISION = 'osfl-panorama-workbench-4';
+  const ASSET_REVISION = 'entity360-expediente-1';
   const LEGACY_UNIVERSES_ASSET_REVISION_MARKER = "ASSET_REVISION = 'universos-intelligence-1'";
   const LEGACY_SANCTIONS_FEDERATION_MARKER = "ASSET_REVISION = 'osfl-sanctions-federation-2'";
   const LEGACY_ASSET_REVISION_MARKER = "ASSET_REVISION = 'executive-pulse-entity360-classic-1'";
+  const LEGACY_ENTITY360_AUTHORITY_MARKER = 'ENTITY360_LEGACY_PARITY_V2';
   void LEGACY_UNIVERSES_ASSET_REVISION_MARKER;
   void LEGACY_SANCTIONS_FEDERATION_MARKER;
   void LEGACY_ASSET_REVISION_MARKER;
+  void LEGACY_ENTITY360_AUTHORITY_MARKER;
   const STRUCTURAL_SURFACES = Object.freeze([
     'atlas-v2-access.js',
     'atlas-v2-viz.js',
@@ -18,9 +20,10 @@
     'explore-surface.js',
     'entity360-adapter.js',
     'entity360-surface.js',
-    // La Entidad 360 histórica/paridad se registra después de la vista ejecutiva:
-    // queda como autoridad visible del expediente profundo sin reactivar runtime legacy.
+    // La superficie histórica se conserva como fallback de paridad de datos.
     'entity360-parity-surface.js',
+    // Autoridad visible actual: expediente ejecutivo limpio, sin relaciones no resueltas.
+    'entity360-expediente-surface.js',
     'public-spend-surface.js',
     'relations-surface.js',
     'universes-adapter.js',
@@ -121,7 +124,7 @@
 
     const federationWarm = warmFederatedSession();
     await installAnalyticalSurfaces();
-    if (!window.AtlasV2Viz?.installed || !window.AtlasV2EntitySearch?.installed || !window.__ATLAS_V2_ENTITY360_PARITY__?.installed || !window.AtlasV2Osfl || !window.__ATLAS_V2_OSFL_SURFACE__ || !window.AtlasV2Sanctions || !window.__ATLAS_V2_SANCTIONS_SURFACE__) {
+    if (!window.AtlasV2Viz?.installed || !window.AtlasV2EntitySearch?.installed || !window.__ATLAS_V2_ENTITY360_PARITY__?.installed || !window.__ATLAS_V2_ENTITY360_EXPEDIENTE__?.installed || !window.AtlasV2Osfl || !window.__ATLAS_V2_OSFL_SURFACE__ || !window.AtlasV2Sanctions || !window.__ATLAS_V2_SANCTIONS_SURFACE__) {
       const error = new Error('ATLAS v2 visual/search/entity360/osfl/sanctions capabilities failed to initialize');
       error.code = 'VISUAL_SEARCH_CAPABILITY_MISSING';
       throw error;
@@ -129,7 +132,7 @@
     window.AtlasV2Shell.mount(root);
     emit('ok', {
       code: 'SHELL_READY', visualNavigation: true, entitySearch: true, entityIntelligence: true,
-      entity360: 'ENTITY360_LEGACY_PARITY_V2', osfl: true, sanctions: true, assetRevision: ASSET_REVISION,
+      entity360: 'ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908', osfl: true, sanctions: true, assetRevision: ASSET_REVISION,
     });
     window.dispatchEvent(new CustomEvent('atlas:v2-shell-ready', {
       detail: {
@@ -139,7 +142,7 @@
         visualNavigation: true,
         entitySearch: true,
         entityIntelligence: true,
-        entity360: 'ENTITY360_LEGACY_PARITY_V2',
+        entity360: 'ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908',
         osfl: true,
         sanctions: true,
         assetRevision: ASSET_REVISION,
