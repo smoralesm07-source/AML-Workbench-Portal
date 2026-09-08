@@ -86,6 +86,7 @@
 .san-panel-head p { margin: 0; color: var(--san-muted); font-size: 10px; line-height: 1.35; }
 
 .san-top-grid { display: grid; grid-template-columns: 1.02fr .98fr; gap: 11px; }
+.san-universes, .san-supervisors, .san-regions, .san-types { min-width: 0; }
 .san-universe-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
 .san-universe {
   display: grid; gap: 3px; text-align: left; padding: 12px; border: 1px solid rgba(82,151,174,.22); border-radius: 10px;
