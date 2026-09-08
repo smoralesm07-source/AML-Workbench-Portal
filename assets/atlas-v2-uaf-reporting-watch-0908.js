@@ -2,10 +2,11 @@
 
 (function installAtlasV2UafReportingWatch(global) {
   if (global.__ATLAS_V2_UAF_REPORTING_WATCH_0908__) return;
-  global.__ATLAS_V2_UAF_REPORTING_WATCH_0908__ = Object.freeze({ installed: true, revision: '2026-09-08-2' });
+  global.__ATLAS_V2_UAF_REPORTING_WATCH_0908__ = Object.freeze({ installed: true, revision: '2026-09-08-3' });
 
   const scriptBase = new URL('./', document.currentScript?.src || document.baseURI);
   const REPORTABILITY_URL = new URL('../data/uaf_reportability_sector_2025.json', scriptBase).href;
+  const YEARS = Object.freeze([2021, 2022, 2023, 2024, 2025]);
   const NO_REGISTERED = Object.freeze([
     'ADMINISTRADORAS DE FONDOS MUTUOS',
     'ARMAS: PERSONAS QUE SE DEDIQUEN A LA FABRICACIÓN DE ARMAS',
@@ -37,6 +38,12 @@
     return el;
   }
 
+  function svgNode(tag, attrs = {}) {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    Object.entries(attrs).forEach(([key, value]) => el.setAttribute(key, String(value)));
+    return el;
+  }
+
   function clear(el) { while (el?.firstChild) el.removeChild(el.firstChild); }
   function number(value) { const n = Number(value); return Number.isFinite(n) ? n : null; }
   function fmt(value, digits = 0) {
@@ -51,6 +58,15 @@
     return null;
   }
   function totalSubjects(rows) { return rows.reduce((sum, row) => sum + (number(row.registered_so_2025) || 0), 0); }
+  function shortSectorName(value) {
+    return String(value || 'Sector sin nombre')
+      .replace(/^FINTEC:\s*/i, '')
+      .replace(/^ARMAS:\s*/i, '')
+      .replace(/^PERSONAS QUE SE DEDIQUEN A LA\s*/i, '')
+      .replace(/^EMPRESAS DEDICADAS A LA\s*/i, '')
+      .replace(/^VEHÍCULOS:\s*/i, '')
+      .trim();
+  }
 
   async function reportability() {
     if (!reportabilityPromise) {
@@ -82,54 +98,144 @@
 
     return [
       {
-        id: 'no-registered', tone: 'no-registered', eyebrow: 'BRECHA DE PADRÓN', title: 'Sectores UAF sin inscritos',
-        description: 'Categorías legales sin sujetos inscritos observados en el padrón sectorial conciliado.',
-        rows: noRegistered, subjectCount: 0,
+        id: 'no-registered', tone: 'no-registered', icon: '◎', eyebrow: 'BRECHA DE PADRÓN',
+        title: 'Sectores sin inscritos', subtitle: 'Brecha de padrón UAF',
+        rows: noRegistered, subjectCount: 0, cta: 'Ver sectores',
       },
       {
-        id: 'low', tone: 'low', eyebrow: 'VIGILANCIA SECTORIAL', title: 'Baja reportabilidad / sin ROS 2025',
-        description: 'Menos de 1 ROS por cada 100 SO en 2025 o sin ROS durante 2025, existiendo actividad previa.',
-        rows: low, subjectCount: totalSubjects(low),
+        id: 'low', tone: 'low', icon: '↘', eyebrow: 'VIGILANCIA SECTORIAL',
+        title: 'Sectores con baja reportabilidad', subtitle: 'Reportan poco o con rezago',
+        rows: low, subjectCount: totalSubjects(low), cta: 'Explorar detalle',
       },
       {
-        id: 'silent', tone: 'silent', eyebrow: 'SILENCIO 2021–2025', title: 'Sin ROS en toda la serie observada',
-        description: 'Sectores con inscritos y cero ROS agregados en cada año de la ventana 2021–2025.',
-        rows: silent, subjectCount: totalSubjects(silent),
+        id: 'silent', tone: 'silent', icon: '∅', eyebrow: 'SILENCIO 2021–2025',
+        title: 'Sectores sin ROS en la serie', subtitle: 'Con inscritos · 0 ROS agregados',
+        rows: silent, subjectCount: totalSubjects(silent), cta: 'Ver sectores',
       },
     ];
   }
 
-  function cardMiniRows(group) {
+  function noRegisteredVisual(group) {
     const rows = group.rows.slice(0, 3);
+    return node('div', { class: 'atlas-v2-uaf-watch-visual no-reg-visual' }, [
+      node('div', { class: 'atlas-v2-uaf-watch-visual-head' }, [
+        node('strong', { text: 'Sectores detectados' }),
+        node('small', { text: 'inscritos' }),
+      ]),
+      node('div', { class: 'atlas-v2-uaf-watch-sector-list' }, rows.map(row => node('div', { class: 'atlas-v2-uaf-watch-sector-line', title: row.sector_name }, [
+        node('span', { class: 'dot', 'aria-hidden': 'true' }),
+        node('span', { class: 'label', text: shortSectorName(row.sector_name) }),
+        node('b', { text: '0' }),
+      ]))),
+      node('p', { class: 'atlas-v2-uaf-watch-note', text: `${fmt(group.rows.length)} categorías sin sujetos inscritos observados en el padrón UAF.` }),
+    ]);
+  }
+
+  function trendSeries(rows) {
+    const divisor = Math.max(1, rows.length);
+    return YEARS.map(year => rows.reduce((sum, row) => sum + (number(row[`ros_${year}`]) || 0), 0) / divisor);
+  }
+
+  function trendChart(rows) {
+    const values = trendSeries(rows);
+    const width = 320;
+    const height = 92;
+    const padX = 18;
+    const top = 10;
+    const bottom = 22;
+    const plotH = height - top - bottom;
+    const max = Math.max(1, ...values);
+    const x = index => padX + (width - padX * 2) * index / (YEARS.length - 1);
+    const y = value => top + plotH * (1 - value / max);
+    const points = values.map((value, index) => [x(index), y(value)]);
+    const lineD = points.map((point, index) => `${index ? 'L' : 'M'}${point[0].toFixed(1)},${point[1].toFixed(1)}`).join(' ');
+    const areaD = `${lineD} L${points[points.length - 1][0].toFixed(1)},${(top + plotH).toFixed(1)} L${points[0][0].toFixed(1)},${(top + plotH).toFixed(1)} Z`;
+    const svg = svgNode('svg', { class: 'atlas-v2-uaf-watch-trend-svg', viewBox: `0 0 ${width} ${height}`, role: 'img', 'aria-label': 'Evolución promedio de ROS de los sectores seleccionados entre 2021 y 2025' });
+
+    [0, .5, 1].forEach(ratio => {
+      const gy = top + plotH * ratio;
+      svg.append(svgNode('line', { x1: padX, y1: gy, x2: width - padX, y2: gy, class: 'grid' }));
+    });
+    svg.append(svgNode('path', { d: areaD, class: 'area' }));
+    svg.append(svgNode('path', { d: lineD, class: 'line' }));
+    points.forEach(([px, py], index) => {
+      svg.append(svgNode('circle', { cx: px, cy: py, r: 3.2, class: 'point' }));
+      const label = svgNode('text', { x: px, y: height - 4, class: 'year', 'text-anchor': 'middle' });
+      label.textContent = String(YEARS[index]);
+      svg.append(label);
+    });
+    return { svg, values };
+  }
+
+  function lowVisual(group) {
+    const chart = trendChart(group.rows);
+    const previous = chart.values[3] || 0;
+    const current = chart.values[4] || 0;
+    const delta = previous > 0 ? ((current - previous) / previous) * 100 : null;
+    const withoutRos2025 = group.rows.filter(row => (number(row.ros_2025) || 0) === 0).length;
+    const deltaText = delta == null ? '—' : `${delta > 0 ? '+' : ''}${fmt(delta, 0)}%`;
+
+    return node('div', { class: 'atlas-v2-uaf-watch-visual low-visual' }, [
+      node('div', { class: 'atlas-v2-uaf-watch-visual-head' }, [
+        node('strong', { text: 'Evolución de ROS' }),
+        node('small', { text: 'promedio sectorial' }),
+      ]),
+      node('div', { class: 'atlas-v2-uaf-watch-trend' }, [chart.svg]),
+      node('div', { class: 'atlas-v2-uaf-watch-insights' }, [
+        node('span', {}, [node('b', { text: fmt(withoutRos2025) }), document.createTextNode(' sin ROS 2025')]),
+        node('span', {}, [node('b', { text: deltaText }), document.createTextNode(' variación 24/25')]),
+      ]),
+    ]);
+  }
+
+  function silentVisual(group) {
+    const rows = group.rows.slice(0, 4);
     const max = Math.max(1, ...rows.map(row => number(row.registered_so_2025) || 0));
-    return node('div', { class: 'atlas-v2-uaf-watch-mini' }, rows.map(row => {
-      const count = number(row.registered_so_2025) || 0;
-      const width = group.id === 'no-registered' ? 7 : Math.max(5, 100 * count / max);
-      return node('div', { class: 'atlas-v2-uaf-watch-mini-row' }, [
-        node('span', { text: row.sector_name || 'Sector sin nombre', title: row.sector_name || '' }),
-        node('span', { class: 'track' }, [node('i', { style: { width: `${width}%` } })]),
-        node('small', { text: group.id === 'no-registered' ? '0' : fmt(count) }),
-      ]);
-    }));
+    return node('div', { class: 'atlas-v2-uaf-watch-visual silent-visual' }, [
+      node('div', { class: 'atlas-v2-uaf-watch-period', text: 'Periodo 2021–2025' }),
+      node('div', { class: 'atlas-v2-uaf-watch-visual-head' }, [
+        node('strong', { text: 'SO inscritos por sector' }),
+        node('small', { text: 'Nº SO' }),
+      ]),
+      node('div', { class: 'atlas-v2-uaf-watch-bars' }, rows.map(row => {
+        const count = number(row.registered_so_2025) || 0;
+        return node('div', { class: 'atlas-v2-uaf-watch-bar-row', title: row.sector_name }, [
+          node('span', { class: 'label', text: shortSectorName(row.sector_name) }),
+          node('span', { class: 'track' }, [node('i', { style: { width: `${Math.max(5, count / max * 100)}%` } })]),
+          node('b', { text: fmt(count) }),
+        ]);
+      })),
+      node('p', { class: 'atlas-v2-uaf-watch-note', text: `${fmt(group.subjectCount)} SO inscritos pertenecen a estos sectores; la señal es sectorial, no individual.` }),
+    ]);
+  }
+
+  function cardVisual(group) {
+    if (group.id === 'no-registered') return noRegisteredVisual(group);
+    if (group.id === 'low') return lowVisual(group);
+    return silentVisual(group);
   }
 
   function groupCard(group, state, selectGroup) {
-    const card = node('button', {
-      type: 'button',
-      class: `atlas-v2-uaf-watch-card ${group.tone} ${state.groupId === group.id ? 'active' : ''}`.trim(),
-      'aria-expanded': state.groupId === group.id ? 'true' : 'false',
-      onclick: () => selectGroup(group.id),
+    const active = state.groupId === group.id;
+    return node('article', {
+      class: `atlas-v2-uaf-watch-card ${group.tone} ${active ? 'active' : ''}`.trim(),
     }, [
-      node('div', { class: 'atlas-v2-uaf-watch-card-top' }, [node('span', { text: group.eyebrow }), node('b', { text: fmt(group.rows.length) })]),
-      node('h4', { text: group.title }),
-      node('p', { text: group.description }),
-      cardMiniRows(group),
-      node('div', { class: 'atlas-v2-uaf-watch-card-foot' }, [
-        node('span', {}, [node('strong', { text: group.id === 'no-registered' ? '0' : fmt(group.subjectCount) }), group.id === 'no-registered' ? ' inscritos' : ' SO involucrados']),
-        node('span', { text: 'Explorar →' }),
+      node('div', { class: 'atlas-v2-uaf-watch-card-head' }, [
+        node('span', { class: 'atlas-v2-uaf-watch-icon', text: group.icon, 'aria-hidden': 'true' }),
+        node('div', { class: 'atlas-v2-uaf-watch-card-copy' }, [
+          node('h4', { text: group.title }),
+          node('p', { text: group.subtitle }),
+        ]),
+        node('b', { class: 'atlas-v2-uaf-watch-card-count', text: fmt(group.rows.length) }),
       ]),
+      cardVisual(group),
+      node('button', {
+        type: 'button',
+        class: 'atlas-v2-uaf-watch-cta',
+        'aria-expanded': active ? 'true' : 'false',
+        onclick: () => selectGroup(group.id),
+      }, [node('span', { text: active ? 'Cerrar detalle' : group.cta }), node('span', { text: active ? '×' : '→', 'aria-hidden': 'true' })]),
     ]);
-    return card;
   }
 
   async function resolveSectorKey(sectorName) {
@@ -203,7 +309,11 @@
     };
 
     host.append(node('div', { class: 'atlas-v2-uaf-watch-explorer-head' }, [
-      node('div', {}, [node('span', { text: group.eyebrow }), node('h4', { text: group.title }), node('p', { text: `${fmt(group.rows.length)} sectores · ${group.id === 'no-registered' ? 'sin cohorte inscrita' : `${fmt(group.subjectCount)} SO involucrados`}` })]),
+      node('div', {}, [
+        node('span', { text: group.eyebrow }),
+        node('h4', { text: group.title }),
+        node('p', { text: `${fmt(group.rows.length)} sectores · ${group.id === 'no-registered' ? 'sin cohorte inscrita' : `${fmt(group.subjectCount)} SO inscritos en los sectores seleccionados`}` }),
+      ]),
       node('button', { type: 'button', class: 'atlas-v2-uaf-watch-close', text: 'Cerrar', onclick: close }),
     ]));
 
@@ -248,14 +358,14 @@
 
     root.append(
       node('div', { class: 'atlas-v2-uaf-watch-head' }, [
-        node('div', {}, [node('span', { text: 'LECTURA ANALÍTICA SECTORIAL' }), node('h3', { text: 'Brechas que conviene abrir después de la conciliación' })]),
-        node('p', { text: 'Cobertura registral y comportamiento agregado de reportabilidad por sector UAF.' }),
+        node('div', {}, [node('span', { text: 'LECTURA SECTORIAL' }), node('h3', { text: 'Brechas de padrón y reportabilidad' })]),
+        node('p', { text: 'Tres señales · un detalle desplegable por sector' }),
       ]),
       grid,
       explorerHost,
       node('p', { class: 'atlas-v2-uaf-watch-guardrail' }, [
-        node('strong', { text: 'Criterio de lectura. ' }),
-        'La reportabilidad disponible es agregada por sector: baja o nula reportabilidad no demuestra incumplimiento de un sujeto individual. “Sin ROS en toda la serie” se refiere exclusivamente a la ventana observada 2021–2025.',
+        node('strong', { text: 'Lectura analítica. ' }),
+        'Los ROS disponibles están agregados por sector; una baja o nula reportabilidad sectorial no demuestra incumplimiento individual. La serie observada cubre 2021–2025.',
       ]),
     );
     repaintCards();
