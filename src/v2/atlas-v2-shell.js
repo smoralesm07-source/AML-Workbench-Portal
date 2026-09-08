@@ -8,13 +8,15 @@
   const ROUTES = Object.freeze([
     { id: 'explorar', label: 'Explorar', icon: '01', group: 'analysis', description: 'Qué está pasando' },
     { id: 'universos', label: 'Universos', icon: '02', group: 'analysis', description: 'Poblaciones y lentes' },
-    { id: 'entidad', label: 'Entidad 360', icon: '03', group: 'analysis', description: 'Evidencia de una entidad' },
-    { id: 'gasto-publico', label: 'Gasto público', icon: '04', group: 'analysis', description: 'Compras y presupuesto' },
-    { id: 'territorio', label: 'Territorio', icon: '05', group: 'analysis', description: 'Contexto geográfico' },
-    { id: 'relaciones', label: 'Relaciones', icon: '06', group: 'analysis', description: 'Redes y convergencias' },
-    { id: 'vigilancia', label: 'Vigilancia', icon: '07', group: 'analysis', description: 'Cambios y señales' },
-    { id: 'guardados', label: 'Guardados', icon: '08', group: 'utility', description: 'Continuidad opcional' },
-    { id: 'metodo', label: 'Método y datos', icon: '09', group: 'utility', description: 'Fuentes y explicabilidad' },
+    { id: 'osfl', label: 'OSFL', icon: '03', group: 'analysis', description: 'Universo, señales y evidencia OSFL' },
+    { id: 'sanciones', label: 'Sanciones', icon: '04', group: 'analysis', description: 'Sanciones, enforcement y evidencia pública' },
+    { id: 'entidad', label: 'Entidad 360', icon: '05', group: 'analysis', description: 'Evidencia de una entidad' },
+    { id: 'gasto-publico', label: 'Gasto público', icon: '06', group: 'analysis', description: 'Compras y presupuesto' },
+    { id: 'territorio', label: 'Territorio', icon: '07', group: 'analysis', description: 'Contexto geográfico' },
+    { id: 'relaciones', label: 'Relaciones', icon: '08', group: 'analysis', description: 'Redes y convergencias' },
+    { id: 'vigilancia', label: 'Vigilancia', icon: '09', group: 'analysis', description: 'Cambios y señales' },
+    { id: 'guardados', label: 'Guardados', icon: '10', group: 'utility', description: 'Continuidad opcional' },
+    { id: 'metodo', label: 'Método y datos', icon: '11', group: 'utility', description: 'Fuentes y explicabilidad' },
   ]);
 
   const routeMap = new Map(ROUTES.map(route => [route.id, route]));
@@ -120,7 +122,9 @@
     if (/compra|proveedor|licit|gasto|presupuesto/.test(normalized)) return navigate('gasto-publico', { q: query });
     if (/comuna|region|territor|geograf/.test(normalized)) return navigate('territorio', { q: query });
     if (/relaci|red|vincul|representante|socio/.test(normalized)) return navigate('relaciones', { q: query });
-    if (/osfl|sii|uaf|res|sancion|sector|universo/.test(normalized)) return navigate('universos', { q: query });
+    if (/osfl|fundacion|corporacion|sin fines de lucro/.test(normalized)) return navigate('osfl', { q: query });
+    if (/sancion|multa|cmf|scj|contralor|cgr|enforcement/.test(normalized)) return navigate('sanciones', { q: query });
+    if (/sii|uaf|res|sector|universo/.test(normalized)) return navigate('universos', { q: query });
     navigate('universos', { q: query });
   }
 
@@ -144,6 +148,8 @@
       sectionHeading('Espacios analíticos', 'Profundiza sin perder el contexto de la pregunta original.'),
       node('div', { class: 'atlas-v2-grid three' }, [
         card('UNIVERSOS', 'Analítica poblacional', 'Filtra y compara universos SII, UAF, OSFL y RES usando fuentes como lentes explícitos.', 'Universos →', () => navigate('universos')),
+        card('OSFL', 'Universo y señales OSFL', 'Cobertura nacional, actividad económica, R.8, M19/M20/M21, fondos públicos y explorador por entidad.', 'OSFL →', () => navigate('osfl')),
+        card('SANCIONES', 'Radiografía sancionatoria', 'CMF, UAF, SCJ y acciones CGR con año, territorio, condición SO y documento público.', 'Sanciones →', () => navigate('sanciones')),
         card('GASTO PÚBLICO', 'Compras y presupuesto', 'Explora proveedores, compradores, pares, hallazgos, materialidad y contexto presupuestario.', 'Gasto público →', () => navigate('gasto-publico')),
         card('TERRITORIO', 'Contexto geográfico', 'Busca patrones regionales y comunales sin heredar automáticamente el contexto como riesgo de una entidad.', 'Territorio →', () => navigate('territorio')),
       ]),
@@ -168,7 +174,7 @@
       node('span', { class: 'atlas-v2-chip' }, [node('strong', { text: 'Sanciones' }), ' · eventos administrativos']),
     ]));
     container.append(node('section', { class: 'atlas-v2-section' }, [
-      sectionHeading('Formas de interrogar el universo', query ? `Consulta recibida: “${query}”` : 'La futura vista conectará filtros y agregados a read models gobernados.'),
+      sectionHeading('Formas de interrogar el universo', query ? `Consulta recibida: “${query}”` : 'La vista conectada usa agregados y páginas acotadas de read models gobernados.'),
       node('div', { class: 'atlas-v2-grid' }, [
         card('DISTRIBUCIÓN', 'Caracterizar', 'Composición sectorial, territorial, tributaria y temporal del universo seleccionado.', 'Sin gestión de casos'),
         card('OUTLIERS', 'Detectar inusualidades', 'Extremos, concentraciones, crecimientos abruptos y combinaciones poco frecuentes.', 'Hipótesis, no conclusiones'),
@@ -217,6 +223,12 @@
   function renderWatch(container) {
     container.append(pageHead('CAMBIO Y ATENCIÓN', 'Vigilancia', 'Detecta señales nuevas o cambiantes a través de snapshots publicados. Revisarlas es opcional: Atlas no las asigna, no abre tareas y no exige cierre.'));
     container.append(node('div', { class: 'atlas-v2-empty' }, [node('strong', { text: 'Superficie analítica v2' }), node('span', { text: 'La vista nativa muestra cambios, señales actuales, salud de fuentes e historial. Una señal puede explorarse o ignorarse sin cambiar un estado de workflow.' })]));
+  }
+
+  function renderSpecializedFallback(container, route) {
+    const label = routeMap.get(route.id)?.label || route.id;
+    container.append(pageHead('MÓDULO V2', label, 'La superficie analítica estructural no se registró. Atlas bloquea normalmente esta condición durante el boot; recarga para restablecer el contrato completo.'));
+    container.append(node('div', { class: 'atlas-v2-notice' }, [node('strong', { text: 'Capacidad estructural no registrada. ' }), 'No se mostrará un módulo legado ni datos demo como sustituto.']));
   }
 
   function readSaved() {
@@ -274,6 +286,8 @@
   const fallbackRenderers = Object.freeze({
     explorar: renderExplore,
     universos: renderUniverses,
+    osfl: renderSpecializedFallback,
+    sanciones: renderSpecializedFallback,
     entidad: renderEntity,
     'gasto-publico': renderPublicSpend,
     territorio: renderTerritory,
