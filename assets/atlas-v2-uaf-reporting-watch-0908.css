@@ -1,466 +1,224 @@
-/* ATLAS v2 · UAF sector reporting watch under UAF↔SII reconciliation · compact redesign · 2026-09-08 */
+/* ATLAS v2 · UAF reporting watch · compact strip + sector-only detail · 2026-09-08 */
 
 .atlas-v2-uaf-watch {
-  margin-top: 14px;
-  padding-top: 13px;
-  border-top: 1px solid color-mix(in srgb, var(--atlas-border) 82%, transparent);
-}
-.atlas-v2-uaf-watch-head {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 10px;
-}
-.atlas-v2-uaf-watch-head span {
-  display: block;
-  margin-bottom: 3px;
-  color: var(--atlas-accent);
-  font: 800 9px/1.15 var(--atlas-mono);
-  letter-spacing: .1em;
-  text-transform: uppercase;
-}
-.atlas-v2-uaf-watch-head h3 {
-  margin: 0;
-  color: var(--atlas-text);
-  font-size: 13px;
-  line-height: 1.2;
-}
-.atlas-v2-uaf-watch-head p {
-  margin: 0;
-  color: var(--atlas-text-3);
-  font-size: 10px;
-  line-height: 1.3;
-  white-space: nowrap;
+  margin: 4px 12px 10px;
+  padding: 0;
+  border: 0;
 }
 
 .atlas-v2-uaf-watch-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 7px;
+  min-width: 0;
 }
+
 .atlas-v2-uaf-watch-card {
   --watch-color: var(--atlas-accent);
-  --watch-soft: color-mix(in srgb, var(--watch-color) 14%, transparent);
-  display: flex;
+  --watch-soft: color-mix(in srgb, var(--watch-color) 11%, transparent);
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
   min-width: 0;
-  min-height: 238px;
-  padding: 13px;
-  flex-direction: column;
-  border: 1px solid color-mix(in srgb, var(--watch-color) 25%, var(--atlas-border));
-  border-radius: 11px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--watch-color) 4%, transparent), transparent 40%),
-    color-mix(in srgb, var(--atlas-surface-2) 91%, transparent);
-  color: var(--atlas-text);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.018);
-}
-.atlas-v2-uaf-watch-card.no-registered { --watch-color: #4dc8f2; }
-.atlas-v2-uaf-watch-card.low { --watch-color: #e4ad3f; }
-.atlas-v2-uaf-watch-card.silent { --watch-color: #f17a42; }
-.atlas-v2-uaf-watch-card.active {
-  border-color: color-mix(in srgb, var(--watch-color) 72%, var(--atlas-border));
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.025), 0 0 0 1px color-mix(in srgb, var(--watch-color) 10%, transparent);
-}
-
-.atlas-v2-uaf-watch-card-head {
-  display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) auto;
-  gap: 9px;
-  align-items: start;
-  min-height: 52px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid color-mix(in srgb, var(--atlas-border) 68%, transparent);
-}
-.atlas-v2-uaf-watch-icon {
-  display: grid;
-  width: 30px;
-  height: 30px;
-  place-items: center;
-  border: 1px solid color-mix(in srgb, var(--watch-color) 30%, transparent);
-  border-radius: 8px;
-  background: var(--watch-soft);
-  color: var(--watch-color);
-  font: 800 17px/1 var(--atlas-mono);
-}
-.atlas-v2-uaf-watch-card-copy { min-width: 0; }
-.atlas-v2-uaf-watch-card h4 {
-  margin: 1px 0 3px;
-  color: var(--atlas-text);
-  font-size: 12.5px;
-  font-weight: 760;
-  line-height: 1.22;
-}
-.atlas-v2-uaf-watch-card-copy p {
+  height: 54px;
   margin: 0;
-  color: var(--atlas-text-3);
-  font-size: 10.5px;
-  line-height: 1.25;
-}
-.atlas-v2-uaf-watch-card-count {
-  color: var(--watch-color);
-  font-size: 29px;
-  line-height: .95;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -.04em;
-}
-
-.atlas-v2-uaf-watch-visual {
-  display: flex;
-  min-height: 0;
-  padding: 10px 0 9px;
-  flex: 1;
-  flex-direction: column;
-}
-.atlas-v2-uaf-watch-visual-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 7px;
-}
-.atlas-v2-uaf-watch-visual-head strong {
-  min-width: 0;
-  color: var(--atlas-text-2);
-  font-size: 10.5px;
-  font-weight: 720;
-  line-height: 1.2;
-}
-.atlas-v2-uaf-watch-visual-head small {
-  flex: 0 0 auto;
-  color: var(--atlas-text-3);
-  font-size: 9px;
-  line-height: 1.1;
-}
-
-.atlas-v2-uaf-watch-sector-list {
-  display: grid;
-  gap: 5px;
-}
-.atlas-v2-uaf-watch-sector-line {
-  display: grid;
-  grid-template-columns: 7px minmax(0, 1fr) 22px;
-  gap: 7px;
-  align-items: center;
-  min-height: 22px;
-}
-.atlas-v2-uaf-watch-sector-line .dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 999px;
-  background: var(--watch-color);
-  box-shadow: 0 0 0 3px var(--watch-soft);
-}
-.atlas-v2-uaf-watch-sector-line .label {
-  overflow: hidden;
-  color: var(--atlas-text-2);
-  font-size: 10px;
-  line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.atlas-v2-uaf-watch-sector-line b {
-  color: var(--watch-color);
-  font: 750 10px/1 var(--atlas-mono);
-  text-align: right;
-}
-
-.atlas-v2-uaf-watch-note {
-  margin: auto 0 0;
-  padding: 7px 8px;
-  border: 1px solid color-mix(in srgb, var(--watch-color) 16%, var(--atlas-border));
-  border-radius: 7px;
-  background: color-mix(in srgb, var(--watch-color) 5%, transparent);
-  color: var(--atlas-text-3);
-  font-size: 9.5px;
-  line-height: 1.3;
-}
-
-.atlas-v2-uaf-watch-trend {
-  height: 86px;
-  min-height: 86px;
-}
-.atlas-v2-uaf-watch-trend-svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-.atlas-v2-uaf-watch-trend-svg .grid {
-  stroke: color-mix(in srgb, var(--atlas-border) 75%, transparent);
-  stroke-width: 1;
-}
-.atlas-v2-uaf-watch-trend-svg .area { fill: color-mix(in srgb, var(--watch-color) 13%, transparent); }
-.atlas-v2-uaf-watch-trend-svg .line {
-  fill: none;
-  stroke: var(--watch-color);
-  stroke-width: 2.2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.atlas-v2-uaf-watch-trend-svg .point {
-  fill: var(--watch-color);
-  stroke: color-mix(in srgb, var(--atlas-surface-1) 70%, black);
-  stroke-width: 1.2;
-}
-.atlas-v2-uaf-watch-trend-svg .year {
-  fill: var(--atlas-text-3);
-  font: 8.5px/1 var(--atlas-mono);
-}
-.atlas-v2-uaf-watch-insights {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  margin-top: 3px;
-}
-.atlas-v2-uaf-watch-insights span {
-  min-width: 0;
-  padding: 6px 7px;
-  border: 1px solid color-mix(in srgb, var(--watch-color) 16%, var(--atlas-border));
-  border-radius: 7px;
-  background: color-mix(in srgb, var(--watch-color) 5%, transparent);
-  color: var(--atlas-text-3);
-  font-size: 8.8px;
-  line-height: 1.2;
-  white-space: nowrap;
-}
-.atlas-v2-uaf-watch-insights b {
-  margin-right: 3px;
-  color: var(--watch-color);
-  font-size: 10.5px;
-}
-
-.atlas-v2-uaf-watch-period {
-  align-self: flex-start;
-  margin-bottom: 7px;
-  padding: 4px 7px;
-  border: 1px solid color-mix(in srgb, var(--watch-color) 20%, var(--atlas-border));
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--watch-color) 6%, transparent);
-  color: var(--atlas-text-2);
-  font-size: 9px;
-  line-height: 1;
-}
-.atlas-v2-uaf-watch-bars {
-  display: grid;
-  gap: 5px;
-}
-.atlas-v2-uaf-watch-bar-row {
-  display: grid;
-  grid-template-columns: minmax(0, .9fr) minmax(54px, 1.25fr) 28px;
-  gap: 6px;
-  align-items: center;
-  min-width: 0;
-}
-.atlas-v2-uaf-watch-bar-row .label {
-  overflow: hidden;
-  color: var(--atlas-text-2);
-  font-size: 9.4px;
-  line-height: 1.15;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.atlas-v2-uaf-watch-bar-row .track {
-  height: 6px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--atlas-border) 68%, transparent);
-}
-.atlas-v2-uaf-watch-bar-row .track i {
-  display: block;
-  height: 100%;
-  min-width: 3px;
-  border-radius: inherit;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--watch-color) 72%, white), var(--watch-color));
-}
-.atlas-v2-uaf-watch-bar-row b {
-  color: var(--atlas-text-2);
-  font: 750 9px/1 var(--atlas-mono);
-  text-align: right;
-}
-
-.atlas-v2-uaf-watch-cta {
-  display: flex;
-  width: 100%;
-  min-height: 30px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: auto;
-  padding: 6px 9px;
-  border: 1px solid color-mix(in srgb, var(--watch-color) 56%, var(--atlas-border));
-  border-radius: 7px;
-  background: color-mix(in srgb, var(--watch-color) 3%, transparent);
-  color: color-mix(in srgb, var(--watch-color) 78%, white);
-  font-size: 10px;
-  font-weight: 720;
+  padding: 7px 9px;
+  border: 1px solid color-mix(in srgb, var(--watch-color) 25%, #17425d);
+  border-radius: 8px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--watch-color) 4%, #091d2b), #081923);
+  color: #e8f1f6;
+  font: inherit;
+  text-align: left;
   cursor: pointer;
-  transition: background .15s ease, border-color .15s ease;
+  box-shadow: none;
+  overflow: hidden;
+  transition: border-color .14s ease, background .14s ease, transform .14s ease;
 }
-.atlas-v2-uaf-watch-cta:hover,
-.atlas-v2-uaf-watch-cta:focus-visible {
-  border-color: var(--watch-color);
-  background: color-mix(in srgb, var(--watch-color) 10%, transparent);
+
+.atlas-v2-uaf-watch-card.no-registered { --watch-color: #42c8ef; }
+.atlas-v2-uaf-watch-card.low { --watch-color: #e8b03e; }
+.atlas-v2-uaf-watch-card.silent { --watch-color: #f17a42; }
+
+.atlas-v2-uaf-watch-card:hover,
+.atlas-v2-uaf-watch-card:focus-visible {
+  border-color: color-mix(in srgb, var(--watch-color) 72%, #17425d);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--watch-color) 8%, #0a2030), #081923);
   outline: none;
 }
-.atlas-v2-uaf-watch-cta span:last-child { font-size: 14px; line-height: 1; }
+.atlas-v2-uaf-watch-card:active { transform: translateY(1px); }
 
-.atlas-v2-uaf-watch-explorer {
-  margin-top: 10px;
-  padding: 12px;
-  border: 1px solid color-mix(in srgb, var(--atlas-accent) 42%, var(--atlas-border));
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--atlas-surface-1) 88%, transparent);
-}
-.atlas-v2-uaf-watch-explorer-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: flex-start;
-  margin-bottom: 10px;
-}
-.atlas-v2-uaf-watch-explorer-head span {
-  color: var(--atlas-accent);
-  font: 800 9px/1.2 var(--atlas-mono);
-  letter-spacing: .08em;
-  text-transform: uppercase;
-}
-.atlas-v2-uaf-watch-explorer-head h4 {
-  margin: 3px 0 2px;
-  font-size: 13px;
-}
-.atlas-v2-uaf-watch-explorer-head p {
-  margin: 0;
-  color: var(--atlas-text-3);
-  font-size: 10px;
-  line-height: 1.4;
-}
-.atlas-v2-uaf-watch-close,
-.atlas-v2-uaf-watch-sector,
-.atlas-v2-uaf-watch-open {
-  border: 1px solid var(--atlas-border);
+.atlas-v2-uaf-watch-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--watch-color) 38%, transparent);
   border-radius: 7px;
-  background: var(--atlas-surface-2);
-  color: var(--atlas-text-2);
+  background: var(--watch-soft);
+  color: var(--watch-color);
+  font: 800 14px/1 var(--atlas-mono);
+}
+
+.atlas-v2-uaf-watch-card-title {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: #e5eef4;
+  font-size: 10.5px;
+  font-weight: 760;
+  line-height: 1.14;
+  letter-spacing: -.01em;
+}
+
+.atlas-v2-uaf-watch-card-count {
+  align-self: center;
+  color: var(--watch-color);
+  font: 800 24px/.95 var(--atlas-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.05em;
+}
+
+/* Detail is an overlay so opening a card never increases the Explorar layout height. */
+.atlas-v2-uaf-sector-dialog-backdrop {
+  --watch-color: var(--atlas-accent);
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(2, 9, 15, .68);
+  backdrop-filter: blur(3px);
+}
+.atlas-v2-uaf-sector-dialog-backdrop.no-registered { --watch-color: #42c8ef; }
+.atlas-v2-uaf-sector-dialog-backdrop.low { --watch-color: #e8b03e; }
+.atlas-v2-uaf-sector-dialog-backdrop.silent { --watch-color: #f17a42; }
+
+.atlas-v2-uaf-sector-dialog {
+  width: min(560px, 100%);
+  max-height: min(72vh, 620px);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--watch-color) 42%, #17425d);
+  border-radius: 11px;
+  background: #081923;
+  color: #e8f1f6;
+  box-shadow: 0 20px 60px rgba(0,0,0,.42);
+}
+
+.atlas-v2-uaf-sector-dialog-head {
+  display: grid;
+  grid-template-columns: 31px minmax(0, 1fr) 30px;
+  gap: 9px;
+  align-items: center;
+  padding: 11px 12px;
+  border-bottom: 1px solid #17364d;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--watch-color) 5%, #0a2030), #081923);
+}
+
+.atlas-v2-uaf-sector-dialog-icon {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--watch-color) 36%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--watch-color) 11%, transparent);
+  color: var(--watch-color);
+  font: 800 14px/1 var(--atlas-mono);
+}
+
+.atlas-v2-uaf-sector-dialog-title { min-width: 0; }
+.atlas-v2-uaf-sector-dialog-title h4 {
+  margin: 0;
+  color: #f1f6f9;
+  font-size: 13px;
+  line-height: 1.2;
+}
+.atlas-v2-uaf-sector-dialog-title p {
+  margin: 2px 0 0;
+  color: #718da1;
+  font-size: 9.5px;
+  line-height: 1.2;
+}
+
+.atlas-v2-uaf-sector-dialog-close {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #1a4861;
+  border-radius: 7px;
+  background: #0a2233;
+  color: #8ea8b9;
+  font-size: 18px;
+  line-height: 1;
   cursor: pointer;
 }
-.atlas-v2-uaf-watch-close { padding: 5px 8px; font-size: 10px; }
-.atlas-v2-uaf-watch-sector-strip {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  padding-bottom: 6px;
+.atlas-v2-uaf-sector-dialog-close:hover,
+.atlas-v2-uaf-sector-dialog-close:focus-visible {
+  border-color: var(--watch-color);
+  color: #f2f8fc;
+  outline: none;
+}
+
+.atlas-v2-uaf-sector-dialog-list {
+  min-height: 0;
+  overflow: auto;
+  padding: 5px 12px 7px;
   scrollbar-width: thin;
 }
-.atlas-v2-uaf-watch-sector {
-  flex: 0 0 auto;
-  max-width: 255px;
-  padding: 7px 9px;
-  text-align: left;
-  font-size: 9.5px;
-  line-height: 1.25;
-}
-.atlas-v2-uaf-watch-sector.active,
-.atlas-v2-uaf-watch-sector:hover {
-  border-color: var(--atlas-accent);
-  color: var(--atlas-text);
-}
-.atlas-v2-uaf-watch-entity-host {
-  min-height: 72px;
-  margin-top: 8px;
-}
-.atlas-v2-uaf-watch-loading,
-.atlas-v2-uaf-watch-empty {
-  padding: 13px;
-  border: 1px dashed var(--atlas-border);
-  border-radius: 8px;
-  color: var(--atlas-text-3);
-  font-size: 10px;
-  line-height: 1.5;
-}
-.atlas-v2-uaf-watch-entity-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 7px;
-}
-.atlas-v2-uaf-watch-entity-head strong { font-size: 11px; }
-.atlas-v2-uaf-watch-open { padding: 6px 8px; font-size: 9.5px; }
-.atlas-v2-uaf-watch-entity-list {
+
+.atlas-v2-uaf-sector-dialog-row {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-}
-.atlas-v2-uaf-watch-entity {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 27px minmax(0, 1fr);
   gap: 8px;
   align-items: center;
+  min-height: 34px;
+  border-bottom: 1px solid #142f43;
+}
+.atlas-v2-uaf-sector-dialog-row:last-child { border-bottom: 0; }
+.atlas-v2-uaf-sector-dialog-index {
+  color: color-mix(in srgb, var(--watch-color) 74%, #7792a7);
+  font: 750 9px/1 var(--atlas-mono);
+}
+.atlas-v2-uaf-sector-dialog-name {
   min-width: 0;
-  padding: 8px 9px;
-  border: 1px solid color-mix(in srgb, var(--atlas-border) 82%, transparent);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--atlas-surface-2) 72%, transparent);
-}
-.atlas-v2-uaf-watch-entity strong {
-  display: block;
-  overflow: hidden;
+  color: #cfdee7;
   font-size: 10.5px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.atlas-v2-uaf-watch-entity small {
-  display: block;
-  margin-top: 2px;
-  overflow: hidden;
-  color: var(--atlas-text-3);
-  font-size: 9px;
+  font-weight: 650;
   line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
-.atlas-v2-uaf-watch-entity button {
-  padding: 5px 7px;
-  border: 1px solid var(--atlas-border);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--atlas-accent);
-  font-size: 9px;
-  cursor: pointer;
-}
-.atlas-v2-uaf-watch-guardrail {
-  margin: 8px 0 0;
-  color: var(--atlas-text-3);
+
+.atlas-v2-uaf-sector-dialog-note {
+  margin: 0;
+  padding: 8px 12px 9px;
+  border-top: 1px solid #17364d;
+  color: #6f8da2;
   font-size: 9px;
   line-height: 1.35;
 }
-.atlas-v2-uaf-watch-guardrail strong { color: var(--atlas-text-2); }
 
-/* Explorar: mantener +2 px aprox. sobre los textos de apoyo de la vista base. */
-.atlas-v2-studio-home .atlas-v2-studio-panel-head p,
-.atlas-v2-studio-home .atlas-v2-studio-kpi-copy > p,
-.atlas-v2-studio-home .atlas-v2-studio-recon-note p,
-.atlas-v2-studio-home .atlas-v2-studio-ros-foot { font-size: 11px !important; }
-.atlas-v2-studio-home .atlas-v2-studio-status-list span,
-.atlas-v2-studio-home .atlas-v2-studio-status-list small,
-.atlas-v2-studio-home .atlas-v2-studio-recon-summary span,
-.atlas-v2-studio-home .atlas-v2-studio-recon-summary small { font-size: 10.5px !important; }
-.atlas-v2-studio-home .atlas-v2-studio-attention-row { font-size: 10.5px !important; }
-.atlas-v2-studio-home .atlas-v2-studio-attention-row .entity strong { font-size: 11px !important; }
-.atlas-v2-studio-home .atlas-v2-studio-attention-row .entity small { font-size: 9.5px !important; }
-.atlas-v2-studio-home .atlas-v2-studio-bar-row,
-.atlas-v2-studio-home .atlas-v2-studio-bar-row span,
-.atlas-v2-studio-home .atlas-v2-studio-bar-row small { font-size: 10.5px !important; }
-
-@media (max-width: 1040px) {
-  .atlas-v2-uaf-watch-grid { grid-template-columns: 1fr; }
-  .atlas-v2-uaf-watch-card { min-height: 0; }
-  .atlas-v2-uaf-watch-head { align-items: flex-start; flex-direction: column; gap: 4px; }
-  .atlas-v2-uaf-watch-head p { white-space: normal; }
-  .atlas-v2-uaf-watch-trend { height: 112px; }
+@media (max-width: 940px) {
+  .atlas-v2-uaf-watch-card {
+    grid-template-columns: 27px minmax(0, 1fr) auto;
+    gap: 6px;
+    padding-inline: 7px;
+  }
+  .atlas-v2-uaf-watch-icon { width: 25px; height: 25px; font-size: 12px; }
+  .atlas-v2-uaf-watch-card-title { font-size: 9.4px; }
+  .atlas-v2-uaf-watch-card-count { font-size: 21px; }
 }
-@media (max-width: 720px) {
-  .atlas-v2-uaf-watch-entity-list { grid-template-columns: 1fr; }
-  .atlas-v2-uaf-watch-card-head { grid-template-columns: 30px minmax(0, 1fr) auto; }
+
+@media (max-width: 680px) {
+  .atlas-v2-uaf-watch { margin-inline: 8px; }
+  .atlas-v2-uaf-watch-grid {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+  .atlas-v2-uaf-watch-card { height: 45px; }
 }
