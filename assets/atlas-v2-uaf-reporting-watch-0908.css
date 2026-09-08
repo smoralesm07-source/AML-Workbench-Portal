@@ -1,0 +1,301 @@
+/* ATLAS v2 · UAF sector reporting watch under UAF↔SII reconciliation · 2026-09-08 */
+
+.atlas-v2-uaf-watch {
+  margin-top: 16px;
+  padding-top: 15px;
+  border-top: 1px solid color-mix(in srgb, var(--atlas-border) 82%, transparent);
+}
+.atlas-v2-uaf-watch-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 11px;
+}
+.atlas-v2-uaf-watch-head span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--atlas-accent);
+  font: 800 10px/1.2 var(--atlas-mono);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.atlas-v2-uaf-watch-head h3 {
+  margin: 0;
+  color: var(--atlas-text);
+  font-size: 14px;
+  line-height: 1.25;
+}
+.atlas-v2-uaf-watch-head p {
+  max-width: 520px;
+  margin: 0;
+  color: var(--atlas-text-3);
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: right;
+}
+.atlas-v2-uaf-watch-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+.atlas-v2-uaf-watch-card {
+  min-width: 0;
+  min-height: 174px;
+  padding: 12px;
+  border: 1px solid var(--atlas-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--atlas-surface-2) 86%, transparent);
+  color: var(--atlas-text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .16s ease, transform .16s ease, background .16s ease;
+}
+.atlas-v2-uaf-watch-card:hover,
+.atlas-v2-uaf-watch-card:focus-visible,
+.atlas-v2-uaf-watch-card.active {
+  border-color: color-mix(in srgb, var(--atlas-accent) 64%, var(--atlas-border));
+  background: color-mix(in srgb, var(--atlas-accent-soft) 35%, var(--atlas-surface-2));
+  transform: translateY(-1px);
+  outline: none;
+}
+.atlas-v2-uaf-watch-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.atlas-v2-uaf-watch-card-top span {
+  color: var(--atlas-text-3);
+  font: 800 9px/1.2 var(--atlas-mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.atlas-v2-uaf-watch-card-top b {
+  color: var(--atlas-text);
+  font-size: 23px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.atlas-v2-uaf-watch-card h4 {
+  margin: 8px 0 3px;
+  color: var(--atlas-text);
+  font-size: 12px;
+  line-height: 1.28;
+}
+.atlas-v2-uaf-watch-card > p {
+  min-height: 30px;
+  margin: 0 0 9px;
+  color: var(--atlas-text-3);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.atlas-v2-uaf-watch-mini {
+  display: grid;
+  gap: 5px;
+}
+.atlas-v2-uaf-watch-mini-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56px 30px;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+.atlas-v2-uaf-watch-mini-row > span:first-child {
+  overflow: hidden;
+  color: var(--atlas-text-2);
+  font-size: 9.5px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.atlas-v2-uaf-watch-mini-row .track {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--atlas-border) 68%, transparent);
+}
+.atlas-v2-uaf-watch-mini-row .track i {
+  display: block;
+  height: 100%;
+  min-width: 3px;
+  border-radius: inherit;
+  background: var(--atlas-accent);
+}
+.atlas-v2-uaf-watch-mini-row small {
+  color: var(--atlas-text-3);
+  font: 700 9px/1 var(--atlas-mono);
+  text-align: right;
+}
+.atlas-v2-uaf-watch-card.no-registered .track i { background: #8b7cf6; }
+.atlas-v2-uaf-watch-card.low .track i { background: #e0a84b; }
+.atlas-v2-uaf-watch-card.silent .track i { background: #e36c78; }
+.atlas-v2-uaf-watch-card-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--atlas-border) 60%, transparent);
+  color: var(--atlas-text-3);
+  font-size: 9.5px;
+}
+.atlas-v2-uaf-watch-card-foot strong { color: var(--atlas-text-2); font-weight: 750; }
+
+.atlas-v2-uaf-watch-explorer {
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--atlas-accent) 42%, var(--atlas-border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--atlas-surface-1) 88%, transparent);
+}
+.atlas-v2-uaf-watch-explorer-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+.atlas-v2-uaf-watch-explorer-head span {
+  color: var(--atlas-accent);
+  font: 800 9px/1.2 var(--atlas-mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.atlas-v2-uaf-watch-explorer-head h4 {
+  margin: 3px 0 2px;
+  font-size: 13px;
+}
+.atlas-v2-uaf-watch-explorer-head p {
+  margin: 0;
+  color: var(--atlas-text-3);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.atlas-v2-uaf-watch-close,
+.atlas-v2-uaf-watch-sector,
+.atlas-v2-uaf-watch-open {
+  border: 1px solid var(--atlas-border);
+  border-radius: 7px;
+  background: var(--atlas-surface-2);
+  color: var(--atlas-text-2);
+  cursor: pointer;
+}
+.atlas-v2-uaf-watch-close { padding: 5px 8px; font-size: 10px; }
+.atlas-v2-uaf-watch-sector-strip {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+}
+.atlas-v2-uaf-watch-sector {
+  flex: 0 0 auto;
+  max-width: 255px;
+  padding: 7px 9px;
+  text-align: left;
+  font-size: 9.5px;
+  line-height: 1.25;
+}
+.atlas-v2-uaf-watch-sector.active,
+.atlas-v2-uaf-watch-sector:hover {
+  border-color: var(--atlas-accent);
+  color: var(--atlas-text);
+}
+.atlas-v2-uaf-watch-entity-host {
+  min-height: 72px;
+  margin-top: 8px;
+}
+.atlas-v2-uaf-watch-loading,
+.atlas-v2-uaf-watch-empty {
+  padding: 13px;
+  border: 1px dashed var(--atlas-border);
+  border-radius: 8px;
+  color: var(--atlas-text-3);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.atlas-v2-uaf-watch-entity-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+}
+.atlas-v2-uaf-watch-entity-head strong { font-size: 11px; }
+.atlas-v2-uaf-watch-open { padding: 6px 8px; font-size: 9.5px; }
+.atlas-v2-uaf-watch-entity-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.atlas-v2-uaf-watch-entity {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid color-mix(in srgb, var(--atlas-border) 82%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--atlas-surface-2) 72%, transparent);
+}
+.atlas-v2-uaf-watch-entity strong {
+  display: block;
+  overflow: hidden;
+  font-size: 10.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.atlas-v2-uaf-watch-entity small {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--atlas-text-3);
+  font-size: 9px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.atlas-v2-uaf-watch-entity button {
+  padding: 5px 7px;
+  border: 1px solid var(--atlas-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--atlas-accent);
+  font-size: 9px;
+  cursor: pointer;
+}
+.atlas-v2-uaf-watch-guardrail {
+  margin: 10px 0 0;
+  color: var(--atlas-text-3);
+  font-size: 9.5px;
+  line-height: 1.45;
+}
+.atlas-v2-uaf-watch-guardrail strong { color: var(--atlas-text-2); }
+
+/* Explorar: legibilidad +2 px aprox. en las lecturas de apoyo, sin inflar los KPIs. */
+.atlas-v2-studio-home .atlas-v2-studio-panel-head p,
+.atlas-v2-studio-home .atlas-v2-studio-kpi-copy > p,
+.atlas-v2-studio-home .atlas-v2-studio-recon-note p,
+.atlas-v2-studio-home .atlas-v2-studio-ros-foot { font-size: 11px !important; }
+.atlas-v2-studio-home .atlas-v2-studio-status-list span,
+.atlas-v2-studio-home .atlas-v2-studio-status-list small,
+.atlas-v2-studio-home .atlas-v2-studio-recon-summary span,
+.atlas-v2-studio-home .atlas-v2-studio-recon-summary small { font-size: 10.5px !important; }
+.atlas-v2-studio-home .atlas-v2-studio-attention-row { font-size: 10.5px !important; }
+.atlas-v2-studio-home .atlas-v2-studio-attention-row .entity strong { font-size: 11px !important; }
+.atlas-v2-studio-home .atlas-v2-studio-attention-row .entity small { font-size: 9.5px !important; }
+.atlas-v2-studio-home .atlas-v2-studio-bar-row,
+.atlas-v2-studio-home .atlas-v2-studio-bar-row span,
+.atlas-v2-studio-home .atlas-v2-studio-bar-row small { font-size: 10.5px !important; }
+
+@media (max-width: 1040px) {
+  .atlas-v2-uaf-watch-grid { grid-template-columns: 1fr; }
+  .atlas-v2-uaf-watch-card { min-height: 0; }
+  .atlas-v2-uaf-watch-head { align-items: flex-start; flex-direction: column; }
+  .atlas-v2-uaf-watch-head p { max-width: none; text-align: left; }
+}
+@media (max-width: 720px) {
+  .atlas-v2-uaf-watch-entity-list { grid-template-columns: 1fr; }
+}
