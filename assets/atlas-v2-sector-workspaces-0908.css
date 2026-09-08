@@ -1,0 +1,111 @@
+/* ATLAS v2 · sector workspaces + legibility uplift · 2026-09-08 */
+
+.atlas-v2-nav .atlas-v2-sector-shortcut {
+  position: relative;
+  min-height: 39px;
+  padding: 8px 10px 8px 16px;
+  gap: 8px;
+  border-left: 2px solid transparent;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--atlas-surface-2) 46%, transparent);
+  color: var(--atlas-text-2);
+  font-size: 11px;
+  line-height: 1.18;
+  letter-spacing: .015em;
+}
+.atlas-v2-nav .atlas-v2-sector-shortcut:hover,
+.atlas-v2-nav .atlas-v2-sector-shortcut:focus-visible {
+  border-left-color: var(--atlas-accent);
+  background: color-mix(in srgb, var(--atlas-accent-soft) 60%, var(--atlas-surface-2));
+  color: var(--atlas-text);
+}
+.atlas-v2-nav .atlas-v2-sector-shortcut[aria-busy="true"] {
+  opacity: .72;
+  cursor: progress;
+}
+.atlas-v2-nav .atlas-v2-sector-shortcut .atlas-v2-sector-shortcut-icon {
+  width: 16px;
+  flex: 0 0 16px;
+  color: var(--atlas-accent);
+  font: 800 10px/1 var(--atlas-mono);
+  text-align: center;
+}
+.atlas-v2-nav .atlas-v2-sector-shortcut .atlas-v2-sector-shortcut-label {
+  display: block;
+  font-weight: 700;
+}
+.atlas-v2-nav .atlas-v2-sector-shortcut:first-of-type {
+  margin-top: 3px;
+}
+
+/* Reading scale: preserve Atlas density but remove 6–8 px analytical text. */
+.atlas-v2-studio-home {
+  font-size: 13px;
+}
+.atlas-v2-studio-title p { font-size: 11px !important; line-height: 1.4 !important; }
+.atlas-v2-studio-update span { font-size: 9px !important; }
+.atlas-v2-studio-update b { font-size: 10px !important; }
+.atlas-v2-studio-search input { font-size: 11px !important; }
+.atlas-v2-studio-search-key { font-size: 9px !important; }
+.atlas-v2-studio-chip { font-size: 9.5px !important; padding: 7px 11px !important; }
+.atlas-v2-studio-chip b { font-size: 9px !important; }
+.atlas-v2-studio-more { font-size: 9.5px !important; }
+.atlas-v2-studio-kpi-copy > span { font-size: 10px !important; }
+.atlas-v2-studio-kpi-copy > p { font-size: 9.5px !important; line-height: 1.4 !important; }
+.atlas-v2-studio-kpi-side small { font-size: 8.8px !important; }
+.atlas-v2-studio-panel-head h2 { font-size: 14px !important; line-height: 1.22 !important; }
+.atlas-v2-studio-panel-head p { font-size: 10px !important; line-height: 1.4 !important; }
+.atlas-v2-studio-kicker { font-size: 8.5px !important; }
+.atlas-v2-studio-link,
+.atlas-v2-studio-period { font-size: 9px !important; }
+.atlas-v2-studio-ros-chart .tick { font-size: 10px !important; }
+.atlas-v2-studio-ros-chart .axis { font-size: 10.5px !important; }
+.atlas-v2-studio-ros-chart .value { font-size: 11.5px !important; }
+.atlas-v2-studio-ros-chart .value.ytd { font-size: 9.5px !important; }
+.atlas-v2-studio-ros-insight span { font-size: 8.5px !important; }
+.atlas-v2-studio-ros-insight b { font-size: 10px !important; }
+.atlas-v2-studio-ros-insight .wide b { font-size: 9.5px !important; }
+.atlas-v2-studio-ros-foot { font-size: 9px !important; line-height: 1.35 !important; }
+.atlas-v2-studio-recon-summary span { font-size: 9.5px !important; }
+.atlas-v2-studio-recon-summary b { font-size: 12px !important; }
+.atlas-v2-studio-recon-summary small { font-size: 9px !important; }
+.atlas-v2-studio-status-list span { font-size: 9px !important; }
+.atlas-v2-studio-status-list b { font-size: 13px !important; }
+.atlas-v2-studio-status-list small { font-size: 8.5px !important; }
+.atlas-v2-studio-recon-note p { font-size: 9.5px !important; line-height: 1.48 !important; }
+.atlas-v2-studio-attention-row { font-size: 9.5px !important; min-height: 41px !important; }
+.atlas-v2-studio-attention-row.head { font-size: 8.8px !important; min-height: 31px !important; }
+.atlas-v2-studio-attention-row .entity strong { font-size: 10.5px !important; }
+.atlas-v2-studio-attention-row .entity small { font-size: 8.5px !important; }
+.atlas-v2-studio-bar-row,
+.atlas-v2-studio-bar-row span,
+.atlas-v2-studio-bar-row small { font-size: 9.5px !important; }
+
+/* Universos: sector workspace, region and SII evidence need to be readable at first glance. */
+.uiv2-head p,
+.uiv2-panel-note,
+.uiv2-kpi small,
+.uiv2-lens-rail small,
+.uiv2-bar-row small,
+.uiv2-entity-row small,
+.uiv2-evidence small { font-size: 11px !important; line-height: 1.45 !important; }
+.uiv2-bar-label,
+.uiv2-bar-row strong,
+.uiv2-entity-row,
+.uiv2-evidence { font-size: 12px !important; }
+.uiv2-panel-head h2 { font-size: 16px !important; }
+
+@media (max-width: 760px) {
+  .atlas-v2-nav .atlas-v2-sector-shortcut {
+    min-height: 44px;
+    padding: 8px 6px;
+    justify-content: center;
+    font-size: 9px;
+    text-align: center;
+    border-left: 0;
+    border-bottom: 2px solid transparent;
+  }
+  .atlas-v2-nav .atlas-v2-sector-shortcut:hover,
+  .atlas-v2-nav .atlas-v2-sector-shortcut:focus-visible { border-bottom-color: var(--atlas-accent); }
+  .atlas-v2-nav .atlas-v2-sector-shortcut .atlas-v2-sector-shortcut-icon { display: none; }
+}
