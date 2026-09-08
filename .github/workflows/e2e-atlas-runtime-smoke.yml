@@ -129,15 +129,17 @@ jobs:
           assert report['legacy_authority_active_on_primary'] is False
           assert report['v2_auth_boundary']=='ENTRA_SUPABASE_ALLOWLIST_VERIFIED_USER'
           assert report['v2_structural_surface_policy']=='FAIL_CLOSED'
-          assert report['v2_explore_mode']=='LIVE_PULSE_VISUAL'
+          assert report['v2_explore_mode']=='LEGACY_PULSE_NATIVE_V2'
+          assert report['v2_explore_design']=='EXECUTIVE_PULSE_V2'
           assert report['v2_visual_navigation']=='INTERACTIVE_FIRST'
-          assert report['v2_entity_search']=='RUT_NAME_UAF_PRESS'
+          assert report['v2_entity_search']=='IDENTITY_TIERED_DIGITAL_PRESS'
+          assert report['v2_entity_search_policy']=='EXACT_RECONCILED_THEN_PRESS_HIGH'
           assert report['v2_federation_prewarm'] is True
           assert report['v2_e2e_proxy'] is True
           assert report['v2_version']=='v2-primary-5'
           assert report['v2_surface_version']=='v2-primary-7-executive-pulse-entity360-classic-1'
-          assert report['osfl_authority']=='OSFL_NATIVE_V2'
-          assert report['sanctions_authority']=='SANCTIONS_NATIVE_V2'
+          assert report['v2_osfl_authority']=='OSFL_NATIVE_V2'
+          assert report['v2_sanctions_authority']=='SANCTIONS_NATIVE_V2'
           assert "'osfl-adapter.js'" in boot and "'osfl-surface.js'" in boot
           assert "'sanctions-adapter.js'" in boot and "'sanctions-surface.js'" in boot
           for path in [
