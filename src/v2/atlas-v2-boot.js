@@ -4,10 +4,12 @@
   const baseUrl = new URL('./', document.currentScript?.src || document.baseURI);
   const STRUCTURAL_VERSION = 'v2-primary-5';
   const SURFACE_VERSION = 'v2-primary-7-executive-pulse-entity360-classic-1';
-  const ASSET_REVISION = 'osfl-sanctions-federation-2';
+  const ASSET_REVISION = 'sanctions-command-center-1';
   const LEGACY_UNIVERSES_ASSET_REVISION_MARKER = "ASSET_REVISION = 'universos-intelligence-1'";
+  const LEGACY_SANCTIONS_FEDERATION_MARKER = "ASSET_REVISION = 'osfl-sanctions-federation-2'";
   const LEGACY_ASSET_REVISION_MARKER = "ASSET_REVISION = 'executive-pulse-entity360-classic-1'";
   void LEGACY_UNIVERSES_ASSET_REVISION_MARKER;
+  void LEGACY_SANCTIONS_FEDERATION_MARKER;
   void LEGACY_ASSET_REVISION_MARKER;
   const STRUCTURAL_SURFACES = Object.freeze([
     'atlas-v2-access.js',
