@@ -18,9 +18,6 @@ on:
       - 'supabase/core-migrations/*atlas_v2_entity_search*'
       - 'supabase/core-migrations/*atlas_v2_sanctions*'
       - '.github/workflows/e2e-atlas-runtime-smoke.yml'
-  pull_request:
-    branches: [main]
-    paths: *atlas_v2_e2e_paths
   workflow_dispatch:
 
 permissions:
