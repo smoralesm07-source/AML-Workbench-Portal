@@ -1,0 +1,1 @@
+No mergear sin que los gates Architecture v2, Federation, Analytics Shell y Sanciones command center terminen en success.
