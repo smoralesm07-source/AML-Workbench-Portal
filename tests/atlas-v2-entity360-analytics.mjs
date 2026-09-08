@@ -12,6 +12,8 @@ const executive = fs.readFileSync('src/v2/entity360-surface.js', 'utf8');
 const executiveCss = fs.readFileSync('src/v2/entity360-surface.css', 'utf8');
 const parity = fs.readFileSync('src/v2/entity360-parity-surface.js', 'utf8');
 const parityCss = fs.readFileSync('src/v2/entity360-parity-surface.css', 'utf8');
+const expediente = fs.readFileSync('src/v2/entity360-expediente-surface.js', 'utf8');
+const expedienteCss = fs.readFileSync('src/v2/entity360-expediente-surface.css', 'utf8');
 const boot = fs.readFileSync('src/v2/atlas-v2-boot.js', 'utf8');
 const edge = fs.readFileSync('supabase/functions/atlas-v2-read/index.ts', 'utf8');
 const sql = fs.readFileSync('supabase/core-migrations/20260907111841_atlas_v2_entity_search_allowlist_hardening.sql', 'utf8');
@@ -22,6 +24,7 @@ new Function(explorerAdapter);
 new Function(classicExplorer);
 new Function(executive);
 new Function(parity);
+new Function(expediente);
 
 assert.match(access, /AtlasV2Data\.create/);
 for (const marker of [
@@ -55,14 +58,14 @@ for (const selector of ['.aex2-command', '.aex2-facets', '.aex2-panorama', '.aex
   assert.ok(classicExplorerCss.includes(selector), `Classic Entidades CSS missing ${selector}`);
 }
 
-// La nueva vista ejecutiva queda disponible como fallback limpio, pero la paridad histórica registra después y es la autoridad del expediente.
+// Capas históricas conservadas como fallback/paridad de datos.
 for (const marker of [
   'timelineEvents', 'timelinePanel', 'whatToReview', 'Qué mirar primero', 'Línea de tiempo de hechos críticos',
   'Término de giro publicado en SII', 'reconciliationPanel', 'UAF ↔ SII', 'reportingPanel',
   'Ausencia de dato ≠ cero ROS/ROE', 'screeningPanel', 'SCREENING INTERNACIONAL', 'digitalIdentityPanel',
-]) assert.ok(executive.includes(marker), `Executive Entity 360 missing ${marker}`);
+]) assert.ok(executive.includes(marker), `Executive Entity 360 fallback missing ${marker}`);
 for (const selector of ['.atlas-v2-h360', '.atlas-v2-h360-priority-grid', '.atlas-v2-h360-timeline', '.atlas-v2-h360-focus-list']) {
-  assert.ok(executiveCss.includes(selector), `Executive Entity 360 CSS missing ${selector}`);
+  assert.ok(executiveCss.includes(selector), `Executive Entity 360 fallback CSS missing ${selector}`);
 }
 assert.doesNotMatch(executive, /innerHTML|MutationObserver|raw\.githubusercontent/);
 
@@ -70,18 +73,31 @@ for (const marker of [
   'SIX_LENS_NATIVE_V2', 'ENTITY360_LEGACY_PARITY_V2', 'e360p-identidad', 'e360p-caracterizacion',
   'e360p-relaciones', 'e360p-contexto', 'e360p-senales', 'e360p-evidencia', 'ipa3_score',
   'peer_positions', 'res_lifecycle', 'sanction_resolution', 'AtlasV2Entity360.read', "registerSurface('entidad'",
-]) assert.ok(parity.includes(marker), `Recovered Entity 360 missing ${marker}`);
+]) assert.ok(parity.includes(marker), `Recovered Entity 360 parity missing ${marker}`);
 for (const selector of ['.e360p-hero', '.e360p-lens-nav', '.e360p-score-ring', '.e360p-rail', '.e360p-mark', '.e360p-timeline']) {
-  assert.ok(parityCss.includes(selector), `Recovered Entity 360 CSS missing ${selector}`);
+  assert.ok(parityCss.includes(selector), `Recovered Entity 360 parity CSS missing ${selector}`);
 }
 assert.doesNotMatch(parity, /innerHTML|MutationObserver|raw\.githubusercontent/);
 
+// Autoridad visible vigente: expediente ejecutivo 360, registrado después de la paridad histórica.
+for (const marker of [
+  'ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908', "registerSurface('entidad'",
+  '__ATLAS_V2_ENTITY360_EXPEDIENTE__', 'Línea de tiempo', 'Sanciones', 'Gasto público', 'OSFL', 'RES',
+]) assert.ok(expediente.includes(marker), `Entity 360 expediente missing ${marker}`);
+for (const selector of ['.e36x{', '.e36x-hero', '.e36x-tabs', '.e36x-timeline']) {
+  assert.ok(expedienteCss.includes(selector), `Entity 360 expediente CSS missing ${selector}`);
+}
+assert.doesNotMatch(expediente, /MutationObserver|raw\.githubusercontent/);
+
 assert.match(boot, /SURFACE_VERSION = 'v2-primary-7-executive-pulse-entity360-classic-1'/);
+assert.match(boot, /ASSET_REVISION = 'entity360-expediente-1'/);
 assert.match(boot, /entity360-surface\.js/);
 assert.match(boot, /entity360-parity-surface\.js/);
+assert.match(boot, /entity360-expediente-surface\.js/);
 assert.ok(boot.indexOf("'entity360-surface.js'") < boot.indexOf("'entity360-parity-surface.js'"));
-assert.match(boot, /ENTITY360_LEGACY_PARITY_V2/);
+assert.ok(boot.indexOf("'entity360-parity-surface.js'") < boot.indexOf("'entity360-expediente-surface.js'"));
 assert.match(html, /entity360-parity-surface\.css\?v=v2-primary-5-entity360-parity-1/);
+assert.match(html, /e=e360-expediente-1/);
 assert.doesNotMatch(html, /entity360-parity-surface\.js\?v=/);
 
 assert.match(classicSql, /kind','explorer_meta'/);
@@ -108,4 +124,4 @@ assert.match(searchPerfSql, /aml_allowed_users/);
 assert.match(searchPerfSql, /left join public\.aml_entities e on e\.entity_id=p\.entity_id/);
 assert.doesNotMatch(searchPerfSql, /aml_entity_master_v0553/);
 
-console.log('ATLAS 2.0.2 classic Entidades + recovered six-lens Entity 360 contract OK');
+console.log('ATLAS 2.0.2 Entidades + Entity 360 expediente authority contract OK');
