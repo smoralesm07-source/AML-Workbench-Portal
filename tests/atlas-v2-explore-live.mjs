@@ -10,6 +10,7 @@ const universesSurface = fs.readFileSync('src/v2/universes-surface.js', 'utf8');
 const universesCss = fs.readFileSync('src/v2/universes-surface.css', 'utf8');
 const universesMigration = fs.readFileSync('supabase/core-migrations/20260908002000_atlas_v2_universos_intelligence.sql', 'utf8');
 const builder = fs.readFileSync('tools/build_atlas_v2_primary.py', 'utf8');
+const builderCore = fs.readFileSync('tools/build_atlas_v2_primary_core.py', 'utf8');
 const html = fs.readFileSync('atlas-v2.html', 'utf8');
 const reportability = JSON.parse(fs.readFileSync('data/uaf_reportability_sector_2025.json', 'utf8'));
 const uafSnapshot = JSON.parse(fs.readFileSync('data/uaf_dashboard_snapshot.json', 'utf8'));
@@ -82,7 +83,9 @@ assert.match(boot, /SURFACE_VERSION = 'v2-primary-7-executive-pulse-entity360-cl
 assert.match(boot, /ASSET_REVISION = 'universos-intelligence-1'/);
 assert.match(boot, /entity360-surface\.js/);
 assert.match(boot, /entity360-parity-surface\.js/);
+assert.match(boot, /entity360-expediente-surface\.js/);
 assert.ok(boot.indexOf("'entity360-surface.js'") < boot.indexOf("'entity360-parity-surface.js'"));
+assert.ok(boot.indexOf("'entity360-parity-surface.js'") < boot.indexOf("'entity360-expediente-surface.js'"));
 assert.match(boot, /ENTITY360_LEGACY_PARITY_V2/);
 
 assert.match(universes, /attention:\s*\(options = \{\}\)\s*=>\s*query\('attention'/);
@@ -112,10 +115,18 @@ assert.match(universesMigration, /universe_slice/);
 assert.match(universesMigration, /REGISTRY_COMPANY_MATERIALIZED/);
 assert.match(universesMigration, /RES_COMPANY_MATERIALIZED_ALL_FILES/);
 
-assert.match(builder, /SURFACE_VERSION = "v2-primary-7-executive-pulse-entity360-classic-1"/);
-assert.match(builder, /"v2_explore_design": "EXECUTIVE_PULSE_V2"/);
-assert.match(builder, /"v2_entity360_authority": "ENTITY360_LEGACY_PARITY_V2"/);
-assert.match(builder, /"v2_ros_2026_semantics": "YTD_DASHED_NO_FABRICATION"/);
+// The historical builder contract remains in the core implementation.
+assert.match(builderCore, /SURFACE_VERSION = "v2-primary-7-executive-pulse-entity360-classic-1"/);
+assert.match(builderCore, /"v2_explore_design": "EXECUTIVE_PULSE_V2"/);
+assert.match(builderCore, /"v2_entity360_authority": "ENTITY360_LEGACY_PARITY_V2"/);
+assert.match(builderCore, /"v2_ros_2026_semantics": "YTD_DASHED_NO_FABRICATION"/);
+
+// The wrapper is now the live Entity 360 authority and must supersede parity.
+assert.match(builder, /ENTITY360_AUTHORITY = "ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908"/);
+assert.match(builder, /"entity360-expediente-surface\.js"/);
+assert.match(builder, /"entity360-expediente-surface\.css"/);
+assert.match(builder, /"v2_entity360_design": "EXECUTIVE_360_DOSSIER"/);
+assert.match(builder, /v2 primary build: Entity 360 expediente must register after historical parity/);
 
 for (const marker of [
   'atlas-v2-shell.css?v=v2-primary-5',
@@ -124,10 +135,11 @@ for (const marker of [
   'atlas-v2-session.js?v=v2-primary-5',
   'atlas-v2-viz.css?v=v2-primary-5-viz1',
   'entity360-parity-surface.css?v=v2-primary-5-entity360-parity-1',
+  'e=e360-expediente-1',
 ]) assert.ok(html.includes(marker), marker);
 assert.doesNotMatch(html, /entity360-parity-surface\.js\?v=/);
 
 new Function(universes);
 new Function(universesSurface);
 
-console.log('ATLAS 2.0.2 Explore + dynamic Universos intelligence + recovered Entity 360 contract OK');
+console.log('ATLAS 2.0.2 Explore + dynamic Universos intelligence + Entity 360 expediente authority OK');
