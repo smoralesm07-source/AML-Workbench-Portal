@@ -16,6 +16,7 @@ on:
       - 'supabase/functions/atlas-v2-session-exchange/**'
       - 'supabase/core-functions/atlas-v2-e2e-auth/**'
       - 'supabase/core-migrations/*atlas_v2_entity_search*'
+      - 'supabase/core-migrations/*atlas_v2_sanctions*'
       - '.github/workflows/e2e-atlas-runtime-smoke.yml'
   workflow_dispatch:
 
@@ -41,7 +42,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Validate post-launch sources
+      - name: Validate current v2 sources
         shell: bash
         run: |
           set -euo pipefail
@@ -57,35 +58,36 @@ jobs:
           assert str(p['legacy_fallback']['build'])==str(l['build'])
           assert p['legacy_fallback']['authority_active_on_primary'] is False
           PY
-          node --check src/v2/atlas-v2-health.js
-          node --check src/v2/atlas-v2-core-auth.js
-          node --check src/v2/atlas-v2-boot.js
-          node --check src/v2/atlas-v2-viz.js
-          node --check src/v2/entity-search-adapter.js
-          node --check src/v2/explore-surface.js
-          node --check src/v2/entity360-adapter.js
-          node --check src/v2/entity360-surface.js
+          for f in \
+            src/v2/atlas-v2-health.js src/v2/atlas-v2-core-auth.js src/v2/atlas-v2-boot.js \
+            src/v2/atlas-v2-viz.js src/v2/entity-search-adapter.js src/v2/explore-surface.js \
+            src/v2/entity360-adapter.js src/v2/entity360-surface.js \
+            src/v2/osfl-adapter.js src/v2/osfl-surface.js \
+            src/v2/sanctions-adapter.js src/v2/sanctions-surface.js; do node --check "$f"; done
           node --check tools/e2e_atlas_runtime_smoke.mjs
           node --check tools/e2e_atlas_v2_ux_preflight.mjs
           node --check tools/serve_atlas_v2_e2e.mjs
           python3 -m py_compile tools/build_atlas_v2_primary.py
 
-      - name: Validate search security contract
+      - name: Validate security and governed gateway contracts
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
           sql=Path('supabase/core-migrations/20260907111841_atlas_v2_entity_search_allowlist_hardening.sql').read_text(encoding='utf-8')
+          sanctions=Path('supabase/core-migrations/20260908132200_atlas_v2_sanctions_command_center.sql').read_text(encoding='utf-8')
           edge=Path('supabase/functions/atlas-v2-read/index.ts').read_text(encoding='utf-8')
           assert 'security definer' in sql.lower()
           assert 'aml_allowed_users' in sql and 'auth.uid()' in sql
           assert "raise exception 'ATLAS_CORE_FORBIDDEN'" in sql
           assert 'security invoker' in sql.lower()
           assert 'ATLAS_ENTITY_SEARCH_V2' in sql
-          assert 'entity_search' in edge and 'atlas_v2_entity_search' in edge
-          assert 'search_entities' in edge
-          print('entity search security/gateway contract: OK')
+          assert 'entity_search' in edge and 'atlas_v2_entity_search' in edge and 'search_entities' in edge
+          assert 'ATLAS_SANCTIONS_QUERY_V2' in sanctions and 'aml_allowed_users' in sanctions and 'auth.uid()' in sanctions
+          assert 'sanctions_query' in edge and 'atlas_v2_sanctions_query' in edge
+          assert 'osfl_query' in edge and 'atlas_v2_osfl_query' in edge
+          print('ATLAS v2 search + OSFL + sanctions gateway contracts: OK')
           PY
 
       - name: Install Chromium
@@ -96,7 +98,7 @@ jobs:
       - name: Build production-equivalent v2 primary artifact
         run: python3 tools/build_atlas_v2_primary.py --out _site --e2e-proxy
 
-      - name: Verify primary authority before browser test
+      - name: Verify current primary authority before browser test
         shell: bash
         run: |
           set -euo pipefail
@@ -108,11 +110,12 @@ jobs:
           html=Path('_site/index.html').read_text(encoding='utf-8')
           legacy=Path('_site/legacy.html').read_text(encoding='utf-8')
           report=json.loads(Path('_site/atlas-runtime-report.json').read_text(encoding='utf-8'))
+          boot=Path('_site/v2/atlas-v2-boot.js').read_text(encoding='utf-8')
           assert f'data-aml-version="{primary["release"]}"' in html
           assert f'data-aml-build="{primary["build"]}"' in html
           assert 'data-atlas-v2-primary="analytics"' in html
-          assert 'atlas-v2-health.js?v=v2-primary-4' in html
-          assert 'atlas-v2-boot.js?v=v2-primary-4' in html
+          assert 'atlas-v2-health.js?v=v2-primary-5' in html
+          assert 'atlas-v2-boot.js?v=v2-primary-7-executive-pulse-entity360-classic-1' in html
           assert 'atlas-runtime-current-' not in html and 'atlas-module-current-' not in html
           assert f'data-aml-version="{legacy_release["release"]}"' in legacy
           assert f'data-aml-build="{legacy_release["build"]}"' in legacy
@@ -123,18 +126,27 @@ jobs:
           assert report['legacy_authority_active_on_primary'] is False
           assert report['v2_auth_boundary']=='ENTRA_SUPABASE_ALLOWLIST_VERIFIED_USER'
           assert report['v2_structural_surface_policy']=='FAIL_CLOSED'
-          assert report['v2_explore_mode']=='LIVE_PULSE_VISUAL'
+          assert report['v2_explore_mode']=='LEGACY_PULSE_NATIVE_V2'
+          assert report['v2_explore_design']=='EXECUTIVE_PULSE_V2'
           assert report['v2_visual_navigation']=='INTERACTIVE_FIRST'
-          assert report['v2_entity_search']=='RUT_NAME_UAF_PRESS'
+          assert report['v2_entity_search']=='IDENTITY_TIERED_DIGITAL_PRESS'
+          assert report['v2_entity_search_policy']=='EXACT_RECONCILED_THEN_PRESS_HIGH'
           assert report['v2_federation_prewarm'] is True
           assert report['v2_e2e_proxy'] is True
-          assert report['v2_version']=='v2-primary-4'
+          assert report['v2_version']=='v2-primary-5'
+          assert report['v2_surface_version']=='v2-primary-7-executive-pulse-entity360-classic-1'
+          assert report['v2_osfl_authority']=='OSFL_NATIVE_V2'
+          assert report['v2_sanctions_authority']=='SANCTIONS_NATIVE_V2'
+          assert "'osfl-adapter.js'" in boot and "'osfl-surface.js'" in boot
+          assert "'sanctions-adapter.js'" in boot and "'sanctions-surface.js'" in boot
           for path in [
             '_site/v2/atlas-v2-viz.js', '_site/v2/atlas-v2-viz.css',
             '_site/v2/entity-search-adapter.js', '_site/v2/explore-surface.js',
-            '_site/v2/entity360-surface.js', '_site/v2/entity360-adapter.js'
+            '_site/v2/entity360-surface.js', '_site/v2/entity360-adapter.js',
+            '_site/v2/osfl-adapter.js', '_site/v2/osfl-surface.js', '_site/v2/osfl-surface.css',
+            '_site/v2/sanctions-adapter.js', '_site/v2/sanctions-surface.js', '_site/v2/sanctions-surface.css'
           ]: assert Path(path).is_file(), path
-          print('ATLAS 2.0.2 visual/search primary preflight: OK')
+          print('ATLAS 2.0.2 current v2 primary preflight: OK')
           PY
 
       - name: Mint ephemeral authenticated session
