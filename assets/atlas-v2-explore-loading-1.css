@@ -3,6 +3,27 @@
    Chrome/Edge used by ATLAS support :has(); once hydration replaces the single
    provisional KPI with the four live KPIs, the normal dashboard becomes visible. */
 
+/* La shell mueve el foco programáticamente al contenedor principal en cada
+   navegación. El selector global :focus-visible de la shell dibujaba entonces
+   un marco turquesa alrededor de casi toda la vista. Conservamos el foco
+   programático (útil para navegación) pero el contenedor nunca debe dibujar
+   ese marco; los controles interactivos mantienen su foco visible normal. */
+.atlas-v2-content:focus,
+.atlas-v2-content:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Explorar ya no usa la hilera superior de filtros rápidos. El filtrado de los
+   bloques analíticos sigue disponible desde sus propios controles y drill-downs. */
+.atlas-v2-studio-filters {
+  display: none !important;
+}
+.atlas-v2-studio-top-tools {
+  grid-template-columns: auto !important;
+  justify-content: end;
+}
+
 .atlas-v2-studio-home:has(.atlas-v2-studio-kpis > .atlas-v2-studio-kpi:only-child) .atlas-v2-studio-top-tools,
 .atlas-v2-studio-home:has(.atlas-v2-studio-kpis > .atlas-v2-studio-kpi:only-child) .atlas-v2-studio-main-grid,
 .atlas-v2-studio-home:has(.atlas-v2-studio-kpis > .atlas-v2-studio-kpi:only-child) .atlas-v2-studio-bottom-grid {
