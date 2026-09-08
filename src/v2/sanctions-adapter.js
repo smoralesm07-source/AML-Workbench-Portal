@@ -7,13 +7,23 @@
   const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_3nrUSbZMWfTYUtXnyjDklg_EjyZIzko';
   const ENDPOINT = '/functions/v1/atlas-v2-read';
   const CONTRACT = 'ATLAS_SANCTIONS_QUERY_V2';
-  const DEFAULT_TIMEOUT_MS = 12000;
+  const DEFAULT_TIMEOUT_MS = 16000;
   const CACHE_MS = 30000;
   let overviewCache = null;
+  const dashboardCache = new Map();
 
   function clean(value, max = 180) {
     const out = String(value ?? '').trim();
     return out && out.length <= max ? out : '';
+  }
+
+  function stableKey(value) {
+    if (!value || typeof value !== 'object') return String(value ?? '');
+    return JSON.stringify(Object.keys(value).sort().reduce((acc, key) => {
+      const current = value[key];
+      if (current !== '' && current != null) acc[key] = current;
+      return acc;
+    }, {}));
   }
 
   async function coreAccessToken() {
@@ -60,7 +70,7 @@
           authorization: `Bearer ${token}`,
           apikey: publishableKey,
           'content-type': 'application/json',
-          'x-client-info': 'atlas-v2/sanctions-adapter/2.0',
+          'x-client-info': 'atlas-v2/sanctions-command-center/2.1',
           'x-atlas-core-authorization': `Bearer ${coreToken}`,
         },
         body: JSON.stringify({
@@ -105,17 +115,35 @@
     return value;
   }
 
+  async function dashboard(filters = {}, options = {}) {
+    const key = stableKey(filters);
+    const cached = dashboardCache.get(key);
+    if (!options.force && cached && Date.now() - cached.at < CACHE_MS) return cached.value;
+    const value = await query('dashboard', filters, options);
+    dashboardCache.set(key, { at: Date.now(), value });
+    return value;
+  }
+
   function events(filters = {}, options = {}) {
     return query('events', filters, options);
   }
 
-  function clearCache() { overviewCache = null; }
+  function detail(eventId, options = {}) {
+    return query('detail', { event_id: clean(eventId, 120) }, options);
+  }
+
+  function clearCache() {
+    overviewCache = null;
+    dashboardCache.clear();
+  }
 
   global.AtlasV2Sanctions = Object.freeze({
     installed: true,
     contract: CONTRACT,
     overview,
+    dashboard,
     events,
+    detail,
     query,
     clearCache,
   });
