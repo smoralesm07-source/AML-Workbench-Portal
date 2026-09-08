@@ -9,6 +9,7 @@
   const CONTRACT = 'ATLAS_OSFL_QUERY_V2';
   const DEFAULT_TIMEOUT_MS = 12000;
   const CACHE_MS = 30000;
+  let dashboardCache = null;
   let overviewCache = null;
 
   function clean(value, max = 180) {
@@ -60,7 +61,7 @@
           authorization: `Bearer ${token}`,
           apikey: publishableKey,
           'content-type': 'application/json',
-          'x-client-info': 'atlas-v2/osfl-adapter/2.0',
+          'x-client-info': 'atlas-v2/osfl-adapter/3.0',
           'x-atlas-core-authorization': `Bearer ${coreToken}`,
         },
         body: JSON.stringify({
@@ -84,6 +85,12 @@
         error.code = 'OSFL_CONTRACT_MISMATCH';
         throw error;
       }
+      if (body?.error) {
+        const error = new Error(body.error);
+        error.code = body.error;
+        error.traceId = body?.trace_id || null;
+        throw error;
+      }
       return body;
     } catch (error) {
       if (controller.signal.aborted && error?.name !== 'AbortError') {
@@ -97,6 +104,23 @@
     }
   }
 
+  async function dashboard(options = {}) {
+    const now = Date.now();
+    if (!options.force && dashboardCache && now - dashboardCache.at < CACHE_MS) return dashboardCache.value;
+    const value = await query('dashboard', {}, options);
+    dashboardCache = { at: Date.now(), value };
+    return value;
+  }
+
+  function search(filters = {}, options = {}) {
+    return query('search', filters, options);
+  }
+
+  function detail(entityId, options = {}) {
+    return query('detail', { entity_id: clean(entityId, 180) }, options);
+  }
+
+  // Backward compatibility for previous OSFL surface and external callers.
   async function overview(options = {}) {
     const now = Date.now();
     if (!options.force && overviewCache && now - overviewCache.at < CACHE_MS) return overviewCache.value;
@@ -109,11 +133,17 @@
     return query('entities', filters, options);
   }
 
-  function clearCache() { overviewCache = null; }
+  function clearCache() {
+    dashboardCache = null;
+    overviewCache = null;
+  }
 
   global.AtlasV2Osfl = Object.freeze({
     installed: true,
     contract: CONTRACT,
+    dashboard,
+    search,
+    detail,
     overview,
     entities,
     query,
