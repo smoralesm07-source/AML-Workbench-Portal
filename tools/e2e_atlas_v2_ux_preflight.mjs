@@ -8,17 +8,17 @@ const refreshToken = process.env.ATLAS_E2E_REFRESH_TOKEN || '';
 const expectedEmail = process.env.ATLAS_E2E_EMAIL || '';
 if (!accessToken || !refreshToken || !expectedEmail) throw new Error('UX preflight session inputs are missing');
 
-const PULSE_BUDGET_MS = 12000;
+const EXPLORE_BUDGET_MS = 12000;
 const CACHE_BUDGET_MS = 250;
 const SEARCH_BUDGET_MS = 10000;
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 const report = {
-  schema: 'ATLAS_V2_UX_PREFLIGHT_V2',
+  schema: 'ATLAS_V2_UX_PREFLIGHT_V3',
   release: '2.0.2',
   build: '2002',
   startedAt: new Date().toISOString(),
-  pulse: null,
+  explore: null,
   visualNavigation: null,
   entitySearch: null,
   trajectory: null,
@@ -28,6 +28,17 @@ const report = {
 
 async function navigate(route, params = {}) {
   await page.evaluate(({ route, params }) => window.AtlasV2Shell.navigate(route, params), { route, params });
+}
+
+async function waitForCurrentExplore() {
+  await page.waitForFunction(() => {
+    const root = document.querySelector('.atlas-v2-studio-home');
+    const panels = document.querySelectorAll('.atlas-v2-studio-panel');
+    const recon = document.querySelector('.atlas-v2-studio-recon-panel');
+    const watch = document.querySelector('.atlas-v2-uaf-watch');
+    const cards = document.querySelectorAll('.atlas-v2-uaf-watch-card');
+    return !!root && panels.length === 4 && !!recon && !!watch && cards.length === 3;
+  }, null, { timeout: EXPLORE_BUDGET_MS });
 }
 
 try {
@@ -45,53 +56,61 @@ try {
   await page.waitForFunction(() => window.AtlasV2Viz?.installed && window.AtlasV2EntitySearch?.installed, null, { timeout: 10000 });
   await navigate('explorar');
 
-  const pulseStarted = Date.now();
-  await page.waitForFunction(() => {
-    const panels = [...document.querySelectorAll('.atlas-v2-explore-grid .atlas-v2-explore-panel')];
-    return panels.length === 4 && panels.every(panel => !panel.classList.contains('is-loading'));
-  }, null, { timeout: PULSE_BUDGET_MS });
-  const pulseMs = Date.now() - pulseStarted;
-  const pulse = await page.evaluate(() => ({
-    errors: document.querySelectorAll('.atlas-v2-explore-panel.is-error').length,
-    panels: document.querySelectorAll('.atlas-v2-explore-panel').length,
-    panelTitles: [...document.querySelectorAll('.atlas-v2-explore-panel .atlas-v2-explore-panel-head h2')].map(node => node.textContent?.trim() || ''),
-    visualizations: document.querySelectorAll('.atlas-v2-explore-panel .atlas-v2-viz').length,
-    interactiveBars: document.querySelectorAll('.atlas-v2-explore-panel button.atlas-v2-viz-bar-row').length,
-    interactiveSegments: document.querySelectorAll('.atlas-v2-explore-panel button.atlas-v2-viz-segment').length,
-    questions: document.querySelectorAll('.atlas-v2-explore-question').length,
-    queryPresent: !!document.querySelector('.atlas-v2-explore-query input'),
-    diagnostics: window.__ATLAS_V2_EXPLORE_DIAGNOSTICS__ || null,
+  const exploreStarted = Date.now();
+  await waitForCurrentExplore();
+  const exploreMs = Date.now() - exploreStarted;
+  const explore = await page.evaluate(() => ({
+    panels: document.querySelectorAll('.atlas-v2-studio-panel').length,
+    panelTitles: [...document.querySelectorAll('.atlas-v2-studio-panel-head h2')].map(node => node.textContent?.trim() || ''),
+    queryPresent: !!document.querySelector('.atlas-v2-studio-search input'),
+    rosChartPresent: !!document.querySelector('.atlas-v2-studio-ros-chart'),
+    reconciliationPresent: !!document.querySelector('.atlas-v2-studio-recon-panel'),
+    sectorBars: document.querySelectorAll('.atlas-v2-studio-sector-body button.atlas-v2-studio-bar-row').length,
+    watchCards: document.querySelectorAll('.atlas-v2-uaf-watch-card').length,
+    watchCtas: document.querySelectorAll('.atlas-v2-uaf-watch-cta').length,
+    watchTrend: !!document.querySelector('.atlas-v2-uaf-watch-trend-svg'),
+    watchDenseKpiRows: document.querySelectorAll('.atlas-v2-uaf-watch-card .atlas-v2-uaf-watch-metrics').length,
     federation: window.AtlasV2Session?.state?.() || null,
   }));
-  assert.equal(pulse.errors, 0, 'Explore live pulse contains unavailable panels');
-  assert.equal(pulse.panels, 4, 'Explore live pulse must render four independent readings');
-  assert.deepEqual(pulse.panelTitles, [
-    'Cobertura observada',
-    'Señales que cambiaron la atención',
-    'Contexto geográfico',
-    'Compras y ejecución',
-  ], 'Explore live pulse panel titles do not match the four governed readings');
-  assert.ok(pulse.visualizations >= 4, 'Explore must render a visualization in every live pulse panel');
-  assert.ok(pulse.interactiveBars + pulse.interactiveSegments >= 4, 'Explore visualizations are not interactive');
-  assert.equal(pulse.questions, 4, 'Explore should expose four analytical continuation questions');
-  assert.equal(pulse.queryPresent, true, 'Explore analytical query box missing');
-  assert.equal(pulse.federation?.status, 'ready', 'Federated v2 session was not warmed');
-  assert.ok(pulseMs <= PULSE_BUDGET_MS, `live pulse exceeded ${PULSE_BUDGET_MS}ms: ${pulseMs}`);
-  report.pulse = { ms: pulseMs, panelTitles: pulse.panelTitles, visualizations: pulse.visualizations, interactiveControls: pulse.interactiveBars + pulse.interactiveSegments, diagnostics: pulse.diagnostics, federationStatus: pulse.federation?.status || null };
+  assert.equal(explore.panels, 4, 'Explore must render the four current studio panels');
+  assert.deepEqual(explore.panelTitles, [
+    'ROS recibidos por año',
+    'Estado de conciliación UAF ↔ SII',
+    'Sujetos obligados que requieren gestión',
+    'Distribución por sector económico',
+  ], 'Explore studio panel titles do not match the current governed surface');
+  assert.equal(explore.queryPresent, true, 'Explore compact analytical query box missing');
+  assert.equal(explore.rosChartPresent, true, 'Explore ROS chart missing');
+  assert.equal(explore.reconciliationPresent, true, 'Explore UAF↔SII reconciliation panel missing');
+  assert.ok(explore.sectorBars >= 1, 'Explore sector distribution must expose at least one navigable bar');
+  assert.equal(explore.watchCards, 3, 'UAF sector watch must render exactly three compact analytical cards');
+  assert.equal(explore.watchCtas, 3, 'Each UAF sector watch card must expose one detail control');
+  assert.equal(explore.watchTrend, true, 'Low-reportability card must expose the 2021–2025 trend');
+  assert.equal(explore.watchDenseKpiRows, 0, 'Dense KPI strips must not return inside the compact sector cards');
+  assert.equal(explore.federation?.status, 'ready', 'Federated v2 session was not warmed');
+  assert.ok(exploreMs <= EXPLORE_BUDGET_MS, `Explore exceeded ${EXPLORE_BUDGET_MS}ms: ${exploreMs}`);
+  report.explore = {
+    ms: exploreMs,
+    panelTitles: explore.panelTitles,
+    watchCards: explore.watchCards,
+    watchCtas: explore.watchCtas,
+    sectorBars: explore.sectorBars,
+    federationStatus: explore.federation?.status || null,
+  };
 
-  // Visuals must be navigation controls, not decoration.
-  const firstUniverseBar = page.locator('.atlas-v2-explore-panel').first().locator('button.atlas-v2-viz-bar-row').first();
-  assert.ok(await firstUniverseBar.count(), 'Universes visual navigation control missing');
-  const clickedLabel = (await firstUniverseBar.locator('.atlas-v2-viz-bar-label strong').textContent())?.trim() || null;
+  // Current Explore visuals must remain navigation controls, not decoration.
+  const firstUniverseBar = page.locator('.atlas-v2-studio-sector-body button.atlas-v2-studio-bar-row').first();
+  assert.ok(await firstUniverseBar.count(), 'Current sector visual navigation control missing');
+  const clickedLabel = (await firstUniverseBar.locator('.atlas-v2-studio-bar-copy strong').textContent())?.trim() || null;
   await firstUniverseBar.click();
   await page.waitForFunction(() => window.AtlasV2Shell?.currentRoute?.().id === 'universos', null, { timeout: 5000 });
   const visualRoute = await page.evaluate(() => ({ id: window.AtlasV2Shell.currentRoute().id, hash: location.hash }));
   assert.equal(visualRoute.id, 'universos');
-  assert.match(visualRoute.hash, /lens=/, 'Universe bar did not preserve selected lens in URL state');
+  assert.match(visualRoute.hash, /lens=UAF/, 'Sector bar did not preserve the UAF lens in URL state');
   report.visualNavigation = { clickedLabel, route: visualRoute.hash };
 
   await navigate('explorar');
-  await page.waitForFunction(() => document.querySelectorAll('.atlas-v2-explore-panel').length === 4, null, { timeout: 5000 });
+  await waitForCurrentExplore();
   const cache = await page.evaluate(async () => {
     const timed = async fn => {
       const start = performance.now();
@@ -105,7 +124,7 @@ try {
     };
   });
   for (const [name, sample] of Object.entries(cache)) {
-    assert.equal(sample.cacheStatus, 'memory', `${name} overview was not reused from live Explore`);
+    assert.equal(sample.cacheStatus, 'memory', `${name} overview was not reused from current Explore`);
     assert.ok(sample.ms <= CACHE_BUDGET_MS, `${name} memory overview exceeded ${CACHE_BUDGET_MS}ms: ${sample.ms}`);
   }
   report.cache = cache;
@@ -132,7 +151,6 @@ try {
     route: location.hash,
     text: (document.querySelector('.atlas-v2-content')?.innerText || '').slice(0, 1800),
     invalidRut: /RUT no válido|RUT inválido/i.test(document.querySelector('.atlas-v2-content')?.innerText || ''),
-    trajectoryPoints: document.querySelectorAll('.atlas-v2-e360-trajectory .atlas-v2-viz-line-point').length,
   }));
   assert.equal(pressEntity.invalidRut, false, 'Press-only entity incorrectly failed RUT validation');
   assert.match(pressEntity.text, /ENTIDAD OBSERVADA · PRENSA/);
@@ -147,7 +165,6 @@ try {
   const trajectory = await page.evaluate(() => ({
     points: document.querySelectorAll('.atlas-v2-e360-trajectory .atlas-v2-viz-line-point').length,
     charts: document.querySelectorAll('.atlas-v2-e360-trajectory .atlas-v2-viz-line').length,
-    details: (document.querySelector('.atlas-v2-e360-year-detail')?.innerText || '').trim(),
   }));
   assert.ok(trajectory.points >= 3, 'SII trajectory lacks interactive year points');
   assert.equal(trajectory.charts, 2, 'SII trajectory must show sales and workers series');
@@ -158,27 +175,30 @@ try {
   assert.ok(detailAfterClick.length > 0, 'Selecting a trajectory year did not refresh detail');
   report.trajectory = { charts: trajectory.charts, points: trajectory.points };
 
-  // Return to Explore for responsive checks.
+  // Return to the current Explore surface for responsive checks.
   await navigate('explorar');
-  await page.waitForFunction(() => document.querySelectorAll('.atlas-v2-explore-panel').length === 4 && !document.querySelector('.atlas-v2-explore-panel.is-loading'), null, { timeout: PULSE_BUDGET_MS });
+  await waitForCurrentExplore();
   for (const viewport of [
     { name: 'mobile', width: 390, height: 844 },
     { name: 'tablet', width: 1024, height: 768 },
   ]) {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.waitForTimeout(150);
     const snap = await page.evaluate(() => ({
       width: window.innerWidth,
       scrollWidth: document.documentElement.scrollWidth,
-      panels: document.querySelectorAll('.atlas-v2-explore-panel').length,
-      errors: document.querySelectorAll('.atlas-v2-explore-panel.is-error').length,
-      visualizations: document.querySelectorAll('.atlas-v2-explore-panel .atlas-v2-viz').length,
+      panels: document.querySelectorAll('.atlas-v2-studio-panel').length,
+      watchCards: document.querySelectorAll('.atlas-v2-uaf-watch-card').length,
+      watchCtas: document.querySelectorAll('.atlas-v2-uaf-watch-cta').length,
+      rosChart: !!document.querySelector('.atlas-v2-studio-ros-chart'),
     }));
     const overflowPx = Math.max(0, snap.scrollWidth - snap.width);
     assert.ok(overflowPx <= 2, `${viewport.name} Explore horizontal overflow ${overflowPx}px`);
-    assert.equal(snap.panels, 4, `${viewport.name} lost live pulse panels`);
-    assert.equal(snap.errors, 0, `${viewport.name} shows unavailable pulse panel`);
-    assert.ok(snap.visualizations >= 4, `${viewport.name} lost visual pulse`);
-    report.responsive.push({ ...viewport, overflowPx, visualizations: snap.visualizations });
+    assert.equal(snap.panels, 4, `${viewport.name} lost current Explore studio panels`);
+    assert.equal(snap.watchCards, 3, `${viewport.name} lost compact sector watch cards`);
+    assert.equal(snap.watchCtas, 3, `${viewport.name} lost sector detail controls`);
+    assert.equal(snap.rosChart, true, `${viewport.name} lost ROS analytical chart`);
+    report.responsive.push({ ...viewport, overflowPx, panels: snap.panels, watchCards: snap.watchCards });
   }
 
   report.finishedAt = new Date().toISOString();
