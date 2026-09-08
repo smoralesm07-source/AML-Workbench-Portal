@@ -1,0 +1,107 @@
+name: Deploy ATLAS v2 live authority
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'atlas-v2.html'
+      - 'src/v2/atlas-v2-boot.js'
+      - 'src/v2/sanctions-surface.js'
+      - 'src/v2/sanctions-surface.css'
+      - 'tools/build_atlas_v2_primary.py'
+      - '.github/workflows/deploy-atlas-v2-live-authority.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: atlas-pages-v2-live-authority
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Validate Sanciones cache and proportional rendering contract
+        run: |
+          set -euo pipefail
+          node --check src/v2/atlas-v2-boot.js
+          node --check src/v2/sanctions-surface.js
+          grep -q "ASSET_REVISION = 'sanctions-chart-variability-2'" src/v2/atlas-v2-boot.js
+          grep -q 's=sanctions-chart-variability-2' atlas-v2.html
+          grep -q "el.style.cssText = String(value)" src/v2/sanctions-surface.js
+          grep -q 'sanctions-surface.css?v=command-center-2' src/v2/sanctions-surface.js
+
+      - name: Build production artifact
+        run: |
+          set -euo pipefail
+          python3 tools/build_atlas_v2_primary.py --out _site
+          test -f _site/v2/sanctions-surface.js
+          test -f _site/v2/sanctions-surface.css
+          grep -q "ASSET_REVISION = 'sanctions-chart-variability-2'" _site/v2/atlas-v2-boot.js
+          grep -q 's=sanctions-chart-variability-2' _site/index.html
+          grep -q "el.style.cssText = String(value)" _site/v2/sanctions-surface.js
+          grep -q 'sanctions-surface.css?v=command-center-2' _site/v2/sanctions-surface.js
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./_site
+
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Verify live Sanciones asset authority
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, time, urllib.request
+          base=os.environ['PAGE_URL'].rstrip('/')
+          sha=os.environ.get('GITHUB_SHA','unknown')
+          def get(path, n):
+              sep='&' if '?' in path else '?'
+              url=f"{base}{path}{sep}atlas={sha}-{n}"
+              req=urllib.request.Request(url,headers={'Cache-Control':'no-cache','Pragma':'no-cache','User-Agent':'ATLAS-v2-live-authority'})
+              with urllib.request.urlopen(req,timeout=20) as r:
+                  return r.read().decode('utf-8','replace')
+          last=None
+          for n in range(1,13):
+              try:
+                  html=get('/',n)
+                  boot=get('/v2/atlas-v2-boot.js?v=v2-primary-7-executive-pulse-entity360-classic-1&s=sanctions-chart-variability-2',n)
+                  sanctions=get('/v2/sanctions-surface.js?v=v2-primary-7-executive-pulse-entity360-classic-1&r=sanctions-chart-variability-2',n)
+                  assert 's=sanctions-chart-variability-2' in html
+                  assert "ASSET_REVISION = 'sanctions-chart-variability-2'" in boot
+                  assert "el.style.cssText = String(value)" in sanctions
+                  assert 'sanctions-surface.css?v=command-center-2' in sanctions
+                  assert 'total / max * 100' in sanctions
+                  assert 'event_count || 0) / max * 100' in sanctions
+                  assert 'conic-gradient' in sanctions
+                  print('ATLAS v2 live Sanciones authority: OK')
+                  break
+              except Exception as exc:
+                  last=exc
+                  print(f'live authority attempt {n}/12 not ready: {exc}')
+                  if n < 12: time.sleep(8)
+          else:
+              raise SystemExit(f'ATLAS v2 live Sanciones authority failed: {last}')
+          PY
