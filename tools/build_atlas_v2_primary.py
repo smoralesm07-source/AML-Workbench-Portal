@@ -16,8 +16,11 @@ EXPEDIENTE_FILES = (
     "entity360-expediente-surface.css",
     "entity360-resilience-hotfix.js",
 )
+TERRITORY_AUTHORITY_FILES = (
+    "territory-authority-v4.js",
+)
 ENTITY360_AUTHORITY = "ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908"
-for _asset in EXPEDIENTE_FILES:
+for _asset in (*EXPEDIENTE_FILES, *TERRITORY_AUTHORITY_FILES):
     if _asset not in _core.V2_FILES:
         _core.V2_FILES.append(_asset)
 V2_FILES = _core.V2_FILES
@@ -66,6 +69,7 @@ def _validate_current_surface(out_dir, html, legacy, published_v2, *, e2e_proxy=
     expediente = (out_dir / "v2" / "entity360-expediente-surface.js").read_text(encoding="utf-8")
     expediente_css = (out_dir / "v2" / "entity360-expediente-surface.css").read_text(encoding="utf-8")
     resilience = (out_dir / "v2" / "entity360-resilience-hotfix.js").read_text(encoding="utf-8")
+    territory_authority = (out_dir / "v2" / "territory-authority-v4.js").read_text(encoding="utf-8")
     boot = (out_dir / "v2" / "atlas-v2-boot.js").read_text(encoding="utf-8")
     _original_require(expediente, [
         ENTITY360_AUTHORITY,
@@ -83,6 +87,12 @@ def _validate_current_surface(out_dir, html, legacy, published_v2, *, e2e_proxy=
         "CORE_READ_IS_SUFFICIENT_TO_OPEN_EXPEDIENTE",
         "readIntelligenceResilient",
     ], "Entity 360 resilient intelligence fallback")
+    _original_require(territory_authority, [
+        "territory-authority-v4",
+        "authority:'obs_territory'",
+        "Join geográfico incompleto",
+        "345 comunas",
+    ], "Territory obs_territory authority surface")
     if boot.index("'entity360-expediente-surface.js'") <= boot.index("'entity360-parity-surface.js'"):
         raise SystemExit("v2 primary build: Entity 360 expediente must register after historical parity")
 
@@ -104,6 +114,9 @@ def _update_current_report(out_dir, published_v2, primary_release, legacy_releas
         "v2_entity360_historical_parity": "ENTITY360_LEGACY_PARITY_V2",
         "v2_entity360_asset_revision": "entity360-expediente-1",
         "v2_entity360_resilience": "ENTITY360_RESILIENCE_CORE_FALLBACK_20260909_1",
+        "v2_territory_authority": "obs_territory",
+        "v2_territory_surface_revision": "territory-authority-v4",
+        "v2_territory_commune_contract": 345,
     })
     path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
