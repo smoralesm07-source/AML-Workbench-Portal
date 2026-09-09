@@ -45,6 +45,7 @@ jobs:
             src/v2/atlas-v2-shell.js src/v2/atlas-v2-boot.js src/v2/atlas-v2-viz.js \
             src/v2/entity-search-adapter.js src/v2/entity-explorer-adapter.js src/v2/entity-explorer-classic-surface.js \
             src/v2/explore-surface.js src/v2/entity360-adapter.js src/v2/entity360-surface.js src/v2/entity360-parity-surface.js \
+            src/v2/entity360-expediente-surface.js src/v2/entity360-resilience-hotfix.js \
             src/v2/public-spend-surface.js src/v2/relations-surface.js src/v2/universes-adapter.js \
             src/v2/universes-surface.js src/v2/territory-adapter.js src/v2/territory-surface.js \
             src/v2/watch-adapter.js src/v2/watch-surface.js; do node --check "$f"; done
@@ -81,7 +82,7 @@ jobs:
               assert forbidden not in shell
           assert "STRUCTURAL_VERSION = 'v2-primary-5'" in boot
           assert "SURFACE_VERSION = 'v2-primary-7-executive-pulse-entity360-classic-1'" in boot
-          assert boot.index("'entity360-surface.js'") < boot.index("'entity360-parity-surface.js'")
+          assert boot.index("'entity360-surface.js'") < boot.index("'entity360-parity-surface.js'") < boot.index("'entity360-expediente-surface.js'")
           assert 'ENTITY360_LEGACY_PARITY_V2' in boot
           assert all(x in read_edge for x in ['atlas_v2_entity_search','entity_search','entity_intelligence','entity_screening_live','digital_identity_live'])
           assert 'x-atlas-trace-id' in read_edge and 'server-timing' in read_edge
@@ -90,7 +91,7 @@ jobs:
           assert 'security definer' in search_sql.lower() and 'security invoker' in search_sql.lower()
           assert 'SUPABASE_SECRET_KEYS' in exchange and 'SUPABASE_SERVICE_ROLE_KEY' not in exchange
           assert 'const MAIN_REF = "refs/heads/main"' in broker
-          print('ATLAS Architecture v2 executive pulse + recovered Entity 360 invariants: OK')
+          print('ATLAS Architecture v2 executive pulse + Entity 360 expediente invariants: OK')
           PY
 
       - name: Product surface contracts
@@ -115,10 +116,14 @@ jobs:
           assert r['v2_version']=='v2-primary-5'
           assert r['v2_surface_version']=='v2-primary-7-executive-pulse-entity360-classic-1'
           assert r['v2_explore_design']=='EXECUTIVE_PULSE_V2'
-          assert r['v2_entity360_authority']=='ENTITY360_LEGACY_PARITY_V2'
+          assert r['v2_entity360_authority']=='ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908'
+          assert r['v2_entity360_design']=='EXECUTIVE_360_DOSSIER'
+          assert r['v2_entity360_historical_parity']=='ENTITY360_LEGACY_PARITY_V2'
           assert r['v2_entity360_parity']=='SIX_LENS_NATIVE_V2'
           assert r['legacy_authority_active_on_primary'] is False
+          assert 'id="atlas-v2-entity360-expediente-style"' in html
+          assert 'entity360-expediente-surface.css?v=entity360-expediente-20260909-2' in html
           assert 'atlas-runtime-current-' not in html and 'atlas-runtime-current-' in legacy
           assert f'data-aml-version="{l["release"]}"' in legacy
-          print('ATLAS Architecture v2 build: OK')
+          print('ATLAS Architecture v2 build + Entity 360 expediente CSS: OK')
           PY
