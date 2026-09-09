@@ -7,98 +7,135 @@
 <meta name="robots" content="noindex,nofollow,noarchive">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net; connect-src 'self' https://raw.githubusercontent.com https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://server.arcgisonline.com https://*.arcgisonline.com; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
-<title>ATLAS · Territorio · IGR</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net; connect-src 'self' https://raw.githubusercontent.com https://unpkg.com https://cdn.jsdelivr.net https://server.arcgisonline.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://server.arcgisonline.com https://*.arcgisonline.com; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>ATLAS · Territorio · Inteligencia Territorial</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="./atlas-territory-igr-v2a-0911.css?v=0915-demo1">
-<link rel="stylesheet" href="./atlas-territory-igr-v2a-0914.css?v=0915-demo1">
-<link rel="stylesheet" href="./atlas-territory-so-0918.css?v=0918-2">
+<link rel="stylesheet" href="./atlas-territory-intelligence-1010.css?v=1010-1">
 </head>
 <body>
-<div class="shell" data-atlas-territory-layout="compact-demo">
-  <div class="header">
-    <div>
-      <div class="kicker">ATLAS · TERRITORIO</div>
-      <h1>Territorio · Índice de Riesgo Geográfico</h1>
-      <p class="sub">Amenaza territorial LA explicada · mapa comunal · historia real 2020–2025 · cobertura comunal de sujetos obligados.</p>
-    </div>
-    <div class="badge">IGR · v2A operativo</div>
-  </div>
-
-  <section class="territory-toolbar" aria-label="Controles territoriales">
-    <div class="controls">
-      <div class="segment" id="layers">
-        <button class="active" data-layer="score">IGR</button>
-        <button data-layer="predicate_direct">Amenazas precedentes LA</button>
-        <button data-layer="criminal_economy">Economía criminal</button>
-        <button data-layer="criminogenic_context">Contexto criminógeno</button>
+<div class="shell ati-shell" data-atlas-territory-layout="intelligence-1010">
+  <header class="ati-page-head">
+    <div class="ati-title-wrap">
+      <span class="ati-title-accent" aria-hidden="true"></span>
+      <div>
+        <h1>Territorio · Inteligencia Territorial</h1>
+        <p>IGR comunal con base CEAD · explicación del índice · contexto UAF y prensa territorial.</p>
       </div>
-      <div class="control-spacer"></div>
-      <select id="region" aria-label="Filtrar por región"><option value="ALL">Todo Chile</option></select>
-      <input id="search" placeholder="Buscar comuna…" aria-label="Buscar comuna" />
     </div>
+    <div class="ati-source" id="atiFreshness"><span class="ati-live-dot"></span><span>Cargando corte territorial…</span></div>
+  </header>
 
-    <section class="igr-status-strip">
-      <div class="igr-status-main"><span class="status-dot ok"></span><div><b>IGR activo</b><small>100% Amenaza territorial CEAD-LA en esta etapa</small></div></div>
-      <div class="igr-stage active"><span>ACTUAL</span><b>CEAD-LA</b><small>100%</small></div>
-      <div class="igr-arrow">→</div>
-      <div class="igr-stage building"><span>SIGUIENTE</span><b>Transfronteriza</b><small>pipeline en construcción</small></div>
-      <div class="igr-arrow">→</div>
-      <div class="igr-stage building"><span>SIGUIENTE</span><b>Evidencia LA</b><small>pipeline en construcción</small></div>
-      <button class="method-help" type="button" id="igrHelp" aria-label="Ayuda metodológica IGR">i</button>
-    </section>
+  <section class="ati-filters" aria-label="Controles de Territorio">
+    <div class="ati-control">
+      <label for="atiYear">Año</label>
+      <select class="ati-select" id="atiYear" aria-label="Año"><option>2025</option></select>
+    </div>
+    <div class="ati-control">
+      <label for="atiRegion">Región</label>
+      <select class="ati-select" id="atiRegion" aria-label="Región"><option value="ALL">Todas las regiones</option></select>
+    </div>
+    <div class="ati-control">
+      <label for="atiSearch">Buscar comuna</label>
+      <div class="ati-input-wrap">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke-width="2"/><path d="m16.5 16.5 4 4" stroke-width="2" stroke-linecap="round"/></svg>
+        <input class="ati-input" id="atiSearch" type="search" autocomplete="off" placeholder="Ej. San Bernardo" aria-label="Buscar comuna">
+      </div>
+    </div>
+    <div class="ati-control">
+      <label for="atiLayer">Capa de visualización</label>
+      <select class="ati-select" id="atiLayer" aria-label="Capa de visualización">
+        <option value="score">Índice de Riesgo Geográfico (IGR)</option>
+        <option value="predicate_direct">Delito base directo</option>
+        <option value="criminal_economy">Economía criminal</option>
+        <option value="criminogenic_context">Contexto criminógeno</option>
+      </select>
+    </div>
   </section>
 
-  <main class="territory-stage" aria-label="Lectura territorial compacta">
-    <section class="card map-card">
-      <div class="map-head">
-        <div>
-          <div class="kicker">LECTURA TERRITORIAL</div>
-          <h2>Mapa comunal IGR</h2>
-          <p>Selecciona una comuna para abrir su IGR, drivers territoriales y evolución real 2020–2025.</p>
+  <main id="atiWorkspace">
+    <section class="ati-stage" aria-label="Mapa y ficha territorial">
+      <article class="ati-card ati-map-card">
+        <div class="ati-map-head">
+          <h2 id="atiMapMetric">Índice de Riesgo Geográfico (IGR)</h2>
+          <small>Por comuna · corte vigente</small>
+          <div class="ati-legend" aria-label="Bandas IGR">
+            <div class="ati-legend-row"><i class="ati-legend-dot" style="background:#f04f4f"></i><span>Muy alto (80–100)</span></div>
+            <div class="ati-legend-row"><i class="ati-legend-dot" style="background:#f47b35"></i><span>Alto (60–80)</span></div>
+            <div class="ati-legend-row"><i class="ati-legend-dot" style="background:#f4bc57"></i><span>Medio (40–60)</span></div>
+            <div class="ati-legend-row"><i class="ati-legend-dot" style="background:#6fd6e5"></i><span>Bajo (20–40)</span></div>
+            <div class="ati-legend-row"><i class="ati-legend-dot" style="background:#4f9ed8"></i><span>Muy bajo (0–20)</span></div>
+          </div>
         </div>
-        <div class="legend" aria-label="Escala de riesgo">
-          <span class="box" style="background:var(--low)"></span>
-          <span class="box" style="background:var(--mod)"></span>
-          <span class="box" style="background:var(--mid)"></span>
-          <span class="box" style="background:var(--high)"></span>
-          <span class="box" style="background:var(--vhigh)"></span>
-          <small>Bajo → Muy alto</small>
+        <div class="ati-map" id="map" aria-label="Mapa comunal de Chile"></div>
+      </article>
+
+      <article class="ati-card ati-summary">
+        <div class="ati-summary-head">
+          <div><h2 id="atiCommuneTitle">—</h2><p id="atiCommuneRegion">Selecciona una comuna</p></div>
+          <button class="ati-method-btn" id="atiMethodBtn" type="button">Cómo se calculó</button>
         </div>
-      </div>
-      <div id="map"></div>
+        <div class="ati-kpis" id="atiKpis"></div>
+        <section class="ati-components">
+          <div class="ati-section-title"><h3>Componentes del IGR · ponderaciones</h3><small>score de cada capa / 100</small></div>
+          <div id="atiComponents"></div>
+        </section>
+        <div class="ati-drivers">
+          <section class="ati-driver-brief" id="atiDriverBrief"><h3>Principales drivers observados</h3></section>
+          <section class="ati-driver-brief" id="atiDynamicBrief"><h3>Mayor dinámica reciente</h3></section>
+        </div>
+      </article>
     </section>
 
-    <aside class="territory-brief" aria-label="Ficha territorial">
-      <div class="card panel hero-panel" id="summary"></div>
-      <div class="card panel" id="readout"></div>
-      <div class="card panel" id="compare"></div>
-      <div class="card panel" id="breakdown"></div>
-    </aside>
+    <section class="ati-lower" aria-label="Análisis territorial complementario">
+      <article class="ati-card ati-panel">
+        <h3>Evolución 2020–2025</h3>
+        <p class="ati-panel-sub">IGR v2A recalculado año a año con historia CEAD real</p>
+        <div id="atiTrend"><div class="ati-loading">Preparando serie histórica…</div></div>
+      </article>
+
+      <article class="ati-card ati-panel">
+        <h3>Comparación con comunas de la región</h3>
+        <p class="ati-panel-sub">Posición de la comuna frente a pares regionales</p>
+        <div class="ati-peer-list" id="atiPeers"></div>
+      </article>
+
+      <article class="ati-card ati-panel">
+        <h3>Contexto territorial</h3>
+        <p class="ati-panel-sub">Variables descriptivas · no modifican el IGR</p>
+        <div class="ati-context-grid" id="atiContext"></div>
+      </article>
+
+      <article class="ati-card ati-panel">
+        <div class="ati-section-title"><h3>Prensa territorial</h3><small>Monitor de Prensa · OSINT</small></div>
+        <p class="ati-panel-sub">Últimas publicaciones con coincidencia comunal o regional</p>
+        <div class="ati-news-list" id="atiNews"></div>
+      </article>
+    </section>
+
+    <footer class="ati-note">
+      <span><b>Nota metodológica:</b> el IGR caracteriza presión criminógena territorial y sirve como insumo de priorización. No representa probabilidad de lavado de activos, no acredita delito ni atribuye conductas a personas, empresas o sectores. La confianza describe calidad y cobertura de evidencia, no nivel de riesgo.</span>
+      <span class="ati-note-source">IGR v2A · CEAD · UAF · prensa OSINT</span>
+    </footer>
   </main>
-
-  <section class="section-label"><span>ANÁLISIS TERRITORIAL</span><small>Historia, dinámica y explicación del score seleccionado</small></section>
-  <section class="analysis-grid">
-    <div class="card panel analysis-wide" id="trend"></div>
-    <div class="card panel" id="matrix"></div>
-    <div class="card panel" id="drivers"></div>
-    <div class="card panel" id="explain"></div>
-  </section>
-
-  <section class="section-label"><span>SUJETOS OBLIGADOS EN EL TERRITORIO</span><small>Cobertura registral de la comuna seleccionada y sectores económicos involucrados</small></section>
-  <section class="governance-grid so-register-grid">
-    <div class="card panel governance-wide" id="roadmap" hidden aria-hidden="true"></div>
-    <div class="card panel" id="trace" hidden aria-hidden="true"></div>
-    <div class="card panel so-register-panel" id="subjects"><div class="loading"><b>Consultando padrón UAF…</b></div></div>
-    <div class="card panel" id="ranking"></div>
-  </section>
 </div>
-<div class="method-pop" id="methodPop" aria-hidden="true"><div class="method-pop-card"><button id="methodClose" class="method-close" type="button">×</button><div class="kicker">AYUDA METODOLÓGICA</div><h3 id="methodTitle">IGR</h3><div id="methodBody"></div></div></div>
+
+<div class="ati-method-pop" id="atiMethodPop" aria-hidden="true">
+  <div class="ati-method-card" role="dialog" aria-modal="true" aria-labelledby="atiMethodTitle">
+    <button class="ati-close" id="atiMethodClose" type="button" aria-label="Cerrar">×</button>
+    <h2 id="atiMethodTitle">IGR · Índice de Riesgo Geográfico</h2>
+    <p>La versión vigente utiliza presión criminógena territorial CEAD-LA. Las tres capas visibles permanecen separadas de los datos de sujetos obligados, hallazgos y prensa para evitar doble conteo y preservar trazabilidad.</p>
+    <div class="formula">
+      <div><b>55%</b><span>Delito base directo</span></div>
+      <div><b>35%</b><span>Economía criminal y facilitadores</span></div>
+      <div><b>10%</b><span>Contexto criminógeno</span></div>
+    </div>
+    <p>Cada driver CEAD combina intensidad territorial, persistencia, tendencia y anomalía. El detalle de drivers mostrado en pantalla proviene del mismo objeto de evidencia que soporta el score. La prensa es una capa OSINT contextual y nunca altera el IGR.</p>
+    <p><b>Guardrail:</b> prioridad analítica ≠ probabilidad de LA/FT; contexto territorial ≠ atribución a una entidad; ausencia de información ≠ cero.</p>
+  </div>
+</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="./atlas-territory-igr-v2a-core-0911.js?v=0915-demo1"></script>
-<script src="./atlas-territory-igr-v2a-history-0911.js?v=0915-demo1"></script>
-<script src="./atlas-territory-igr-v2a-ui-0911.js?v=0915-demo1"></script>
-<script src="./atlas-territory-so-0918.js?v=0918-2"></script>
+<script src="./atlas-territory-igr-v2a-core-0911.js?v=1010-history1"></script>
+<script src="./atlas-territory-intelligence-1010.js?v=1010-1"></script>
 </body>
 </html>
