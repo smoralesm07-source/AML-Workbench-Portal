@@ -35,6 +35,8 @@
     'sanctions-surface.js',
     'territory-adapter.js',
     'territory-surface.js',
+    // Autoridad territorial actual: obs_territory + join CUT comunal.
+    'territory-authority-v4.js',
     'watch-adapter.js',
     'watch-surface.js',
   ]);
@@ -47,7 +49,9 @@
 
   function loadScript(file) {
     return new Promise((resolve, reject) => {
-      const revision = file === 'territory-surface.js' ? `${ASSET_REVISION}-${TERRITORY_ASSET_REVISION}` : ASSET_REVISION;
+      const revision = file === 'territory-surface.js' || file === 'territory-authority-v4.js'
+        ? `${ASSET_REVISION}-${TERRITORY_ASSET_REVISION}-authority-v4`
+        : ASSET_REVISION;
       const src = new URL(`${file}?v=${SURFACE_VERSION}&r=${revision}`, baseUrl).href;
       const existing = Array.from(document.scripts).find(script => script.src === src);
       if (existing) {
@@ -134,7 +138,7 @@
     window.AtlasV2Shell.mount(root);
     emit('ok', {
       code: 'SHELL_READY', visualNavigation: true, entitySearch: true, entityIntelligence: true,
-      entity360: 'ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908', osfl: true, sanctions: true, assetRevision: ASSET_REVISION,
+      entity360: 'ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908', osfl: true, sanctions: true, territory: 'obs_territory', assetRevision: ASSET_REVISION,
     });
     window.dispatchEvent(new CustomEvent('atlas:v2-shell-ready', {
       detail: {
@@ -147,6 +151,7 @@
         entity360: 'ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908',
         osfl: true,
         sanctions: true,
+        territory: 'obs_territory',
         assetRevision: ASSET_REVISION,
       },
     }));
