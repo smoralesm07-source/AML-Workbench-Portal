@@ -14,6 +14,7 @@ from build_atlas_v2_primary_core import *  # noqa: F401,F403
 EXPEDIENTE_FILES = (
     "entity360-expediente-surface.js",
     "entity360-expediente-surface.css",
+    "entity360-resilience-hotfix.js",
 )
 ENTITY360_AUTHORITY = "ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908"
 for _asset in EXPEDIENTE_FILES:
@@ -64,6 +65,7 @@ def _validate_current_surface(out_dir, html, legacy, published_v2, *, e2e_proxy=
     _original_validate(out_dir, html, legacy, published_v2, e2e_proxy=e2e_proxy)
     expediente = (out_dir / "v2" / "entity360-expediente-surface.js").read_text(encoding="utf-8")
     expediente_css = (out_dir / "v2" / "entity360-expediente-surface.css").read_text(encoding="utf-8")
+    resilience = (out_dir / "v2" / "entity360-resilience-hotfix.js").read_text(encoding="utf-8")
     boot = (out_dir / "v2" / "atlas-v2-boot.js").read_text(encoding="utf-8")
     _original_require(expediente, [
         ENTITY360_AUTHORITY,
@@ -76,6 +78,11 @@ def _validate_current_surface(out_dir, html, legacy, published_v2, *, e2e_proxy=
         ".e36x-tabs",
         ".e36x-timeline",
     ], "Entity 360 expediente visual contract")
+    _original_require(resilience, [
+        "ENTITY360_RESILIENCE_CORE_FALLBACK_20260909_1",
+        "CORE_READ_IS_SUFFICIENT_TO_OPEN_EXPEDIENTE",
+        "readIntelligenceResilient",
+    ], "Entity 360 resilient intelligence fallback")
     if boot.index("'entity360-expediente-surface.js'") <= boot.index("'entity360-parity-surface.js'"):
         raise SystemExit("v2 primary build: Entity 360 expediente must register after historical parity")
 
@@ -96,6 +103,7 @@ def _update_current_report(out_dir, published_v2, primary_release, legacy_releas
         "v2_entity360_design": "EXECUTIVE_360_DOSSIER",
         "v2_entity360_historical_parity": "ENTITY360_LEGACY_PARITY_V2",
         "v2_entity360_asset_revision": "entity360-expediente-1",
+        "v2_entity360_resilience": "ENTITY360_RESILIENCE_CORE_FALLBACK_20260909_1",
     })
     path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
