@@ -46,7 +46,7 @@ jobs:
           python3 -m py_compile tools/build_atlas_v2_primary.py
           grep -Fq "ASSET_REVISION = 'entity360-expediente-1'" src/v2/atlas-v2-boot.js
           grep -Fq "'entity360-expediente-surface.js'" src/v2/atlas-v2-boot.js
-          grep -Fq "TERRITORY_ASSET_REVISION = 'territory-intelligence-2'" src/v2/atlas-v2-boot.js
+          grep -Fq "TERRITORY_ASSET_REVISION = 'territory-intelligence-3'" src/v2/atlas-v2-boot.js
           grep -Fq 'ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908' src/v2/entity360-expediente-surface.js
           grep -Fq "registerSurface('entidad'" src/v2/entity360-expediente-surface.js
           grep -Fq '__ATLAS_V2_ENTITY360_EXPEDIENTE__' src/v2/entity360-expediente-surface.js
@@ -55,7 +55,7 @@ jobs:
           grep -Fq '.e36x{' src/v2/entity360-expediente-surface.css
           grep -Fq '.e36x-hero' src/v2/entity360-expediente-surface.css
           grep -Fq 'e=e360-expediente-1' atlas-v2.html
-          grep -Fq 't=territory-intelligence-2' atlas-v2.html
+          grep -Fq 't=territory-intelligence-3' atlas-v2.html
 
       - name: Build production artifact
         run: |
@@ -71,6 +71,9 @@ jobs:
           curl --fail --location --retry 3 --retry-delay 2 \
             'https://raw.githubusercontent.com/fcortes/Chile-GeoJSON/7cb60d790c0340c2b7e8afebff4d91971fd552fc/comunas.geojson' \
             --output _site/v2/territory-comunas.geojson
+          # fetch('./territory-comunas.geojson') se resuelve respecto del documento.
+          # Mantener una copia raíz evita 404 y conserva la copia v2 para trazabilidad.
+          cp _site/v2/territory-comunas.geojson _site/territory-comunas.geojson
 
           python3 - <<'PY'
           import json
@@ -84,8 +87,10 @@ jobs:
           territory_path.write_text(territory)
 
           geo=json.loads((root/'v2/territory-comunas.geojson').read_text())
+          root_geo=json.loads((root/'territory-comunas.geojson').read_text())
           assert geo.get('type')=='FeatureCollection'
           assert len(geo.get('features') or []) >= 300
+          assert len(root_geo.get('features') or []) == len(geo.get('features') or [])
 
           p=json.loads((root/'atlas-v2-release.json').read_text())
           l=json.loads((root/'atlas-release.json').read_text())
@@ -113,13 +118,13 @@ jobs:
           assert r['legacy_authority_active_on_primary'] is False
           assert f'data-aml-version="{p["release"]}"' in html and f'data-aml-build="{p["build"]}"' in html
           assert 'e=e360-expediente-1' in html
-          assert 't=territory-intelligence-2' in html
+          assert 't=territory-intelligence-3' in html
           assert 'atlas-runtime-current-' not in html
           assert f'data-aml-version="{l["release"]}"' in legacy and 'atlas-runtime-current-' in legacy
           assert "'entity360-surface.js'" in boot
           assert "'entity360-parity-surface.js'" in boot
           assert "'entity360-expediente-surface.js'" in boot
-          assert "TERRITORY_ASSET_REVISION = 'territory-intelligence-2'" in boot
+          assert "TERRITORY_ASSET_REVISION = 'territory-intelligence-3'" in boot
           assert boot.index("'entity360-surface.js'") < boot.index("'entity360-parity-surface.js'") < boot.index("'entity360-expediente-surface.js'")
           assert all(x in explore for x in ['EXECUTIVE_PULSE_V2','YTD_DASHED_NO_FABRICATION','rosYearChart','attentionTable','UAF ↔ SII'])
           assert all(x in parity for x in ['SIX_LENS_NATIVE_V2','ENTITY360_LEGACY_PARITY_V2'])
@@ -170,15 +175,15 @@ jobs:
                   boot=get(f'/v2/atlas-v2-boot.js?v={surface}&r=entity360-expediente-1',stamp)
                   expediente=get(f'/v2/entity360-expediente-surface.js?v={surface}&r=entity360-expediente-1',stamp)
                   expediente_css=get('/v2/entity360-expediente-surface.css?v=entity360-expediente-20260908-1',stamp)
-                  territory=get(f'/v2/territory-surface.js?v={surface}&r=entity360-expediente-1-territory-intelligence-2',stamp)
-                  geo=json.loads(get('/v2/territory-comunas.geojson',stamp))
+                  territory=get(f'/v2/territory-surface.js?v={surface}&r=entity360-expediente-1-territory-intelligence-3',stamp)
+                  geo=json.loads(get('/territory-comunas.geojson',stamp))
                   assert 'e=e360-expediente-1' in html
-                  assert 't=territory-intelligence-2' in html
+                  assert 't=territory-intelligence-3' in html
                   assert report['v2_entity360_authority']==authority
                   assert report['v2_entity360_design']=='EXECUTIVE_360_DOSSIER'
                   assert report['v2_entity360_asset_revision']=='entity360-expediente-1'
                   assert "ASSET_REVISION = 'entity360-expediente-1'" in boot
-                  assert "TERRITORY_ASSET_REVISION = 'territory-intelligence-2'" in boot
+                  assert "TERRITORY_ASSET_REVISION = 'territory-intelligence-3'" in boot
                   assert "'entity360-expediente-surface.js'" in boot
                   assert authority in expediente
                   assert "registerSurface('entidad'" in expediente
@@ -188,7 +193,7 @@ jobs:
                   assert "registerSurface('territorio'" in territory
                   assert './territory-comunas.geojson' in territory
                   assert len(geo.get('features') or []) >= 300
-                  print(json.dumps({'status':'ok','entity360':authority,'territory':'intelligence-territorial-v2','geo_features':len(geo.get('features') or [])}))
+                  print(json.dumps({'status':'ok','entity360':authority,'territory':'intelligence-territorial-v2','territory_revision':'territory-intelligence-3','geo_features':len(geo.get('features') or [])}))
                   break
               except Exception as exc:
                   last=exc
