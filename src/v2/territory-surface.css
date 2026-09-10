@@ -8,3 +8,7 @@
 @media(max-width:1180px){.atlas-v2-territory-stage{grid-template-columns:1.25fr .9fr}.atlas-v2-territory-lower{grid-template-columns:1fr 1fr}.atlas-v2-territory-filters{grid-template-columns:1fr 1fr}.atlas-v2-territory-method{grid-template-columns:1fr 1fr}.atlas-v2-territory-mapwrap{min-height:455px}.atlas-v2-territory-map{min-height:465px}}
 @media(max-width:820px){.atlas-v2-territory-head{align-items:flex-start;flex-direction:column}.atlas-v2-territory-stage{grid-template-columns:1fr}.atlas-v2-territory-lower{grid-template-columns:1fr}.atlas-v2-territory-legend{grid-template-columns:repeat(3,auto)}.atlas-v2-territory-footnote{flex-direction:column}.atlas-v2-territory-search{grid-template-columns:1fr}.atlas-v2-territory-method{grid-template-columns:1fr}}
 @media(max-width:560px){.atlas-v2-territory-filters{grid-template-columns:1fr}.atlas-v2-territory-mapwrap{min-height:390px}.atlas-v2-territory-map{min-height:400px}.atlas-v2-territory-kpis{grid-template-columns:1fr 1fr}.atlas-v2-territory-cardhead{flex-direction:column}.atlas-v2-territory-legend{grid-template-columns:repeat(2,auto)}}
+
+/* Higher contrast for communal territory reading. Keep semantic/accent colors unchanged. */
+.atlas-v2-territory-head,.atlas-v2-territory-tabs,.atlas-v2-territory-host{--atlas-text-2:#fff;--atlas-text-3:#fff}
+.atlas-v2-territory-trend .label{fill:#fff}
