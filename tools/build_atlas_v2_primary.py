@@ -19,8 +19,11 @@ EXPEDIENTE_FILES = (
 TERRITORY_AUTHORITY_FILES = (
     "territory-authority-v4.js",
 )
+LEGACY_RETIREMENT_FILES = (
+    "atlas-legacy-retirement.js",
+)
 ENTITY360_AUTHORITY = "ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908"
-for _asset in (*EXPEDIENTE_FILES, *TERRITORY_AUTHORITY_FILES):
+for _asset in (*EXPEDIENTE_FILES, *TERRITORY_AUTHORITY_FILES, *LEGACY_RETIREMENT_FILES):
     if _asset not in _core.V2_FILES:
         _core.V2_FILES.append(_asset)
 V2_FILES = _core.V2_FILES
@@ -70,6 +73,7 @@ def _validate_current_surface(out_dir, html, legacy, published_v2, *, e2e_proxy=
     expediente_css = (out_dir / "v2" / "entity360-expediente-surface.css").read_text(encoding="utf-8")
     resilience = (out_dir / "v2" / "entity360-resilience-hotfix.js").read_text(encoding="utf-8")
     territory_authority = (out_dir / "v2" / "territory-authority-v4.js").read_text(encoding="utf-8")
+    retirement = (out_dir / "v2" / "atlas-legacy-retirement.js").read_text(encoding="utf-8")
     boot = (out_dir / "v2" / "atlas-v2-boot.js").read_text(encoding="utf-8")
     _original_require(expediente, [
         ENTITY360_AUTHORITY,
@@ -93,6 +97,12 @@ def _validate_current_surface(out_dir, html, legacy, published_v2, *, e2e_proxy=
         "Join geográfico incompleto",
         "345 comunas",
     ], "Territory obs_territory authority surface")
+    _original_require(retirement, [
+        "smoralesm07-source.github.io",
+        "/AML-Workbench-Portal/",
+        "https://atlasobservatorio.app/",
+        "location.replace",
+    ], "legacy portal retirement guard")
     if boot.index("'entity360-expediente-surface.js'") <= boot.index("'entity360-parity-surface.js'"):
         raise SystemExit("v2 primary build: Entity 360 expediente must register after historical parity")
 
@@ -117,6 +127,8 @@ def _update_current_report(out_dir, published_v2, primary_release, legacy_releas
         "v2_territory_authority": "obs_territory",
         "v2_territory_surface_revision": "territory-authority-v4",
         "v2_territory_commune_contract": 345,
+        "legacy_portal_interactive": False,
+        "legacy_portal_redirect": "https://atlasobservatorio.app/",
     })
     path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
