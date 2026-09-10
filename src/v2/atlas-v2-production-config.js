@@ -5,7 +5,9 @@
   const V2_PUBLISHABLE_KEY = 'sb_publishable_3nrUSbZMWfTYUtXnyjDklg_EjyZIzko';
   const CORE_URL = 'https://ldmtlwzqaqmegedktlxr.supabase.co';
   const CORE_PUBLISHABLE_KEY = 'sb_publishable_Nu21dZFBM3NwtIvOwIM8ag_9tyfDJyR';
-  const REDIRECT_TO = 'https://smoralesm07-source.github.io/AML-Workbench-Portal/';
+  // AML-Workbench-Portal is no longer an authentication destination.
+  // All interactive authentication returns to the canonical ATLAS Observatorio app.
+  const REDIRECT_TO = 'https://atlasobservatorio.app/';
 
   global.__ATLAS_V2_PRIMARY__ = true;
   global.__ATLAS_V2_CONFIG__ = Object.freeze({
