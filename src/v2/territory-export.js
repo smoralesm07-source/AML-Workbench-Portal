@@ -2,19 +2,21 @@
 
 (function installAtlasV2TerritoryExport(global) {
   if (global.__ATLAS_V2_TERRITORY_EXPORT__) return;
-  global.__ATLAS_V2_TERRITORY_EXPORT__ = Object.freeze({ installed: true, version: '1.0.0' });
+  global.__ATLAS_V2_TERRITORY_EXPORT__ = Object.freeze({ installed: true, version: '1.1.0' });
 
   const STYLE_ID = 'atlas-v2-territory-export-style';
   const ROW_CLASS = 'atlas-v2-territory-method-export-row';
   const ACTION_CLASS = 'atlas-v2-territory-export-action';
+  const METHOD_CLASS = 'atlas-v2-territory-export-method';
 
   function ensureStyles() {
     if (document.getElementById(STYLE_ID)) return;
     const style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = `
-      .${ROW_CLASS}{display:grid;grid-template-columns:minmax(0,1fr) 176px;gap:12px;align-items:stretch;margin-top:0}
-      .${ROW_CLASS}>.atlas-v2-territory-footnote{margin:0;padding:11px 13px;border:1px solid var(--atlas-border);border-radius:12px;background:linear-gradient(180deg,rgba(15,29,44,.82),rgba(11,23,36,.82));min-width:0}
+      .${ROW_CLASS}{display:grid;grid-template-columns:minmax(0,1fr) 176px;gap:12px;align-items:stretch;margin-top:12px;margin-bottom:12px}
+      .${ROW_CLASS}>.atlas-v2-territory-footnote,.${METHOD_CLASS}{margin:0;padding:11px 13px;border:1px solid var(--atlas-border);border-radius:12px;background:linear-gradient(180deg,rgba(15,29,44,.82),rgba(11,23,36,.82));min-width:0;color:var(--atlas-text-2);font-size:.72rem;line-height:1.45}
+      .${METHOD_CLASS} strong{color:var(--atlas-text);font-weight:750}
       .${ACTION_CLASS}{display:flex;align-items:center;justify-content:center;min-width:0}
       .atlas-v2-territory-export-button{width:100%;height:100%;min-height:44px;border:1px solid rgba(128,151,174,.22);border-radius:12px;background:linear-gradient(180deg,rgba(18,32,48,.78),rgba(12,24,38,.78));color:var(--atlas-text-2);font:inherit;font-size:.72rem;font-weight:700;letter-spacing:.01em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 12px;transition:border-color .16s ease,background .16s ease,color .16s ease,transform .16s ease}
       .atlas-v2-territory-export-button:hover{border-color:rgba(240,122,63,.48);background:rgba(240,122,63,.07);color:var(--atlas-text);transform:translateY(-1px)}
@@ -40,8 +42,8 @@
     if (n >= 80) return 'Muy alto';
     if (n >= 60) return 'Alto';
     if (n >= 40) return 'Medio';
-    if (n >= 20) return 'Bajo';
-    return 'Muy bajo';
+    if (n >= 20) return 'Moderado';
+    return 'Bajo';
   }
 
   function primitiveKeys(rows) {
@@ -81,6 +83,7 @@
       const rank = rankMap.get(key) || null;
       const percentile = rank && total > 1 ? Math.round(100 * (1 - (rank - 1) / (total - 1))) : null;
       return {
+        ...row,
         commune_code: row.commune_code ?? '',
         commune: row.commune ?? '',
         region: row.region ?? '',
@@ -93,8 +96,7 @@
         vulnerability: row.vulnerability ?? '',
         mapping_quality: row.mapping_quality ?? '',
         uaf_observed: row.uaf_observed ?? '',
-        snapshot_at: generatedAt || '',
-        ...row
+        snapshot_at: generatedAt || ''
       };
     });
   }
@@ -134,14 +136,33 @@
     return wrap.firstChild;
   }
 
-  function installButton() {
-    const footnote = document.querySelector('.atlas-v2-territory-workbench > .atlas-v2-territory-footnote');
-    if (!footnote || footnote.closest(`.${ROW_CLASS}`)) return;
+  function buildMethodBox() {
+    const box = document.createElement('div');
+    box.className = METHOD_CLASS;
+    const strong = document.createElement('strong');
+    strong.textContent = 'Metodología · ';
+    box.append(strong, document.createTextNode('IGR comunal CEAD-LA. La prioridad territorial es comparativa y no equivale a probabilidad de LA/FT ni se transfiere automáticamente a entidades.'));
+    return box;
+  }
 
+  function installButton() {
+    const workbench = document.querySelector('.atlas-v2-territory-workbench');
+    if (!workbench || workbench.querySelector(`.${ROW_CLASS}`)) return;
+
+    const legacyFootnote = workbench.querySelector(':scope > .atlas-v2-territory-footnote');
     const row = document.createElement('div');
     row.className = ROW_CLASS;
-    footnote.parentNode.insertBefore(row, footnote);
-    row.appendChild(footnote);
+
+    const method = legacyFootnote || buildMethodBox();
+    if (legacyFootnote) {
+      legacyFootnote.parentNode.insertBefore(row, legacyFootnote);
+      row.appendChild(legacyFootnote);
+    } else {
+      const filters = workbench.querySelector(':scope > .atlas-v2-territory-filters');
+      if (filters?.nextSibling) workbench.insertBefore(row, filters.nextSibling);
+      else workbench.appendChild(row);
+      row.appendChild(method);
+    }
 
     const action = document.createElement('div');
     action.className = ACTION_CLASS;
