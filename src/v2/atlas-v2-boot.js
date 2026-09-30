@@ -5,7 +5,7 @@
   const STRUCTURAL_VERSION = 'v2-primary-5';
   const SURFACE_VERSION = 'v2-primary-7-executive-pulse-entity360-classic-1';
   const ASSET_REVISION = 'entity360-expediente-1';
-  const TERRITORY_ASSET_REVISION = 'territory-intelligence-3';
+  const TERRITORY_ASSET_REVISION = 'territory-intelligence-4';
   const LEGACY_UNIVERSES_ASSET_REVISION_MARKER = "ASSET_REVISION = 'universos-intelligence-1'";
   const LEGACY_SANCTIONS_FEDERATION_MARKER = "ASSET_REVISION = 'osfl-sanctions-federation-2'";
   const LEGACY_ASSET_REVISION_MARKER = "ASSET_REVISION = 'executive-pulse-entity360-classic-1'";
@@ -37,6 +37,8 @@
     'territory-surface.js',
     // Autoridad territorial actual: obs_territory + join CUT comunal.
     'territory-authority-v4.js',
+    // Export analítico del universo comunal para Excel/modelos externos.
+    'territory-export.js',
     'watch-adapter.js',
     'watch-surface.js',
   ]);
@@ -49,7 +51,7 @@
 
   function loadScript(file) {
     return new Promise((resolve, reject) => {
-      const revision = file === 'territory-surface.js' || file === 'territory-authority-v4.js'
+      const revision = file === 'territory-surface.js' || file === 'territory-authority-v4.js' || file === 'territory-export.js'
         ? `${ASSET_REVISION}-${TERRITORY_ASSET_REVISION}-authority-v4`
         : ASSET_REVISION;
       const src = new URL(`${file}?v=${SURFACE_VERSION}&r=${revision}`, baseUrl).href;
