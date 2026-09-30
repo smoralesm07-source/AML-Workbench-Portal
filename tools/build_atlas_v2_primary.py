@@ -18,6 +18,7 @@ EXPEDIENTE_FILES = (
 )
 TERRITORY_AUTHORITY_FILES = (
     "territory-authority-v4.js",
+    "territory-export.js",
 )
 LEGACY_RETIREMENT_FILES = (
     "atlas-legacy-retirement.js",
@@ -73,6 +74,7 @@ def _validate_current_surface(out_dir, html, legacy, published_v2, *, e2e_proxy=
     expediente_css = (out_dir / "v2" / "entity360-expediente-surface.css").read_text(encoding="utf-8")
     resilience = (out_dir / "v2" / "entity360-resilience-hotfix.js").read_text(encoding="utf-8")
     territory_authority = (out_dir / "v2" / "territory-authority-v4.js").read_text(encoding="utf-8")
+    territory_export = (out_dir / "v2" / "territory-export.js").read_text(encoding="utf-8")
     retirement = (out_dir / "v2" / "atlas-legacy-retirement.js").read_text(encoding="utf-8")
     boot = (out_dir / "v2" / "atlas-v2-boot.js").read_text(encoding="utf-8")
     _original_require(expediente, [
@@ -97,6 +99,12 @@ def _validate_current_surface(out_dir, html, legacy, published_v2, *, e2e_proxy=
         "Join geográfico incompleto",
         "345 comunas",
     ], "Territory obs_territory authority surface")
+    _original_require(territory_export, [
+        "__ATLAS_V2_TERRITORY_EXPORT__",
+        "Exportar CSV",
+        "atlas_territorio_riesgo_comunal_",
+        "national_percentile",
+    ], "Territory analytical CSV export")
     _original_require(retirement, [
         "smoralesm07-source.github.io",
         "/AML-Workbench-Portal/",
@@ -127,6 +135,7 @@ def _update_current_report(out_dir, published_v2, primary_release, legacy_releas
         "v2_territory_authority": "obs_territory",
         "v2_territory_surface_revision": "territory-authority-v4",
         "v2_territory_commune_contract": 345,
+        "v2_territory_csv_export": True,
         "legacy_portal_interactive": False,
         "legacy_portal_redirect": "https://atlasobservatorio.app/",
     })
