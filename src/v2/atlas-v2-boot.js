@@ -37,6 +37,8 @@
     'territory-surface.js',
     // Autoridad territorial actual: obs_territory + join CUT comunal.
     'territory-authority-v4.js',
+    // Export analítico del universo comunal para Excel/modelos externos.
+    'territory-export.js',
     'watch-adapter.js',
     'watch-surface.js',
   ]);
@@ -49,7 +51,7 @@
 
   function loadScript(file) {
     return new Promise((resolve, reject) => {
-      const revision = file === 'territory-surface.js' || file === 'territory-authority-v4.js'
+      const revision = file === 'territory-surface.js' || file === 'territory-authority-v4.js' || file === 'territory-export.js'
         ? `${ASSET_REVISION}-${TERRITORY_ASSET_REVISION}-authority-v4`
         : ASSET_REVISION;
       const src = new URL(`${file}?v=${SURFACE_VERSION}&r=${revision}`, baseUrl).href;
