@@ -2,7 +2,9 @@ name: RES official data ingest
 
 on:
   schedule:
-    - cron: '20 7 * * *'
+    # El RES publica cortes mensuales sin una hora fija. Consultamos cada 4 h
+    # para reducir la latencia entre la publicación oficial y Atlas.
+    - cron: '20 */4 * * *'
   workflow_dispatch:
     inputs:
       year:
@@ -63,13 +65,33 @@ jobs:
             requested="current"
           fi
           echo "requested=$requested" >> "$GITHUB_OUTPUT"
-      - name: Ingest official RES data into Atlas
+      - name: Ingest official RES data into Atlas with recovery
         env:
           REQUESTED: ${{ steps.scope.outputs.requested }}
         run: |
-          set -euo pipefail
-          if [ "$REQUESTED" = "all" ]; then
-            python ops/res/ingest.py --all
-          else
-            python ops/res/ingest.py --year "$REQUESTED"
-          fi
+          set -u
+          run_ingest() {
+            if [ "$REQUESTED" = "all" ]; then
+              python ops/res/ingest.py --all
+            else
+              python ops/res/ingest.py --year "$REQUESTED"
+            fi
+          }
+
+          # Un fallo de conciliación/timeout no debe dejar el nuevo corte fuera
+          # de Atlas hasta el siguiente día. Reintentamos en la misma ejecución.
+          for attempt in 1 2 3; do
+            echo "[RES] intento ${attempt}/3"
+            if run_ingest; then
+              echo "[RES] ingesta completada"
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              wait_seconds=$((attempt * 300))
+              echo "[RES] intento fallido; reintento en ${wait_seconds}s"
+              sleep "$wait_seconds"
+            fi
+          done
+
+          echo "[RES] ingesta falló después de 3 intentos"
+          exit 1
