@@ -1,0 +1,47 @@
+name: Probe Presupuesto Municipal
+on:
+  push:
+    paths:
+      - '.github/workflows/probe-presupuesto-municipal.yml'
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect Presupuesto Abierto municipal frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          PAGE='https://presupuestoabierto.gob.cl/municipalities/9'
+          curl -fsSL --retry 3 --connect-timeout 15 "$PAGE" -o /tmp/page.html
+          echo '=== SCRIPT SOURCES ==='
+          grep -oE '<script[^>]+src="[^"]+"' /tmp/page.html | sed -E 's/.*src="([^"]+)"/\1/' | tail -n 40 || true
+          echo '=== MUNICIPAL/API REFERENCES IN HTML ==='
+          grep -oiE '.{0,100}(api/v1|municipal|dte|csv|json).{0,180}' /tmp/page.html | head -n 120 || true
+          echo '=== FETCH JS BUNDLES AND SEARCH REFERENCES ==='
+          python3 - <<'PY'
+          import re, urllib.parse, urllib.request
+          html=open('/tmp/page.html',encoding='utf-8',errors='ignore').read()
+          srcs=re.findall(r'<script[^>]+src=["\']([^"\']+)',html,re.I)
+          base='https://presupuestoabierto.gob.cl/'
+          for src in srcs[-40:]:
+              url=urllib.parse.urljoin(base,src)
+              try:
+                  txt=urllib.request.urlopen(url,timeout=20).read().decode('utf-8','ignore')
+              except Exception as e:
+                  continue
+              hits=[]
+              for pat in [r'https?://[^"\'\s]+', r'/api/v1/[^"\'\s]+', r'[^"\']{0,80}municipal[^"\']{0,160}', r'[^"\']{0,80}DTE[^"\']{0,160}']:
+                  hits += re.findall(pat,txt,re.I)
+              if hits:
+                  print('\nBUNDLE',url)
+                  for h in hits[:80]: print(str(h)[:320])
+          PY
+          echo '=== CANDIDATE ENDPOINT STATUS ==='
+          for path in municipios municipalidades municipalities municipal dte gastos-municipales; do
+            url="https://api.presupuestoabierto.gob.cl/api/v1/data/$path"
+            code=$(curl -sSL -o /tmp/candidate.out -w '%{http_code}' --connect-timeout 10 "$url" || true)
+            echo "$code $url"
+            head -c 220 /tmp/candidate.out | tr '\n' ' '; echo
+          done
