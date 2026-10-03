@@ -1,14 +1,16 @@
 'use strict';
 /* ATLAS AML · Gasto Público navigation authority · GP13 loader */
 (function(){
-  const VIEW='public-spend', VERSION='GP-AUTH.1300';
+  const VIEW='public-spend', VERSION='GP-AUTH.1400';
   const SCRIPT='./assets/atlas-gasto-publico-1300.js?v=1300-1';
   const STYLE='./assets/atlas-gasto-publico-1300.css?v=1300-1';
-  let active=false,dispatching=false,delegatedNavigate=null,loadPromise=null;
+  const MUNICIPAL_SCRIPT='./assets/atlas-municipal-footprint-1400.js?v=1400-1';
+  let active=false,dispatching=false,delegatedNavigate=null,loadPromise=null,municipalPromise=null;
 
   function publish(status,extra={}){
     window.__ATLAS_PUBLIC_SPEND_ROUTE_AUTHORITY_0578__={status,version:VERSION,active,
       authority:window.AtlasGastoPublico1300?.authority||window.AtlasPublicSpendIntelligence0720?.authority||null,
+      municipalFootprint:window.__ATLAS_MUNICIPAL_FOOTPRINT_1400__?.active===true,
       navigateWrapped:!!window.navigate?.__atlasGpAuthority1300,freezeGuard:'NO_GLOBAL_DOM_OBSERVER',
       checkedAt:new Date().toISOString(),...extra};
   }
@@ -31,13 +33,29 @@
     });
     return loadPromise;
   }
+  function ensureMunicipal(){
+    if(window.AtlasMunicipalFootprint1400)return Promise.resolve(window.AtlasMunicipalFootprint1400);
+    if(municipalPromise)return municipalPromise;
+    municipalPromise=new Promise((resolve,reject)=>{
+      const existing=document.querySelector('script[data-atlas-municipal-footprint-script]');
+      if(existing){existing.addEventListener('load',()=>resolve(window.AtlasMunicipalFootprint1400),{once:true});existing.addEventListener('error',()=>reject(new Error('No fue posible cargar Huella Municipal')),{once:true});return;}
+      const script=document.createElement('script');script.src=MUNICIPAL_SCRIPT;script.dataset.atlasMunicipalFootprintScript='1';script.async=true;
+      script.onload=()=>window.AtlasMunicipalFootprint1400?resolve(window.AtlasMunicipalFootprint1400):reject(new Error('Huella Municipal cargó sin publicar su API'));
+      script.onerror=()=>reject(new Error('No fue posible cargar Huella Municipal'));
+      document.head.appendChild(script);
+    });
+    return municipalPromise;
+  }
 
   async function open(source='navigate'){
     if(dispatching)return false;dispatching=true;active=true;
     try{
       const route=await ensureGp13();
+      await ensureMunicipal();
       if(typeof route?.open!=='function')throw new Error('Gasto Público GP13 no está disponible');
-      const ok=await route.open();publish(ok===false?'open-incomplete':'ready',{source,authority:'GASTO_PUBLICO_GP13'});return ok;
+      const ok=await route.open();
+      window.AtlasMunicipalFootprint1400?.refresh?.();
+      publish(ok===false?'open-incomplete':'ready',{source,authority:'GASTO_PUBLICO_GP13'});return ok;
     }catch(error){publish('error',{source,error:String(error?.message||error)});throw error;}
     finally{dispatching=false;}
   }
@@ -59,8 +77,8 @@
     event.preventDefault();event.stopImmediatePropagation();void open('window-capture-click').catch(()=>{});
   },true);
 
-  ['pageshow','atlas:nav-refresh','atlas:public-spend-v2-ready','atlas:public-spend-gp13-ready'].forEach(evt=>window.addEventListener(evt,()=>{install(evt);publish(evt);}));
-  window.AtlasPublicSpendRouteAuthority0578={open,install,ensureGp13,health:()=>window.__ATLAS_PUBLIC_SPEND_ROUTE_AUTHORITY_0578__||null};
-  ensureGp13().catch(error=>publish('gp13-preload-error',{error:String(error?.message||error)}));
+  ['pageshow','atlas:nav-refresh','atlas:public-spend-v2-ready','atlas:public-spend-gp13-ready'].forEach(evt=>window.addEventListener(evt,()=>{install(evt);ensureMunicipal().then(x=>x?.refresh?.()).catch(()=>{});publish(evt);}));
+  window.AtlasPublicSpendRouteAuthority0578={open,install,ensureGp13,ensureMunicipal,health:()=>window.__ATLAS_PUBLIC_SPEND_ROUTE_AUTHORITY_0578__||null};
+  ensureGp13().then(()=>ensureMunicipal()).then(x=>x?.refresh?.()).catch(error=>publish('preload-error',{error:String(error?.message||error)}));
   install('initial');[0,80,300,1000].forEach(ms=>setTimeout(()=>install(`deferred-${ms}`),ms));
 })();
