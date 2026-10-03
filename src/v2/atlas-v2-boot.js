@@ -26,6 +26,8 @@
     // Autoridad visible actual: expediente ejecutivo limpio, sin relaciones no resueltas.
     'entity360-expediente-surface.js',
     'public-spend-surface.js',
+    // Huella municipal v2: DTE observados, sin reinterpretarlos como pagos.
+    'municipal-footprint-v2.js',
     'relations-surface.js',
     'universes-adapter.js',
     'universes-surface.js',
@@ -132,15 +134,15 @@
 
     const federationWarm = warmFederatedSession();
     await installAnalyticalSurfaces();
-    if (!window.AtlasV2Viz?.installed || !window.AtlasV2EntitySearch?.installed || !window.__ATLAS_V2_ENTITY360_PARITY__?.installed || !window.__ATLAS_V2_ENTITY360_EXPEDIENTE__?.installed || !window.AtlasV2Osfl || !window.__ATLAS_V2_OSFL_SURFACE__ || !window.AtlasV2Sanctions || !window.__ATLAS_V2_SANCTIONS_SURFACE__) {
-      const error = new Error('ATLAS v2 visual/search/entity360/osfl/sanctions capabilities failed to initialize');
+    if (!window.AtlasV2Viz?.installed || !window.AtlasV2EntitySearch?.installed || !window.__ATLAS_V2_ENTITY360_PARITY__?.installed || !window.__ATLAS_V2_ENTITY360_EXPEDIENTE__?.installed || !window.__ATLAS_V2_MUNICIPAL_FOOTPRINT__?.installed || !window.AtlasV2Osfl || !window.__ATLAS_V2_OSFL_SURFACE__ || !window.AtlasV2Sanctions || !window.__ATLAS_V2_SANCTIONS_SURFACE__) {
+      const error = new Error('ATLAS v2 visual/search/entity360/municipal/osfl/sanctions capabilities failed to initialize');
       error.code = 'VISUAL_SEARCH_CAPABILITY_MISSING';
       throw error;
     }
     window.AtlasV2Shell.mount(root);
     emit('ok', {
       code: 'SHELL_READY', visualNavigation: true, entitySearch: true, entityIntelligence: true,
-      entity360: 'ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908', osfl: true, sanctions: true, territory: 'obs_territory', assetRevision: ASSET_REVISION,
+      entity360: 'ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908', municipalFootprint: 'MUNICIPAL_FOOTPRINT_V2_20261002_1', osfl: true, sanctions: true, territory: 'obs_territory', assetRevision: ASSET_REVISION,
     });
     window.dispatchEvent(new CustomEvent('atlas:v2-shell-ready', {
       detail: {
@@ -151,6 +153,7 @@
         entitySearch: true,
         entityIntelligence: true,
         entity360: 'ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908',
+        municipalFootprint: 'MUNICIPAL_FOOTPRINT_V2_20261002_1',
         osfl: true,
         sanctions: true,
         territory: 'obs_territory',
