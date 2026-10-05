@@ -28,8 +28,8 @@ LEGACY_RETIREMENT_FILES = (
     "atlas-legacy-retirement.js",
 )
 ENTITY360_AUTHORITY = "ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908"
-MUNICIPAL_FOOTPRINT_AUTHORITY = "MUNICIPAL_FOOTPRINT_V2_20261005_2"
-MUNICIPAL_ASSET_REVISION = "municipal-parity-2"
+MUNICIPAL_FOOTPRINT_AUTHORITY = "MUNICIPAL_FOOTPRINT_V2_20261005_3"
+MUNICIPAL_ASSET_REVISION = "municipal-parity-3"
 for _asset in (*EXPEDIENTE_FILES, *TERRITORY_AUTHORITY_FILES, *MUNICIPAL_FOOTPRINT_FILES, *LEGACY_RETIREMENT_FILES):
     if _asset not in _core.V2_FILES:
         _core.V2_FILES.append(_asset)
@@ -71,7 +71,7 @@ def _require_current_surface(source: str, markers: list[str], label: str) -> Non
             "entity360-expediente-surface.js",
             "municipal-footprint-v2.js",
             "ASSET_REVISION = 'entity360-expediente-1'",
-            "MUNICIPAL_ASSET_REVISION = 'municipal-parity-2'",
+            "MUNICIPAL_ASSET_REVISION = 'municipal-parity-3'",
         ]
     _original_require(source, markers, label)
 
@@ -120,11 +120,15 @@ def _validate_current_surface(out_dir, html, legacy, published_v2, *, e2e_proxy=
         "atlas-v2-municipal-read",
         "DTE municipal observado ≠ pago efectivo",
         "Municipios con DTE observados",
+        "Presupuesto Abierto Municipal",
+        "extractRut",
+        "enrichBuyerCandidate",
     ], "Municipal DTE footprint v2")
     _original_require(municipal_footprint_css, [
         ".munv2-panel",
         ".munv2-row",
         ".munv2-coverage",
+        ".munv2-source-badge",
     ], "Municipal DTE footprint visual contract")
     _original_require(retirement, [
         "smoralesm07-source.github.io",
@@ -160,6 +164,8 @@ def _update_current_report(out_dir, published_v2, primary_release, legacy_releas
         "v2_municipal_footprint": MUNICIPAL_FOOTPRINT_AUTHORITY,
         "v2_municipal_asset_revision": MUNICIPAL_ASSET_REVISION,
         "v2_municipal_semantics": "DTE_OBSERVED_NOT_PAYMENT",
+        "v2_municipal_entity_parity": True,
+        "v2_municipal_buyer_source_badge": True,
         "legacy_portal_interactive": False,
         "legacy_portal_redirect": "https://atlasobservatorio.app/",
     })
