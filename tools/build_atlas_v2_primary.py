@@ -23,13 +23,14 @@ TERRITORY_AUTHORITY_FILES = (
 MUNICIPAL_FOOTPRINT_FILES = (
     "municipal-footprint-v2.js",
     "municipal-footprint-v2.css",
+    "municipal-footprint-search-hotfix.js",
 )
 LEGACY_RETIREMENT_FILES = (
     "atlas-legacy-retirement.js",
 )
 ENTITY360_AUTHORITY = "ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908"
 MUNICIPAL_FOOTPRINT_AUTHORITY = "MUNICIPAL_FOOTPRINT_V2_20261005_3"
-MUNICIPAL_ASSET_REVISION = "municipal-parity-3"
+MUNICIPAL_ASSET_REVISION = "municipal-parity-4"
 for _asset in (*EXPEDIENTE_FILES, *TERRITORY_AUTHORITY_FILES, *MUNICIPAL_FOOTPRINT_FILES, *LEGACY_RETIREMENT_FILES):
     if _asset not in _core.V2_FILES:
         _core.V2_FILES.append(_asset)
@@ -70,8 +71,9 @@ def _require_current_surface(source: str, markers: list[str], label: str) -> Non
         markers = list(markers) + [
             "entity360-expediente-surface.js",
             "municipal-footprint-v2.js",
+            "municipal-footprint-search-hotfix.js",
             "ASSET_REVISION = 'entity360-expediente-1'",
-            "MUNICIPAL_ASSET_REVISION = 'municipal-parity-3'",
+            "MUNICIPAL_ASSET_REVISION = 'municipal-parity-4'",
         ]
     _original_require(source, markers, label)
 
@@ -85,6 +87,7 @@ def _validate_current_surface(out_dir, html, legacy, published_v2, *, e2e_proxy=
     territory_export = (out_dir / "v2" / "territory-export.js").read_text(encoding="utf-8")
     municipal_footprint = (out_dir / "v2" / "municipal-footprint-v2.js").read_text(encoding="utf-8")
     municipal_footprint_css = (out_dir / "v2" / "municipal-footprint-v2.css").read_text(encoding="utf-8")
+    municipal_search = (out_dir / "v2" / "municipal-footprint-search-hotfix.js").read_text(encoding="utf-8")
     retirement = (out_dir / "v2" / "atlas-legacy-retirement.js").read_text(encoding="utf-8")
     boot = (out_dir / "v2" / "atlas-v2-boot.js").read_text(encoding="utf-8")
     _original_require(expediente, [
@@ -130,6 +133,13 @@ def _validate_current_surface(out_dir, html, legacy, published_v2, *, e2e_proxy=
         ".munv2-coverage",
         ".munv2-source-badge",
     ], "Municipal DTE footprint visual contract")
+    _original_require(municipal_search, [
+        "MUNICIPAL_SEARCH_HOTFIX_20261005_1",
+        "municipal_buyers",
+        "Presupuesto Abierto Municipal",
+        "DTE observados",
+        "data-mun-search-hotfix-panel",
+    ], "Municipal buyer live-search parity")
     _original_require(retirement, [
         "smoralesm07-source.github.io",
         "/AML-Workbench-Portal/",
@@ -166,6 +176,7 @@ def _update_current_report(out_dir, published_v2, primary_release, legacy_releas
         "v2_municipal_semantics": "DTE_OBSERVED_NOT_PAYMENT",
         "v2_municipal_entity_parity": True,
         "v2_municipal_buyer_source_badge": True,
+        "v2_municipal_live_search_parity": True,
         "legacy_portal_interactive": False,
         "legacy_portal_redirect": "https://atlasobservatorio.app/",
     })
