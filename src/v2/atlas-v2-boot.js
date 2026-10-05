@@ -4,7 +4,7 @@
   const baseUrl = new URL('./', document.currentScript?.src || document.baseURI);
   const STRUCTURAL_VERSION = 'v2-primary-5';
   const SURFACE_VERSION = 'v2-primary-7-executive-pulse-entity360-classic-1';
-  const ASSET_REVISION = 'entity360-expediente-1';
+  const ASSET_REVISION = 'municipal-buyers-1';
   const TERRITORY_ASSET_REVISION = 'territory-intelligence-3';
   const LEGACY_UNIVERSES_ASSET_REVISION_MARKER = "ASSET_REVISION = 'universos-intelligence-1'";
   const LEGACY_SANCTIONS_FEDERATION_MARKER = "ASSET_REVISION = 'osfl-sanctions-federation-2'";
@@ -142,7 +142,7 @@
     window.AtlasV2Shell.mount(root);
     emit('ok', {
       code: 'SHELL_READY', visualNavigation: true, entitySearch: true, entityIntelligence: true,
-      entity360: 'ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908', municipalFootprint: 'MUNICIPAL_FOOTPRINT_V2_20261002_1', osfl: true, sanctions: true, territory: 'obs_territory', assetRevision: ASSET_REVISION,
+      entity360: 'ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908', municipalFootprint: 'MUNICIPAL_FOOTPRINT_V2_20261005_1', osfl: true, sanctions: true, territory: 'obs_territory', assetRevision: ASSET_REVISION,
     });
     window.dispatchEvent(new CustomEvent('atlas:v2-shell-ready', {
       detail: {
@@ -153,7 +153,7 @@
         entitySearch: true,
         entityIntelligence: true,
         entity360: 'ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908',
-        municipalFootprint: 'MUNICIPAL_FOOTPRINT_V2_20261002_1',
+        municipalFootprint: 'MUNICIPAL_FOOTPRINT_V2_20261005_1',
         osfl: true,
         sanctions: true,
         territory: 'obs_territory',
