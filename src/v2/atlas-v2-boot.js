@@ -4,7 +4,7 @@
   const baseUrl = new URL('./', document.currentScript?.src || document.baseURI);
   const STRUCTURAL_VERSION = 'v2-primary-5';
   const SURFACE_VERSION = 'v2-primary-7-executive-pulse-entity360-classic-1';
-  const ASSET_REVISION = 'municipal-buyers-1';
+  const ASSET_REVISION = 'municipal-parity-2';
   const TERRITORY_ASSET_REVISION = 'territory-intelligence-3';
   const LEGACY_UNIVERSES_ASSET_REVISION_MARKER = "ASSET_REVISION = 'universos-intelligence-1'";
   const LEGACY_SANCTIONS_FEDERATION_MARKER = "ASSET_REVISION = 'osfl-sanctions-federation-2'";
@@ -21,12 +21,9 @@
     'explore-surface.js',
     'entity360-adapter.js',
     'entity360-surface.js',
-    // La superficie histórica se conserva como fallback de paridad de datos.
     'entity360-parity-surface.js',
-    // Autoridad visible actual: expediente ejecutivo limpio, sin relaciones no resueltas.
     'entity360-expediente-surface.js',
     'public-spend-surface.js',
-    // Huella municipal v2: DTE observados, sin reinterpretarlos como pagos.
     'municipal-footprint-v2.js',
     'relations-surface.js',
     'universes-adapter.js',
@@ -37,9 +34,7 @@
     'sanctions-surface.js',
     'territory-adapter.js',
     'territory-surface.js',
-    // Autoridad territorial actual: obs_territory + join CUT comunal.
     'territory-authority-v4.js',
-    // Export analítico del universo comunal para Excel/modelos externos.
     'territory-export.js',
     'watch-adapter.js',
     'watch-surface.js',
@@ -77,12 +72,8 @@
   async function installAnalyticalSurfaces() {
     const failed = [];
     for (const file of STRUCTURAL_SURFACES) {
-      try {
-        await loadScript(file);
-      } catch (error) {
-        failed.push(file);
-        console.error('[ATLAS v2] structural analytical surface failed to load', file, error);
-      }
+      try { await loadScript(file); }
+      catch (error) { failed.push(file); console.error('[ATLAS v2] structural analytical surface failed to load', file, error); }
     }
     if (failed.length) {
       const error = new Error(`ATLAS v2 structural surfaces unavailable: ${failed.join(', ')}`);
@@ -142,33 +133,19 @@
     window.AtlasV2Shell.mount(root);
     emit('ok', {
       code: 'SHELL_READY', visualNavigation: true, entitySearch: true, entityIntelligence: true,
-      entity360: 'ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908', municipalFootprint: 'MUNICIPAL_FOOTPRINT_V2_20261005_1', osfl: true, sanctions: true, territory: 'obs_territory', assetRevision: ASSET_REVISION,
+      entity360: 'ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908', municipalFootprint: 'MUNICIPAL_FOOTPRINT_V2_20261005_2', osfl: true, sanctions: true, territory: 'obs_territory', assetRevision: ASSET_REVISION,
     });
     window.dispatchEvent(new CustomEvent('atlas:v2-shell-ready', {
       detail: {
-        route: window.AtlasV2Shell.currentRoute?.().id || 'explorar',
-        role: access.role || 'viewer',
-        runtime: 'analytics-primary',
-        visualNavigation: true,
-        entitySearch: true,
-        entityIntelligence: true,
-        entity360: 'ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908',
-        municipalFootprint: 'MUNICIPAL_FOOTPRINT_V2_20261005_1',
-        osfl: true,
-        sanctions: true,
-        territory: 'obs_territory',
-        assetRevision: ASSET_REVISION,
+        route: window.AtlasV2Shell.currentRoute?.().id || 'explorar', role: access.role || 'viewer', runtime: 'analytics-primary', visualNavigation: true,
+        entitySearch: true, entityIntelligence: true, entity360: 'ENTITY360_EXPEDIENTE_EXECUTIVE_V2_20260908', municipalFootprint: 'MUNICIPAL_FOOTPRINT_V2_20261005_2',
+        osfl: true, sanctions: true, territory: 'obs_territory', assetRevision: ASSET_REVISION,
       },
     }));
     void federationWarm;
   }
 
-  const start = () => {
-    void mount().catch(error => {
-      console.error('[ATLAS v2] boot failed', error);
-      renderFatal(error);
-    });
-  };
+  const start = () => { void mount().catch(error => { console.error('[ATLAS v2] boot failed', error); renderFatal(error); }); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
   else start();
 })();
