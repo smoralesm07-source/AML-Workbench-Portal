@@ -3,7 +3,7 @@
 (function installAtlasV2MunicipalFootprint(global) {
   if (global.__ATLAS_V2_MUNICIPAL_FOOTPRINT__?.installed) return;
 
-  const VERSION = 'MUNICIPAL_FOOTPRINT_V2_20261005_2';
+  const VERSION = 'MUNICIPAL_FOOTPRINT_V2_20261005_3';
   const DEFAULT_URL = 'https://bzqxvidggykkdouotylg.supabase.co';
   const DEFAULT_KEY = 'sb_publishable_3nrUSbZMWfTYUtXnyjDklg_EjyZIzko';
   const ENDPOINT = '/functions/v1/atlas-v2-municipal-read';
@@ -15,6 +15,24 @@
   function num(value) { const n = Number(value); return Number.isFinite(n) ? n : 0; }
   function money(value) { const n = Number(value); return Number.isFinite(n) ? `$${Math.round(n).toLocaleString('es-CL')}` : '—'; }
   function integer(value) { const n = Number(value); return Number.isFinite(n) ? Math.round(n).toLocaleString('es-CL') : '—'; }
+  function normalizedText(value) { return clean(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleUpperCase('es-CL').replace(/\s+/g, ' '); }
+  function compactRut(value) {
+    const raw = clean(value).toUpperCase().replace(/[^0-9K]/g, '');
+    if (raw.length < 2) return '';
+    return `${raw.slice(0, -1)}-${raw.slice(-1)}`;
+  }
+  function routeParam(route, key) {
+    const params = route?.params;
+    if (params?.get) return clean(params.get(key));
+    return clean(params?.[key] || route?.[key] || '');
+  }
+  function extractRut(route, root) {
+    const routed = routeParam(route, 'rut');
+    if (routed) return compactRut(routed);
+    const text = clean(root?.textContent);
+    const match = text.match(/\b\d{1,2}(?:\.\d{3}){2}-[0-9K]\b/i) || text.match(/\b\d{7,8}-[0-9K]\b/i);
+    return compactRut(match?.[0] || '');
+  }
   function config() {
     const current = global.__ATLAS_V2_CONFIG__ || {};
     return { url: String(current.supabaseUrl || DEFAULT_URL).replace(/\/$/, ''), key: String(current.publishableKey || DEFAULT_KEY) };
@@ -35,7 +53,7 @@
   function injectStyle() {
     if (document.getElementById('atlas-v2-municipal-footprint-style')) return;
     const base = new URL('./', document.currentScript?.src || document.baseURI);
-    document.head.appendChild(node('link', { id: 'atlas-v2-municipal-footprint-style', rel: 'stylesheet', href: new URL('municipal-footprint-v2.css?v=20261005-2', base).href }));
+    document.head.appendChild(node('link', { id: 'atlas-v2-municipal-footprint-style', rel: 'stylesheet', href: new URL('municipal-footprint-v2.css?v=20261005-3', base).href }));
   }
 
   async function tokens() {
@@ -60,7 +78,7 @@
     try {
       const res = await fetch(`${c.url}${ENDPOINT}`, {
         method: 'POST', cache: 'no-store', signal: controller.signal,
-        headers: { authorization: `Bearer ${v2Token}`, apikey: c.key, 'content-type': 'application/json', 'x-atlas-core-authorization': `Bearer ${coreToken}`, 'x-client-info': 'atlas-v2-municipal-footprint/1.2' },
+        headers: { authorization: `Bearer ${v2Token}`, apikey: c.key, 'content-type': 'application/json', 'x-atlas-core-authorization': `Bearer ${coreToken}`, 'x-client-info': 'atlas-v2-municipal-footprint/1.3' },
         body: JSON.stringify({ kind, search: normalized || undefined, offset: 0, limit }),
       });
       const body = await res.json().catch(() => ({}));
@@ -72,7 +90,7 @@
 
   function coverageLabel(value) {
     if (value === 'partial_period') return 'corte parcial';
-    if (value === 'complete') return 'cobertura completa';
+    if (value === 'complete' || value === 'complete_year') return 'cobertura completa';
     return 'cobertura no determinada';
   }
   function yearsText(row) {
@@ -125,12 +143,28 @@
   }
   function routeIsPublicSpend(route) { return ['gasto-publico', 'huella-publica', 'huella'].includes(route?.id); }
 
+  function enrichBuyerCandidate(host, buyer) {
+    const buyerName = normalizedText(buyer?.buyer_name || buyer?.organization_name || '');
+    if (!buyerName) return false;
+    const candidates = Array.from(host.querySelectorAll('article,button,[role="button"],li,div'))
+      .filter(el => !el.closest('.munv2-panel') && normalizedText(el.textContent).includes(buyerName))
+      .sort((a, b) => clean(a.textContent).length - clean(b.textContent).length);
+    const target = candidates.find(el => /mercado\s+p[uú]blico/i.test(el.textContent || '')) || candidates[0];
+    if (!target || target.querySelector('[data-munv2-buyer-source]')) return Boolean(target);
+    const range = buyer.first_year && buyer.last_year ? (Number(buyer.first_year) === Number(buyer.last_year) ? String(buyer.first_year) : `${buyer.first_year}–${buyer.last_year}`) : '';
+    target.append(node('div', { class: 'munv2-inline-source', dataset: { munv2BuyerSource: '1' } }, [
+      node('span', { class: 'munv2-source-badge', text: 'Presupuesto Abierto Municipal' }),
+      node('small', { text: `DTE observados${range ? ` · ${range}` : ''}` }),
+    ]));
+    return true;
+  }
+
   async function enhancePublicSpend(route) {
     const host = document.querySelector('.atlas-v2-gp-host');
     if (!host) return;
     ensureSourceChip('.atlas-v2-gp-source-strip');
-    const search = clean(route.params.get('q') || route.params.get('rut') || '');
-    const tab = route.params.get('tab') || (route.params.get('rut') ? 'providers' : 'overview');
+    const search = routeParam(route, 'q') || routeParam(route, 'rut');
+    const tab = routeParam(route, 'tab') || (routeParam(route, 'rut') ? 'providers' : 'overview');
     const signature = `gp:${tab}:${search.toLocaleUpperCase('es-CL')}`;
     const current = host.querySelector('[data-munv2-wrap]');
     if (current?.dataset.munv2Wrap === signature) return;
@@ -142,6 +176,7 @@
         const [buyersBody, relationsBody] = await Promise.all([query('municipal_buyers', search, 100), query('municipal_relations', search, 100)]);
         const buyers = Array.isArray(buyersBody.items) ? buyersBody.items : [];
         const relations = Array.isArray(relationsBody.items) ? relationsBody.items : [];
+        buyers.forEach(buyer => enrichBuyerCandidate(host, buyer));
         if (buyers.length) wrap.append(panel('Municipalidades encontradas', `Coincidencias para “${search}”. Búsqueda por nombre o RUT municipal.`, buyers, buyerRow, `${signature}:buyers`));
         if (relations.length) wrap.append(panel('Municipios con DTE del proveedor', `Relaciones municipales observadas para “${search}”.`, relations, relationRow, `${signature}:relations`));
         if (!buyers.length && !relations.length) wrap.append(panel('Presupuesto Abierto Municipal', `Sin coincidencias municipales para “${search}”.`, [], buyerRow, `${signature}:empty`));
@@ -162,31 +197,42 @@
     const min = Math.min(...years), max = Math.max(...years);
     return min === max ? String(min) : `${min}–${max}`;
   }
-  function reconcileEntityKpi(items) {
+  function municipalBuyerCount(items) {
+    return new Set(items.map(item => compactRut(item.buyer_rut) || normalizedText(item.buyer_name || item.organization_name)).filter(Boolean)).size;
+  }
+  function entityFootprintTarget(root) {
+    const primary = Array.from(root.querySelectorAll('.e36x-kpi')).find(card => /huella\s+p[uú]blica/i.test(card.textContent || ''));
+    if (primary) return primary;
+    return Array.from(root.querySelectorAll('article,section,div')).filter(el => /huella\s+p[uú]blica/i.test(el.textContent || '')).sort((a, b) => clean(a.textContent).length - clean(b.textContent).length)[0] || null;
+  }
+  function reconcileEntityKpi(root, items) {
     if (!items.length) return;
-    const cards = Array.from(document.querySelectorAll('.e36x-kpi'));
-    const target = cards.find(card => /huella\s+p[uú]blica/i.test(card.textContent || ''));
+    const target = entityFootprintTarget(root);
     if (!target) return;
-    const strong = target.querySelector('strong');
-    const small = target.querySelector('small');
+    const strong = target.querySelector('strong,b,[class*="value"]');
+    const smalls = Array.from(target.querySelectorAll('small,p,span')).filter(el => el !== strong);
     if (strong) strong.textContent = 'Registra';
-    if (small) small.textContent = `DTE municipales observados${municipalRange(items) ? ` · ${municipalRange(items)}` : ''}`;
+    else target.append(node('strong', { class: 'munv2-entity-value', text: 'Registra' }));
+    const detail = `DTE municipales observados en ${municipalBuyerCount(items)} municipio${municipalBuyerCount(items) === 1 ? '' : 's'}${municipalRange(items) ? ` · ${municipalRange(items)}` : ''}`;
+    const small = smalls.find(el => /sin\s+compras|pagos\s+observados|huella|2020|mercado/i.test(el.textContent || '')) || target.querySelector('small');
+    if (small) small.textContent = detail;
+    else target.append(node('small', { class: 'munv2-entity-detail', text: detail }));
     target.classList.add('present');
     target.dataset.munv2Kpi = '1';
   }
   async function enhanceEntity(route) {
     const root = document.querySelector('.e36x');
     if (!root) return;
-    const rut = clean(route.params.get('rut') || root.querySelector('.e36x-hero p')?.textContent?.match(/\b\d{7,8}-[0-9K]\b/i)?.[0] || '');
+    const rut = extractRut(route, root);
     if (!rut) return;
     try {
       const body = await query('municipal_relations', rut, 100);
-      if (global.AtlasV2Shell?.currentRoute?.().id !== 'entidad') return;
+      if (!document.contains(root)) return;
       const items = Array.isArray(body.items) ? body.items : [];
       if (!items.length) return;
       ensureSourceChip('.e36x-source-strip', 'munv2EntitySource');
-      reconcileEntityKpi(items);
-      const purchases = root.querySelector('[data-panel="compras"]');
+      reconcileEntityKpi(root, items);
+      const purchases = root.querySelector('[data-panel="compras"]') || root.querySelector('[data-tab-panel="compras"]');
       if (purchases) {
         const signature = `entity:${rut.toUpperCase()}`;
         const current = purchases.querySelector('[data-munv2]');
@@ -202,7 +248,7 @@
     const route = global.AtlasV2Shell?.currentRoute?.();
     if (!route) return;
     if (routeIsPublicSpend(route)) void enhancePublicSpend(route);
-    else if (route.id === 'entidad') void enhanceEntity(route);
+    if (route.id === 'entidad' || document.querySelector('.e36x')) void enhanceEntity(route);
   }
   function schedule() { clearTimeout(timer); timer = setTimeout(enhance, 120); }
   function observe() {
