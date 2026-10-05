@@ -3,7 +3,7 @@
 (function installAtlasV2MunicipalFootprint(global) {
   if (global.__ATLAS_V2_MUNICIPAL_FOOTPRINT__?.installed) return;
 
-  const VERSION = 'MUNICIPAL_FOOTPRINT_V2_20261002_1';
+  const VERSION = 'MUNICIPAL_FOOTPRINT_V2_20261005_1';
   const DEFAULT_URL = 'https://bzqxvidggykkdouotylg.supabase.co';
   const DEFAULT_KEY = 'sb_publishable_3nrUSbZMWfTYUtXnyjDklg_EjyZIzko';
   const ENDPOINT = '/functions/v1/atlas-v2-municipal-read';
@@ -48,7 +48,7 @@
     if (document.getElementById('atlas-v2-municipal-footprint-style')) return;
     const base = new URL('./', document.currentScript?.src || document.baseURI);
     document.head.appendChild(node('link', {
-      id: 'atlas-v2-municipal-footprint-style', rel: 'stylesheet', href: new URL('municipal-footprint-v2.css?v=20261002-1', base).href,
+      id: 'atlas-v2-municipal-footprint-style', rel: 'stylesheet', href: new URL('municipal-footprint-v2.css?v=20261005-1', base).href,
     }));
   }
 
@@ -80,7 +80,7 @@
           apikey: c.key,
           'content-type': 'application/json',
           'x-atlas-core-authorization': `Bearer ${coreToken}`,
-          'x-client-info': 'atlas-v2-municipal-footprint/1.0',
+          'x-client-info': 'atlas-v2-municipal-footprint/1.1',
         },
         body: JSON.stringify({ kind, search: normalized || undefined, offset: 0, limit }),
         cache: 'no-store', signal: controller.signal,
@@ -123,6 +123,21 @@
     ]);
   }
 
+  function buyerRow(row) {
+    return node('article', { class: 'munv2-row' }, [
+      node('div', { class: 'munv2-row-main' }, [
+        node('strong', { text: row.buyer_name || row.organization_name || 'Municipalidad' }),
+        node('span', { text: [row.region, row.buyer_rut, `${integer(row.provider_count)} proveedores`].filter(Boolean).join(' · ') }),
+        node('small', { text: yearsText(row) }),
+      ]),
+      node('div', { class: 'munv2-row-value' }, [
+        node('b', { text: money(row.amount_clp) }),
+        node('span', { text: `${integer(row.document_count)} DTE` }),
+        node('em', { class: `munv2-coverage ${row.coverage_status || 'unknown'}`, text: coverageLabel(row.coverage_status) }),
+      ]),
+    ]);
+  }
+
   function providerRow(row, api) {
     const rut = row.provider_rut || row.supplier_rut || '';
     return node('article', { class: 'munv2-row' }, [
@@ -146,7 +161,7 @@
       node('b', { text: `${integer(items.length)} resultados` }),
     ]));
     if (!items.length) {
-      section.append(node('div', { class: 'munv2-empty', text: 'No se observaron DTE municipales para esta entidad en el corte materializado. Ausencia de registro no se interpreta como pago $0.' }));
+      section.append(node('div', { class: 'munv2-empty', text: 'No se observaron DTE municipales para este criterio en el corte materializado. Ausencia de registro no se interpreta como pago $0.' }));
       return section;
     }
     const list = node('div', { class: 'munv2-list' });
@@ -172,7 +187,7 @@
   function ensureSourceChip() {
     const strip = document.querySelector('.atlas-v2-gp-source-strip');
     if (!strip || strip.querySelector('[data-munv2-source]')) return;
-    strip.append(node('span', { class: 'live', dataset: { munv2Source: '1' }, text: 'Monitor Municipal · DTE observados' }));
+    strip.append(node('span', { class: 'live', dataset: { munv2Source: '1' }, text: 'Presupuesto Abierto Municipal · DTE observados' }));
   }
 
   async function enhancePublicSpend(route) {
@@ -182,18 +197,35 @@
     const search = clean(route.params.get('q') || route.params.get('rut') || '');
     const tab = route.params.get('tab') || (route.params.get('rut') ? 'providers' : 'overview');
     const signature = `gp:${tab}:${search.toLocaleUpperCase('es-CL')}`;
-    const current = host.querySelector('[data-munv2]');
-    if (current?.dataset.munv2 === signature) return;
+    const current = host.querySelector('[data-munv2-wrap]');
+    if (current?.dataset.munv2Wrap === signature) return;
     current?.remove();
-    if (!search && tab !== 'providers') return;
+    if (!search && !['overview', 'providers', 'buyers'].includes(tab)) return;
+    const wrap = node('div', { dataset: { munv2Wrap: signature } });
     try {
-      const body = await query(search ? 'municipal_relations' : 'municipal_providers', search, search ? 100 : 40);
-      if (global.AtlasV2Shell?.currentRoute?.().id !== 'gasto-publico') return;
-      const items = Array.isArray(body.items) ? body.items : [];
-      const section = search
-        ? panel('Municipios con DTE observados', `Resultados municipales para “${search}”. Se muestran relaciones documentales, no pagadores confirmados.`, items, relationRow, signature)
-        : panel('Proveedores observados por municipios', 'Ranking del Monitor Municipal. El monto corresponde al neto de DTE observados y no prueba pago.', items, row => providerRow(row, global.AtlasV2Shell), signature);
-      host.append(section);
+      if (search) {
+        const [buyersBody, relationsBody] = await Promise.all([
+          query('municipal_buyers', search, 100),
+          query('municipal_relations', search, 100),
+        ]);
+        if (global.AtlasV2Shell?.currentRoute?.().id !== 'gasto-publico') return;
+        const buyers = Array.isArray(buyersBody.items) ? buyersBody.items : [];
+        const relations = Array.isArray(relationsBody.items) ? relationsBody.items : [];
+        if (buyers.length) wrap.append(panel('Municipalidades encontradas', `Coincidencias municipales para “${search}”. Puedes buscar por nombre o RUT del municipio.`, buyers, buyerRow, `${signature}:buyers`));
+        if (relations.length) wrap.append(panel('Municipios con DTE del proveedor', `Relaciones municipales observadas para “${search}”. Se muestran DTE, no pagos confirmados.`, relations, relationRow, `${signature}:relations`));
+        if (!buyers.length && !relations.length) wrap.append(panel('Presupuesto Abierto Municipal', `Sin coincidencias municipales para “${search}”.`, [], buyerRow, `${signature}:empty`));
+      } else if (tab === 'providers') {
+        const body = await query('municipal_providers', '', 40);
+        if (global.AtlasV2Shell?.currentRoute?.().id !== 'gasto-publico') return;
+        const items = Array.isArray(body.items) ? body.items : [];
+        wrap.append(panel('Proveedores observados por municipios', 'Ranking del Monitor Municipal. El monto corresponde al neto de DTE observados y no prueba pago.', items, row => providerRow(row, global.AtlasV2Shell), `${signature}:providers`));
+      } else {
+        const body = await query('municipal_buyers', '', 100);
+        if (global.AtlasV2Shell?.currentRoute?.().id !== 'gasto-publico') return;
+        const items = Array.isArray(body.items) ? body.items : [];
+        wrap.append(panel('Municipalidades · Presupuesto Abierto', 'Universo municipal consultable. Selecciona la pestaña Compradores o usa el buscador por nombre/RUT para encontrar municipios de menor monto.', items, buyerRow, `${signature}:buyers`));
+      }
+      host.append(wrap);
     } catch (error) {
       console.warn('[ATLAS v2 municipal] public-spend enhancement unavailable', error?.code || error?.message || error);
     }
