@@ -159,7 +159,17 @@
   }
   function overallState(){if(loadState!=='ready')return 'off';const o=ops?.summary||{},redFresh=catalog().some(x=>x.tone==='degraded');return Number(o.critical_down||0)>0?'bad':Number(o.degraded||0)>0||redFresh?'warn':'ok';}
   function shellHtml(){const o=ops?.summary||{},overall=overallState(),pending=loadState!=='ready',coverage=pending?'—':`${Number(o.coverage_effective_pct??0)}%`,falls=pending?'verificando':`${Number(o.degraded||0)} caídas`,dotState=overall==='ok'?'healthy':overall==='warn'?'watch':overall==='bad'?'degraded':'loading';return `<button type="button" class="v024-audit-summary ash-main" data-ash-toggle aria-expanded="false"><span class="a57-title">${dot(dotState)}<span><strong>Salud de fuentes</strong><small>Estado resumido de frescura y disponibilidad técnica</small></span></span><span class="ash-quick"><b>${coverage}</b><small>cobertura</small><span>${falls}</span></span><span class="a57-chevron">⌄</span></button><div class="v024-audit-detail ash-detail" data-ash-detail hidden><div class="ash-tabs"><button data-ash-tab="summary" class="active">Resumen</button><button data-ash-tab="freshness">Catálogo de fuentes</button><button data-ash-tab="operations">Integraciones</button><button data-ash-refresh>Actualizar</button></div><div data-ash-panel>${summaryHtml()}</div><footer>Frescura y disponibilidad son dimensiones separadas; este control informa salud técnica, no validez analítica.</footer></div>`;}
-  function mount(){if(root?.isConnected)return root;const old=document.querySelector('.a57-data-audit:not([data-ash0536])');if(!old)return null;root=document.createElement('section');root.className='v024-audit a57-data-audit ash-audit';root.dataset.ash0536='1';root.innerHTML=shellHtml();old.replaceWith(root);bind(root);updateRoot();return root;}
+  function mount(){if(root?.isConnected)return root;const old=document.querySelector('.a57-data-audit:not([data-ash0536])');if(!old)return null;root=document.createElement('section');root.className='v024-audit a57-data-audit ash-audit';root.dataset.ash0536='1';
+    // The provisional seed has already been placed in the topbar. Carry its
+    // layout/visibility contract across replacement or CSS will hide this root.
+    for(const key of ['topbarMode','topbarPlacement','globalAudit']){
+      if(old.dataset[key])root.dataset[key]=old.dataset[key];
+    }
+    const right=old.style.getPropertyValue('--atlas-health-right');
+    if(right)root.style.setProperty('--atlas-health-right',right);
+    root.innerHTML=shellHtml();old.replaceWith(root);bind(root);updateRoot();
+    window.AtlasGlobalSourceHealth?.schedule?.();
+    return root;}
   function updateRoot(){if(!root?.isConnected)return;const overall=overallState();root.classList.remove('ok','warn','bad','off');root.classList.add(overall);const quick=root.querySelector('.ash-quick'),o=ops?.summary||{},pending=loadState!=='ready';if(quick)quick.innerHTML=`<b>${pending?'—':`${Number(o.coverage_effective_pct??0)}%`}</b><small>cobertura</small><span>${pending?(loadState==='loading'?'verificando':'sin telemetría'):`${Number(o.degraded||0)} caídas`}</span>`;const titleDot=root.querySelector('.a57-title .ash-dot');if(titleDot)titleDot.className=`ash-dot ${status(overall==='ok'?'healthy':overall==='warn'?'watch':overall==='bad'?'degraded':'loading').cls}`;const p=root.querySelector('[data-ash-panel]');if(p)p.innerHTML=activeTab==='freshness'?catalogRows():activeTab==='operations'?opRows():summaryHtml();}
   function bind(rootEl){
     rootEl.querySelector('[data-ash-toggle]')?.addEventListener('click',e=>{const b=e.currentTarget,d=rootEl.querySelector('[data-ash-detail]'),open=b.getAttribute('aria-expanded')==='true';b.setAttribute('aria-expanded',String(!open));d.hidden=open;});
