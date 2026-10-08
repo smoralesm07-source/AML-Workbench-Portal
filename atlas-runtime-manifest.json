@@ -69,7 +69,8 @@
     "assets/atlas-sanctions-radiography-0960.css",
     "v0434-reconciliation-command.css",
     "v0435-reconciliation-fix.css",
-    "assets/atlas-osfl-economic-0950.css"
+    "assets/atlas-osfl-economic-0950.css",
+    "assets/atlas-source-health-header-20261008.css"
   ],
   "scripts": [
     {
@@ -596,6 +597,11 @@
       "path": "assets/atlas-osfl-graphics-final-1001.js",
       "type": "classic",
       "role": "osfl-graphics-final-runtime-1001"
+    },
+    {
+      "path": "assets/atlas-source-health-header-20261008.js",
+      "type": "classic",
+      "role": "account-header-health-authority"
     }
   ],
   "forbidden_runtime_assets": [
