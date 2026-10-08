@@ -33,7 +33,7 @@
   function ensureSeed(){if(document.querySelector('.ash-audit,.a57-data-audit'))return;const seed=document.createElement('section');seed.className='v024-audit a57-data-audit';seed.dataset.atlasAuditSeed='0714';seed.hidden=true;seed.innerHTML='<button type="button" class="v024-audit-summary"><span class="a57-title"><span><strong>Auditoría y salud de fuentes</strong><small>Inicializando telemetría gobernada</small></span></span></button>';fallbackHost().appendChild(seed);}
   async function loadMaterialization(force=false){if(!force&&matState&&Date.now()-matAt<TTL)return matState;if(matInflight)return matInflight;const c=db();if(!c)return null;matInflight=(async()=>{const {data,error}=await c.from('aml_sync_state').select('pipeline,status,updated_at,fusion_synced_at,sii_synced_at').in('pipeline',PIPELINES);if(error)throw error;const map={};for(const row of data||[])map[row.pipeline]=row;matState=map;matAt=Date.now();return map;})().catch(()=>null).finally(()=>{matInflight=null;schedule();});return matInflight;}
   function materializationText(){if(!matState)return 'Materialización Atlas: verificando derivados internos…';const labels={RUNTIME_SNAPSHOT:'runtime',UAF_SECTOR_PROFILE:'UAF',SII_ENTITY_YEAR:'SII',OSFL_PROFILE:'OSFL',SANCTION_IDENTITY:'sanciones'};const parts=PIPELINES.map(p=>{const r=matState[p];return `${labels[p]} ${r?stamp(r.updated_at||r.fusion_synced_at||r.sii_synced_at):'—'}`;});const failed=PIPELINES.some(p=>matState[p]&&String(matState[p].status||'').toUpperCase().includes('FAIL'));return `${failed?'⚠':'✓'} Materialización Atlas · ${parts.join(' · ')}`;}
-  function applySemantics(audit){if(!audit)return;setData(audit,'semanticContract','SOURCE_INTEGRATION_MATERIALIZATION_0714');setText(audit.querySelector('.a57-title small'),'Fuente · integración · materialización Atlas');audit.querySelectorAll('.ash-metric > span').forEach(el=>{if(norm(el.textContent)==='fuentes al día')setText(el,'Fuentes verificadas');});const head=audit.querySelector('.ash-catalog-head');if(head?.children?.[1])setText(head.children[1],'Dato en fuente');audit.querySelectorAll('.ash-catalog-row').forEach(row=>setText(row.querySelector('.ash-catalog-cell small'),'último dato observado en la fuente'));const panel=audit.querySelector('[data-ash-panel]');if(panel?.querySelector('.ash-summary-grid')){let note=panel.querySelector('[data-atlas-materialization="0714"]');if(!note){note=document.createElement('div');note.className='ash-impact';note.dataset.atlasMaterialization='0714';panel.appendChild(note);}setText(note,materializationText());}}
+  function applySemantics(audit){if(!audit)return;setData(audit,'semanticContract','SOURCE_INTEGRATION_MATERIALIZATION_0714');setText(audit.querySelector('.a57-title small'),'Fuente · integración · materialización Atlas');audit.querySelectorAll('.ash-metric > span').forEach(el=>{if(norm(el.textContent)==='fuentes al día')setText(el,'Fuentes verificadas');});/* Preserve source catalog labels: source cut and Atlas load have distinct meanings. */const panel=audit.querySelector('[data-ash-panel]');if(panel?.querySelector('.ash-summary-grid')){let note=panel.querySelector('[data-atlas-materialization="0714"]');if(!note){note=document.createElement('div');note.className='ash-impact';note.dataset.atlasMaterialization='0714';panel.appendChild(note);}setText(note,materializationText());}}
   function retryPlacement(){if(retryTimer||retryCount>=5)return;retryCount++;retryTimer=setTimeout(()=>{retryTimer=0;schedule();},250+retryCount*150);}
   function place(){
     raf=0;if(authVisible())return;ensureSeed();
@@ -41,8 +41,21 @@
     const top=findTopbar();if(!top){audit.hidden=true;fallbackHost().appendChild(audit);retryPlacement();return;}
     retryCount=0;if(retryTimer){clearTimeout(retryTimer);retryTimer=0;}
     setData(top,'auditHost','1');setData(top,'atlasGlobalAuditHost','0714');suppressTopSearch(top);
-    setData(audit,'topbarMode','1');setData(audit,'topbarPlacement','center');setData(audit,'globalAudit','0714');
-    if(audit.parentElement!==top)top.appendChild(audit);audit.hidden=false;
+    setData(audit,'topbarMode','1');setData(audit,'topbarPlacement','account-adjacent');setData(audit,'globalAudit','0714');
+    if(audit.parentElement!==top)top.appendChild(audit);
+    // Keep the health light immediately before the signed-in account, never over theme/logout.
+    const emailNode=[...top.querySelectorAll('span,small,a,div')].find(el=>{
+      if(el.children.length)return false;
+      if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test((el.textContent||'').trim()))return false;
+      const rect=el.getBoundingClientRect();return rect.width>40&&rect.width<500;
+    });
+    if(emailNode){
+      const right=Math.max(12,Math.ceil(top.getBoundingClientRect().right-emailNode.getBoundingClientRect().left+12));
+      audit.style.setProperty('--atlas-health-right',right+'px');
+    }else{
+      audit.style.removeProperty('--atlas-health-right');
+    }
+    audit.hidden=false;
     document.querySelector('[data-atlas-global-audit-fallback="1"]')?.remove();applySemantics(audit);void loadMaterialization(false);
   }
   function schedule(){if(!raf)raf=requestAnimationFrame(place);}
