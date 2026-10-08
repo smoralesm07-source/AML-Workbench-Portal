@@ -59,26 +59,93 @@
     inflight=(async()=>{const c=db();if(!c)throw new Error('Supabase no disponible');
       try{const r=await c.functions.invoke('aml-source-health-monitor',{body:{}});if(!r.error&&r.data?.ok){ops=r.data;opsAt=Date.now();loadState='ready';return ops;}}catch{}
       const {data,error}=await c.from('aml_external_source_health').select('*').eq('enabled',true).order('source_name');if(error)throw error;
-      const rows=(data||[]).map(x=>({source_code:x.source_code,source_name:x.source_name,source_class:x.source_class,software_status:x.software_status,data_status:x.data_status,last_source_record_at:x.last_source_record_at,last_successful_ingest_at:x.last_successful_ingest_at,last_check_at:x.last_check_at,metadata:x.metadata||{}}));
+      const rows=(data||[]).map(x=>({source_code:x.source_code,source_name:x.source_name,source_class:x.source_class,software_status:x.software_status,data_status:x.data_status,last_source_record_at:x.last_source_record_at,last_successful_ingest_at:x.last_successful_ingest_at,last_upstream_activity_at:x.last_upstream_activity_at,last_check_at:x.last_check_at,refreshed_at:x.refreshed_at,metadata:x.metadata||{}}));
       const healthy=rows.filter(x=>x.software_status==='healthy').length,watch=rows.filter(x=>x.software_status==='watch').length,degraded=rows.filter(x=>x.software_status==='degraded').length;
       ops={ok:true,summary:{total:rows.length,healthy,watch,degraded,coverage_effective_pct:rows.length?Math.round((healthy+.5*watch)/rows.length*100):0,critical_down:rows.filter(x=>x?.metadata?.criticality==='high'&&x.software_status==='degraded').length},sources:rows};opsAt=Date.now();loadState='ready';return ops;
     })().catch(err=>{lastError=err;loadState='unavailable';throw err;}).finally(()=>{inflight=null;updateRoot();});return inflight;
   }
 
   function catalog(){
-    let rows=freshness().map(r=>({kind:'freshness',label:r.label||r.source_system||r.source_id||'Fuente',system:r.source_system||'ATLAS',latest:r.latest_record_label||day(r.latest_record_at||r.last_capture_at),checked:dt(r.last_checked_at),tone:freshnessTone(r),state:String(r.status||'SIN ESTADO').toUpperCase(),reason:r.reason||'Sin detalle'}));
-    if(!rows.length&&Array.isArray(ops?.sources)&&ops.sources.length){
-      rows=ops.sources.map(r=>{const tone=operationalTone(r);return{kind:'operational-fallback',label:r.source_name||r.source_code||'Fuente',system:r.source_class||r?.metadata?.domain||'Integración ATLAS',latest:day(r.last_source_record_at||r.last_successful_ingest_at),checked:dt(r.last_check_at||r?.metadata?.health?.checked_at),tone,state:status(tone).label,reason:r?.metadata?.health?.error||r?.metadata?.impact_if_down||'Telemetría operacional de respaldo'};});
-    }
-    const seen=new Set();
-    rows=rows.filter(r=>{const key=`${String(r.label||'').trim().toLowerCase()}|${String(r.system||'').trim().toLowerCase()}`;if(seen.has(key))return false;seen.add(key);return true;});
-    const hasRes=rows.some(r=>/\bRES\b|REGISTRO DE EMPRESAS Y SOCIEDADES/i.test(`${r.label} ${r.system}`));
-    if(!hasRes){const r=resState;rows.push({kind:'res',label:'Registro de Empresas y Sociedades (RES)',system:'Datos.gob.cl · RES',latest:r?.available?day(r.latest):'—',checked:r?.available?dt(r.checked):'—',tone:r?.status||'unknown',state:r?.available?status(r.status).label:'SIN ESTADO',reason:r?.reason||'Consultando snapshot oficial'});}
-    return rows;
+  const f=Array.isArray(freshness())?freshness():[];
+  const operational=Array.isArray(ops?.sources)?ops.sources:[];
+  const operationalByCode=new Map(operational.map(r=>[String(r.source_code||'').toUpperCase(),r]));
+  const material=window.AtlasGlobalSourceHealth?.getMaterializationState?.()||{};
+  const pipelineBySource={UAF:'UAF_SECTOR_PROFILE',SII_BULK:'SII_ENTITY_YEAR',OSFL:'OSFL_PROFILE',SANCIONES:'SANCTION_IDENTITY'};
+  const operationalBySource={RES:'RES',MERCADO_PUBLICO:'MERCADO_PUBLICO'};
+  const found=new Set();
+  const rows=f.map(r=>{
+    const id=String(r.source_id||'').toUpperCase();
+    const op=operationalByCode.get(operationalBySource[id]||id);
+    if(op)found.add(String(op.source_code||'').toUpperCase());
+    const pipeline=material[pipelineBySource[id]];
+    const pipelineOk=pipeline&&/SUCCESS|COMPLETED|READY/i.test(String(pipeline.status||''));
+    const pipelineLoaded=pipelineOk?(pipeline.fusion_synced_at||pipeline.sii_synced_at||pipeline.updated_at):null;
+    const atlasLoad=pipelineLoaded||(op?.last_successful_ingest_at||null);
+    const sourceCaptured=r.last_capture_at||null;
+    return {
+      kind:'freshness',sourceId:id,label:r.label||r.source_system||id||'Fuente',system:r.source_system||'ATLAS',
+      latest:r.latest_record_label||day(r.latest_record_at),latestRaw:r.latest_record_at||null,
+      checked:dt(r.last_checked_at),checkedRaw:r.last_checked_at||null,captured:sourceCaptured,
+      loaded:atlasLoad,loadEvidence:pipelineLoaded?'Materialización Atlas · '+pipelineBySource[id]:(op?.last_successful_ingest_at?'Ingesta registrada en Atlas':'No existe registro verificable de carga en Atlas'),
+      tone:freshnessTone(r),state:String(r.status||'SIN ESTADO').toUpperCase(),
+      reason:r.reason||'Sin detalle',pipelineStatus:pipeline?.status||null,recordSource:r.updated_at||freshState?.updated_at||null
+    };
+  });
+  for(const r of operational){
+    const id=String(r.source_code||'').toUpperCase();
+    if(found.has(id)||rows.some(x=>x.sourceId===id))continue;
+    const tone=operationalTone(r);
+    rows.push({
+      kind:'operational',sourceId:id,label:r.source_name||r.source_code||'Fuente',
+      system:r.source_class||r?.metadata?.domain||'Integración ATLAS',latest:day(r.last_source_record_at),
+      latestRaw:r.last_source_record_at||null,checked:dt(r.last_check_at),checkedRaw:r.last_check_at||null,
+      captured:r.last_upstream_activity_at||null,loaded:r.last_successful_ingest_at||null,
+      loadEvidence:r.last_successful_ingest_at?'Ingesta registrada en Atlas':'No existe registro verificable de carga en Atlas',
+      tone,state:status(tone).label,reason:r?.metadata?.health?.error||r?.metadata?.impact_if_down||'Telemetría operacional',recordSource:r.refreshed_at||null
+    });
   }
-  function catalogRows(){const rows=catalog();if(!rows.length)return '<div class="ash-empty">Sin telemetría de fuentes disponible.</div>';return `<div class="ash-catalog"><div class="ash-catalog-head"><span>Fuente</span><span>Último dato</span><span>Verificación</span><span>Estado</span></div>${rows.map(r=>`<div class="ash-catalog-row"><div class="ash-source-name ${r.kind==='res'?'res':''}">${dot(r.tone)}<div><b>${esc(r.label)}</b><small>${esc(r.system)}</small></div></div><div class="ash-catalog-cell"><b>${esc(r.latest)}</b><small>corte materializado</small></div><div class="ash-catalog-cell"><b>${esc(r.checked)}</b><small title="${esc(r.reason)}">${esc(r.reason)}</small></div><div><span class="ash-state ${status(r.tone).cls}">${esc(r.state)}</span></div></div>`).join('')}</div>`;}
+  if(!rows.some(r=>r.sourceId==='RES'||/registro de empresas y sociedades/i.test(r.label))){
+    const r=resState;
+    rows.push({
+      kind:'res',sourceId:'RES',label:'Registro de Empresas y Sociedades (RES)',system:'Datos.gob.cl · RES',
+      latest:r?.available?day(r.latest):'—',latestRaw:r?.latest||null,checked:r?.available?dt(r.checked):'—',
+      checkedRaw:r?.checked||null,captured:null,loaded:null,loadEvidence:'Sin fecha de ingesta confirmada',
+      tone:r?.status||'unknown',state:r?.available?status(r.status).label:'SIN ESTADO',
+      reason:r?.reason||'Consultando snapshot oficial',recordSource:r?.checked||null
+    });
+  }
+  return rows;
+}
+  function catalogRows(){
+  const rows=catalog();
+  if(!rows.length)return '<div class="ash-empty">Sin telemetría de fuentes disponible.</div>';
+  const dateTime=v=>v&&Number.isFinite(new Date(v).getTime())?dt(v):'No informada';
+  const info='Última carga confirmada en Atlas. Una captura en origen o una verificación no implica ingesta.';
+  return `<div class="ash-catalog" aria-label="${esc(info)}"><div class="ash-catalog-head"><span>Fuente</span><span>Última carga Atlas</span><span>Dato en origen</span><span>Estado</span></div>${rows.map(r=>{
+    const loaded=dateTime(r.loaded);
+    const capture=dateTime(r.captured);
+    const checked=dateTime(r.checkedRaw);
+    const lastData=r.latest&&r.latest!=='—'?r.latest:'No informado';
+    const materialDate=dateTime(r.recordSource);
+    return `<details class="ash-catalog-item"><summary class="ash-catalog-row" title="Ver detalle de ${esc(r.label)}">
+      <span class="ash-source-name">${dot(r.tone)}<span><b>${esc(r.label)}</b><small>${esc(r.system)}</small></span></span>
+      <span class="ash-catalog-cell ash-load"><b>${esc(loaded)}</b><small>${esc(r.loaded?'Carga registrada':'Sin confirmación de carga')}</small></span>
+      <span class="ash-catalog-cell"><b>${esc(lastData)}</b><small>corte / dato del origen</small></span>
+      <span class="ash-state ${status(r.tone).cls}">${esc(r.state)}</span>
+      </summary>
+      <div class="ash-source-detail">
+        <span><b>Última carga Atlas</b>${esc(loaded)}</span>
+        <span><b>Última captura en origen</b>${esc(capture)}</span>
+        <span><b>Último dato disponible</b>${esc(lastData)}</span>
+        <span><b>Última verificación</b>${esc(checked)}</span>
+        <span><b>Fecha telemetría</b>${esc(materialDate)}</span>
+        <span class="wide"><b>Evidencia de carga</b>${esc(r.loadEvidence)}</span>
+        <span class="wide"><b>Diagnóstico</b>${esc(r.reason)}</span>
+      </div></details>`;
+  }).join('')}</div>`;
+}
 
-  function opRows(){const rows=ops?.sources||[];if(!rows.length)return `<div class="ash-empty">${loadState==='loading'?'Cargando telemetría operacional…':loadState==='unavailable'?'No fue posible obtener la telemetría operacional.':'Sin telemetría operacional disponible.'}</div>`;return `<div class="ash-oplist">${rows.map(r=>{const h=r.metadata?.health||{},s=status(r.software_status),fallback=r.metadata?.fallback||'—',impact=r.metadata?.impact_if_down||'—',lat=h.latency_ms==null?'—':`${h.latency_ms} ms`;return `<details class="ash-op ${s.cls}"><summary><span>${dot(r.software_status)}<span><b>${esc(r.source_name||r.source_code)}</b><small>${esc(r.source_class||'')}</small></span></span><span><b>${esc(lat)}</b><small>latencia</small></span><span><b>${esc(dt(r.last_check_at||h.checked_at))}</b><small>última prueba</small></span><span class="ash-state ${s.cls}">${esc(s.label)}</span></summary><div class="ash-opdetail"><span><b>Disponibilidad</b>${esc(status(h.availability||r.software_status).label)}</span><span><b>Upstream</b>${esc(status(h.upstream||'unknown').label)}</span><span><b>Dato</b>${esc(status(r.data_status||'unknown').label)}</span><span><b>HTTP</b>${esc(h.http_status||'—')}</span><span class="wide"><b>Fallback</b>${esc(fallback)}</span><span class="wide"><b>Impacto si falla</b>${esc(impact)}</span>${h.error?`<span class="wide badtext"><b>Último error</b>${esc(h.error)}</span>`:''}</div></details>`}).join('')}</div>`;}
+  function opRows(){const rows=ops?.sources||[];if(!rows.length)return `<div class="ash-empty">${loadState==='loading'?'Cargando telemetría operacional…':loadState==='unavailable'?'No fue posible obtener la telemetría operacional.':'Sin telemetría operacional disponible.'}</div>`;return `<div class="ash-oplist">${rows.map(r=>{const h=r.metadata?.health||{},s=status(r.software_status),fallback=r.metadata?.fallback||'—',impact=r.metadata?.impact_if_down||'—',lat=h.latency_ms==null?'—':`${h.latency_ms} ms`;return `<details class="ash-op ${s.cls}"><summary><span>${dot(r.software_status)}<span><b>${esc(r.source_name||r.source_code)}</b><small>${esc(r.source_class||'')}</small></span></span><span><b>${esc(lat)}</b><small>latencia</small></span><span><b>${esc(dt(r.last_check_at||h.checked_at))}</b><small>última prueba</small></span><span class="ash-state ${s.cls}">${esc(s.label)}</span></summary><div class="ash-opdetail"><span><b>Última carga Atlas</b>${esc(dt(r.last_successful_ingest_at))}</span><span><b>Último dato fuente</b>${esc(day(r.last_source_record_at))}</span><span><b>Actividad upstream</b>${esc(dt(r.last_upstream_activity_at))}</span><span><b>Disponibilidad</b>${esc(status(h.availability||r.software_status).label)}</span><span><b>Upstream</b>${esc(status(h.upstream||'unknown').label)}</span><span><b>Dato</b>${esc(status(r.data_status||'unknown').label)}</span><span><b>HTTP</b>${esc(h.http_status||'—')}</span><span class="wide"><b>Fallback</b>${esc(fallback)}</span><span class="wide"><b>Impacto si falla</b>${esc(impact)}</span>${h.error?`<span class="wide badtext"><b>Último error</b>${esc(h.error)}</span>`:''}</div></details>`}).join('')}</div>`;}
 
   function summaryHtml(){
     const f=catalog(),fs={green:f.filter(x=>x.tone==='healthy').length,yellow:f.filter(x=>x.tone==='watch').length,red:f.filter(x=>x.tone==='degraded').length};
@@ -91,7 +158,7 @@
     return `<div class="ash-summary-grid"><div class="ash-metric"><span>Cobertura operacional</span><b>${coverage}</b><small>${operational}</small></div><div class="ash-metric"><span>Fuentes al día</span><b>${fs.green}/${f.length||0}</b><small>${fs.yellow} revisar · ${fs.red} caídas/rezagadas</small></div><div class="ash-metric"><span>RES</span><b>${resState?.available?status(resState.status).label:'—'}</b><small>${esc(resText)}</small></div></div><div class="ash-domains">${groups.filter(x=>x.total).map(x=>`<div><span>${esc(name(x.g))}</span><b>${x.coverage}%</b><small>${x.total} fuentes</small></div>`).join('')}</div><div class="ash-impact">${impact}</div>`;
   }
   function overallState(){if(loadState!=='ready')return 'off';const o=ops?.summary||{},redFresh=catalog().some(x=>x.tone==='degraded');return Number(o.critical_down||0)>0?'bad':Number(o.degraded||0)>0||redFresh?'warn':'ok';}
-  function shellHtml(){const o=ops?.summary||{},overall=overallState(),pending=loadState!=='ready',coverage=pending?'—':`${Number(o.coverage_effective_pct??0)}%`,falls=pending?'verificando':`${Number(o.degraded||0)} caídas`,dotState=overall==='ok'?'healthy':overall==='warn'?'watch':overall==='bad'?'degraded':'loading';return `<button type="button" class="v024-audit-summary ash-main" data-ash-toggle aria-expanded="false"><span class="a57-title">${dot(dotState)}<span><strong>Auditoría y salud de fuentes</strong><small>Estado resumido de frescura y disponibilidad técnica</small></span></span><span class="ash-quick"><b>${coverage}</b><small>cobertura</small><span>${falls}</span></span><span class="a57-chevron">⌄</span></button><div class="v024-audit-detail ash-detail" data-ash-detail hidden><div class="ash-tabs"><button data-ash-tab="summary" class="active">Resumen</button><button data-ash-tab="freshness">Catálogo de fuentes</button><button data-ash-tab="operations">Integraciones</button><button data-ash-refresh>Actualizar</button></div><div data-ash-panel>${summaryHtml()}</div><footer>Frescura y disponibilidad son dimensiones separadas; este control informa salud técnica, no validez analítica.</footer></div>`;}
+  function shellHtml(){const o=ops?.summary||{},overall=overallState(),pending=loadState!=='ready',coverage=pending?'—':`${Number(o.coverage_effective_pct??0)}%`,falls=pending?'verificando':`${Number(o.degraded||0)} caídas`,dotState=overall==='ok'?'healthy':overall==='warn'?'watch':overall==='bad'?'degraded':'loading';return `<button type="button" class="v024-audit-summary ash-main" data-ash-toggle aria-expanded="false"><span class="a57-title">${dot(dotState)}<span><strong>Salud de fuentes</strong><small>Estado resumido de frescura y disponibilidad técnica</small></span></span><span class="ash-quick"><b>${coverage}</b><small>cobertura</small><span>${falls}</span></span><span class="a57-chevron">⌄</span></button><div class="v024-audit-detail ash-detail" data-ash-detail hidden><div class="ash-tabs"><button data-ash-tab="summary" class="active">Resumen</button><button data-ash-tab="freshness">Catálogo de fuentes</button><button data-ash-tab="operations">Integraciones</button><button data-ash-refresh>Actualizar</button></div><div data-ash-panel>${summaryHtml()}</div><footer>Frescura y disponibilidad son dimensiones separadas; este control informa salud técnica, no validez analítica.</footer></div>`;}
   function mount(){if(root?.isConnected)return root;const old=document.querySelector('.a57-data-audit:not([data-ash0536])');if(!old)return null;root=document.createElement('section');root.className='v024-audit a57-data-audit ash-audit';root.dataset.ash0536='1';root.innerHTML=shellHtml();old.replaceWith(root);bind(root);updateRoot();return root;}
   function updateRoot(){if(!root?.isConnected)return;const overall=overallState();root.classList.remove('ok','warn','bad','off');root.classList.add(overall);const quick=root.querySelector('.ash-quick'),o=ops?.summary||{},pending=loadState!=='ready';if(quick)quick.innerHTML=`<b>${pending?'—':`${Number(o.coverage_effective_pct??0)}%`}</b><small>cobertura</small><span>${pending?(loadState==='loading'?'verificando':'sin telemetría'):`${Number(o.degraded||0)} caídas`}</span>`;const titleDot=root.querySelector('.a57-title .ash-dot');if(titleDot)titleDot.className=`ash-dot ${status(overall==='ok'?'healthy':overall==='warn'?'watch':overall==='bad'?'degraded':'loading').cls}`;const p=root.querySelector('[data-ash-panel]');if(p)p.innerHTML=activeTab==='freshness'?catalogRows():activeTab==='operations'?opRows():summaryHtml();}
   function bind(rootEl){
