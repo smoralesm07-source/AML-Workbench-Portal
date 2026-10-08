@@ -596,11 +596,6 @@
       "path": "assets/atlas-osfl-graphics-final-1001.js",
       "type": "classic",
       "role": "osfl-graphics-final-runtime-1001"
-    },
-    {
-      "path": "assets/atlas-source-health-indicator-20261008.js",
-      "type": "classic",
-      "role": "global-source-health-indicator"
     }
   ],
   "forbidden_runtime_assets": [
