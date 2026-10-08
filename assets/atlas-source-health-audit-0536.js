@@ -80,13 +80,13 @@
     const pipeline=material[pipelineBySource[id]];
     const pipelineOk=pipeline&&/SUCCESS|COMPLETED|READY/i.test(String(pipeline.status||''));
     const pipelineLoaded=pipelineOk?(pipeline.fusion_synced_at||pipeline.sii_synced_at||pipeline.updated_at):null;
-    const atlasLoad=pipelineLoaded||(op?.last_successful_ingest_at||null);
+    const atlasLoad=pipelineLoaded||null;
     const sourceCaptured=r.last_capture_at||null;
     return {
       kind:'freshness',sourceId:id,label:r.label||r.source_system||id||'Fuente',system:r.source_system||'ATLAS',
       latest:r.latest_record_label||day(r.latest_record_at),latestRaw:r.latest_record_at||null,
       checked:dt(r.last_checked_at),checkedRaw:r.last_checked_at||null,captured:sourceCaptured,
-      loaded:atlasLoad,loadEvidence:pipelineLoaded?'Materialización Atlas · '+pipelineBySource[id]:(op?.last_successful_ingest_at?'Ingesta registrada en Atlas':'No existe registro verificable de carga en Atlas'),
+      loaded:atlasLoad,loadEvidence:pipelineLoaded?'Materialización confirmada · '+pipelineBySource[id]:'Sin evidencia de materialización; el monitor solo confirma comprobaciones técnicas',
       tone:freshnessTone(r),state:String(r.status||'SIN ESTADO').toUpperCase(),
       reason:r.reason||'Sin detalle',pipelineStatus:pipeline?.status||null,recordSource:r.updated_at||freshState?.updated_at||null
     };
@@ -99,8 +99,8 @@
       kind:'operational',sourceId:id,label:r.source_name||r.source_code||'Fuente',
       system:r.source_class||r?.metadata?.domain||'Integración ATLAS',latest:day(r.last_source_record_at),
       latestRaw:r.last_source_record_at||null,checked:dt(r.last_check_at),checkedRaw:r.last_check_at||null,
-      captured:r.last_upstream_activity_at||null,loaded:r.last_successful_ingest_at||null,
-      loadEvidence:r.last_successful_ingest_at?'Ingesta registrada en Atlas':'No existe registro verificable de carga en Atlas',
+      captured:null,loaded:null,
+      loadEvidence:'La comprobación del conector no demuestra ingesta de datos en Atlas',
       tone,state:status(tone).label,reason:r?.metadata?.health?.error||r?.metadata?.impact_if_down||'Telemetría operacional',recordSource:r.refreshed_at||null
     });
   }
@@ -109,7 +109,7 @@
     rows.push({
       kind:'res',sourceId:'RES',label:'Registro de Empresas y Sociedades (RES)',system:'Datos.gob.cl · RES',
       latest:r?.available?day(r.latest):'—',latestRaw:r?.latest||null,checked:r?.available?dt(r.checked):'—',
-      checkedRaw:r?.checked||null,captured:null,loaded:null,loadEvidence:'Sin fecha de ingesta confirmada',
+      checkedRaw:r?.checked||null,captured:null,loaded:r?.available?r.checked:null,loadEvidence:r?.available?'Snapshot RES materializado (fecha refreshed_at)':'Sin fecha de ingesta confirmada',
       tone:r?.status||'unknown',state:r?.available?status(r.status).label:'SIN ESTADO',
       reason:r?.reason||'Consultando snapshot oficial',recordSource:r?.checked||null
     });
@@ -145,7 +145,7 @@
   }).join('')}</div>`;
 }
 
-  function opRows(){const rows=ops?.sources||[];if(!rows.length)return `<div class="ash-empty">${loadState==='loading'?'Cargando telemetría operacional…':loadState==='unavailable'?'No fue posible obtener la telemetría operacional.':'Sin telemetría operacional disponible.'}</div>`;return `<div class="ash-oplist">${rows.map(r=>{const h=r.metadata?.health||{},s=status(r.software_status),fallback=r.metadata?.fallback||'—',impact=r.metadata?.impact_if_down||'—',lat=h.latency_ms==null?'—':`${h.latency_ms} ms`;return `<details class="ash-op ${s.cls}"><summary><span>${dot(r.software_status)}<span><b>${esc(r.source_name||r.source_code)}</b><small>${esc(r.source_class||'')}</small></span></span><span><b>${esc(lat)}</b><small>latencia</small></span><span><b>${esc(dt(r.last_check_at||h.checked_at))}</b><small>última prueba</small></span><span class="ash-state ${s.cls}">${esc(s.label)}</span></summary><div class="ash-opdetail"><span><b>Última carga Atlas</b>${esc(dt(r.last_successful_ingest_at))}</span><span><b>Último dato fuente</b>${esc(day(r.last_source_record_at))}</span><span><b>Actividad upstream</b>${esc(dt(r.last_upstream_activity_at))}</span><span><b>Disponibilidad</b>${esc(status(h.availability||r.software_status).label)}</span><span><b>Upstream</b>${esc(status(h.upstream||'unknown').label)}</span><span><b>Dato</b>${esc(status(r.data_status||'unknown').label)}</span><span><b>HTTP</b>${esc(h.http_status||'—')}</span><span class="wide"><b>Fallback</b>${esc(fallback)}</span><span class="wide"><b>Impacto si falla</b>${esc(impact)}</span>${h.error?`<span class="wide badtext"><b>Último error</b>${esc(h.error)}</span>`:''}</div></details>`}).join('')}</div>`;}
+  function opRows(){const rows=ops?.sources||[];if(!rows.length)return `<div class="ash-empty">${loadState==='loading'?'Cargando telemetría operacional…':loadState==='unavailable'?'No fue posible obtener la telemetría operacional.':'Sin telemetría operacional disponible.'}</div>`;return `<div class="ash-oplist">${rows.map(r=>{const h=r.metadata?.health||{},s=status(r.software_status),fallback=r.metadata?.fallback||'—',impact=r.metadata?.impact_if_down||'—',lat=h.latency_ms==null?'—':`${h.latency_ms} ms`;return `<details class="ash-op ${s.cls}"><summary><span>${dot(r.software_status)}<span><b>${esc(r.source_name||r.source_code)}</b><small>${esc(r.source_class||'')}</small></span></span><span><b>${esc(lat)}</b><small>latencia</small></span><span><b>${esc(dt(r.last_check_at||h.checked_at))}</b><small>última prueba</small></span><span class="ash-state ${s.cls}">${esc(s.label)}</span></summary><div class="ash-opdetail"><span><b>Último control de acceso</b>${esc(dt(r.last_successful_ingest_at))}</span><span><b>Último dato fuente</b>${esc(day(r.last_source_record_at))}</span><span><b>Actividad upstream</b>${esc(dt(r.last_upstream_activity_at))}</span><span><b>Disponibilidad</b>${esc(status(h.availability||r.software_status).label)}</span><span><b>Upstream</b>${esc(status(h.upstream||'unknown').label)}</span><span><b>Dato</b>${esc(status(r.data_status||'unknown').label)}</span><span><b>HTTP</b>${esc(h.http_status||'—')}</span><span class="wide"><b>Fallback</b>${esc(fallback)}</span><span class="wide"><b>Impacto si falla</b>${esc(impact)}</span>${h.error?`<span class="wide badtext"><b>Último error</b>${esc(h.error)}</span>`:''}</div></details>`}).join('')}</div>`;}
 
   function summaryHtml(){
     const f=catalog(),fs={green:f.filter(x=>x.tone==='healthy').length,yellow:f.filter(x=>x.tone==='watch').length,red:f.filter(x=>x.tone==='degraded').length};
