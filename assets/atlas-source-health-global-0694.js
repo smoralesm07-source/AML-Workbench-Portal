@@ -10,7 +10,7 @@
   const stamp=v=>{if(!v)return '—';try{return new Intl.DateTimeFormat('es-CL',{timeZone:'America/Santiago',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(v));}catch{return String(v);}};
   const setData=(el,key,value)=>{if(el&&el.dataset[key]!==value)el.dataset[key]=value;};
   const setText=(el,value)=>{if(el&&el.textContent!==value)el.textContent=value;};
-  function authVisible(){const auth=document.querySelector('.auth-screen');return !!auth&&!auth.hidden&&auth.isConnected;}
+  function authVisible(){const auth=document.querySelector('.auth-screen');if(!auth||!auth.isConnected||auth.hidden||auth.closest('[hidden]'))return false;const style=window.getComputedStyle(auth);return style.display!=='none'&&style.visibility!=='hidden'&&Number(style.opacity||1)>0&&auth.getClientRects().length>0;}
   function findTopbar(){
     if(cachedTop?.isConnected)return cachedTop;
     const direct=document.querySelector('.v019-top,.topbar,.v18-appbar,[data-audit-host="1"]');
@@ -30,14 +30,14 @@
     }
   }
   function fallbackHost(){let h=document.querySelector('[data-atlas-global-audit-fallback="1"]');if(!h){h=document.createElement('div');h.dataset.atlasGlobalAuditFallback='1';h.hidden=true;document.body.appendChild(h);}return h;}
-  function ensureSeed(){if(document.querySelector('.ash-audit,.a57-data-audit'))return;const seed=document.createElement('section');seed.className='v024-audit a57-data-audit';seed.dataset.atlasAuditSeed='0714';seed.hidden=true;seed.innerHTML='<button type="button" class="v024-audit-summary"><span class="a57-title"><span><strong>Auditoría y salud de fuentes</strong><small>Inicializando telemetría gobernada</small></span></span></button>';fallbackHost().appendChild(seed);}
+  function ensureSeed(){if(document.querySelector('[data-ash0536],[data-atlas-audit-seed]'))return;const seed=document.createElement('section');seed.className='v024-audit a57-data-audit';seed.dataset.atlasAuditSeed='0714';seed.hidden=true;seed.innerHTML='<button type="button" class="v024-audit-summary"><span class="a57-title"><span><strong>Auditoría y salud de fuentes</strong><small>Inicializando telemetría gobernada</small></span></span></button>';fallbackHost().appendChild(seed);}
   async function loadMaterialization(force=false){if(!force&&matState&&Date.now()-matAt<TTL)return matState;if(matInflight)return matInflight;const c=db();if(!c)return null;matInflight=(async()=>{const {data,error}=await c.from('aml_sync_state').select('pipeline,status,updated_at,fusion_synced_at,sii_synced_at').in('pipeline',PIPELINES);if(error)throw error;const map={};for(const row of data||[])map[row.pipeline]=row;matState=map;matAt=Date.now();return map;})().catch(()=>null).finally(()=>{matInflight=null;schedule();});return matInflight;}
   function materializationText(){if(!matState)return 'Materialización Atlas: verificando derivados internos…';const labels={RUNTIME_SNAPSHOT:'runtime',UAF_SECTOR_PROFILE:'UAF',SII_ENTITY_YEAR:'SII',OSFL_PROFILE:'OSFL',SANCTION_IDENTITY:'sanciones'};const parts=PIPELINES.map(p=>{const r=matState[p];return `${labels[p]} ${r?stamp(r.updated_at||r.fusion_synced_at||r.sii_synced_at):'—'}`;});const failed=PIPELINES.some(p=>matState[p]&&String(matState[p].status||'').toUpperCase().includes('FAIL'));return `${failed?'⚠':'✓'} Materialización Atlas · ${parts.join(' · ')}`;}
   function applySemantics(audit){if(!audit)return;setData(audit,'semanticContract','SOURCE_INTEGRATION_MATERIALIZATION_0714');setText(audit.querySelector('.a57-title small'),'Fuente · integración · materialización Atlas');audit.querySelectorAll('.ash-metric > span').forEach(el=>{if(norm(el.textContent)==='fuentes al día')setText(el,'Fuentes verificadas');});/* Preserve source catalog labels: source cut and Atlas load have distinct meanings. */const panel=audit.querySelector('[data-ash-panel]');if(panel?.querySelector('.ash-summary-grid')){let note=panel.querySelector('[data-atlas-materialization="0714"]');if(!note){note=document.createElement('div');note.className='ash-impact';note.dataset.atlasMaterialization='0714';panel.appendChild(note);}setText(note,materializationText());}}
   function retryPlacement(){if(retryTimer||retryCount>=5)return;retryCount++;retryTimer=setTimeout(()=>{retryTimer=0;schedule();},250+retryCount*150);}
   function place(){
     raf=0;if(authVisible())return;ensureSeed();
-    const audit=document.querySelector('.ash-audit,.a57-data-audit');if(!audit)return;
+    const audit=document.querySelector('[data-ash0536],[data-atlas-audit-seed]');if(!audit)return;
     const top=findTopbar();if(!top){audit.hidden=true;fallbackHost().appendChild(audit);retryPlacement();return;}
     retryCount=0;if(retryTimer){clearTimeout(retryTimer);retryTimer=0;}
     setData(top,'auditHost','1');setData(top,'atlasGlobalAuditHost','0714');suppressTopSearch(top);
@@ -61,7 +61,7 @@
   function schedule(){if(!raf)raf=requestAnimationFrame(place);}
   function resetAndSchedule(){cachedTop=null;retryCount=0;if(retryTimer){clearTimeout(retryTimer);retryTimer=0;}schedule();}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(resetAndSchedule,100),{once:true});else setTimeout(resetAndSchedule,100);
-  ['resize','pageshow','atlas:nav-refresh','atlas:runtime-ready'].forEach(evt=>window.addEventListener(evt,resetAndSchedule));
+  ['resize','pageshow','atlas:nav-refresh','atlas:runtime-ready','atlas:routechange','atlas:navigate'].forEach(evt=>window.addEventListener(evt,resetAndSchedule));
   setTimeout(resetAndSchedule,700);
   setInterval(()=>void loadMaterialization(false),TTL);
   window.AtlasGlobalSourceHealth={version:VERSION,semanticContract:'SOURCE_INTEGRATION_MATERIALIZATION_0714',freezeGuard:'NO_GLOBAL_DOM_OBSERVER:CACHED_TOPBAR_DEFERRED_SCAN',schedule,place,refresh:(force=false)=>{resetAndSchedule();return loadMaterialization(force);},getMaterializationState:()=>matState};
