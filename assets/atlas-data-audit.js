@@ -4,9 +4,18 @@
 (function retireAtlasDataAuditLegacy(){
   const SELECTOR='#app .v024-audit,main .v024-audit,.v024-audit.a57-data-audit';
   const noAudit=()=>'';
+  // The canonical source-health widget shares historical audit classes.
+  // Never remove it while retiring obsolete cards inside the content area.
+  function isCanonicalHealth(el){
+    if(el.matches('[data-ash0536],[data-atlas-audit-seed],[data-topbar-mode="1"],[data-global-audit="0714"]'))return true;
+    return !!el.closest('[data-atlas-global-audit-fallback="1"],[data-atlas-global-audit-host],.v019-top,.topbar,.v18-appbar');
+  }
 
   function retire(){
-    document.querySelectorAll(SELECTOR).forEach(el=>el.remove());
+    document.querySelectorAll(SELECTOR).forEach(el=>{
+      if(isCanonicalHealth(el))return;
+      el.remove();
+    });
     try{window.v024AuditHtml=noAudit;}catch(_e){}
     try{if(typeof v024AuditHtml!=='undefined')v024AuditHtml=noAudit;}catch(_e){}
     window.AtlasDataAudit={
